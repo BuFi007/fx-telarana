@@ -124,9 +124,68 @@ This document is the contract. Drops:
 
    Reports are written to `reports/sim-matrix-latest.md` after each run.
 
-3. **Drop 3** — categories C + D (14 sims) + the deposit+redeem bundle fix
-   + property-style fuzzers (random persona × random op).
+3. **Drop 3** ✅ (this commit) — full 117-sim matrix.
 
-After Drop 3, the suite is a `bun run sim:matrix` away from re-running
-itself after any contract redeploy, with the Markdown report committed
-alongside the deployment manifest.
+   Categories added on top of A + B:
+
+   * **Category B (redeem bundles)** — 3 personas × 1 flow (`deposit → redeem`
+     as a `simulate-bundle`). Whale / mid / small now exercise the full
+     ERC-4626 round-trip via consistent vault bookkeeping. The 4 standalone
+     redeem cases from Drop 2 stay in the matrix as expected-revert
+     entries; they document the storage-override limitation.
+
+   * **Category C (9 sims)** — borrow at 46% / 85.9% / 87% LTV (bundled
+     `supplyCollateral + borrow`); liquidate guards (no-allowance,
+     no-RedStone); sweep on unknown nonce; oracle staleness, reverse-direction
+     staleness, unknown feed.
+
+   * **Category D (5 sims)** — direct reads of `totalShares`, `hotReservePct`,
+     `spreadBps`, `kBps` on `FxSwapHook`; plus a direct `beforeSwap` call
+     to verify the `NotPoolManager` guard.
+
+   * **Fuzzer (20 sims)** — deterministic PRNG (seed 0xdeadbeef) picks
+     persona + op + payload across spoke `enterHub`, hub mint, hub `getMid`.
+     Expectations derived from the persona's pre-loaded balance.
+
+   First-run result: **107/117 pass (91.4%)**. The 10 failures are:
+   - 8 `A.arc-testnet.*` — Tenderly's network registry doesn't know chain
+     5042002 (same limit that blocks Arc source verification).
+   - 2 `C.borrow.healthy` + `C.borrow.boundary-85.9` — bundled supply +
+     borrow against Morpho. State overrides cover ERC-20 balances and
+     allowances but not Morpho's market struct (`totalSupplyAssets`,
+     `lastUpdate`, the borrower's `Position`). Bundled supply works in
+     isolation; the borrow step reverts because Morpho's `irm.borrowRate`
+     needs initialized market state. Drop 4 task: either pre-seed the
+     market via a separate setup tx or override Morpho's storage layout
+     for these slots.
+
+   Honest expectations encode reality: Pyth on Base Sepolia testnet rarely
+   sees fresh updates (no production keepers), so `getMid` reliably reverts
+   with `OracleStale`. The suite asserts `revert` for unbundled
+   `getMid` calls — and asserts `pass` once Drop 4 adds a bundle that
+   prepends `updatePriceFeeds` with a fixture Pyth Hermes payload.
+
+After Drop 3, the suite is a `bun run --cwd packages/sdk sim:matrix` away
+from re-running itself after any contract redeploy, with the Markdown
+report committed alongside the deployment manifests.
+
+## Drop 4 candidates (not yet built)
+
+1. **Pyth-fresh bundle** — fetch a current Hermes payload at run time,
+   prepend `Pyth.updatePriceFeeds(...)` to each oracle sim, flip 7+ Pyth
+   sims from `revert` to `pass`.
+2. **Morpho borrow proper** — pre-seed market storage or include a
+   priming supply from a separate persona so the borrow bundles work
+   with real state.
+3. **Live PoolManager.swap path** — full Uniswap v4 unlock-callback
+   simulation to exercise `FxSwapHook.beforeSwap` end-to-end. Requires
+   fabricating the unlock-data and the swap delta accounting.
+4. **CCTP V2 reverse leg** — fabricate a `cctpMessage + attestation` pair
+   and simulate `FxHubMessageReceiver.executeDeposit` on the hub. The
+   attestation signature has to be valid — easiest path is mocking
+   the `IMessageTransmitterV2` at its address with a permissive
+   `setCode` override.
+5. **Snapshot reuse** — Tenderly supports saving a sim as a "fork
+   snapshot" and chaining sims off it. Use it to materialize a
+   common-state "primed hub" once per run and branch test cases off
+   that, instead of overriding state per case.

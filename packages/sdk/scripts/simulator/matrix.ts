@@ -19,7 +19,12 @@ export type TestCase = {
   id: string;
   /** Human description for the report. */
   description: string;
+  /** The single tx the assertion is run against. When `bundle` is present
+   *  this is the LAST entry of the bundle (the one the assertion checks). */
   request: SimulateRequest;
+  /** Optional multi-step setup. When set the runner uses simulate-bundle
+   *  and asserts against the final entry's result. */
+  bundle?: SimulateRequest[];
   expect: Expect;
 };
 

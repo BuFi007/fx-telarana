@@ -14,6 +14,7 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { TenderlyClient } from "./client.js";
 import { categoryA, categoryB, type TestCase, type Expect } from "./matrix.js";
+import { categoryBRedeemBundle, categoryC, categoryD, fuzzer } from "./matrix-cd.js";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
@@ -63,7 +64,13 @@ function summarize(exp: Expect): string {
 
 async function runOne(client: TenderlyClient, c: TestCase) {
   try {
-    const res = await client.simulate(c.request);
+    let res;
+    if (c.bundle && c.bundle.length > 1) {
+      const bundleRes = await client.simulateBundle(c.bundle);
+      res = bundleRes[bundleRes.length - 1];
+    } else {
+      res = await client.simulate(c.request);
+    }
     const status = !!res.simulation?.status;
     const url = res.simulation?.url ?? "";
     const gas = res.transaction?.gas_used ?? 0;
@@ -88,6 +95,28 @@ async function main() {
   const spokes = loadSpokes();
   const hub = loadHub();
 
+  const hubManifest = {
+    network: hub.network,
+    chainId: hub.chainId,
+    contracts: {
+      FxOracle: hub.contracts.FxOracle,
+      FxMarketRegistry: hub.contracts.FxMarketRegistry,
+      FxReceiptUSDC: hub.contracts.FxReceiptUSDC,
+      FxReceiptEURC: hub.contracts.FxReceiptEURC,
+      FxLiquidator: hub.contracts.FxLiquidator,
+      FxHubMessageReceiver: hub.contracts.FxHubMessageReceiver,
+      FxSwapHook: hub.contracts.FxSwapHook,
+      MorphoOracleAdapterM1: hub.contracts.MorphoOracleAdapterM1,
+      MorphoOracleAdapterM2: hub.contracts.MorphoOracleAdapterM2,
+    },
+    external: {
+      USDC: hub.external.USDC,
+      EURC: hub.external.EURC,
+      MorphoBlue: hub.external.MorphoBlue,
+      Pyth: hub.external.Pyth,
+    },
+  };
+
   const cases: TestCase[] = [
     ...categoryA(spokes),
     ...categoryB({
@@ -101,6 +130,10 @@ async function main() {
       },
       external: { USDC: hub.external.USDC, EURC: hub.external.EURC },
     }),
+    ...categoryBRedeemBundle(hubManifest),
+    ...categoryC(hubManifest),
+    ...categoryD(hubManifest),
+    ...fuzzer(spokes, hubManifest, 0xdeadbeef, 20),
   ];
 
   console.log(`running ${cases.length} cases (Drop 2: A=64 + B=16)\n`);
