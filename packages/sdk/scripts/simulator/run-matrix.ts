@@ -17,6 +17,7 @@ import { categoryA, categoryB, type TestCase, type Expect } from "./matrix.js";
 import { categoryBRedeemBundle, categoryC, categoryD, fuzzer } from "./matrix-cd.js";
 import { categoryE, categoryCPrimedBorrow, categoryCSweep, categoryFAdminGuards, fetchPythUpdate } from "./matrix-d4.js";
 import { categoryG } from "./matrix-d6.js";
+import { categoryH } from "./matrix-d8.js";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
@@ -151,6 +152,11 @@ async function main() {
       },
       external: { USDC: hub.external.USDC },
     }),
+    ...(await categoryH({
+      chainId: hub.chainId,
+      contracts: { FxSwapHook: hub.contracts.FxSwapHook },
+      external: { USDC: hub.external.USDC, EURC: hub.external.EURC, Pyth: hub.external.Pyth },
+    })),
     ...fuzzer(spokes, hubManifest, 0xdeadbeef, 20),
   ];
 
