@@ -106,6 +106,11 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     // fxSpoke: <set after deploy>
   },
   [ChainId.ArcTestnet]: {
+    // FxSpoke — deployed 2026-05-14. Phase 1: swap Base Sepolia hub for an
+    // Arc-hosted hub so this becomes the canonical loop. Tenderly does NOT
+    // yet index chain 5042002 — no source verification possible until they
+    // add it (manifest at deployments/arc-testnet.json is the source of truth).
+    fxSpoke: "0x47c76D420f6534B4b83592cf706D9830669EEdB8",
     pyth: "0x2880aB155794e7179c9eE2e38200202908C17B43",
     usdc: "0x3600000000000000000000000000000000000000",
     eurc: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
@@ -166,6 +171,8 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.PolygonAmoy]: {
+    // FxSpoke — deployed 2026-05-14
+    fxSpoke: "0x2552E1027fF27A285635a9593825E3Da8F25808b",
     // CCTP V2 domain 7
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",

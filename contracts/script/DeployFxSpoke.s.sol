@@ -97,6 +97,11 @@ contract DeployFxSpoke is Script {
             // World Chain Sepolia, CCTP V2 domain 14
             return (0x66145f38cBAC35Ca6F1Dfb4914dF98F1614aeA88, "worldchain-sepolia");
         }
+        if (chainId == 5042002) {
+            // Arc Testnet (USDC is native gas at 18-dec; this address is the
+            // 6-decimal ERC-20 form used by CCTP V2), domain 26.
+            return (0x3600000000000000000000000000000000000000, "arc-testnet");
+        }
         revert("unsupported chainId: pass SPOKE_USDC + SPOKE_CCTP_TOKEN_MESSENGER explicitly");
     }
 }
