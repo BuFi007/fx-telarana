@@ -4,6 +4,7 @@ export { FxReceiptAbi } from "./FxReceipt.js";
 export { FxLiquidatorAbi } from "./FxLiquidator.js";
 export { FxHubMessageReceiverAbi } from "./FxHubMessageReceiver.js";
 export { FxSpokeAbi } from "./FxSpoke.js";
+export { FxSwapHookAbi } from "./FxSwapHook.js";
 export { MorphoOracleAdapterAbi } from "./MorphoOracleAdapter.js";
 export { IFxOracleAbi } from "./IFxOracle.js";
 export { IFxMarketRegistryAbi } from "./IFxMarketRegistry.js";

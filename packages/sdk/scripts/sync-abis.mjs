@@ -20,6 +20,7 @@ const CONTRACTS = [
   ["FxLiquidator", "FxLiquidator"],
   ["FxHubMessageReceiver", "FxHubMessageReceiver"],
   ["FxSpoke", "FxSpoke"],
+  ["FxSwapHook", "FxSwapHook"],
   ["MorphoOracleAdapter", "MorphoOracleAdapter"],
   ["IFxOracle", "IFxOracle"],
   ["IFxMarketRegistry", "IFxMarketRegistry"],
