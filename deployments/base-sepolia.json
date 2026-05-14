@@ -2,17 +2,23 @@
   "network": "base-sepolia",
   "chainId": 84532,
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
-  "deployedAt": "2026-05-14 (v3: FxLiquidator maxRepayAssets cap + FxOracle getMidWithUpdatePyth split)",
+  "deployedAt": "2026-05-14 (v4: Codex adversarial patch — registry onBehalf gate + receiver USDC consumption check)",
   "contracts": {
     "FxOracle":              "0x4cf0403ee262a5f4E964658C428aC9D7EfF37076",
     "MorphoOracleAdapterM1": "0x0A1e5Df9E1767d8B9691E77b97Bf6BfE51D28DD8",
     "MorphoOracleAdapterM2": "0x15561478B91a2B17eaA8D54E0BD4dd145A6D2b02",
-    "FxMarketRegistry":      "0x16105B08195315da3292be5bf3A9b5c82C6f6734",
+    "FxMarketRegistry":      "0x0cb2dd5296e06c86cb96aeef2c59d2a92cfd9b9e",
     "FxReceiptEURC":         "0xe6bA492FC3256Ba05c80be30436Cdf069BE23b80",
     "FxReceiptUSDC":         "0xD5A6cB32f2635f90C3Ccb9EB2d5d2Cc59f1C333c",
+    "FxLiquidator":          "0xb9f81d14bdc2d96d99222aafcad1752ea18e80e4",
+    "FxHubMessageReceiver":  "0x17afd89bd6888c393b8c5d7e7c0baee8259581a5",
+    "FxSwapHook":            "0xc7260EF7D95D155aD6CA18ED539373a7576c8AC8"
+  },
+  "v3_DEPRECATED_DO_NOT_AUTHORIZE": {
+    "FxMarketRegistry":      "0x16105B08195315da3292be5bf3A9b5c82C6f6734",
     "FxLiquidator":          "0x88962441364a60903d27a945e1FDCf97AE7dd978",
     "FxHubMessageReceiver":  "0x758c17BfA85D1b26A81423B524397b8b2D271818",
-    "FxSwapHook":            "0xc7260EF7D95D155aD6CA18ED539373a7576c8AC8"
+    "note": "These v3 contracts had the Codex-flagged vulnerabilities. Users must NOT call setAuthorization(v3_registry) — anyone could drain. Use v4 above. v3 is left on-chain only as a trace-decoding reference."
   },
   "fxSwapHook": {
     "address": "0xc7260EF7D95D155aD6CA18ED539373a7576c8AC8",

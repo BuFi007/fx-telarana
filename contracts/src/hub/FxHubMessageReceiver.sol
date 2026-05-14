@@ -109,18 +109,33 @@ contract FxHubMessageReceiver is IFxHubMessageReceiver, ReentrancyGuard {
 
         uint256 balBefore = USDC.balanceOf(address(this));
         MESSAGE_TRANSMITTER.receiveMessage(cctpMessage, cctpAttestation);
-        uint256 balAfter = USDC.balanceOf(address(this));
+        uint256 balAfterMint = USDC.balanceOf(address(this));
 
-        uint256 minted = balAfter - balBefore;
+        uint256 minted = balAfterMint - balBefore;
         if (minted != expectedAmount) revert AmountMismatch(expectedAmount, minted);
 
-        // Forward to FxMarketRegistry. Approval is reset on a per-call basis to avoid
-        // residual allowance if the call reverts.
-        _ensureApproval(USDC, MARKET_REGISTRY, minted);
+        // Approve the registry for EXACTLY the minted amount. Setting to
+        // type(uint256).max (the prior behavior) would have let a malicious
+        // hubCalldata pull leftover USDC from earlier stranded deposits;
+        // a tight approval prevents the registry from touching anything
+        // beyond this deposit's bridged funds.
+        USDC.forceApprove(MARKET_REGISTRY, minted);
 
         (bool ok, bytes memory ret) = MARKET_REGISTRY.call(hubCalldata);
 
-        if (ok) {
+        // Always drop the approval — whether the call succeeded or reverted,
+        // and whether or not the registry actually pulled anything.
+        USDC.forceApprove(MARKET_REGISTRY, 0);
+
+        // How much of THIS deposit's USDC is still parked on the receiver
+        // after the registry call? `balBefore` is the receiver's baseline
+        // (including any earlier stranded deposits); current balance above
+        // baseline is this deposit's leftover.
+        uint256 balPostCall = USDC.balanceOf(address(this));
+        uint256 leftover = balPostCall > balBefore ? balPostCall - balBefore : 0;
+
+        if (ok && leftover == 0) {
+            // Fully consumed — registry pulled the entire `minted`.
             _deposits[nonce] = StrandedDeposit({
                 beneficiary: beneficiary,
                 amount: uint96(minted),
@@ -129,15 +144,21 @@ contract FxHubMessageReceiver is IFxHubMessageReceiver, ReentrancyGuard {
             });
             emit DepositExecuted(nonce, beneficiary, minted);
         } else {
-            // Mark stranded; reset registry approval; USDC stays here until sweep.
-            USDC.forceApprove(MARKET_REGISTRY, 0);
+            // Either the call reverted OR it succeeded but didn't consume all
+            // bridged USDC (e.g. a hubCalldata that supplies only 1 of 1000
+            // bridged USDC, or returns success without touching the funds).
+            // Codex adversarial-review #2: prior logic marked this Executed
+            // and the leftover sat permanently unrecoverable. Now we mark
+            // the unconsumed portion Stranded so the beneficiary can sweep
+            // it after the grace window.
+            uint96 stranded = ok ? uint96(leftover) : uint96(minted);
             _deposits[nonce] = StrandedDeposit({
                 beneficiary: beneficiary,
-                amount: uint96(minted),
+                amount: stranded,
                 strandedAt: uint64(block.timestamp),
                 state: DepositState.Stranded
             });
-            emit DepositStranded(nonce, beneficiary, minted, ret);
+            emit DepositStranded(nonce, beneficiary, stranded, ret);
         }
     }
 

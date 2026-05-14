@@ -60,12 +60,19 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     //   FxLiquidator: caller-supplied maxRepayAssets cap, useVerified flag
     //   FxOracle:     getMidWithUpdatePyth split (Pyth-only refresh for chains w/o RedStone)
     // FxSwapHook + v4 pool are still wired to v2 oracle/registry (see deployments/base-sepolia.json).
+    // v4 patch (2026-05-14): Codex adversarial-review fix —
+    //   FxMarketRegistry now enforces onBehalf==msg.sender on withdraw,
+    //   withdrawCollateral, borrow. FxHubMessageReceiver verifies bridged
+    //   USDC was fully consumed; partial consumption → Stranded (sweepable).
+    //   FxLiquidator rebound to the new registry.
+    //   Do NOT setAuthorization on the v3 contracts (see deployments/base-sepolia.json
+    //   v3_DEPRECATED_DO_NOT_AUTHORIZE).
     fxOracle: "0x4cf0403ee262a5f4E964658C428aC9D7EfF37076",
-    fxMarketRegistry: "0x16105B08195315da3292be5bf3A9b5c82C6f6734",
-    fxLiquidator: "0x88962441364a60903d27a945e1FDCf97AE7dd978",
+    fxMarketRegistry: "0x0cb2dd5296e06c86cb96aeef2c59d2a92cfd9b9e",
+    fxLiquidator: "0xb9f81d14bdc2d96d99222aafcad1752ea18e80e4",
     fxReceiptEURC: "0xe6bA492FC3256Ba05c80be30436Cdf069BE23b80",
     fxReceiptUSDC: "0xD5A6cB32f2635f90C3Ccb9EB2d5d2Cc59f1C333c",
-    fxHubMessageReceiver: "0x758c17BfA85D1b26A81423B524397b8b2D271818",
+    fxHubMessageReceiver: "0x17afd89bd6888c393b8c5d7e7c0baee8259581a5",
     fxSwapHook: "0xc7260EF7D95D155aD6CA18ED539373a7576c8AC8",
     // External deps
     morphoBlue: "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
