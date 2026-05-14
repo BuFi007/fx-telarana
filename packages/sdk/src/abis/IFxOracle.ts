@@ -116,6 +116,40 @@ export const IFxOracleAbi = [
     "stateMutability": "payable"
   },
   {
+    "type": "function",
+    "name": "getMidWithUpdatePyth",
+    "inputs": [
+      {
+        "name": "base",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "quote",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "pythUpdate",
+        "type": "bytes[]",
+        "internalType": "bytes[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "midE18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "publishedAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "payable"
+  },
+  {
     "type": "error",
     "name": "OracleDeviation",
     "inputs": [

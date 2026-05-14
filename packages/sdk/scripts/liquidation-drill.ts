@@ -70,7 +70,7 @@ const morphoAbi = parseAbi([
 ]);
 
 const liquidatorAbi = parseAbi([
-  "function liquidate(address loanToken, address collateralToken, address borrower, uint256 seizedAssets, uint256 repaidShares, bytes[] pythUpdate) external payable returns (uint256 seized, uint256 repaid)",
+  "function liquidate(address loanToken, address collateralToken, address borrower, uint256 seizedAssets, uint256 repaidShares, uint256 maxRepayAssets, bool useVerified, bytes[] pythUpdate) external payable returns (uint256 seized, uint256 repaid)",
 ]);
 
 const adapterAbi = parseAbi([
@@ -294,12 +294,15 @@ async function main() {
   await pub.waitForTransactionReceipt({ hash: h });
 
   // ── 9. Approve liquidator for USDC repay ─────────────────────────────
-  console.log("→ approve liquidator for USDC repay");
+  // Cap repay at 200_000 (0.2 USDC). The liquidator now pulls only this exact
+  // amount, not the full allowance, so we can approve a larger safety buffer.
+  const MAX_REPAY = 200_000n;
+  console.log(`→ approve liquidator for ${MAX_REPAY} USDC repay`);
   h = await wal.writeContract({
     address: ADDR.usdc,
     abi: erc20,
     functionName: "approve",
-    args: [ADDR.liquidator, 1_000_000n],
+    args: [ADDR.liquidator, MAX_REPAY],
   });
   await pub.waitForTransactionReceipt({ hash: h });
 
@@ -316,7 +319,9 @@ async function main() {
       account.address,            // borrower (= us)
       SEIZE,                      // seize 0.25 MockEURC
       0n,                         // repaidShares = 0 (we specify seizedAssets)
-      [] as Hex[],                // no Pyth update — our oracle is the TestableAdapter, not FxOracle
+      MAX_REPAY,                  // maxRepayAssets — cap caller pull
+      false,                      // useVerified — Base Sepolia has no RedStone signers
+      [] as Hex[],                // no Pyth update — adapter is TestableAdapter
     ],
   });
   const liqRcpt = await pub.waitForTransactionReceipt({ hash: h });

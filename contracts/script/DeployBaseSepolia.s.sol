@@ -10,6 +10,7 @@ import {FxOracle} from "../src/hub/FxOracle.sol";
 import {FxMarketRegistry} from "../src/hub/FxMarketRegistry.sol";
 import {FxReceipt} from "../src/hub/FxReceipt.sol";
 import {FxLiquidator} from "../src/hub/FxLiquidator.sol";
+import {FxHubMessageReceiver} from "../src/hub/FxHubMessageReceiver.sol";
 import {MorphoOracleAdapter} from "../src/hub/MorphoOracleAdapter.sol";
 import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
 import {MockEURC} from "../src/test-helpers/MockEURC.sol";
@@ -38,6 +39,8 @@ contract DeployBaseSepolia is Script {
     address constant DEFAULT_ADAPTIVE_IRM = 0x46415998764C29aB2a25CbeA6254146D50D22687;
     address constant DEFAULT_PYTH         = 0xA2aa501b19aff244D90cc15a4Cf739D2725B5729;
     address constant DEFAULT_USDC         = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+    // CCTP V2 on Base Sepolia (domain 6)
+    address constant DEFAULT_CCTP_MESSAGE_TRANSMITTER = 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275;
 
     bytes32 constant PYTH_USDC_USD = 0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a;
     bytes32 constant PYTH_EURC_USD = 0x76fa85158bf14ede77087fe3ae472f66213f6ea2f5b411cb2de472794990fa5c;
@@ -113,6 +116,11 @@ contract DeployBaseSepolia is Script {
         // 7) Liquidator
         FxLiquidator liquidator = new FxLiquidator(morpho, address(registry), address(oracle));
 
+        // 8) Hub-side CCTP V2 message receiver (lets spokes deposit through CCTP hooks)
+        address cctpMt = vm.envOr("BASE_SEPOLIA_CCTP_MT", DEFAULT_CCTP_MESSAGE_TRANSMITTER);
+        FxHubMessageReceiver hubReceiver =
+            new FxHubMessageReceiver(cctpMt, usdc, address(registry));
+
         vm.stopBroadcast();
 
         console2.log("============================================");
@@ -125,6 +133,8 @@ contract DeployBaseSepolia is Script {
         console2.log("FxReceipt fxEURC      ", address(fxEURC));
         console2.log("FxReceipt fxUSDC      ", address(fxUSDC));
         console2.log("FxLiquidator          ", address(liquidator));
+        console2.log("FxHubMessageReceiver  ", address(hubReceiver));
+        console2.log("CctpMessageTransmitter", cctpMt);
         console2.log("EURC token            ", eurc);
         console2.log("Market M1 id (EURC/USDC):");
         console2.logBytes32(m1Id);

@@ -240,17 +240,36 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
     }
 
     /// @notice Update Pyth + return verified mid (Pyth + RedStone-from-msg.data).
+    /// @dev    Strict path — requires RedStone signers configured for both tokens.
+    ///         On chains without RedStone (e.g. Base Sepolia), use
+    ///         `getMidWithUpdatePyth` instead.
     function getMidWithUpdate(
         address base,
         address quote,
         bytes[] calldata pythUpdate
     ) external payable returns (uint256 midE18, uint256 publishedAt) {
+        _updatePyth(pythUpdate);
+        (midE18, publishedAt) = getMidVerified(base, quote);
+    }
+
+    /// @notice Update Pyth + return Pyth-only mid. Skips the RedStone deviation
+    ///         gate, so callers MUST treat the result as freshness-only and rely
+    ///         on Pyth confidence bands for safety.
+    /// @dev    Intended for chains that don't have RedStone signers deployed yet.
+    function getMidWithUpdatePyth(
+        address base,
+        address quote,
+        bytes[] calldata pythUpdate
+    ) external payable returns (uint256 midE18, uint256 publishedAt) {
+        _updatePyth(pythUpdate);
+        return _getMidFromPyth(base, quote);
+    }
+
+    function _updatePyth(bytes[] calldata pythUpdate) internal {
         uint256 fee = PYTH.getUpdateFee(pythUpdate);
         if (msg.value < fee) revert InsufficientPythFee(fee, msg.value);
 
         PYTH.updatePriceFeeds{value: fee}(pythUpdate);
-
-        (midE18, publishedAt) = getMidVerified(base, quote);
 
         uint256 excess = msg.value - fee;
         if (excess > 0) {

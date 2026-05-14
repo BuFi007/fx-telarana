@@ -90,6 +90,16 @@ export const FxLiquidatorAbi = [
         "internalType": "uint256"
       },
       {
+        "name": "maxRepayAssets",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "useVerified",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
         "name": "pythUpdate",
         "type": "bytes[]",
         "internalType": "bytes[]"
@@ -108,6 +118,22 @@ export const FxLiquidatorAbi = [
       }
     ],
     "stateMutability": "payable"
+  },
+  {
+    "type": "error",
+    "name": "InsufficientApproval",
+    "inputs": [
+      {
+        "name": "needed",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "approved",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",

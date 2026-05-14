@@ -30,7 +30,8 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test": "bun test",
-    "circle:register": "bun scripts/register-contracts.ts"
+    "circle:register": "bun scripts/register-contracts.ts",
+    "tenderly:label": "bun scripts/tenderly-label.ts"
   },
   "peerDependencies": {
     "viem": "^2.0.0"
@@ -41,6 +42,6 @@
     "viem": "^2.21.0"
   },
   "optionalDependencies": {
-    "@circle-fin/smart-contract-platform": "^1.0.0"
+    "@circle-fin/smart-contract-platform": "^10.3.1"
   }
 }

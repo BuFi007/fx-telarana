@@ -5,6 +5,8 @@ export const ChainId = {
   EthereumMainnet: 1,
   Sepolia: 11155111,
   BaseSepolia: 84532,
+  UnichainSepolia: 1301,
+  AvalancheFuji: 43113,
   ArcTestnet: 5042002,
 } as const;
 
@@ -49,22 +51,50 @@ const ZERO = "0x0000000000000000000000000000000000000000" as const;
 /// Addresses partitioned per chain. fx-Telarana contracts are TBD until deploy.
 export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
   [ChainId.BaseSepolia]: {
-    // fx-Telarana contracts — v2 deploy 2026-05-14 (real EURC + Pyth-RedStone fallback oracle)
-    fxOracle: "0x7a2a612820f3f697b40f93c026758f2dfafcdbce",
-    fxMarketRegistry: "0x30f4c7bce1e0c5ca5d2ecd2ebdbf13f6273fe7fe",
-    fxLiquidator: "0xf4556f31cace9a80aa584059c81638a5cd344dde",
-    fxReceiptEURC: "0xf6d845da2051183b9519ca1806c39040ba5e71ba",
-    fxReceiptUSDC: "0x4e63954685241c4469f02fec3761ff1d4f34ffa9",
+    // fx-Telarana contracts — v3 deploy 2026-05-14
+    //   FxLiquidator: caller-supplied maxRepayAssets cap, useVerified flag
+    //   FxOracle:     getMidWithUpdatePyth split (Pyth-only refresh for chains w/o RedStone)
+    // FxSwapHook + v4 pool are still wired to v2 oracle/registry (see deployments/base-sepolia.json).
+    fxOracle: "0x4cf0403ee262a5f4E964658C428aC9D7EfF37076",
+    fxMarketRegistry: "0x16105B08195315da3292be5bf3A9b5c82C6f6734",
+    fxLiquidator: "0x88962441364a60903d27a945e1FDCf97AE7dd978",
+    fxReceiptEURC: "0xe6bA492FC3256Ba05c80be30436Cdf069BE23b80",
+    fxReceiptUSDC: "0xD5A6cB32f2635f90C3Ccb9EB2d5d2Cc59f1C333c",
+    fxHubMessageReceiver: "0x758c17BfA85D1b26A81423B524397b8b2D271818",
     fxSwapHook: "0xc7260EF7D95D155aD6CA18ED539373a7576c8AC8",
     // External deps
     morphoBlue: "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
     adaptiveCurveIrm: "0x46415998764C29aB2a25CbeA6254146D50D22687",
     pyth: "0xA2aa501b19aff244D90cc15a4Cf739D2725B5729",
+    cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
+    cctpDomain: 6,
     usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     eurc: "0x808456652fdb597867f38412077A9182bf77359F", // Circle's real EURC on Base Sepolia
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
+  },
+  [ChainId.UnichainSepolia]: {
+    // CCTP V2 testnet deterministic addresses (domain 10)
+    cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
+    cctpDomain: 10,
+    usdc: "0x31d0220469e10c4E71834a79b1f276d740d3768F",
+    pythFeedUSDC: PYTH_FEED_USDC_USD,
+    pythFeedEURC: PYTH_FEED_EURC_USD,
+    pythFeedEURUSD: PYTH_FEED_EUR_USD,
+    // fxSpoke: <set after deploy>
+  },
+  [ChainId.AvalancheFuji]: {
+    cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
+    cctpDomain: 1,
+    usdc: "0x5425890298aed601595a70AB815c96711a31Bc65",
+    pythFeedUSDC: PYTH_FEED_USDC_USD,
+    pythFeedEURC: PYTH_FEED_EURC_USD,
+    pythFeedEURUSD: PYTH_FEED_EUR_USD,
+    // fxSpoke: <set after deploy>
   },
   [ChainId.ArcTestnet]: {
     pyth: "0x2880aB155794e7179c9eE2e38200202908C17B43",

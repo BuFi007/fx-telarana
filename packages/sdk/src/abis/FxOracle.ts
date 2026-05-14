@@ -162,6 +162,35 @@ export const FxOracleAbi = [
   },
   {
     "type": "function",
+    "name": "getMidFromPyth",
+    "inputs": [
+      {
+        "name": "base",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "quote",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "midE18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "publishedAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getMidVerified",
     "inputs": [
       {
@@ -192,6 +221,40 @@ export const FxOracleAbi = [
   {
     "type": "function",
     "name": "getMidWithUpdate",
+    "inputs": [
+      {
+        "name": "base",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "quote",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "pythUpdate",
+        "type": "bytes[]",
+        "internalType": "bytes[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "midE18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "publishedAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "getMidWithUpdatePyth",
     "inputs": [
       {
         "name": "base",

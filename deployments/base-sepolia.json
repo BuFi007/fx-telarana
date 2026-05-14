@@ -2,26 +2,22 @@
   "network": "base-sepolia",
   "chainId": 84532,
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
-  "deployedAt": "2026-05-14 (v2 with real EURC + Pyth-RedStone fallback oracle)",
+  "deployedAt": "2026-05-14 (v3: FxLiquidator maxRepayAssets cap + FxOracle getMidWithUpdatePyth split)",
   "contracts": {
-    "FxOracle":              "0x7a2a612820f3f697b40f93c026758f2dfafcdbce",
-    "MorphoOracleAdapterM1": "0x42b447fe874cbc5ccd18a8ab4ffa2e297eb7f873",
-    "MorphoOracleAdapterM2": "0xb50bd1025584169bd3cb434e829a37d6b604cc33",
-    "FxMarketRegistry":      "0x30f4c7bce1e0c5ca5d2ecd2ebdbf13f6273fe7fe",
-    "FxReceiptEURC":         "0xf6d845da2051183b9519ca1806c39040ba5e71ba",
-    "FxReceiptUSDC":         "0x4e63954685241c4469f02fec3761ff1d4f34ffa9",
-    "FxLiquidator":          "0xf4556f31cace9a80aa584059c81638a5cd344dde",
+    "FxOracle":              "0x4cf0403ee262a5f4E964658C428aC9D7EfF37076",
+    "MorphoOracleAdapterM1": "0x0A1e5Df9E1767d8B9691E77b97Bf6BfE51D28DD8",
+    "MorphoOracleAdapterM2": "0x15561478B91a2B17eaA8D54E0BD4dd145A6D2b02",
+    "FxMarketRegistry":      "0x16105B08195315da3292be5bf3A9b5c82C6f6734",
+    "FxReceiptEURC":         "0xe6bA492FC3256Ba05c80be30436Cdf069BE23b80",
+    "FxReceiptUSDC":         "0xD5A6cB32f2635f90C3Ccb9EB2d5d2Cc59f1C333c",
+    "FxLiquidator":          "0x88962441364a60903d27a945e1FDCf97AE7dd978",
+    "FxHubMessageReceiver":  "0x758c17BfA85D1b26A81423B524397b8b2D271818",
     "FxSwapHook":            "0xc7260EF7D95D155aD6CA18ED539373a7576c8AC8"
-  },
-  "v1_deprecated": {
-    "FxOracle":              "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
-    "FxMarketRegistry":      "0x58c1a04BC4E25DB2f8474C9dF41907CfFC894A4b",
-    "FxSwapHook":            "0x4F9226ea4c67CE68ABA79C061474d72C1201CAc8",
-    "MockEURC":              "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
-    "note": "v1 used MockEURC + Pyth-only oracle + 60s staleness. Superseded by v2 above."
   },
   "fxSwapHook": {
     "address": "0xc7260EF7D95D155aD6CA18ED539373a7576c8AC8",
+    "wiredTo": "v2",
+    "note": "Still wired to v2 oracle/registry. Re-deploy + re-init pool when ready to migrate LP.",
     "create2Factory": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
     "permissionBits": "0x0ac8",
     "token0": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
@@ -30,8 +26,29 @@
     "hotReservePct": 2000
   },
   "marketIds": {
-    "M1_EURC_USDC": "0xea9d1165e0351ad9158bf060482c056775eeff3271e4f3ea39fcf713e168a871",
-    "M2_USDC_EURC": "0xbe4ee7fd90fedf14fb97925cef80cfd6feea40f61722e249e269fe447cb63cb7"
+    "M1_EURC_USDC": "0x3efece38d6b9b444a12cd45078c738c04cc1eb9d1110e217b353373eada3a215",
+    "M2_USDC_EURC": "0xd365f7e41ef0fb6cedd01af44aece4e2be8e5518b117dcd43e2f976bdcffa800"
+  },
+  "v2_deprecated": {
+    "FxOracle":              "0x7a2a612820f3f697b40f93c026758f2dfafcdbce",
+    "MorphoOracleAdapterM1": "0x42b447fe874cbc5ccd18a8ab4ffa2e297eb7f873",
+    "MorphoOracleAdapterM2": "0xb50bd1025584169bd3cb434e829a37d6b604cc33",
+    "FxMarketRegistry":      "0x30f4c7bce1e0c5ca5d2ecd2ebdbf13f6273fe7fe",
+    "FxReceiptEURC":         "0xf6d845da2051183b9519ca1806c39040ba5e71ba",
+    "FxReceiptUSDC":         "0x4e63954685241c4469f02fec3761ff1d4f34ffa9",
+    "FxLiquidator":          "0xf4556f31cace9a80aa584059c81638a5cd344dde",
+    "marketIds": {
+      "M1_EURC_USDC": "0xea9d1165e0351ad9158bf060482c056775eeff3271e4f3ea39fcf713e168a871",
+      "M2_USDC_EURC": "0xbe4ee7fd90fedf14fb97925cef80cfd6feea40f61722e249e269fe447cb63cb7"
+    },
+    "note": "Superseded by v3 above. FxSwapHook + the live v4 pool are still wired to v2 — migrate when needed."
+  },
+  "v1_deprecated": {
+    "FxOracle":              "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
+    "FxMarketRegistry":      "0x58c1a04BC4E25DB2f8474C9dF41907CfFC894A4b",
+    "FxSwapHook":            "0x4F9226ea4c67CE68ABA79C061474d72C1201CAc8",
+    "MockEURC":              "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
+    "note": "v1 used MockEURC + Pyth-only oracle + 60s staleness. Superseded by v2/v3."
   },
   "uniswapV4Pool": {
     "poolId": "0xd5976d7ec3d29f19a5447b545176cbd0b14e958994190842d680b3db3ddcd31d",
@@ -39,21 +56,26 @@
     "tickSpacing": 60,
     "initSqrtPriceX96": "79228162514264337593543950336",
     "initializeTx": "0x14a9e16a81dba1b22c09cbe0681c7704e53d4fa4e7d58a5c527b805fa278eb1e",
-    "firstSwapTx": "0x2f27b8f3502534341907ad666ccca5b0439f15a1dab23c73335b207f390fe65c"
+    "firstSwapTx": "0x2f27b8f3502534341907ad666ccca5b0439f15a1dab23c73335b207f390fe65c",
+    "note": "Pool is wired to v2 FxSwapHook above. Untouched by v3 hub redeploy."
   },
   "external": {
-    "MorphoBlue":        "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
-    "AdaptiveCurveIrm":  "0x46415998764C29aB2a25CbeA6254146D50D22687",
-    "Pyth":              "0xA2aa501b19aff244D90cc15a4Cf739D2725B5729",
-    "USDC":              "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-    "UniswapV4PoolManager":    "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
-    "UniswapUniversalRouter":  "0x492e6456d9528771018deb9e87ef7750ef184104",
+    "MorphoBlue":             "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+    "AdaptiveCurveIrm":       "0x46415998764C29aB2a25CbeA6254146D50D22687",
+    "Pyth":                   "0xA2aa501b19aff244D90cc15a4Cf739D2725B5729",
+    "USDC":                   "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "EURC":                   "0x808456652fdb597867f38412077A9182bf77359F",
+    "CctpTokenMessengerV2":   "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    "CctpMessageTransmitterV2":"0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
+    "CctpDomain":             "6",
+    "UniswapV4PoolManager":   "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+    "UniswapUniversalRouter": "0x492e6456d9528771018deb9e87ef7750ef184104",
     "UniswapV4PositionManager":"0x4b2c77d209d3405f41a037ec6c77f7f5b8e2ca80",
-    "Permit2":           "0x000000000022D473030F116dDEE9F6B43aC78BA3"
+    "Permit2":                "0x000000000022D473030F116dDEE9F6B43aC78BA3"
   },
   "explorer": {
-    "FxOracle":         "https://sepolia.basescan.org/address/0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
-    "FxMarketRegistry": "https://sepolia.basescan.org/address/0x58c1a04BC4E25DB2f8474C9dF41907CfFC894A4b",
-    "FxLiquidator":     "https://sepolia.basescan.org/address/0x7ba745b979e027992ECFa51207666e3F5B46cF0a"
+    "FxOracle":         "https://sepolia.basescan.org/address/0x4cf0403ee262a5f4E964658C428aC9D7EfF37076",
+    "FxMarketRegistry": "https://sepolia.basescan.org/address/0x16105B08195315da3292be5bf3A9b5c82C6f6734",
+    "FxLiquidator":     "https://sepolia.basescan.org/address/0x88962441364a60903d27a945e1FDCf97AE7dd978"
   }
 }

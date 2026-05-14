@@ -59,6 +59,15 @@ interface IFxOracle {
         bytes[] calldata pythUpdate
     ) external payable returns (uint256 midE18, uint256 publishedAt);
 
+    /// @notice Update Pyth feeds inline and return the Pyth-only mid (no RedStone
+    ///         deviation gate). Use only on chains without RedStone signers; rely
+    ///         on Pyth confidence bands for safety.
+    function getMidWithUpdatePyth(
+        address base,
+        address quote,
+        bytes[] calldata pythUpdate
+    ) external payable returns (uint256 midE18, uint256 publishedAt);
+
     /*//////////////////////////////////////////////////////////////
                                 ADMIN
     //////////////////////////////////////////////////////////////*/
