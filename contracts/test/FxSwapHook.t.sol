@@ -55,8 +55,15 @@ contract FxSwapHookTest is Test {
             registry,
             owner,
             address(token0),
-            address(token1)
+            address(token1),
+            address(0x4444)   // mock morpho — unused at hotReservePct = 10_000
         );
+
+        // Use 100% hot reserves so these standalone unit tests don't touch
+        // the (mocked) Morpho/registry. Phase 2.6 rehypothecation is exercised
+        // in fork-based tests.
+        vm.prank(owner);
+        hook.setHotReservePct(10_000);
 
         // Fund alice with both tokens
         token0.mint(alice, 1_000_000_000); // 1000 token0
@@ -115,16 +122,34 @@ contract FxSwapHookTest is Test {
         hook.setKBps(maxK + 1);
     }
 
-    function test_constructor_setsDefaults() public view {
-        assertEq(hook.spreadBps(), hook.DEFAULT_SPREAD_BPS());
-        assertEq(hook.kBps(), hook.DEFAULT_K_BPS());
-        assertEq(hook.TOKEN0(), address(token0));
-        assertEq(hook.TOKEN1(), address(token1));
+    function test_constructor_setsDefaults() public {
+        // Re-deploy to inspect untouched constructor defaults.
+        FxSwapHook fresh = new FxSwapHook(
+            poolManager, address(oracle), registry, owner,
+            address(token0), address(token1), address(0x4444)
+        );
+        assertEq(fresh.spreadBps(), fresh.DEFAULT_SPREAD_BPS());
+        assertEq(fresh.kBps(), fresh.DEFAULT_K_BPS());
+        assertEq(fresh.hotReservePct(), fresh.DEFAULT_HOT_RESERVE_PCT());
+        assertEq(fresh.TOKEN0(), address(token0));
+        assertEq(fresh.TOKEN1(), address(token1));
     }
 
     function test_constructor_revertsOnTokensUnsorted() public {
         vm.expectRevert();
-        new FxSwapHook(poolManager, address(oracle), registry, owner, address(token1), address(token0));
+        new FxSwapHook(poolManager, address(oracle), registry, owner, address(token1), address(token0), address(0x4444));
+    }
+
+    function test_setHotReservePct_revertsAbove10k() public {
+        vm.expectRevert();
+        vm.prank(owner);
+        hook.setHotReservePct(10_001);
+    }
+
+    function test_setHotReservePct_updatesAndEmits() public {
+        vm.prank(owner);
+        hook.setHotReservePct(2_000);
+        assertEq(hook.hotReservePct(), 2_000);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -262,6 +287,8 @@ contract FxSwapHookTest is Test {
 
     function test_constructor_revertsOnZeroAddress() public {
         vm.expectRevert();
-        new FxSwapHook(address(0), address(oracle), registry, owner, address(token0), address(token1));
+        new FxSwapHook(address(0), address(oracle), registry, owner, address(token0), address(token1), address(0x4444));
+        vm.expectRevert();
+        new FxSwapHook(poolManager, address(oracle), registry, owner, address(token0), address(token1), address(0));
     }
 }

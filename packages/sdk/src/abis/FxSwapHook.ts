@@ -32,9 +32,27 @@ export const FxSwapHookAbi = [
         "name": "token1_",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "morpho_",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "DEFAULT_HOT_RESERVE_PCT",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -97,6 +115,19 @@ export const FxSwapHookAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MORPHO",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IMorpho"
       }
     ],
     "stateMutability": "view"
@@ -531,7 +562,7 @@ export const FxSwapHookAbi = [
         ]
       },
       {
-        "name": "",
+        "name": "params",
         "type": "tuple",
         "internalType": "struct IPoolManager.SwapParams",
         "components": [
@@ -575,7 +606,7 @@ export const FxSwapHookAbi = [
         "internalType": "int128"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -1064,6 +1095,19 @@ export const FxSwapHookAbi = [
   },
   {
     "type": "function",
+    "name": "hotReservePct",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "kBps",
     "inputs": [],
     "outputs": [
@@ -1071,6 +1115,25 @@ export const FxSwapHookAbi = [
         "name": "",
         "type": "uint16",
         "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "morphoShares",
+    "inputs": [
+      {
+        "name": "loanToken",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "shares",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -1114,6 +1177,13 @@ export const FxSwapHookAbi = [
   },
   {
     "type": "function",
+    "name": "rebalance",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "redeem",
     "inputs": [
       {
@@ -1134,6 +1204,19 @@ export const FxSwapHookAbi = [
         "internalType": "uint256"
       }
     ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setHotReservePct",
+    "inputs": [
+      {
+        "name": "newBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "outputs": [],
     "stateMutability": "nonpayable"
   },
   {
@@ -1266,10 +1349,29 @@ export const FxSwapHookAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "sharesMinted",
+        "name": "shares",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "HotReservePctSet",
+    "inputs": [
+      {
+        "name": "oldBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "newBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
       }
     ],
     "anonymous": false
@@ -1317,6 +1419,31 @@ export const FxSwapHookAbi = [
       },
       {
         "name": "amount1",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Rehypothecated",
+    "inputs": [
+      {
+        "name": "loanToken",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "assetsSupplied",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "sharesAfter",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -1384,13 +1511,38 @@ export const FxSwapHookAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "reserveIn",
+        "name": "effectiveReserveIn",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       },
       {
-        "name": "reserveOut",
+        "name": "effectiveReserveOut",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Withdrawn",
+    "inputs": [
+      {
+        "name": "loanToken",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "assetsWithdrawn",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "sharesAfter",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -1411,10 +1563,21 @@ export const FxSwapHookAbi = [
   },
   {
     "type": "error",
+    "name": "HotReservePctOutOfRange",
+    "inputs": [
+      {
+        "name": "requested",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "InsufficientLiquidity",
     "inputs": [
       {
-        "name": "reserveOut",
+        "name": "effectiveReserveOut",
         "type": "uint256",
         "internalType": "uint256"
       },

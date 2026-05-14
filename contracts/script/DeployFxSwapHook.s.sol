@@ -16,6 +16,7 @@ import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 ///   POOL_MANAGER          — Uniswap v4 PoolManager on the target chain
 ///   FX_ORACLE             — already-deployed FxOracle address
 ///   FX_MARKET_REGISTRY    — already-deployed FxMarketRegistry
+///   MORPHO_BLUE           — Morpho Blue address on the target chain
 ///   HOOK_OWNER            — initial owner of the hook (e.g. deployer or timelock)
 ///   POOL_TOKEN0           — sorted-lower token (USDC on Arc + Base Sepolia)
 ///   POOL_TOKEN1           — sorted-higher token (EURC)
@@ -32,6 +33,7 @@ contract DeployFxSwapHook is Script {
         address poolManager = vm.envAddress("POOL_MANAGER");
         address oracle      = vm.envAddress("FX_ORACLE");
         address registry    = vm.envAddress("FX_MARKET_REGISTRY");
+        address morpho      = vm.envAddress("MORPHO_BLUE");
         address hookOwner   = vm.envAddress("HOOK_OWNER");
         address token0      = vm.envAddress("POOL_TOKEN0");
         address token1      = vm.envAddress("POOL_TOKEN1");
@@ -40,7 +42,7 @@ contract DeployFxSwapHook is Script {
         // 1) Pack constructor args + creation code
         bytes memory creationCode = abi.encodePacked(
             type(FxSwapHook).creationCode,
-            abi.encode(poolManager, oracle, registry, hookOwner, token0, token1)
+            abi.encode(poolManager, oracle, registry, hookOwner, token0, token1, morpho)
         );
 
         // 2) Compute target flags from FxSwapHook.getHookPermissions() (mirror in code)
