@@ -16,6 +16,7 @@ import { TenderlyClient } from "./client.js";
 import { categoryA, categoryB, type TestCase, type Expect } from "./matrix.js";
 import { categoryBRedeemBundle, categoryC, categoryD, fuzzer } from "./matrix-cd.js";
 import { categoryE, categoryCPrimedBorrow, categoryCSweep, categoryFAdminGuards, fetchPythUpdate } from "./matrix-d4.js";
+import { categoryG } from "./matrix-d6.js";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
@@ -142,6 +143,14 @@ async function main() {
     ...categoryCPrimedBorrow(hubManifest, pythUpdate),
     ...categoryCSweep(hubManifest),
     ...categoryFAdminGuards(hubManifest),
+    ...categoryG({
+      chainId: hub.chainId,
+      contracts: {
+        FxMarketRegistry: hub.contracts.FxMarketRegistry,
+        FxHubMessageReceiver: hub.contracts.FxHubMessageReceiver,
+      },
+      external: { USDC: hub.external.USDC },
+    }),
     ...fuzzer(spokes, hubManifest, 0xdeadbeef, 20),
   ];
 
