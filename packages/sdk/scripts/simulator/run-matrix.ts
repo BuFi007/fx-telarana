@@ -95,6 +95,23 @@ async function main() {
   const env = loadEnv();
   const client = TenderlyClient.fromEnv(env);
 
+  // Drop 9: optional primed-vnet routing. When TENDERLY_USE_PRIMED_VNET=1
+  // and the env has TENDERLY_PRIMED_VNET_PUBLIC_RPC set (populated by
+  // `packages/sdk/scripts/tenderly-prime-vnet.sh`), future iterations of
+  // this runner can send simulations to the vnet's RPC instead of the
+  // /simulate endpoint, dropping per-case state_objects. We surface the
+  // hint today so the workflow is discoverable.
+  if (env.TENDERLY_USE_PRIMED_VNET === "1") {
+    if (env.TENDERLY_PRIMED_VNET_PUBLIC_RPC) {
+      console.log("[priming] would route sims through primed vnet: <redacted>");
+      console.log("[priming] migration to vnet-RPC sims is queued for the next runner refactor;");
+      console.log("[priming] current run still uses /simulate. Pattern is wired in priming.ts.");
+    } else {
+      console.warn("[priming] TENDERLY_USE_PRIMED_VNET=1 but no primed vnet env detected;");
+      console.warn("[priming] run scripts/tenderly-prime-vnet.sh first.");
+    }
+  }
+
   const spokes = loadSpokes();
   const hub = loadHub();
 
