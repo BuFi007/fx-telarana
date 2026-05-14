@@ -6,11 +6,13 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IMorpho, MarketParams as MorphoMarketParams, Id} from "morpho-blue/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "morpho-blue/libraries/MarketParamsLib.sol";
+import {MorphoBalancesLib} from "morpho-blue/libraries/periphery/MorphoBalancesLib.sol";
 
 import {FxOracle} from "../src/hub/FxOracle.sol";
 import {FxMarketRegistry} from "../src/hub/FxMarketRegistry.sol";
 import {FxReceipt} from "../src/hub/FxReceipt.sol";
 import {FxLiquidator} from "../src/hub/FxLiquidator.sol";
+import {FxSwapHook} from "../src/hub/FxSwapHook.sol";
 import {MorphoOracleAdapter} from "../src/hub/MorphoOracleAdapter.sol";
 import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
 import {MockPyth} from "./mocks/MockPyth.sol";
@@ -42,6 +44,8 @@ contract MainnetForkTest is Test {
     FxReceipt internal fxUSDC;
     FxReceipt internal fxEURC;
     FxLiquidator internal liquidator;
+    FxSwapHook   internal hook;
+    address internal hookPoolManager = address(0x9999); // mock — fork tests don't exercise the v4 swap path
 
     address internal owner = address(0xA11CE);
     address internal lender = address(0xBABE);
@@ -128,6 +132,21 @@ contract MainnetForkTest is Test {
 
         liquidator = new FxLiquidator(MORPHO, address(registry), address(fxOracle));
 
+        // FxSwapHook — locked to (USDC, EURC) and the real Morpho instance.
+        // PoolManager is a mock since these fork tests exercise only the LP +
+        // rehypothecation paths, not the v4 swap callbacks.
+        (address t0, address t1) = USDC < EURC ? (USDC, EURC) : (EURC, USDC);
+        hook = new FxSwapHook(
+            hookPoolManager,
+            address(fxOracle),
+            address(registry),
+            owner,
+            t0,
+            t1,
+            MORPHO
+        );
+        // Default 20% hot, 80% Morpho
+
         // Fund test users via Foundry's `deal` cheatcode
         deal(USDC, lender, 1_000_000e6);
         deal(EURC, lender, 1_000_000e6);
@@ -198,6 +217,98 @@ contract MainnetForkTest is Test {
 
         // Without borrowing, no interest accrues — receipt should return ~ deposit
         assertApproxEqAbs(assetsOut, 100_000e6, 10);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        FxSwapHook PHASE 2.6 REHYPOTHECATION
+    //////////////////////////////////////////////////////////////*/
+
+    function test_fork_swapHook_depositRehypothecates() public whenFork {
+        // hotReservePct default = 2000 (20% hot, 80% Morpho)
+        address t0 = USDC < EURC ? USDC : EURC;
+        address t1 = USDC < EURC ? EURC : USDC;
+
+        vm.startPrank(lender);
+        IERC20(t0).approve(address(hook), type(uint256).max);
+        IERC20(t1).approve(address(hook), type(uint256).max);
+        uint256 shares = hook.deposit(100_000e6, 100_000e6);
+        vm.stopPrank();
+
+        assertGt(shares, 0, "no LP shares minted");
+
+        // 20% hot in the hook
+        uint256 hot0 = IERC20(t0).balanceOf(address(hook));
+        uint256 hot1 = IERC20(t1).balanceOf(address(hook));
+        assertApproxEqAbs(hot0, 20_000e6, 1, "hot t0 should be ~20% of deposit");
+        assertApproxEqAbs(hot1, 20_000e6, 1, "hot t1 should be ~20% of deposit");
+
+        // 80% supplied into Morpho
+        assertGt(hook.morphoShares(t0), 0, "no morpho shares for t0");
+        assertGt(hook.morphoShares(t1), 0, "no morpho shares for t1");
+    }
+
+    function test_fork_swapHook_redeemPullsFromMorpho() public whenFork {
+        address t0 = USDC < EURC ? USDC : EURC;
+        address t1 = USDC < EURC ? EURC : USDC;
+
+        vm.startPrank(lender);
+        IERC20(t0).approve(address(hook), type(uint256).max);
+        IERC20(t1).approve(address(hook), type(uint256).max);
+        uint256 shares = hook.deposit(100_000e6, 100_000e6);
+
+        uint256 t0BalBefore = IERC20(t0).balanceOf(lender);
+        uint256 t1BalBefore = IERC20(t1).balanceOf(lender);
+
+        (uint256 out0, uint256 out1) = hook.redeem(shares);
+        vm.stopPrank();
+
+        // Lender gets back ~99% of deposit (a tiny dust to address(0) for bootstrap)
+        assertApproxEqRel(out0, 100_000e6, 0.001e18);
+        assertApproxEqRel(out1, 100_000e6, 0.001e18);
+        assertEq(IERC20(t0).balanceOf(lender), t0BalBefore + out0);
+        assertEq(IERC20(t1).balanceOf(lender), t1BalBefore + out1);
+    }
+
+    function test_fork_swapHook_rebalanceDoesNotWithdrawWhenHotBelowTarget() public whenFork {
+        address t0 = USDC < EURC ? USDC : EURC;
+        address t1 = USDC < EURC ? EURC : USDC;
+
+        // Start: deposit at default 20% hot
+        vm.startPrank(lender);
+        IERC20(t0).approve(address(hook), type(uint256).max);
+        IERC20(t1).approve(address(hook), type(uint256).max);
+        hook.deposit(100_000e6, 100_000e6);
+        vm.stopPrank();
+
+        uint256 morpho0Before = hook.morphoShares(t0);
+        assertGt(morpho0Before, 0);
+
+        // Increase target to 100% hot. rebalance() only PUSHES excess to Morpho
+        // (it doesn't withdraw). So with hot=20% < target=100%, nothing happens.
+        vm.startPrank(owner);
+        hook.setHotReservePct(10_000);
+        hook.rebalance();
+        vm.stopPrank();
+
+        assertEq(hook.morphoShares(t0), morpho0Before, "rebalance must not withdraw");
+    }
+
+    function test_fork_swapHook_secondDepositPushesExcessToMorpho() public whenFork {
+        address t0 = USDC < EURC ? USDC : EURC;
+        address t1 = USDC < EURC ? EURC : USDC;
+
+        vm.startPrank(lender);
+        IERC20(t0).approve(address(hook), type(uint256).max);
+        IERC20(t1).approve(address(hook), type(uint256).max);
+        hook.deposit(100_000e6, 100_000e6);   // first deposit at 20% hot
+        uint256 morpho0AfterFirst = hook.morphoShares(t0);
+
+        hook.deposit(50_000e6, 50_000e6);     // second deposit — should rebalance push
+        uint256 morpho0AfterSecond = hook.morphoShares(t0);
+        vm.stopPrank();
+
+        assertGt(morpho0AfterSecond, morpho0AfterFirst,
+            "second deposit must push excess hot into morpho");
     }
 
     function test_fork_marketIds_deterministic() public whenFork {

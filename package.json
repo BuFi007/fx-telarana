@@ -1,0 +1,15 @@
+{
+  "name": "fx-telarana",
+  "version": "0.1.0",
+  "description": "Forex Telaraña Protocol — decentralized cross-currency money market and FX engine on Arc",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "sdk:build": "cd packages/sdk && bun run build",
+    "sdk:test": "cd packages/sdk && bun test",
+    "sdk:abis:sync": "cd packages/sdk && bun run abis:sync",
+    "contracts:test": "cd contracts && forge test --no-match-contract MainnetForkTest",
+    "contracts:test:fork": "cd contracts && ETH_RPC_URL=https://ethereum-rpc.publicnode.com forge test",
+    "sdk:circle:register": "cd packages/sdk && bun scripts/register-contracts.ts"
+  }
+}

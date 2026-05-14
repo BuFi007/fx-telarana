@@ -34,6 +34,7 @@ contract FxLiquidator {
 
     error ZeroAddress();
     error InvalidLiquidation();
+    error InsufficientApproval(uint256 needed, uint256 approved);
 
     /*//////////////////////////////////////////////////////////////
                                 CTOR
@@ -51,41 +52,45 @@ contract FxLiquidator {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Liquidate a position. Pass either `seizedAssets` or `repaidShares`; the other = 0.
-    /// @dev    Caller must approve this contract for the debt asset (`loanToken`) up to the
-    ///         repaid amount. Pyth + RedStone payloads keep the oracle fresh atomically.
+    /// @param  maxRepayAssets Upper bound the caller is willing to pay in debt asset. The
+    ///                        contract pulls at most this amount from the caller (capped further
+    ///                        by allowance) — never the full allowance. Unused balance is refunded.
+    /// @param  useVerified    If true, freshen the oracle through `getMidWithUpdate` (Pyth +
+    ///                        RedStone deviation gate, requires RedStone payload in msg.data tail).
+    ///                        If false, use `getMidWithUpdatePyth` (Pyth-only — for chains without
+    ///                        RedStone signers, e.g. Base Sepolia today).
+    /// @dev    Caller must approve this contract for the debt asset (`loanToken`) for at least
+    ///         `maxRepayAssets`. Morpho enforces health-factor breach internally.
     function liquidate(
         address loanToken,
         address collateralToken,
         address borrower,
         uint256 seizedAssets,
         uint256 repaidShares,
-        bytes[] calldata pythUpdate,
-        bytes calldata redstoneUpdate
+        uint256 maxRepayAssets,
+        bool useVerified,
+        bytes[] calldata pythUpdate
     ) external payable returns (uint256 seized, uint256 repaid) {
         if ((seizedAssets == 0) == (repaidShares == 0)) revert InvalidLiquidation();
 
-        // Freshen oracle in the same tx. We don't need the return value — Morpho will
-        // call the oracle itself; we just want the cached prices up to date.
+        // Freshen oracle in the same tx.
         if (pythUpdate.length > 0) {
-            ORACLE.getMidWithUpdate{value: msg.value}(
-                loanToken,
-                collateralToken,
-                pythUpdate,
-                redstoneUpdate
-            );
+            if (useVerified) {
+                ORACLE.getMidWithUpdate{value: msg.value}(loanToken, collateralToken, pythUpdate);
+            } else {
+                ORACLE.getMidWithUpdatePyth{value: msg.value}(loanToken, collateralToken, pythUpdate);
+            }
         }
 
         MorphoMarketParams memory mp = _morphoParams(loanToken, collateralToken);
 
-        // The caller has approved THIS contract; we transfer in the repay funds and
-        // approve Morpho. Morpho pulls the debt asset via transferFrom inside liquidate.
-        // We compute an upper bound on debt repayment by previewing via Morpho if needed.
-        // For simplicity we sweep caller's approved balance; any unused stays at caller.
         IERC20 debtToken = IERC20(loanToken);
-        uint256 allowance = debtToken.allowance(msg.sender, address(this));
-        if (allowance > 0) {
-            debtToken.safeTransferFrom(msg.sender, address(this), allowance);
-            if (debtToken.allowance(address(this), address(MORPHO)) < allowance) {
+        if (maxRepayAssets > 0) {
+            uint256 allowance = debtToken.allowance(msg.sender, address(this));
+            if (allowance < maxRepayAssets) revert InsufficientApproval(maxRepayAssets, allowance);
+
+            debtToken.safeTransferFrom(msg.sender, address(this), maxRepayAssets);
+            if (debtToken.allowance(address(this), address(MORPHO)) < maxRepayAssets) {
                 debtToken.forceApprove(address(MORPHO), type(uint256).max);
             }
         }

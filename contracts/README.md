@@ -51,7 +51,7 @@ forge test --no-match-contract MainnetForkTest
 ETH_RPC_URL=https://ethereum-rpc.publicnode.com forge test
 ```
 
-Current status: **31 / 31 tests passing.**
+Current status: **36 / 36 tests passing** (32 unit + 4 mainnet fork).
 
 ## Phase 0 decisions (spec v0.2)
 
@@ -89,18 +89,40 @@ Pyth feed ids (verified via Hermes):
 
 ## Deferred to later phases
 
-- **Phase 0.5** — RedStone consumer payload extraction in `FxOracle.getMidWithUpdate` (currently the RedStone path is a stable ABI placeholder; deviation gate works once `_setRedstoneCacheForTest` is replaced with the real consumer wiring).
+- **Phase 0.5** — DONE. RedStone wired via `PrimaryProdDataServiceConsumerBase`; `getMidVerified()` reads signed payload from msg.data tail and runs the deviation gate.
 - **Phase 1** — Hinkal Emporium wrappers in `@bu/private-transfer-core` + fresh-SCA-per-deposit factory integration; auto-routing on AccessToken presence.
 - **Phase 2** — `FxSwapHook.sol` (Uniswap v4 hook with oracle-anchored PMM + JIT-borrow from Morpho).
 
 ## Deploy
 
-```bash
-# Arc testnet (Hub-side)
-cp .env.example .env && edit  # fill ARC_MORPHO_BLUE + ARC_MORPHO_ADAPTIVE_IRM + DEPLOYER_PRIVATE_KEY + FX_HUB_LLTV
-forge script script/DeployFxHub.s.sol --rpc-url arc_testnet --broadcast --verify
+### Base Sepolia (recommended for early validation — Morpho Blue is already live there)
 
-# Per-spoke (Ethereum / Base)
+```bash
+# Simulate (no broadcast)
+DEPLOYER_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
+  forge script script/DeployBaseSepolia.s.sol \
+    --fork-url https://base-sepolia-rpc.publicnode.com
+
+# Live deploy (~0.00016 ETH gas)
+DEPLOYER_PRIVATE_KEY=<your-funded-key> \
+  forge script script/DeployBaseSepolia.s.sol \
+    --rpc-url https://base-sepolia-rpc.publicnode.com \
+    --broadcast --verify
+```
+
+Base Sepolia uses real Morpho Blue + real Pyth + real USDC. A MockEURC is deployed
+automatically since Circle hasn't shipped canonical EURC there yet.
+
+### Arc testnet (waiting on Morpho Blue Arc address)
+
+```bash
+# When Morpho ships on Arc, fill ARC_MORPHO_BLUE + ARC_MORPHO_ADAPTIVE_IRM + DEPLOYER_PRIVATE_KEY + FX_HUB_LLTV
+forge script script/DeployFxHub.s.sol --rpc-url arc_testnet --broadcast --verify
+```
+
+### Per-spoke (Ethereum / Base / etc.)
+
+```bash
 SPOKE_USDC=... SPOKE_CCTP_TOKEN_MESSENGER=... ARC_HUB_RECEIVER=... ARC_DOMAIN=26 \
   forge script script/DeployFxSpoke.s.sol --rpc-url ethereum --broadcast --verify
 ```

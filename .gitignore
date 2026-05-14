@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.context/
+
+# foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+
+# bun
+.bun-cache/
+bun.lockb
+.env.local
+contracts/.env.tenderly

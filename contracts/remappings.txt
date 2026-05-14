@@ -2,6 +2,7 @@ forge-std/=lib/forge-std/src/
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
 @pythnetwork/pyth-sdk-solidity/=lib/pyth-sdk-solidity/
 @redstone-finance/evm-connector/=lib/redstone-oracles-monorepo/packages/evm-connector/contracts/
+redstone-mocks/=lib/redstone-oracles-monorepo/packages/evm-connector/contracts/mocks/
 morpho-blue/=lib/morpho-blue/src/
 @uniswap/v4-core/=lib/v4-core/
 @uniswap/v4-periphery/=lib/v4-periphery/

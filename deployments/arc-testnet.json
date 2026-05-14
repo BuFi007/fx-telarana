@@ -1,0 +1,22 @@
+{
+  "network": "arc-testnet",
+  "chainId": 5042002,
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "deployedAt": "2026-05-14",
+  "contracts": {
+    "FxSpoke": "0x729fe51fa88eae24cbcff7a192c5a91e937ceb68"
+  },
+  "external": {
+    "CctpTokenMessengerV2": "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    "CctpMessageTransmitterV2": "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
+    "CctpDomain": "26",
+    "USDC": "0x3600000000000000000000000000000000000000"
+  },
+  "hub": {
+    "network": "avalanche-fuji",
+    "chainId": 43113,
+    "messageReceiver": "0x365de300dda61c81a33bce3606a5d524ed964362",
+    "cctpDomain": 1
+  },
+  "notes": "Arc Testnet uses USDC as native 18-dec gas token. The 0x3600...0000 address is the 6-decimal ERC-20 form CCTP V2 burns/mints. Phase 1 target: swap Base Sepolia hub for an Arc-hosted hub so this spoke flips into the canonical loop."
+}

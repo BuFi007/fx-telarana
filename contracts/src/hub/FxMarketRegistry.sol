@@ -153,8 +153,12 @@ contract FxMarketRegistry is IFxMarketRegistry {
         address onBehalf,
         address receiver
     ) external returns (uint256 assetsOut) {
-        // Caller must have authorized this contract to manage onBehalf's position
-        // via IMorpho.setAuthorization (or onBehalf == msg.sender).
+        // Morpho's setAuthorization(registry) is registry-wide. The registry
+        // therefore MUST gate every withdraw at the caller level — otherwise
+        // an attacker can drain any user who authorized the registry by
+        // setting `onBehalf=victim, receiver=attacker`. See
+        // `NotAuthorizedForOnBehalf` doc on IFxMarketRegistry.
+        if (onBehalf != msg.sender) revert NotAuthorizedForOnBehalf(onBehalf, msg.sender);
         MorphoMarketParams memory mp = _morphoParams(loanToken, collateralToken);
         (assetsOut, ) = MORPHO.withdraw(mp, 0, shares, onBehalf, receiver);
     }
@@ -180,6 +184,7 @@ contract FxMarketRegistry is IFxMarketRegistry {
         address onBehalf,
         address receiver
     ) external {
+        if (onBehalf != msg.sender) revert NotAuthorizedForOnBehalf(onBehalf, msg.sender);
         MorphoMarketParams memory mp = _morphoParams(loanToken, collateralToken);
         MORPHO.withdrawCollateral(mp, collateral, onBehalf, receiver);
     }
@@ -191,6 +196,7 @@ contract FxMarketRegistry is IFxMarketRegistry {
         address onBehalf,
         address receiver
     ) external returns (uint256 borrowedShares) {
+        if (onBehalf != msg.sender) revert NotAuthorizedForOnBehalf(onBehalf, msg.sender);
         MorphoMarketParams memory mp = _morphoParams(loanToken, collateralToken);
         (, borrowedShares) = MORPHO.borrow(mp, assets, 0, onBehalf, receiver);
     }

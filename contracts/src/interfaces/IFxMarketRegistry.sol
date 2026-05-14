@@ -21,6 +21,13 @@ interface IFxMarketRegistry {
     error UnknownMarket(address loanToken, address collateralToken);
     error MarketAlreadyRegistered(bytes32 marketId);
     error InvalidParams();
+    /// @notice `onBehalf` (or `receiver`) was not the caller and no registry-level
+    ///         delegation was in place. Surfaced by Codex adversarial review:
+    ///         Morpho's `setAuthorization(registry, true)` is registry-wide, so
+    ///         without this self-gate any caller could drain an authorized user's
+    ///         supply/collateral or borrow against their collateral to an
+    ///         attacker-controlled receiver.
+    error NotAuthorizedForOnBehalf(address onBehalf, address caller);
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS

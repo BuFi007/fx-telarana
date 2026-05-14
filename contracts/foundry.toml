@@ -5,7 +5,14 @@ libs = ["lib"]
 test = "test"
 script = "script"
 cache_path = "cache"
-solc_version = "0.8.26"
+# Auto-detect: project files pin ^0.8.26, vendored Morpho pins 0.8.19 strictly.
+# With auto_detect_solc, Foundry downloads each version on demand via svm.
+auto_detect_solc = true
+# Arc targets the Prague hardfork (superset of Cancun), so Cancun opcodes (mcopy,
+# transient storage) are safe. RedStone's evm-connector library uses `mcopy`,
+# which requires Cancun+. The Circle SCP `evmVersion: "paris"` advice applies to
+# their bytecode-upload deploy path, not to direct RPC deploys or contract
+# imports — which is what we use.
 evm_version = "cancun"
 optimizer = true
 optimizer_runs = 1_000_000
@@ -18,6 +25,7 @@ remappings = [
   "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
   "@pythnetwork/pyth-sdk-solidity/=lib/pyth-sdk-solidity/",
   "@redstone-finance/evm-connector/=lib/redstone-oracles-monorepo/packages/evm-connector/contracts/",
+  "redstone-mocks/=lib/redstone-oracles-monorepo/packages/evm-connector/contracts/mocks/",
   "morpho-blue/=lib/morpho-blue/src/",
   "@uniswap/v4-core/=lib/v4-core/",
   "@uniswap/v4-periphery/=lib/v4-periphery/",

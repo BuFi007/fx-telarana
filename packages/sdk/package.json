@@ -1,0 +1,51 @@
+{
+  "name": "@bu/fx-engine",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the fx-Telarana Hub-and-Spoke FX money market protocol",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./abis": {
+      "types": "./dist/abis/index.d.ts",
+      "default": "./dist/abis/index.js"
+    },
+    "./addresses": {
+      "types": "./dist/addresses/index.d.ts",
+      "default": "./dist/addresses/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "abis:sync": "node scripts/sync-abis.mjs",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "test": "bun test",
+    "circle:register": "bun scripts/register-contracts.ts",
+    "tenderly:label": "bun scripts/tenderly-label.ts",
+    "tenderly:verify:hub": "sh scripts/tenderly-verify.sh",
+    "tenderly:verify:spoke": "sh scripts/tenderly-verify-spoke.sh",
+    "sim:spoke-deposit": "bun scripts/simulator/run-spoke-deposit.ts",
+    "sim:matrix": "bun scripts/simulator/run-matrix.ts"
+  },
+  "peerDependencies": {
+    "viem": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.5.0",
+    "viem": "^2.21.0"
+  },
+  "optionalDependencies": {
+    "@circle-fin/smart-contract-platform": "^10.3.1"
+  }
+}
