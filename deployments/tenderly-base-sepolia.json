@@ -1,0 +1,28 @@
+{
+  "network": "tenderly-base-sepolia-vnet",
+  "chainId": 84532,
+  "tenderlyVnetId": "d70bf2af-c59f-4ef5-a6cc-0af9d5c2cf2f",
+  "tenderlyVnetSlug": "fx-telarana-base-sepolia",
+  "forkedFromBlock": "0x278e72a",
+  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "contracts": {
+    "FxOracle":              "0xeba5CEc9257045Df0B44eA784F9a7Fa07DeeF6d4",
+    "MorphoOracleAdapterM1": "0x6cFa40a00F3123b6855ef4CE2aE18Dbbb589A731",
+    "MorphoOracleAdapterM2": "0x00828634807f6AC769108EA2C809cD66252f20df",
+    "FxMarketRegistry":      "0x6CAf8e8a646037aEfaB5B75CF5DB1B07880C97B9",
+    "FxReceiptEURC":         "0x7e392657611208e4A80B7FBa4F867661049770C3",
+    "FxReceiptUSDC":         "0x9dbf6DE68accAE32393be416D748aeA15572624d",
+    "FxLiquidator":          "0xf20F03e89D0dA08877D43774bABE0cb918313bAc",
+    "MockEURC":              "0x210BBd033630e5e611B7922D70b0Caabe64636d9"
+  },
+  "marketIds": {
+    "M1_EURC_USDC": "0x17927d8758d27c20a1327f0eff301cea22b6237a826f8e4bb02075e67bb8af99",
+    "M2_USDC_EURC": "0xabfc0ff6e9f6fafeb1e03ca22de2703b512db483458175b764fe8474fa5f8632"
+  },
+  "external": {
+    "MorphoBlue":        "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+    "AdaptiveCurveIrm":  "0x46415998764C29aB2a25CbeA6254146D50D22687",
+    "Pyth":              "0xA2aa501b19aff244D90cc15a4Cf739D2725B5729",
+    "USDC":              "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+  }
+}

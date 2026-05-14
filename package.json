@@ -9,6 +9,7 @@
     "sdk:test": "cd packages/sdk && bun test",
     "sdk:abis:sync": "cd packages/sdk && bun run abis:sync",
     "contracts:test": "cd contracts && forge test --no-match-contract MainnetForkTest",
-    "contracts:test:fork": "cd contracts && ETH_RPC_URL=https://ethereum-rpc.publicnode.com forge test"
+    "contracts:test:fork": "cd contracts && ETH_RPC_URL=https://ethereum-rpc.publicnode.com forge test",
+    "sdk:circle:register": "cd packages/sdk && bun scripts/register-contracts.ts"
   }
 }

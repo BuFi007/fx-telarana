@@ -6,6 +6,11 @@ test = "test"
 script = "script"
 cache_path = "cache"
 solc_version = "0.8.26"
+# Arc targets the Prague hardfork (superset of Cancun), so Cancun opcodes (mcopy,
+# transient storage) are safe. RedStone's evm-connector library uses `mcopy`,
+# which requires Cancun+. The Circle SCP `evmVersion: "paris"` advice applies to
+# their bytecode-upload deploy path, not to direct RPC deploys or contract
+# imports — which is what we use.
 evm_version = "cancun"
 optimizer = true
 optimizer_runs = 1_000_000

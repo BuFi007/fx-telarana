@@ -21,12 +21,16 @@
       "default": "./dist/addresses/index.js"
     }
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
     "abis:sync": "node scripts/sync-abis.mjs",
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "bun test"
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "test": "bun test",
+    "circle:register": "bun scripts/register-contracts.ts"
   },
   "peerDependencies": {
     "viem": "^2.0.0"
@@ -35,5 +39,8 @@
     "@types/bun": "latest",
     "typescript": "^5.5.0",
     "viem": "^2.21.0"
+  },
+  "optionalDependencies": {
+    "@circle-fin/smart-contract-platform": "^1.0.0"
   }
 }
