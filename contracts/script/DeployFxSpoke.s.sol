@@ -62,16 +62,40 @@ contract DeployFxSpoke is Script {
         pure
         returns (address usdc, string memory name)
     {
-        if (chainId == 1301) {
-            // Unichain Sepolia, CCTP V2 domain 10
-            return (0x31d0220469e10c4E71834a79b1f276d740d3768F, "unichain-sepolia");
+        if (chainId == 11155111) {
+            // Ethereum Sepolia, CCTP V2 domain 0
+            return (0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238, "ethereum-sepolia");
         }
         if (chainId == 43113) {
             // Avalanche Fuji, CCTP V2 domain 1
             return (0x5425890298aed601595a70AB815c96711a31Bc65, "avalanche-fuji");
         }
+        if (chainId == 11155420) {
+            // OP Sepolia, CCTP V2 domain 2
+            return (0x5fd84259d66Cd46123540766Be93DFE6D43130D7, "op-sepolia");
+        }
+        if (chainId == 421614) {
+            // Arbitrum Sepolia, CCTP V2 domain 3
+            return (0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d, "arbitrum-sepolia");
+        }
         if (chainId == 84532) {
             return (0x036CbD53842c5426634e7929541eC2318f3dCF7e, "base-sepolia-selfloop");
+        }
+        if (chainId == 80002) {
+            // Polygon Amoy, CCTP V2 domain 7
+            return (0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582, "polygon-amoy");
+        }
+        if (chainId == 1301) {
+            // Unichain Sepolia, CCTP V2 domain 10
+            return (0x31d0220469e10c4E71834a79b1f276d740d3768F, "unichain-sepolia");
+        }
+        if (chainId == 59141) {
+            // Linea Sepolia, CCTP V2 domain 11
+            return (0xFEce4462D57bD51A6A552365A011b95f0E16d9B7, "linea-sepolia");
+        }
+        if (chainId == 4801) {
+            // World Chain Sepolia, CCTP V2 domain 14
+            return (0x66145f38cBAC35Ca6F1Dfb4914dF98F1614aeA88, "worldchain-sepolia");
         }
         revert("unsupported chainId: pass SPOKE_USDC + SPOKE_CCTP_TOKEN_MESSENGER explicitly");
     }

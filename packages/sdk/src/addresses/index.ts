@@ -4,9 +4,14 @@ import type { Address } from "viem";
 export const ChainId = {
   EthereumMainnet: 1,
   Sepolia: 11155111,
+  OpSepolia: 11155420,
+  ArbitrumSepolia: 421614,
   BaseSepolia: 84532,
   UnichainSepolia: 1301,
   AvalancheFuji: 43113,
+  PolygonAmoy: 80002,
+  LineaSepolia: 59141,
+  WorldChainSepolia: 4801,
   ArcTestnet: 5042002,
 } as const;
 
@@ -121,8 +126,63 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.Sepolia]: {
+    // CCTP V2 domain 0
+    cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
+    cctpDomain: 0,
+    usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
     morphoBlue: "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
     adaptiveCurveIrm: "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+    pythFeedUSDC: PYTH_FEED_USDC_USD,
+    pythFeedEURC: PYTH_FEED_EURC_USD,
+    pythFeedEURUSD: PYTH_FEED_EUR_USD,
+  },
+  [ChainId.OpSepolia]: {
+    // CCTP V2 domain 2
+    cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
+    cctpDomain: 2,
+    usdc: "0x5fD84259d66Cd46123540766Be93DFE6D43130D7",
+    pythFeedUSDC: PYTH_FEED_USDC_USD,
+    pythFeedEURC: PYTH_FEED_EURC_USD,
+    pythFeedEURUSD: PYTH_FEED_EUR_USD,
+  },
+  [ChainId.ArbitrumSepolia]: {
+    // CCTP V2 domain 3
+    cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
+    cctpDomain: 3,
+    usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d",
+    pythFeedUSDC: PYTH_FEED_USDC_USD,
+    pythFeedEURC: PYTH_FEED_EURC_USD,
+    pythFeedEURUSD: PYTH_FEED_EUR_USD,
+  },
+  [ChainId.PolygonAmoy]: {
+    // CCTP V2 domain 7
+    cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
+    cctpDomain: 7,
+    usdc: "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582",
+    pythFeedUSDC: PYTH_FEED_USDC_USD,
+    pythFeedEURC: PYTH_FEED_EURC_USD,
+    pythFeedEURUSD: PYTH_FEED_EUR_USD,
+  },
+  [ChainId.LineaSepolia]: {
+    // CCTP V2 domain 11
+    cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
+    cctpDomain: 11,
+    usdc: "0xFEce4462D57bD51A6A552365A011b95f0E16d9B7",
+    pythFeedUSDC: PYTH_FEED_USDC_USD,
+    pythFeedEURC: PYTH_FEED_EURC_USD,
+    pythFeedEURUSD: PYTH_FEED_EUR_USD,
+  },
+  [ChainId.WorldChainSepolia]: {
+    // CCTP V2 domain 14
+    cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
+    cctpDomain: 14,
+    usdc: "0x66145f38cBAC35Ca6F1Dfb4914dF98F1614aeA88",
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
