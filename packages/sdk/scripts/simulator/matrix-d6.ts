@@ -62,21 +62,32 @@ function mockMTRuntime(): Hex {
 }
 
 /**
- * Build the CCTP V2 burn message body that CctpMessageLib parses.
+ * Build a CCTP V2 outer message + burn-message body matching CctpMessageLib
+ * exactly. Layouts copied from contracts/src/libraries/CctpMessageLib.sol:
  *
- * Format (offsets per CctpMessageLib):
- *   [0..96)    headerLength header — version+srcDomain+destDomain+nonce+sender+recipient+destCaller
- *   [96+0]     bytes32 burnToken
- *   [96+32]    bytes32 mintRecipient  ← FxHubMessageReceiver address as bytes32
- *   [96+64]    uint256 amount         ← bridged amount
- *   [96+96]    bytes32 messageSender
- *   [96+128]   uint256 maxFee
- *   [96+160]   uint256 feeExecuted
- *   [96+192]   uint256 expirationBlock
- *   [96+224+]  bytes   hookData       ← length-prefixed
+ *   Outer (148 bytes):
+ *     [0..4)    version (4)
+ *     [4..8)    sourceDomain (4)
+ *     [8..12)   destDomain (4)
+ *     [12..44)  nonce (32)             ← CctpMessageLib.nonce()
+ *     [44..76)  sender (32)
+ *     [76..108) recipient (32)
+ *     [108..140) destCaller (32)
+ *     [140..144) minFinalityThreshold (4)
+ *     [144..148) finalityThresholdExecuted (4)
  *
- * The receiver only reads `nonce`, `mintRecipient`, `mintedAmount` (= amount - feeExecuted),
- * and `hookData`. We zero-out everything else.
+ *   Inner body (starts at outer offset 148):
+ *     [+0..+4)   version (4)
+ *     [+4..+36)  burnToken (32)
+ *     [+36..+68) mintRecipient (32)    ← CctpMessageLib.mintRecipient()
+ *     [+68..+100) amount (32)          ← CctpMessageLib.burnAmount()
+ *     [+100..+132) messageSender (32)
+ *     [+132..+164) maxFee (32)
+ *     [+164..+196) feeExecuted (32)    ← CctpMessageLib.feeExecuted()
+ *     [+196..+228) expirationBlock (32)
+ *     [+228..]   hookData (RAW, no length prefix — CctpMessageLib reads `length - 228`)
+ *
+ * Total minimum = 148 + 228 = 376 bytes. hookData appends past that.
  */
 function buildCctpMessage(
   nonce: Hex,
@@ -85,39 +96,25 @@ function buildCctpMessage(
   feeExecuted: bigint,
   hookData: Hex,
 ): Hex {
-  // 96-byte header. CctpMessageLib slices `nonce` from offset 12..44.
-  // Layout per the lib: version(4) | sourceDomain(4) | destDomain(4) | nonce(32) | ...
-  const header = new Uint8Array(96);
-  // version + srcDomain + destDomain — 12 bytes of zero
+  const header = new Uint8Array(148);
   // nonce at bytes 12..44
-  const nonceBytes = Buffer.from(nonce.slice(2), "hex");
-  header.set(nonceBytes, 12);
-  // sender(32)+recipient(32)+destCaller(32) follow but receiver doesn't read them
+  header.set(Buffer.from(nonce.slice(2), "hex"), 12);
 
-  // Body (the burn message body).
-  const burnToken = pad("0x0", { size: 32 });
-  const mintRecipientB32 = pad(mintRecipient, { size: 32 });
-  const amountB32 = pad(toHex(burnAmount), { size: 32 });
-  const messageSender = pad("0x0", { size: 32 });
-  const maxFee = pad("0x0", { size: 32 });
-  const feeExecutedB32 = pad(toHex(feeExecuted), { size: 32 });
-  const expirationBlock = pad("0x0", { size: 32 });
-
-  // hookData length-prefixed: 32-byte length + content.
-  const hookBytes = Buffer.from(hookData.slice(2), "hex");
-  const hookLenB32 = pad(toHex(BigInt(hookBytes.length)), { size: 32 });
+  const body = new Uint8Array(228);
+  // mintRecipient at body+36 (32 bytes, left-padded address)
+  const mintRecipBytes = Buffer.from(mintRecipient.slice(2).padStart(64, "0"), "hex");
+  body.set(mintRecipBytes, 36);
+  // amount at body+68
+  const amountHex = burnAmount.toString(16).padStart(64, "0");
+  body.set(Buffer.from(amountHex, "hex"), 68);
+  // feeExecuted at body+164
+  const feeHex = feeExecuted.toString(16).padStart(64, "0");
+  body.set(Buffer.from(feeHex, "hex"), 164);
 
   return concat([
     ("0x" + Buffer.from(header).toString("hex")) as Hex,
-    burnToken,
-    mintRecipientB32,
-    amountB32,
-    messageSender,
-    maxFee,
-    feeExecutedB32,
-    expirationBlock,
-    hookLenB32,
-    ("0x" + hookBytes.toString("hex")) as Hex,
+    ("0x" + Buffer.from(body).toString("hex")) as Hex,
+    hookData, // raw, no length prefix
   ]);
 }
 
@@ -192,12 +189,7 @@ export function categoryG(hub: HubManifest): TestCase[] {
       // patched invariant still classifies correctly: ok=false → Stranded.
       // The "happy path" of CCTP-reverse-leg-with-supply needs more state
       // setup (pre-fund registry); deferred to Drop 7.
-      // WIP: hand-crafted CCTP V2 message body doesn't pass CctpMessageLib
-      // parsing yet (the offsets in this file are approximate, not exhaustively
-      // matched against the library). The setCode override + storage pack
-      // pieces are wired correctly; only the message-bytes layout needs a
-      // second pass. Documenting current failure so it surfaces in the report.
-      expect: { kind: "revert" },
+      expect: { kind: "pass" },
     });
   }
 
@@ -229,7 +221,7 @@ export function categoryG(hub: HubManifest): TestCase[] {
         }),
         state_objects: baseState(),
       },
-      expect: { kind: "revert" }, // same CCTP message-format issue as above
+      expect: { kind: "pass" }, // executeDeposit itself succeeds → Stranded path
     });
   }
 
