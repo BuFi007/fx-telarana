@@ -23,7 +23,7 @@ export interface FxAddresses {
 
   /// External dependencies
   morphoBlue: Address;
-  adaptiveCurveIrm: Address;
+  adaptiveCurveIrm?: Address;
   pyth: Address;
   cctpTokenMessengerV2?: Address;
   cctpMessageTransmitterV2?: Address;
@@ -48,11 +48,18 @@ const ZERO = "0x0000000000000000000000000000000000000000" as const;
 /// Addresses partitioned per chain. fx-Telarana contracts are TBD until deploy.
 export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
   [ChainId.BaseSepolia]: {
+    // fx-Telarana contracts — live deploy 2026-05-14
+    fxOracle: "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
+    fxMarketRegistry: "0x58c1a04BC4E25DB2f8474C9dF41907CfFC894A4b",
+    fxLiquidator: "0x7ba745b979e027992ECFa51207666e3F5B46cF0a",
+    fxReceiptEURC: "0xdA4c3E315ffFD0790c9D8A1730c2Ba56330Cb2EC",
+    fxReceiptUSDC: "0xf0cDaA9CF9e8d52060dcb41a045e3a6d618A9f65",
+    // External deps
     morphoBlue: "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
     adaptiveCurveIrm: "0x46415998764C29aB2a25CbeA6254146D50D22687",
     pyth: "0xA2aa501b19aff244D90cc15a4Cf739D2725B5729",
     usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-    // eurc: filled in after MockEURC is deployed by DeployBaseSepolia.s.sol
+    eurc: "0x8B7041d8A4bd773a537a01e1F61175da5395714c", // MockEURC (Circle hasn't shipped canonical here)
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,

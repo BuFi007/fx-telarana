@@ -4,8 +4,9 @@ Per-repo guidance for Claude Code agents working in this codebase.
 
 ## Status
 
-- **Live deployment**: Tenderly Virtual TestNet forked off Base Sepolia. Addresses in `deployments/tenderly-base-sepolia.json`. Vnet RPC + dashboard URL in `.env.local` (gitignored).
-- **Production target**: Arc testnet (chainId 5042002). Deploy script at `contracts/script/DeployArcTestnet.s.sol`. Blocked on Morpho Blue Arc address.
+- **Live on real Base Sepolia** (chainId 84532, deployer `0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69`). All 8 contracts deployed + both Morpho markets created on the real Morpho Blue singleton + registered with Circle SCP. Addresses: `deployments/base-sepolia.json` and `packages/sdk/src/addresses/index.ts` (`ChainId.BaseSepolia`).
+- **Live on Tenderly vnet**: parallel deployment for fast iteration. Addresses in `deployments/tenderly-base-sepolia.json`. Vnet RPC + dashboard URL in `.env.local` (gitignored).
+- **Production target**: Arc testnet (chainId 5042002). Deploy script at `contracts/script/DeployArcTestnet.s.sol`. Still blocked on Morpho Blue Arc address — or we self-deploy Morpho there next.
 - **Branch**: `tcxcx/fx-onchain-hub-arc`. Don't rename without explicit instruction.
 
 ## Testing
@@ -25,22 +26,11 @@ Current: 42/42 unit + 4/4 mainnet fork + 20/20 SDK tests passing.
 
 ## Deferred work — pick up when triggered
 
-### Circle Smart Contract Platform registration — DEFERRED until Arc testnet deploy
+### Circle Smart Contract Platform registration — DONE for Base Sepolia
 
-We have `packages/sdk/scripts/register-contracts.ts` ready to ingest any deployment JSON into Circle SCP for event webhooks + read API. It is intentionally **not run** against the current Tenderly vnet because Circle SCP queries the real public chain — it cannot see contracts that only exist on a Tenderly fork.
+All 8 Base Sepolia contracts registered in Circle SCP project (under `criptopoeta`, account-scoped). Contract IDs persist on Circle's side; re-running `bun run sdk:circle:register deployments/base-sepolia.json` is idempotent.
 
-**When to run it:** after the first real testnet broadcast (Arc testnet, ideally; Base Sepolia is acceptable if we broadcast there first).
-
-```bash
-CIRCLE_API_KEY=TEST_API_KEY:... \
-ENTITY_SECRET=... \
-WEBHOOK_URL=https://your.webhook.endpoint \
-  bun run sdk:circle:register deployments/<live-deployment>.json
-```
-
-Idempotent. Re-runs find existing imports by address. Events monitored: `DepositStranded`, `DepositSwept`, `DepositExecuted`, `MarketRegistered`, `Entered`, `Exited`, `FeedSet`, `RedstoneFeedSet`.
-
-The user provided test credentials from desk-v1/sendero during the Tenderly setup phase but those are throwaways — pull fresh ones from the Circle developer console at registration time.
+When we deploy to Arc testnet, run the same script with `deployments/arc-testnet.json` — works identically. Webhook URL not yet set; add `WEBHOOK_URL=https://...` when Pasillo/Trigger.dev sink is ready.
 
 ### Phase 2.5 swap hook — IN PROGRESS
 

@@ -1,0 +1,31 @@
+{
+  "network": "base-sepolia",
+  "chainId": 84532,
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "deployedAt": "2026-05-14",
+  "contracts": {
+    "FxOracle":              "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
+    "MorphoOracleAdapterM1": "0xf7fcDCA3f9c92418A980A31df7f87De7E1a1a04b",
+    "MorphoOracleAdapterM2": "0x7882d3f0e210128A4DCE51E1AF1Ec801E21E1E5A",
+    "FxMarketRegistry":      "0x58c1a04BC4E25DB2f8474C9dF41907CfFC894A4b",
+    "FxReceiptEURC":         "0xdA4c3E315ffFD0790c9D8A1730c2Ba56330Cb2EC",
+    "FxReceiptUSDC":         "0xf0cDaA9CF9e8d52060dcb41a045e3a6d618A9f65",
+    "FxLiquidator":          "0x7ba745b979e027992ECFa51207666e3F5B46cF0a",
+    "MockEURC":              "0x8B7041d8A4bd773a537a01e1F61175da5395714c"
+  },
+  "marketIds": {
+    "M1_EURC_USDC": "0xbce69156929b7c78864e18908eeae98a0209e82521a3a7b08c779c7f16ae4728",
+    "M2_USDC_EURC": "0xb0c6675bc130031554df6b1cf42620eed4c6365adb4383f0df1ff79fafaf09c9"
+  },
+  "external": {
+    "MorphoBlue":        "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+    "AdaptiveCurveIrm":  "0x46415998764C29aB2a25CbeA6254146D50D22687",
+    "Pyth":              "0xA2aa501b19aff244D90cc15a4Cf739D2725B5729",
+    "USDC":              "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+  },
+  "explorer": {
+    "FxOracle":         "https://sepolia.basescan.org/address/0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
+    "FxMarketRegistry": "https://sepolia.basescan.org/address/0x58c1a04BC4E25DB2f8474C9dF41907CfFC894A4b",
+    "FxLiquidator":     "https://sepolia.basescan.org/address/0x7ba745b979e027992ECFa51207666e3F5B46cF0a"
+  }
+}
