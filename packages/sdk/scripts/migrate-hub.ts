@@ -241,19 +241,17 @@ async function preflight(
 // Reads HUB_RECEIVER() + ARC_DOMAIN() from the freshly-deployed FxSpoke via
 // cast and asserts they match the new hub config. Returns null on success or
 // a human-readable error string on mismatch / RPC error.
+//
+// Cast is more lenient about RPC response shape than viem (some testnet RPCs
+// return empty-body for viem's default request shape), so we shell out. The
+// gotcha is that --broadcast --slow returns as soon as receipts are mined but
+// some RPCs lag a few seconds before eth_call sees the new code. We retry
+// up to 6 times with 3s backoff to cover that window.
 async function verifyDeployedSpoke(
   newAddr: Address,
   rpc: string,
   expectedHub: HubConfig,
 ): Promise<string | null> {
-  // Some testnet RPCs return empty-body for eth_call when called from viem's
-  // default request shape (no chainId hint, no block tag). cast works
-  // reliably across all of them, so shell out — but redirect stderr to stdout
-  // so we see the actual error message instead of just "Command failed".
-  // Brief settle delay: forge --broadcast --slow returns when receipts are
-  // mined, but some RPCs lag a couple seconds before eth_call sees the code.
-  await new Promise((r) => setTimeout(r, 2000));
-
   function castCall(sig: string): { out?: string; err?: string } {
     try {
       const out = execSync(`cast call ${newAddr} '${sig}' --rpc-url '${rpc}' 2>&1`, {
@@ -269,14 +267,35 @@ async function verifyDeployedSpoke(
     }
   }
 
-  const recvR = castCall("HUB_RECEIVER()(address)");
+  async function castCallWithRetry(sig: string, label: string): Promise<{ out?: string; err?: string }> {
+    let lastErr: string | undefined;
+    for (let attempt = 1; attempt <= 6; attempt++) {
+      await new Promise((r) => setTimeout(r, attempt === 1 ? 2000 : 3000));
+      const r = castCall(sig);
+      if (!r.err && r.out) {
+        // cast prints decode errors to stdout with non-zero exit. Guard against
+        // a successful execSync that still contains a decode error.
+        if (r.out.toLowerCase().includes("error:")) {
+          lastErr = r.out;
+          console.log(`    ${label} attempt ${attempt}/6: decode error, retrying …`);
+          continue;
+        }
+        return r;
+      }
+      lastErr = r.err ?? "empty result";
+      console.log(`    ${label} attempt ${attempt}/6: ${lastErr.slice(0, 80)} …`);
+    }
+    return { err: lastErr ?? "exhausted retries" };
+  }
+
+  const recvR = await castCallWithRetry("HUB_RECEIVER()(address)", "HUB_RECEIVER");
   if (recvR.err) return `cast HUB_RECEIVER call failed: ${recvR.err.slice(0, 400)}`;
   const recv = (recvR.out ?? "").split(/\s+/)[0].toLowerCase();
   if (recv !== expectedHub.messageReceiver.toLowerCase()) {
     return `HUB_RECEIVER mismatch: expected ${expectedHub.messageReceiver}, got ${recv}`;
   }
 
-  const domR = castCall("ARC_DOMAIN()(uint32)");
+  const domR = await castCallWithRetry("ARC_DOMAIN()(uint32)", "ARC_DOMAIN");
   if (domR.err) return `cast ARC_DOMAIN call failed: ${domR.err.slice(0, 400)}`;
   const domStr = (domR.out ?? "").split(/\s+/)[0];
   const dom = domStr.startsWith("0x") ? parseInt(domStr, 16) : parseInt(domStr, 10);
