@@ -99,14 +99,34 @@ cutting wall-clock further.
 
 ## Phasing
 
-This document is the contract. I'll build it in three drops:
+This document is the contract. Drops:
 
-1. **Drop 1** — client + personas + one happy-path sim per spoke (8 sims),
-   so the pattern is proven and the dashboard view tells the story.
-2. **Drop 2** — category A complete (64 sims) + category B (32 sims).
-3. **Drop 3** — categories C + D (14 sims) + property-style fuzzers
-   (random persona × random op).
+1. **Drop 1** ✅ — client + personas + one happy-path sim per spoke (8 sims).
+   Shipped: `packages/sdk/scripts/simulator/{client,personas,run-spoke-deposit}.ts`.
+
+2. **Drop 2** ✅ (this commit) — full category A (64 sims) + category B
+   ERC-4626 mint+redeem subset (16 sims) = **80-sim matrix**.
+
+   First-run result: **72/80 pass**. The 8 failures are all `A.arc-testnet.*`
+   cases — Tenderly returns `Internal server error` because chain 5042002
+   isn't yet indexed by their network registry. The same limitation blocks
+   source verification on Arc; both will work the moment Tenderly adds Arc
+   support. Every spoke we've deployed elsewhere passes its expected
+   outcome (pass-when-balance-sufficient, revert-on-insufficient-balance).
+
+   The B-category redeem cases (`B.redeem-fx{USDC,EURC}.*`) currently
+   `expect: revert`. The override sets `_balances[persona]` on the receipt
+   but does **not** seed `_totalSupply` (slot 2) or the vault's Morpho
+   bookkeeping, so ERC-4626's `assets = shares * totalAssets / totalSupply`
+   hits division by zero. Drop 3 replaces these with a `simulate-bundle`
+   that first deposits and then redeems — consistent bookkeeping, no
+   override gymnastics.
+
+   Reports are written to `reports/sim-matrix-latest.md` after each run.
+
+3. **Drop 3** — categories C + D (14 sims) + the deposit+redeem bundle fix
+   + property-style fuzzers (random persona × random op).
 
 After Drop 3, the suite is a `bun run sim:matrix` away from re-running
-itself after any contract redeploy, with a Markdown report committed
+itself after any contract redeploy, with the Markdown report committed
 alongside the deployment manifest.

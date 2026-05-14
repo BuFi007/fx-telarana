@@ -34,7 +34,8 @@
     "tenderly:label": "bun scripts/tenderly-label.ts",
     "tenderly:verify:hub": "sh scripts/tenderly-verify.sh",
     "tenderly:verify:spoke": "sh scripts/tenderly-verify-spoke.sh",
-    "sim:spoke-deposit": "bun scripts/simulator/run-spoke-deposit.ts"
+    "sim:spoke-deposit": "bun scripts/simulator/run-spoke-deposit.ts",
+    "sim:matrix": "bun scripts/simulator/run-matrix.ts"
   },
   "peerDependencies": {
     "viem": "^2.0.0"
