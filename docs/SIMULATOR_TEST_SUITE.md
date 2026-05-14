@@ -169,23 +169,58 @@ After Drop 3, the suite is a `bun run --cwd packages/sdk sim:matrix` away
 from re-running itself after any contract redeploy, with the Markdown
 report committed alongside the deployment manifests.
 
-## Drop 4 candidates (not yet built)
+4. **Drop 4** ✅ (this commit) — 122-sim matrix, **113/122 pass (92.6%)**.
 
-1. **Pyth-fresh bundle** — fetch a current Hermes payload at run time,
-   prepend `Pyth.updatePriceFeeds(...)` to each oracle sim, flip 7+ Pyth
-   sims from `revert` to `pass`.
-2. **Morpho borrow proper** — pre-seed market storage or include a
-   priming supply from a separate persona so the borrow bundles work
-   with real state.
-3. **Live PoolManager.swap path** — full Uniswap v4 unlock-callback
-   simulation to exercise `FxSwapHook.beforeSwap` end-to-end. Requires
-   fabricating the unlock-data and the swap delta accounting.
-4. **CCTP V2 reverse leg** — fabricate a `cctpMessage + attestation` pair
-   and simulate `FxHubMessageReceiver.executeDeposit` on the hub. The
-   attestation signature has to be valid — easiest path is mocking
-   the `IMessageTransmitterV2` at its address with a permissive
-   `setCode` override.
-5. **Snapshot reuse** — Tenderly supports saving a sim as a "fork
-   snapshot" and chaining sims off it. Use it to materialize a
-   common-state "primed hub" once per run and branch test cases off
-   that, instead of overriding state per case.
+   Categories added on top of A + B + C + D + fuzzer:
+
+   * **Category E (2 sims) — Pyth-fresh oracle reads.** Each run fetches
+     a current Hermes payload (`https://hermes.pyth.network/api/latest_vaas`)
+     and bundles it into a `FxOracle.getMidWithUpdatePyth` call. Both
+     directions (USDC→EURC, EURC→USDC) now pass cleanly — the same calls
+     that reliably reverted in Drop 3 because Pyth feeds aren't keeper-pushed
+     on Base Sepolia.
+
+   * **`C.borrow.primed` (1 sim).** Bundled `supply 5k USDC` →
+     `supplyCollateral 1k EURC` → `getMidWithUpdatePyth refresh` →
+     `borrow 500 USDC`. Passes. The old `C.borrow.healthy` and
+     `C.borrow.boundary-85.9` cases stay in the matrix with their
+     expectations flipped to `revert` — they document "Morpho can't
+     issue debt from an empty market", which is correct behavior.
+
+   * **`C.sweep.before-grace` + `C.sweep.after-grace` (2 sims).** Fake
+     a stranded deposit via storage override of `_deposits[nonce]` at
+     `keccak256(nonce . 1)` (FxHubMessageReceiver's mapping slot). Pre-fund
+     the receiver with 1000 USDC at `_balances[receiver]`. Call
+     `sweepStrandedDeposit(nonce)`. The before-grace sim correctly reverts
+     `GraceUnexpired`. The after-grace sim attempts a `block_header.timestamp`
+     override to push 24h+ forward — Tenderly silently ignores that field,
+     so this sim still reverts `GraceUnexpired` and is the only non-Arc
+     failure on the board. Likely fix is a different API field name or
+     a snapshot-based fork.
+
+   Remaining 9 failures:
+   - 8 `A.arc-testnet.*` — Tenderly hasn't indexed chain 5042002.
+   - 1 `C.sweep.after-grace` — block-timestamp override quirk noted above.
+
+   Run command unchanged:
+   ```bash
+   bun run --cwd packages/sdk sim:matrix
+   ```
+   Output: `reports/sim-matrix-latest.md` (committed each run).
+
+## Drop 5 candidates (not yet built)
+
+1. **Block-timestamp override fix** — investigate the exact Tenderly
+   API field for advancing `block.timestamp`. Likely `block_header.time`
+   or a fork-snapshot whose head block was mined with a future timestamp.
+   Flips `C.sweep.after-grace` from fail to pass.
+2. **Live PoolManager.swap path** — full Uniswap v4 unlock-callback
+   simulation to exercise `FxSwapHook.beforeSwap` end-to-end.
+3. **CCTP V2 reverse leg** — fabricate a `cctpMessage + attestation`
+   pair and simulate `FxHubMessageReceiver.executeDeposit` on the hub.
+   Easiest path: `setCode` override the `IMessageTransmitterV2` at its
+   deterministic address with a permissive stub.
+4. **Snapshot reuse** — Tenderly supports saving a sim as a fork
+   snapshot and chaining sims off it. Materialize a "primed hub" once
+   per run and branch test cases off that, instead of overriding state
+   per case.

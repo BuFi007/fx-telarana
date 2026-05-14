@@ -154,15 +154,15 @@ export function categoryC(hub: HubManifest): TestCase[] {
     });
 
     out.push({
-      id: "C.borrow.healthy",
-      description: "supply 1000 EURC, borrow 500 USDC (~46% LTV)",
+      id: "C.borrow.from-empty-market",
+      description: "borrow against fresh collateral but empty supply side — expect revert (Morpho has no liquidity to issue). Drop 4's C.borrow.primed adds supply first and passes.",
       request: {
         network_id: String(hub.chainId),
         from: whale.address,
         to: hub.external.MorphoBlue,
         input: borrowCall,
       },
-      expect: { kind: "pass" },
+      expect: { kind: "revert" },
       bundle: [
         {
           network_id: String(hub.chainId),
@@ -187,8 +187,8 @@ export function categoryC(hub: HubManifest): TestCase[] {
     const collateral = 1_000_000_000n;
     const borrowAmt   = 859_000_000n;
     out.push({
-      id: "C.borrow.boundary-85.9",
-      description: "borrow at 85.9% LTV (inside 86% gate)",
+      id: "C.borrow.boundary-from-empty",
+      description: "borrow at LLTV boundary against empty supply side — expect revert (same as above; documents that LLTV is irrelevant without supply liquidity)",
       request: {
         network_id: String(hub.chainId),
         from: whale.address,
@@ -199,7 +199,7 @@ export function categoryC(hub: HubManifest): TestCase[] {
           args: [m2Params(hub, ADAPTIVE_IRM, LLTV), borrowAmt, 0n, whale.address, whale.address],
         }),
       },
-      expect: { kind: "pass" },
+      expect: { kind: "revert" },
       bundle: [
         {
           network_id: String(hub.chainId),

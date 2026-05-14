@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { TenderlyClient } from "./client.js";
 import { categoryA, categoryB, type TestCase, type Expect } from "./matrix.js";
 import { categoryBRedeemBundle, categoryC, categoryD, fuzzer } from "./matrix-cd.js";
+import { categoryE, categoryCPrimedBorrow, categoryCSweep, fetchPythUpdate } from "./matrix-d4.js";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
@@ -117,6 +118,10 @@ async function main() {
     },
   };
 
+  console.log("fetching fresh Pyth Hermes payload...");
+  const pythUpdate = await fetchPythUpdate();
+  console.log(`  got ${pythUpdate.length} VAA(s), total ${pythUpdate[0].length - 2} hex chars`);
+
   const cases: TestCase[] = [
     ...categoryA(spokes),
     ...categoryB({
@@ -133,6 +138,9 @@ async function main() {
     ...categoryBRedeemBundle(hubManifest),
     ...categoryC(hubManifest),
     ...categoryD(hubManifest),
+    ...categoryE(hubManifest, pythUpdate),
+    ...categoryCPrimedBorrow(hubManifest, pythUpdate),
+    ...categoryCSweep(hubManifest),
     ...fuzzer(spokes, hubManifest, 0xdeadbeef, 20),
   ];
 
