@@ -126,6 +126,8 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.Sepolia]: {
+    // FxSpoke — deployed 2026-05-14
+    fxSpoke: "0xc3FFF144b37B79264573E6c4c2ac2F960113A114",
     // CCTP V2 domain 0
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
@@ -138,16 +140,20 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.OpSepolia]: {
+    // FxSpoke — deployed 2026-05-14
+    fxSpoke: "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
     // CCTP V2 domain 2
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
     cctpDomain: 2,
-    usdc: "0x5fD84259d66Cd46123540766Be93DFE6D43130D7",
+    usdc: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.ArbitrumSepolia]: {
+    // FxSpoke — deployed 2026-05-14
+    fxSpoke: "0xEFd7CF5ad5a2dB9a3C23e2807f2279DE92C730D2",
     // CCTP V2 domain 3
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
@@ -178,6 +184,8 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.WorldChainSepolia]: {
+    // FxSpoke — deployed 2026-05-14
+    fxSpoke: "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
     // CCTP V2 domain 14
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",

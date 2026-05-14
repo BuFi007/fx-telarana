@@ -1,0 +1,21 @@
+{
+  "network": "arbitrum-sepolia",
+  "chainId": 421614,
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "deployedAt": "2026-05-14",
+  "contracts": {
+    "FxSpoke": "0xEFd7CF5ad5a2dB9a3C23e2807f2279DE92C730D2"
+  },
+  "external": {
+    "CctpTokenMessengerV2":     "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    "CctpMessageTransmitterV2": "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
+    "CctpDomain":               "3",
+    "USDC":                     "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d"
+  },
+  "hub": {
+    "network":         "base-sepolia",
+    "chainId":         84532,
+    "messageReceiver": "0x758c17BfA85D1b26A81423B524397b8b2D271818",
+    "cctpDomain":      6
+  }
+}

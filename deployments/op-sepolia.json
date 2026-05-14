@@ -1,0 +1,21 @@
+{
+  "network": "op-sepolia",
+  "chainId": 11155420,
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "deployedAt": "2026-05-14",
+  "contracts": {
+    "FxSpoke": "0x8B7041d8A4bd773a537a01e1F61175da5395714c"
+  },
+  "external": {
+    "CctpTokenMessengerV2":     "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    "CctpMessageTransmitterV2": "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
+    "CctpDomain":               "2",
+    "USDC":                     "0x5fd84259d66Cd46123540766Be93DFE6D43130D7"
+  },
+  "hub": {
+    "network":         "base-sepolia",
+    "chainId":         84532,
+    "messageReceiver": "0x758c17BfA85D1b26A81423B524397b8b2D271818",
+    "cctpDomain":      6
+  }
+}
