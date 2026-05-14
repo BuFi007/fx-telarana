@@ -1,4 +1,4 @@
-# fx-Telaraña — Forex Telaraña Protocol
+# Forex Telaraña Protocol
 
 A decentralized cross-currency money market and FX engine on **Arc** with cross-chain spokes (CCTP V2) and an opt-in confidential rail (Hinkal, Phase 1).
 
