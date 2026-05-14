@@ -16,9 +16,17 @@
 set -e
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/../../.." && pwd)"
-MANIFEST="${1:-}"
-if [ -z "$MANIFEST" ] || [ ! -f "$MANIFEST" ]; then
+MANIFEST_ARG="${1:-}"
+if [ -z "$MANIFEST_ARG" ]; then
   echo "usage: $0 <deployments-json>"; exit 1
+fi
+# Resolve manifest to an absolute path so later cwd changes don't break re-reads.
+case "$MANIFEST_ARG" in
+  /*) MANIFEST="$MANIFEST_ARG" ;;
+  *)  MANIFEST="$(pwd)/$MANIFEST_ARG" ;;
+esac
+if [ ! -f "$MANIFEST" ]; then
+  echo "manifest not found: $MANIFEST"; exit 1
 fi
 
 set -a

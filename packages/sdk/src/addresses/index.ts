@@ -76,6 +76,9 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.UnichainSepolia]: {
+    // FxSpoke — deployed 2026-05-14, targets Base Sepolia hub receiver
+    //   0x758c17BfA85D1b26A81423B524397b8b2D271818 (domain 6).
+    fxSpoke: "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
     // CCTP V2 testnet deterministic addresses (domain 10)
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
@@ -84,7 +87,6 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
-    // fxSpoke: <set after deploy>
   },
   [ChainId.AvalancheFuji]: {
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
