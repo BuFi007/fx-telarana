@@ -31,7 +31,9 @@
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test": "bun test",
     "circle:register": "bun scripts/register-contracts.ts",
-    "tenderly:label": "bun scripts/tenderly-label.ts"
+    "tenderly:label": "bun scripts/tenderly-label.ts",
+    "tenderly:verify:hub": "sh scripts/tenderly-verify.sh",
+    "tenderly:verify:spoke": "sh scripts/tenderly-verify-spoke.sh"
   },
   "peerDependencies": {
     "viem": "^2.0.0"
