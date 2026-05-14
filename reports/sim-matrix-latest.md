@@ -1,136 +1,138 @@
 # Simulator matrix run
 
-Run at: 2026-05-14T17:15:26.142Z
+Run at: 2026-05-14T18:21:42.373Z
 
 Result: **120/128** pass, **8** fail
 
-| # | Test | Expect | Sim | Pass | Gas | Trace |
-|---|---|---|---|---|---|---|
-| 1 | `A.arbitrum-sepolia.whale.small` | pass | ✓ | ✅ | 161183 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/e0f8ddf4-0804-4d5e-8b57-17d7d27f5360) |
-| 2 | `A.arbitrum-sepolia.whale.large` | pass | ✓ | ✅ | 161195 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/fade9200-289c-4967-ae93-9369c094ff13) |
-| 3 | `A.arbitrum-sepolia.mid.small` | pass | ✓ | ✅ | 161183 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/bfaea9d3-4811-4ea1-931c-30e5ddbeaaec) |
-| 4 | `A.arbitrum-sepolia.mid.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/ae96e08d-00d7-4d6f-a738-b11512ca27b0) |
-| 5 | `A.arbitrum-sepolia.small.small` | revert | ✗ | ✅ | 42605 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/047b14a1-4fb8-41c2-a624-98a5e3200a18) |
-| 6 | `A.arbitrum-sepolia.small.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/0084848a-f76d-4d5d-b0dd-cbe348d3478c) |
-| 7 | `A.arbitrum-sepolia.empty.small` | revert | ✗ | ✅ | 42605 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/5823d6a9-459c-4f3b-ae20-17096ca23151) |
-| 8 | `A.arbitrum-sepolia.empty.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/6774a906-52de-418d-a4ef-ae6791cbaac3) |
-| 9 | `A.arc-testnet.whale.small` | pass | ✗ | ❌ | 0 | - |
-| 10 | `A.arc-testnet.whale.large` | pass | ✗ | ❌ | 0 | - |
-| 11 | `A.arc-testnet.mid.small` | pass | ✗ | ❌ | 0 | - |
-| 12 | `A.arc-testnet.mid.large` | revert | ✗ | ❌ | 0 | - |
-| 13 | `A.arc-testnet.small.small` | revert | ✗ | ❌ | 0 | - |
-| 14 | `A.arc-testnet.small.large` | revert | ✗ | ❌ | 0 | - |
-| 15 | `A.arc-testnet.empty.small` | revert | ✗ | ❌ | 0 | - |
-| 16 | `A.arc-testnet.empty.large` | revert | ✗ | ❌ | 0 | - |
-| 17 | `A.avalanche-fuji.whale.small` | pass | ✓ | ✅ | 200983 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/f831f60d-134b-4fa2-9652-75414aced426) |
-| 18 | `A.avalanche-fuji.whale.large` | pass | ✓ | ✅ | 200995 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/af323c95-c31e-4a19-99e9-1a47d926c274) |
-| 19 | `A.avalanche-fuji.mid.small` | pass | ✓ | ✅ | 200983 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/3a29ba6a-e5c4-4903-83ef-63c7721ae82d) |
-| 20 | `A.avalanche-fuji.mid.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/69fe9c41-9f33-4a35-9f09-cc187a4b87cb) |
-| 21 | `A.avalanche-fuji.small.small` | revert | ✗ | ✅ | 42605 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/e030bc64-ec4b-4e51-8efd-5676314fc365) |
-| 22 | `A.avalanche-fuji.small.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/1f39d328-73bd-4809-a18f-ccb1faaf48dd) |
-| 23 | `A.avalanche-fuji.empty.small` | revert | ✗ | ✅ | 42605 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/9b1045cd-6d95-497c-8aa7-67443b742854) |
-| 24 | `A.avalanche-fuji.empty.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/73cb1347-abc9-4c22-976b-90b5ab0b4eb2) |
-| 25 | `A.ethereum-sepolia.whale.small` | pass | ✓ | ✅ | 161183 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/84ce5009-2802-4189-87cf-899c940336f8) |
-| 26 | `A.ethereum-sepolia.whale.large` | pass | ✓ | ✅ | 161195 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/d313a122-7921-4d79-aa31-9caef8063320) |
-| 27 | `A.ethereum-sepolia.mid.small` | pass | ✓ | ✅ | 161183 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/0f516ec0-4609-4a5d-ae78-5b99537b28eb) |
-| 28 | `A.ethereum-sepolia.mid.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/c7b1e554-7023-4ff9-b802-fca03dd2235c) |
-| 29 | `A.ethereum-sepolia.small.small` | revert | ✗ | ✅ | 42605 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/daeab5b8-5252-4c31-b585-9836c1a616e7) |
-| 30 | `A.ethereum-sepolia.small.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/7efbe986-62e8-4940-9422-5d5b34f89797) |
-| 31 | `A.ethereum-sepolia.empty.small` | revert | ✗ | ✅ | 42605 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/5588cd48-2e14-44d5-a6ad-b1ccfa87b192) |
-| 32 | `A.ethereum-sepolia.empty.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/a76440be-8c2b-473f-96a6-f2bc167b3f1c) |
-| 33 | `A.op-sepolia.whale.small` | pass | ✓ | ✅ | 161183 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/5419673a-6788-491e-bc7c-400e2faed960) |
-| 34 | `A.op-sepolia.whale.large` | pass | ✓ | ✅ | 161195 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/d5b5d327-da3e-4d9b-81c4-fc2ac20a646c) |
-| 35 | `A.op-sepolia.mid.small` | pass | ✓ | ✅ | 161183 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/6a3210e5-1f51-4454-bac8-79f235bd9b84) |
-| 36 | `A.op-sepolia.mid.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/d8a592ef-e613-4b8c-966d-f45552b61be2) |
-| 37 | `A.op-sepolia.small.small` | revert | ✗ | ✅ | 42605 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/fc7850ae-2ee3-4f43-9afc-8217fa730085) |
-| 38 | `A.op-sepolia.small.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/bb5062d0-8e97-44fa-80c0-c85bc87e50f3) |
-| 39 | `A.op-sepolia.empty.small` | revert | ✗ | ✅ | 42605 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/266f967a-9726-4d37-a39e-2f573a1dd730) |
-| 40 | `A.op-sepolia.empty.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/cb7dd19f-71ba-4cdd-ac5c-7c0e84ecbc2e) |
-| 41 | `A.polygon-amoy.whale.small` | pass | ✓ | ✅ | 232583 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/d7bbf069-1bf2-4533-a451-d0e8de1b0dd6) |
-| 42 | `A.polygon-amoy.whale.large` | pass | ✓ | ✅ | 232595 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/892fe159-12c3-4d2e-af22-c57676925757) |
-| 43 | `A.polygon-amoy.mid.small` | pass | ✓ | ✅ | 232583 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/6ad291ff-3383-4790-a6a4-58c5ef76a038) |
-| 44 | `A.polygon-amoy.mid.large` | revert | ✗ | ✅ | 62777 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/dce55101-1bd6-429e-a2e8-c08271f282ad) |
-| 45 | `A.polygon-amoy.small.small` | revert | ✗ | ✅ | 62765 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/e213b652-5cb9-4016-bc4d-4ff1600c3a65) |
-| 46 | `A.polygon-amoy.small.large` | revert | ✗ | ✅ | 62777 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/c7962c09-2a4d-430f-b6ec-9bb0a657ba43) |
-| 47 | `A.polygon-amoy.empty.small` | revert | ✗ | ✅ | 62765 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/6205d1a0-7e53-4925-a9e7-56d94f21c2cb) |
-| 48 | `A.polygon-amoy.empty.large` | revert | ✗ | ✅ | 62777 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/e405eb10-76d6-4428-b525-4e7aa203d887) |
-| 49 | `A.unichain-sepolia.whale.small` | pass | ✓ | ✅ | 161183 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/82b86f21-a12f-49fb-ab20-af1adbdcc13e) |
-| 50 | `A.unichain-sepolia.whale.large` | pass | ✓ | ✅ | 161195 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/0f0ef64a-9a77-41e6-9256-739328129f55) |
-| 51 | `A.unichain-sepolia.mid.small` | pass | ✓ | ✅ | 161183 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b0f9b510-33d2-4f12-bcbf-b34c1e75332d) |
-| 52 | `A.unichain-sepolia.mid.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/3e2addda-3f09-4060-bb29-d807632d35ca) |
-| 53 | `A.unichain-sepolia.small.small` | revert | ✗ | ✅ | 42605 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/1c53de8c-d758-413e-aa54-85f745824f63) |
-| 54 | `A.unichain-sepolia.small.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/0cc6f73d-4929-46e5-b24f-6e58be558193) |
-| 55 | `A.unichain-sepolia.empty.small` | revert | ✗ | ✅ | 42605 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/d7e578cf-0f41-4b12-ab77-5aa05c147baf) |
-| 56 | `A.unichain-sepolia.empty.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/d63e4ba3-3e19-4963-9033-e9dea003f16b) |
-| 57 | `A.worldchain-sepolia.whale.small` | pass | ✓ | ✅ | 161183 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/34ab9280-4d97-4ba9-9ef8-df1e14b6f7f1) |
-| 58 | `A.worldchain-sepolia.whale.large` | pass | ✓ | ✅ | 161195 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b667630a-2a6b-49fb-8ac2-ef7df58c650e) |
-| 59 | `A.worldchain-sepolia.mid.small` | pass | ✓ | ✅ | 161183 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/2aff39f0-d57f-4601-a27c-c71750087a18) |
-| 60 | `A.worldchain-sepolia.mid.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/17bccca2-746d-4a88-8146-bf2ca9b7a496) |
-| 61 | `A.worldchain-sepolia.small.small` | revert | ✗ | ✅ | 42605 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/6e4e2658-8303-4762-b4e6-f2ff52e01409) |
-| 62 | `A.worldchain-sepolia.small.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/8cf8049e-358f-4538-a353-b635efab66af) |
-| 63 | `A.worldchain-sepolia.empty.small` | revert | ✗ | ✅ | 42605 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/8d0ad0c4-5f10-4706-becf-d6dc7c586ad7) |
-| 64 | `A.worldchain-sepolia.empty.large` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/2648c21c-7ae9-44ea-9f86-258d59a9addf) |
-| 65 | `B.mint-fxUSDC.whale` | pass | ✓ | ✅ | 235544 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/168b96c0-a22a-4a14-a97b-cd441303f955) |
-| 66 | `B.mint-fxEURC.whale` | pass | ✓ | ✅ | 235544 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/2f581ebf-8d5e-4f42-a74b-84b0fc61bafa) |
-| 67 | `B.redeem-fxUSDC.whale` | revert | ✗ | ✅ | 79197 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/00fe47e4-e222-42c3-8974-da4358b636e9) |
-| 68 | `B.redeem-fxEURC.whale` | revert | ✗ | ✅ | 79197 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/7e604593-030f-4ede-83a3-6c4ad83b8e0b) |
-| 69 | `B.mint-fxUSDC.mid` | pass | ✓ | ✅ | 235532 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/83204c2e-fb95-44f9-be17-641f4e6453db) |
-| 70 | `B.mint-fxEURC.mid` | pass | ✓ | ✅ | 235532 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/1df3606d-005d-4cad-bef9-14b74ec3223c) |
-| 71 | `B.redeem-fxUSDC.mid` | revert | ✗ | ✅ | 79197 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/820d35c7-759f-487a-a8d1-b8d4a9f8086c) |
-| 72 | `B.redeem-fxEURC.mid` | revert | ✗ | ✅ | 79197 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/f682cefb-f2ce-4517-b711-1d7739d00c55) |
-| 73 | `B.mint-fxUSDC.small` | pass | ✓ | ✅ | 235532 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/db5a0c7a-2b87-432f-80f2-23452f961702) |
-| 74 | `B.mint-fxEURC.small` | pass | ✓ | ✅ | 235532 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/a275e360-94f5-4218-82f7-433a9ec5af52) |
-| 75 | `B.redeem-fxUSDC.small` | revert | ✗ | ✅ | 79185 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/c0af3107-53b3-4e53-b362-1e5ae0fe39c0) |
-| 76 | `B.redeem-fxEURC.small` | revert | ✗ | ✅ | 79185 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/2901a05d-9968-4198-a1a5-d2b66f112e9f) |
-| 77 | `B.mint-fxUSDC.empty` | revert | ✗ | ✅ | 71236 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/d9e37a96-81a5-44a2-aee3-551ac0e9a3fb) |
-| 78 | `B.mint-fxEURC.empty` | revert | ✗ | ✅ | 71236 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/96629c69-7eb2-4309-9ee7-b2e9cfb233dd) |
-| 79 | `B.redeem-fxUSDC.empty` | revert | ✗ | ✅ | 24914 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/c18781b0-5b49-4b8b-b577-9e07d063cc1c) |
-| 80 | `B.redeem-fxEURC.empty` | revert | ✗ | ✅ | 24914 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/5c0dfa7f-4de7-49b9-9548-8ea5e260e413) |
-| 81 | `B.bundle-redeem-fxUSDC.whale` | pass | ✓ | ✅ | 123986 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/0bdabaa7-9e8b-43e3-9c45-01bfda82c303) |
-| 82 | `B.bundle-redeem-fxUSDC.mid` | pass | ✓ | ✅ | 107200 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/ebc8653d-5a83-442b-8c60-05f04fe7c0c9) |
-| 83 | `B.bundle-redeem-fxUSDC.small` | pass | ✓ | ✅ | 107191 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/01fc5d10-1215-43e0-bc1e-f5c81537b5d9) |
-| 84 | `C.borrow.from-empty-market` | revert | ✗ | ✅ | 111540 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b7413e18-12f6-46a8-9ab2-4050527102c6) |
-| 85 | `C.borrow.boundary-from-empty` | revert | ✗ | ✅ | 111552 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/8274f174-23f8-4767-96e9-eacd5669573c) |
-| 86 | `C.borrow.over-LLTV-87` | revert | ✗ | ✅ | 111552 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/0dbf1e33-a685-41b7-9d6c-e1a82a1a4e9f) |
-| 87 | `C.liquidate.no-allowance` | revert | ✗ | ✅ | 54154 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/e86aefa8-aa9f-4846-9735-d1f094f02ac9) |
-| 88 | `C.liquidate.no-redstone` | revert | ✗ | ✅ | 39841 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/dda4f31a-c56b-4772-9061-c655658db255) |
-| 89 | `C.sweep.unknown-nonce` | revert | ✗ | ✅ | 31608 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/1376640d-18a8-4093-9587-38e4e192acf2) |
-| 90 | `C.oracle.stale-as-expected` | revert | ✗ | ✅ | 47191 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b8e7e1ec-d4ab-48c5-b61a-5452b3e62844) |
-| 91 | `C.oracle.stale-reverse` | revert | ✗ | ✅ | 47191 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b9690a03-9134-44e8-b696-98284793f950) |
-| 92 | `C.oracle.unknown-feed` | revert | ✗ | ✅ | 31626 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/fb4a0d9d-b769-4060-a207-ad5ec450f87b) |
-| 93 | `D.read.totalShares` | pass | ✓ | ✅ | 23498 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/ab651331-d404-47e6-b9e1-aaf8785d2094) |
-| 94 | `D.read.hotReservePct` | pass | ✓ | ✅ | 23667 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/39809a7e-cd62-4494-a6f0-9282b5e72fbc) |
-| 95 | `D.read.spreadBps` | pass | ✓ | ✅ | 23777 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/e9cce632-9621-4d65-9c64-918510e8902b) |
-| 96 | `D.read.kBps` | pass | ✓ | ✅ | 23755 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b95ff164-0965-4fb7-818c-e192db09badc) |
-| 97 | `D.hook.guards-poolmanager` | revert | ✗ | ✅ | 27350 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/f0e2a896-91c7-4e18-837d-da47519bd399) |
-| 98 | `E.pyth-fresh.usdc-eurc` | pass | ✓ | ✅ | 258042 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b30ca8ba-3240-4540-be44-36d74ff8367e) |
-| 99 | `E.pyth-fresh.eurc-usdc` | pass | ✓ | ✅ | 258042 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/5e519d48-e8f1-4a7c-9d28-f552e01715b2) |
-| 100 | `C.borrow.primed` | pass | ✓ | ✅ | 146628 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/1acd0d88-4cd6-4ebb-a70d-d4af6b57bbbd) |
-| 101 | `C.sweep.before-grace` | revert | ✗ | ✅ | 31813 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/2a6055be-78cb-4afb-9f01-7c02285faad2) |
-| 102 | `C.sweep.after-grace` | pass | ✓ | ✅ | 55520 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/ca76314b-ef6a-4bb4-9536-0f34010d3b60) |
-| 103 | `Auth.hook.setSpreadBps.non-owner` | revert | ✗ | ✅ | 24099 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/632e291b-22cb-400d-931b-ccd6e7417044) |
-| 104 | `Auth.hook.setHotReservePct.non-owner` | revert | ✗ | ✅ | 24023 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/66ada4a9-ca3c-4d14-9789-469b9748ca26) |
-| 105 | `Auth.hook.setKBps.non-owner` | revert | ✗ | ✅ | 23544 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/d6e49688-70d0-4028-920c-54d07124939f) |
-| 106 | `G.cctp-reverse-leg.supply-executed` | pass | ✓ | ✅ | 146077 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/714de686-cb84-4cc5-9bf4-473b433a8de1) |
-| 107 | `G.cctp-reverse-leg.bad-calldata-stranded` | pass | ✓ | ✅ | 139803 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/def9baf8-fc9b-43d7-bccc-05f13ff33bfd) |
-| 108 | `H.universal-router.usdc-to-eurc` | pass | ✓ | ✅ | 405641 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/c5387866-096c-4386-92bc-8622836d7cf7) |
-| 109 | `F.00.small.hub-mint-fxUSDC` | revert | ✗ | ✅ | 71236 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/ddd6100f-6898-4c95-a64b-373f1d8506f2) |
-| 110 | `F.01.empty.hub-mint-fxEURC` | revert | ✗ | ✅ | 71260 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/9b26653e-3637-4e12-ab0a-b632117a40f8) |
-| 111 | `F.02.whale.hub-getMid` | revert | ✗ | ✅ | 47191 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/7193146e-8877-462c-9dac-808f30d17776) |
-| 112 | `F.03.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/d503a3af-fd7f-4bd5-8cd2-58787be05d93) |
-| 113 | `F.04.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/3b3c89ed-6096-463a-ab8a-d123e0415098) |
-| 114 | `F.05.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/616dc849-c00e-4e3f-9f12-7264592ea2d6) |
-| 115 | `F.06.mid.spoke-enterHub` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/ff5d5a67-a299-4eec-bc67-03dbda9a5c6a) |
-| 116 | `F.07.mid.spoke-enterHub` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/f0c2b612-5104-49ee-8510-3514ec728e0b) |
-| 117 | `F.08.mid.spoke-enterHub` | pass | ✓ | ✅ | 161195 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/ed10d145-f69d-49ac-a895-a497d9036a5a) |
-| 118 | `F.09.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/16b420b3-d308-4810-b173-d8c71986887f) |
-| 119 | `F.10.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/555f9f9b-e44d-4d0d-9d7e-318f776c0394) |
-| 120 | `F.11.mid.spoke-enterHub` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/4526cc41-df06-4cfc-9cbe-96bfdba994d2) |
-| 121 | `F.12.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/0bf3b5f8-5474-45f9-9c59-8469c3cf4873) |
-| 122 | `F.13.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/a3b15c4a-983d-4393-a778-d17435c3ca13) |
-| 123 | `F.14.mid.spoke-enterHub` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/9c4c5493-2075-47e1-909f-e1dc5376337b) |
-| 124 | `F.15.mid.spoke-enterHub` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/2bb79ac8-ed30-4e60-b98e-4e6dc5544557) |
-| 125 | `F.16.mid.spoke-enterHub` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/473e62c0-cfb9-4857-bdc6-d9ed93599fd9) |
-| 126 | `F.17.mid.spoke-enterHub` | revert | ✗ | ✅ | 42617 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/d3605ea8-f220-444e-827d-915a7706a3b1) |
-| 127 | `F.18.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/ee10c9b5-ab24-4af1-bb63-08493700abc9) |
-| 128 | `F.19.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/24a9162e-b422-48ad-b17e-4a63835a8da5) |
+Backend routing: all cases via `/simulate` (primed-vnet flag not set)
+
+| # | Test | Expect | Sim | Pass | Gas | Backend | Trace |
+|---|---|---|---|---|---|---|---|
+| 1 | `A.arbitrum-sepolia.whale.small` | pass | ✓ | ✅ | 161183 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b9140638-88ad-43b3-935c-0b1950d4e155) |
+| 2 | `A.arbitrum-sepolia.whale.large` | pass | ✓ | ✅ | 161195 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/ff546ecf-9734-4bc7-8d21-3433fed6c66a) |
+| 3 | `A.arbitrum-sepolia.mid.small` | pass | ✓ | ✅ | 161183 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/30a65f81-e823-47ee-8c21-09c248c455ee) |
+| 4 | `A.arbitrum-sepolia.mid.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/41c59a25-58fd-44bf-a27a-1801b75c51e4) |
+| 5 | `A.arbitrum-sepolia.small.small` | revert | ✗ | ✅ | 42605 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/5d8749ab-2607-4949-be05-8bfb8f69c27c) |
+| 6 | `A.arbitrum-sepolia.small.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/c216b688-6cdc-4173-b84d-817045872233) |
+| 7 | `A.arbitrum-sepolia.empty.small` | revert | ✗ | ✅ | 42605 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/44bca8cc-c2d4-4f82-8e23-78807a8aa711) |
+| 8 | `A.arbitrum-sepolia.empty.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/6e28fa6b-e9fb-4957-88a0-f3849c8b6a91) |
+| 9 | `A.arc-testnet.whale.small` | pass | ✗ | ❌ | 0 | `/simulate` | - |
+| 10 | `A.arc-testnet.whale.large` | pass | ✗ | ❌ | 0 | `/simulate` | - |
+| 11 | `A.arc-testnet.mid.small` | pass | ✗ | ❌ | 0 | `/simulate` | - |
+| 12 | `A.arc-testnet.mid.large` | revert | ✗ | ❌ | 0 | `/simulate` | - |
+| 13 | `A.arc-testnet.small.small` | revert | ✗ | ❌ | 0 | `/simulate` | - |
+| 14 | `A.arc-testnet.small.large` | revert | ✗ | ❌ | 0 | `/simulate` | - |
+| 15 | `A.arc-testnet.empty.small` | revert | ✗ | ❌ | 0 | `/simulate` | - |
+| 16 | `A.arc-testnet.empty.large` | revert | ✗ | ❌ | 0 | `/simulate` | - |
+| 17 | `A.avalanche-fuji.whale.small` | pass | ✓ | ✅ | 200983 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/778071f7-7b2b-4244-8654-b0056a9cff04) |
+| 18 | `A.avalanche-fuji.whale.large` | pass | ✓ | ✅ | 200995 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/aaef20a5-f822-457c-9167-06a527b57cc5) |
+| 19 | `A.avalanche-fuji.mid.small` | pass | ✓ | ✅ | 200983 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/14c37686-9dbd-4e7f-9df8-9853b5804dde) |
+| 20 | `A.avalanche-fuji.mid.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/9dd494fc-148d-491f-b93d-721782148b1f) |
+| 21 | `A.avalanche-fuji.small.small` | revert | ✗ | ✅ | 42605 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/ec3098e9-f038-4428-bfe7-9cc2aad8b2f8) |
+| 22 | `A.avalanche-fuji.small.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/34780778-23db-4b87-ad56-c0d2b3b7c033) |
+| 23 | `A.avalanche-fuji.empty.small` | revert | ✗ | ✅ | 42605 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/612fe8b9-2ac7-4fb3-9a45-51ecb78b30f1) |
+| 24 | `A.avalanche-fuji.empty.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b26a1a24-8e25-4d91-a657-f0808627d491) |
+| 25 | `A.ethereum-sepolia.whale.small` | pass | ✓ | ✅ | 161183 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/f0484785-f66b-428d-9189-a7924a8a0636) |
+| 26 | `A.ethereum-sepolia.whale.large` | pass | ✓ | ✅ | 161195 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/1ee74890-c1ed-4e67-bad4-9e2ec8ef2c5a) |
+| 27 | `A.ethereum-sepolia.mid.small` | pass | ✓ | ✅ | 161183 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b1353804-027b-4792-a042-3d42ae0cc6a4) |
+| 28 | `A.ethereum-sepolia.mid.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/2cc1f77a-c1f7-46aa-a07d-fa5465361c9c) |
+| 29 | `A.ethereum-sepolia.small.small` | revert | ✗ | ✅ | 42605 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/921e8223-6ce3-440c-8ea1-e2c2ad20d81c) |
+| 30 | `A.ethereum-sepolia.small.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/7bc489d8-3097-4814-808b-4b95bbe06a4a) |
+| 31 | `A.ethereum-sepolia.empty.small` | revert | ✗ | ✅ | 42605 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/946d2181-192c-409f-b32f-f4cb16b0e4f2) |
+| 32 | `A.ethereum-sepolia.empty.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/2fdc5462-0737-4308-85dc-4d282dfca03d) |
+| 33 | `A.op-sepolia.whale.small` | pass | ✓ | ✅ | 161183 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/dc61d7f1-f14f-47f1-bcaa-bb59b8dab84e) |
+| 34 | `A.op-sepolia.whale.large` | pass | ✓ | ✅ | 161195 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b70b7455-b9b0-464c-a3fc-4ae3846c5fde) |
+| 35 | `A.op-sepolia.mid.small` | pass | ✓ | ✅ | 161183 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b2f1f9ca-9450-4dd4-97c5-dbe6c61e9e2d) |
+| 36 | `A.op-sepolia.mid.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/fa54c739-f337-4af9-b664-a177ad62e79d) |
+| 37 | `A.op-sepolia.small.small` | revert | ✗ | ✅ | 42605 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/dd23271d-fac8-4d7b-a39a-8b3a8ba29b75) |
+| 38 | `A.op-sepolia.small.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/c2fe1d89-f47a-4764-967f-23f702805510) |
+| 39 | `A.op-sepolia.empty.small` | revert | ✗ | ✅ | 42605 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/19ece16f-7638-4bfe-b190-b8ccae7e3d81) |
+| 40 | `A.op-sepolia.empty.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/51ddb3cb-8233-4525-80d6-5543896ca255) |
+| 41 | `A.polygon-amoy.whale.small` | pass | ✓ | ✅ | 232583 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/4d375b7f-f48e-4782-b409-2027501d6f20) |
+| 42 | `A.polygon-amoy.whale.large` | pass | ✓ | ✅ | 232595 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/a7dd22a4-1ed3-413c-a308-3c7d885117bb) |
+| 43 | `A.polygon-amoy.mid.small` | pass | ✓ | ✅ | 232583 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/e99e3253-0ba8-4002-8f45-4908d487fea4) |
+| 44 | `A.polygon-amoy.mid.large` | revert | ✗ | ✅ | 62777 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/759a33f6-4d14-49de-b7c1-3681fdb4981d) |
+| 45 | `A.polygon-amoy.small.small` | revert | ✗ | ✅ | 62765 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/58edee8e-0831-4d14-a75c-9e9ffd39821d) |
+| 46 | `A.polygon-amoy.small.large` | revert | ✗ | ✅ | 62777 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/5fed2c2d-71b6-4f60-9b99-d13b0e6c17d0) |
+| 47 | `A.polygon-amoy.empty.small` | revert | ✗ | ✅ | 62765 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/bb5a4e6b-7205-4001-b424-c529c5b7bfde) |
+| 48 | `A.polygon-amoy.empty.large` | revert | ✗ | ✅ | 62777 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/de6a5ec5-442c-4c56-8473-a12b71e0cd4f) |
+| 49 | `A.unichain-sepolia.whale.small` | pass | ✓ | ✅ | 161183 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/062ebef9-de26-4dc1-b0a0-f203bd6b7be9) |
+| 50 | `A.unichain-sepolia.whale.large` | pass | ✓ | ✅ | 161195 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b118c317-2f3a-4c60-8981-84450b1a7f17) |
+| 51 | `A.unichain-sepolia.mid.small` | pass | ✓ | ✅ | 161183 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/56b41e38-70d0-4951-ad41-90f180d1fe18) |
+| 52 | `A.unichain-sepolia.mid.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/5ae7a417-7258-44bc-b210-3f06628c81bb) |
+| 53 | `A.unichain-sepolia.small.small` | revert | ✗ | ✅ | 42605 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/a76478bf-b285-4a22-9099-f9a7b4fdce33) |
+| 54 | `A.unichain-sepolia.small.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b8fa9775-f22a-48f0-a55b-585032b75d28) |
+| 55 | `A.unichain-sepolia.empty.small` | revert | ✗ | ✅ | 42605 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/e5aa5e7b-e244-4864-91c0-236ec3a8f4d7) |
+| 56 | `A.unichain-sepolia.empty.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/6f277f6d-0fda-4fde-ab71-0e2c5415009f) |
+| 57 | `A.worldchain-sepolia.whale.small` | pass | ✓ | ✅ | 161183 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/cc127a5a-13ab-4685-8e09-6dfd9f820a01) |
+| 58 | `A.worldchain-sepolia.whale.large` | pass | ✓ | ✅ | 161195 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/eed0abab-a3e4-4f89-8340-626fcaa5d7b1) |
+| 59 | `A.worldchain-sepolia.mid.small` | pass | ✓ | ✅ | 161183 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/f3f3474e-3ab1-4a45-9cc2-bcc4a0328a2b) |
+| 60 | `A.worldchain-sepolia.mid.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/77849fd5-ec74-4784-bc1d-90c8ce4cf65c) |
+| 61 | `A.worldchain-sepolia.small.small` | revert | ✗ | ✅ | 42605 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/e10c9605-c911-470f-82e5-b5b15cb16c4a) |
+| 62 | `A.worldchain-sepolia.small.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/a49700b6-96d6-4013-b3f0-1dbc848f220a) |
+| 63 | `A.worldchain-sepolia.empty.small` | revert | ✗ | ✅ | 42605 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/a055250a-f27d-4ceb-a962-3d6a295b593c) |
+| 64 | `A.worldchain-sepolia.empty.large` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/57a871c2-af09-4f16-a5c1-c88e098b24ca) |
+| 65 | `B.mint-fxUSDC.whale` | pass | ✓ | ✅ | 235544 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/6b050e0f-82d3-41ef-b928-075b9d10b788) |
+| 66 | `B.mint-fxEURC.whale` | pass | ✓ | ✅ | 235544 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/7314336a-8810-409d-96f4-e3539b25ab76) |
+| 67 | `B.redeem-fxUSDC.whale` | revert | ✗ | ✅ | 79197 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/f723d1e8-9de4-48dd-83bb-bc14cc8185e4) |
+| 68 | `B.redeem-fxEURC.whale` | revert | ✗ | ✅ | 79197 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/d194a1d3-e9c4-44f1-90a3-2499d0866ad3) |
+| 69 | `B.mint-fxUSDC.mid` | pass | ✓ | ✅ | 235532 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/f87c48cb-e5b4-47d2-9e7f-3db934a02649) |
+| 70 | `B.mint-fxEURC.mid` | pass | ✓ | ✅ | 235532 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/eae5ec10-4b9a-4ed4-a8e2-05b7f0d14a13) |
+| 71 | `B.redeem-fxUSDC.mid` | revert | ✗ | ✅ | 79197 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/4b20789c-d286-402e-aae2-2bf33e91d5c9) |
+| 72 | `B.redeem-fxEURC.mid` | revert | ✗ | ✅ | 79197 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/301265cd-45ac-4fd2-a700-d4f0a0645332) |
+| 73 | `B.mint-fxUSDC.small` | pass | ✓ | ✅ | 235532 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/cabdef3d-4088-4ae6-b3c6-8c412a3329c9) |
+| 74 | `B.mint-fxEURC.small` | pass | ✓ | ✅ | 235532 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/f95d9320-c3b8-4d89-9646-16a74b38cfac) |
+| 75 | `B.redeem-fxUSDC.small` | revert | ✗ | ✅ | 79185 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/54ec22de-bb76-4750-ac67-4e8863ad04fe) |
+| 76 | `B.redeem-fxEURC.small` | revert | ✗ | ✅ | 79185 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/6064f862-c14d-4ae5-a697-39f765b9533f) |
+| 77 | `B.mint-fxUSDC.empty` | revert | ✗ | ✅ | 71236 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/8e6c5f3a-8c82-4f88-9fbc-efd395249572) |
+| 78 | `B.mint-fxEURC.empty` | revert | ✗ | ✅ | 71236 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/3d26202d-cd2d-4339-9c8d-25275f828752) |
+| 79 | `B.redeem-fxUSDC.empty` | revert | ✗ | ✅ | 24914 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b00207c1-5c88-48cb-be94-9bd627e4b520) |
+| 80 | `B.redeem-fxEURC.empty` | revert | ✗ | ✅ | 24914 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/442d20f5-9c91-4850-8c7e-85215a2bf9df) |
+| 81 | `B.bundle-redeem-fxUSDC.whale` | pass | ✓ | ✅ | 123986 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/eaa671f7-1b82-47fd-a56b-deb4ce7dfe1c) |
+| 82 | `B.bundle-redeem-fxUSDC.mid` | pass | ✓ | ✅ | 107200 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/68df9145-8e92-4aaf-aa85-db5b532f4ab8) |
+| 83 | `B.bundle-redeem-fxUSDC.small` | pass | ✓ | ✅ | 107191 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/4826f76b-3def-411b-8670-d94a5f391c82) |
+| 84 | `C.borrow.from-empty-market` | revert | ✗ | ✅ | 111540 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/12be0fe5-f8fb-4577-b626-1cc8bd2c7412) |
+| 85 | `C.borrow.boundary-from-empty` | revert | ✗ | ✅ | 111552 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/7700fa37-59f2-4293-82d6-27c9a7d5b22d) |
+| 86 | `C.borrow.over-LLTV-87` | revert | ✗ | ✅ | 111552 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/12254afb-5320-4398-8ead-1eefa9cb9e64) |
+| 87 | `C.liquidate.no-allowance` | revert | ✗ | ✅ | 54154 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/8a4031c4-513c-4341-8ca2-c236fb516518) |
+| 88 | `C.liquidate.no-redstone` | revert | ✗ | ✅ | 39841 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/2d05f94a-e9cd-40ce-9660-ac0a0826ef4f) |
+| 89 | `C.sweep.unknown-nonce` | revert | ✗ | ✅ | 31608 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/e6919534-963b-4bc3-a758-fed12df9e9fa) |
+| 90 | `C.oracle.stale-as-expected` | revert | ✗ | ✅ | 47191 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/5b0e0b26-9245-4929-ba32-ec694c87cfd5) |
+| 91 | `C.oracle.stale-reverse` | revert | ✗ | ✅ | 47191 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/a095ed53-50d7-426d-b35f-17fd9a2ca06e) |
+| 92 | `C.oracle.unknown-feed` | revert | ✗ | ✅ | 31626 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/3daeffb9-abf6-4cd2-ab3b-3d2d16cd20a3) |
+| 93 | `D.read.totalShares` | pass | ✓ | ✅ | 23498 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/01f3ce13-d0f3-4d7e-be69-6a109a71174e) |
+| 94 | `D.read.hotReservePct` | pass | ✓ | ✅ | 23667 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/6fc7a9f2-1ad5-4273-a5fa-0bd4d54af3e8) |
+| 95 | `D.read.spreadBps` | pass | ✓ | ✅ | 23777 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/d626508d-d31e-46ca-b33b-ff8528e77774) |
+| 96 | `D.read.kBps` | pass | ✓ | ✅ | 23755 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/22fbaf37-7a0b-4b5d-a012-60deb0e72820) |
+| 97 | `D.hook.guards-poolmanager` | revert | ✗ | ✅ | 27350 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/818015a7-8e0a-4d69-b636-d7b51c2efc95) |
+| 98 | `E.pyth-fresh.usdc-eurc` | pass | ✓ | ✅ | 258201 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/fba55455-ed8f-44f9-8b77-ee988f95aafc) |
+| 99 | `E.pyth-fresh.eurc-usdc` | pass | ✓ | ✅ | 258201 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/e29fbd0f-23fc-4643-89bb-162ffa6555c4) |
+| 100 | `C.borrow.primed` | pass | ✓ | ✅ | 146628 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/aed388e7-00e7-443c-815f-c91e7e8aa9b9) |
+| 101 | `C.sweep.before-grace` | revert | ✗ | ✅ | 31813 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/4a54f806-f5a8-4728-a012-506f15d50eec) |
+| 102 | `C.sweep.after-grace` | pass | ✓ | ✅ | 55520 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/525a0d1f-a5a1-4ef3-ab1d-052ccbc5cec4) |
+| 103 | `Auth.hook.setSpreadBps.non-owner` | revert | ✗ | ✅ | 24099 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/1779573c-f6ee-481d-8eef-5902a9fe0512) |
+| 104 | `Auth.hook.setHotReservePct.non-owner` | revert | ✗ | ✅ | 24023 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/7d50bd68-cb3a-40f0-98e1-6cc617ec33ee) |
+| 105 | `Auth.hook.setKBps.non-owner` | revert | ✗ | ✅ | 23544 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/14558a84-9c09-440b-8aa7-2fbe77725018) |
+| 106 | `G.cctp-reverse-leg.supply-executed` | pass | ✓ | ✅ | 146077 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/ba06f277-9e08-4421-8989-028653f06e0a) |
+| 107 | `G.cctp-reverse-leg.bad-calldata-stranded` | pass | ✓ | ✅ | 139803 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/e37eb138-3e2e-4c47-bb02-9ddb659127a9) |
+| 108 | `H.universal-router.usdc-to-eurc` | pass | ✓ | ✅ | 405641 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/de36bb0e-c9ae-4ffe-b6f7-8c51324cb01a) |
+| 109 | `F.00.small.hub-mint-fxUSDC` | revert | ✗ | ✅ | 71236 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/8ac23ccc-1506-4865-9a1d-452d314730c3) |
+| 110 | `F.01.empty.hub-mint-fxEURC` | revert | ✗ | ✅ | 71260 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/f4948094-0101-4135-a7b2-8ce17fcd40f1) |
+| 111 | `F.02.whale.hub-getMid` | revert | ✗ | ✅ | 47191 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/ad1c0bb6-a7d1-44c5-8c7e-83fa888f35be) |
+| 112 | `F.03.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/436e1c4a-c4dc-45cf-84d2-bc129cf7badd) |
+| 113 | `F.04.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/2cf06225-4b4f-4dab-950f-738771e5209c) |
+| 114 | `F.05.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/346e3129-15c5-4edb-b17a-70d48abc63fc) |
+| 115 | `F.06.mid.spoke-enterHub` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/558b0c9e-9f46-4d79-a7ad-0561a782ee23) |
+| 116 | `F.07.mid.spoke-enterHub` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/12564b2e-e741-42db-bff9-54a8a927b3d4) |
+| 117 | `F.08.mid.spoke-enterHub` | pass | ✓ | ✅ | 161195 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/1517ed82-600c-4a80-90c1-cf233f778b2f) |
+| 118 | `F.09.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/23c24a2e-a585-480f-b000-0c092fb10a55) |
+| 119 | `F.10.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/862e46cd-8935-4e82-ba61-06961906cd53) |
+| 120 | `F.11.mid.spoke-enterHub` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/724b2cb4-fed3-4237-8f95-1e74f3b58450) |
+| 121 | `F.12.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/b64573b4-2cea-4844-963f-724ebb7c94ab) |
+| 122 | `F.13.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/3254272e-f7bc-4673-8495-94ecceffe61e) |
+| 123 | `F.14.mid.spoke-enterHub` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/5f7d19a4-9da7-4df2-907f-74b77029958c) |
+| 124 | `F.15.mid.spoke-enterHub` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/c192d419-a61d-4031-91bd-fdf80719f8da) |
+| 125 | `F.16.mid.spoke-enterHub` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/7b27a8ab-4d6e-43b7-af15-d38d32a63e20) |
+| 126 | `F.17.mid.spoke-enterHub` | revert | ✗ | ✅ | 42617 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/539d228f-69cd-4b55-8e2d-70eb390aa597) |
+| 127 | `F.18.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/ce0c4d68-ac66-4a74-9590-c0e749c921eb) |
+| 128 | `F.19.mid.spoke-enterHub` | revert | ✗ | ✅ | 42629 | `/simulate` | [link](https://dashboard.tenderly.co/criptopoeta/bufi/simulator/f56fb2db-b364-44dd-b978-f148a0a51064) |

@@ -1,0 +1,8 @@
+{
+  "network": "avalanche-fuji",
+  "chainId": 43113,
+  "messageReceiver": "0x0000000000000000000000000000000000000000",
+  "cctpDomain": 1,
+  "rpcUrl": "https://api.avax-test.network/ext/bc/C/rpc",
+  "note": "Step 1 of the planned hub migration. messageReceiver is the address-zero placeholder — fill in after deploying the hub stack (FxOracle, Morpho adapters, FxMarketRegistry, FxReceipts, FxLiquidator, FxHubMessageReceiver) on Fuji. The migrate-hub script reads this and redeploys every non-Fuji spoke pointing here. Step 2 will swap this for an Arc Testnet config."
+}
