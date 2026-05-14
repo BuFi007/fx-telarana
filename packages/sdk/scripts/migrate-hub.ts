@@ -241,44 +241,53 @@ async function preflight(
 // Reads HUB_RECEIVER() + ARC_DOMAIN() from the freshly-deployed FxSpoke via
 // cast and asserts they match the new hub config. Returns null on success or
 // a human-readable error string on mismatch / RPC error.
-function verifyDeployedSpoke(
+async function verifyDeployedSpoke(
   newAddr: Address,
   rpc: string,
   expectedHub: HubConfig,
-): string | null {
-  try {
-    const recvOut = execSync(
-      `cast call ${newAddr} "HUB_RECEIVER()(address)" --rpc-url ${rpc}`,
-      { stdio: "pipe" },
-    )
-      .toString()
-      .trim();
-    const domOut = execSync(
-      `cast call ${newAddr} "ARC_DOMAIN()(uint32)" --rpc-url ${rpc}`,
-      { stdio: "pipe" },
-    )
-      .toString()
-      .trim();
+): Promise<string | null> {
+  // Some testnet RPCs return empty-body for eth_call when called from viem's
+  // default request shape (no chainId hint, no block tag). cast works
+  // reliably across all of them, so shell out — but redirect stderr to stdout
+  // so we see the actual error message instead of just "Command failed".
+  // Brief settle delay: forge --broadcast --slow returns when receipts are
+  // mined, but some RPCs lag a couple seconds before eth_call sees the code.
+  await new Promise((r) => setTimeout(r, 2000));
 
-    // cast may print "0x… [decoded]" — first whitespace token is what we want.
-    const recv = recvOut.split(/\s+/)[0].toLowerCase();
-    const domStr = domOut.split(/\s+/)[0];
-    const dom = domStr.startsWith("0x") ? parseInt(domStr, 16) : parseInt(domStr, 10);
-
-    if (recv !== expectedHub.messageReceiver.toLowerCase()) {
-      return `HUB_RECEIVER mismatch: expected ${expectedHub.messageReceiver}, got ${recv}`;
+  function castCall(sig: string): { out?: string; err?: string } {
+    try {
+      const out = execSync(`cast call ${newAddr} '${sig}' --rpc-url '${rpc}' 2>&1`, {
+        stdio: "pipe",
+        encoding: "utf8",
+      }).toString().trim();
+      return { out };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      const stderr = (e as { stderr?: Buffer }).stderr?.toString() ?? "";
+      const stdout = (e as { stdout?: Buffer }).stdout?.toString() ?? "";
+      return { err: `${msg}\nstderr: ${stderr}\nstdout: ${stdout}` };
     }
-    if (!Number.isFinite(dom) || dom !== expectedHub.cctpDomain) {
-      return `ARC_DOMAIN mismatch: expected ${expectedHub.cctpDomain}, got ${domStr}`;
-    }
-    return null;
-  } catch (e) {
-    return `cast read failed: ${e instanceof Error ? e.message : String(e)}`;
   }
+
+  const recvR = castCall("HUB_RECEIVER()(address)");
+  if (recvR.err) return `cast HUB_RECEIVER call failed: ${recvR.err.slice(0, 400)}`;
+  const recv = (recvR.out ?? "").split(/\s+/)[0].toLowerCase();
+  if (recv !== expectedHub.messageReceiver.toLowerCase()) {
+    return `HUB_RECEIVER mismatch: expected ${expectedHub.messageReceiver}, got ${recv}`;
+  }
+
+  const domR = castCall("ARC_DOMAIN()(uint32)");
+  if (domR.err) return `cast ARC_DOMAIN call failed: ${domR.err.slice(0, 400)}`;
+  const domStr = (domR.out ?? "").split(/\s+/)[0];
+  const dom = domStr.startsWith("0x") ? parseInt(domStr, 16) : parseInt(domStr, 10);
+  if (!Number.isFinite(dom) || dom !== expectedHub.cctpDomain) {
+    return `ARC_DOMAIN mismatch: expected ${expectedHub.cctpDomain}, got ${domStr}`;
+  }
+  return null;
 }
 
 // ── EXECUTE ONE SPOKE ──────────────────────────────────────────────────────
-function runOneSpoke(
+async function runOneSpoke(
   entry: SpokeStateEntry,
   state: MigrationState,
   targetHub: HubConfig,
@@ -314,27 +323,57 @@ function runOneSpoke(
     return { ok: false, reason: `forge broadcast failed:\n${msg.slice(0, 1200)}` };
   }
 
-  // Parse the deployed address. We REFUSE to write a placeholder.
-  const match = stdout.match(/FxSpoke\s+(0x[0-9a-fA-F]{40})/);
-  if (!match) {
+  // Parse the deployed address from the broadcast artifact — authoritative.
+  // The earlier stdout-regex approach matched an arbitrary "FxSpoke 0x..."
+  // occurrence in forge's trace output (which can echo env-var addresses,
+  // setup-tx labels, etc. before the actual deploy log). The broadcast
+  // file records the actual CREATE tx with `contractName` + `contractAddress`.
+  const broadcastPath = resolve(
+    REPO_ROOT,
+    `contracts/broadcast/DeployFxSpoke.s.sol/${entry.chainId}/run-latest.json`,
+  );
+  if (!existsSync(broadcastPath)) {
+    return {
+      ok: false,
+      reason: `forge broadcast succeeded but artifact missing at ${broadcastPath}.`,
+    };
+  }
+  let broadcastJson;
+  try {
+    broadcastJson = JSON.parse(readFileSync(broadcastPath, "utf8"));
+  } catch (e) {
+    return {
+      ok: false,
+      reason: `forge broadcast artifact unparseable: ${e instanceof Error ? e.message : String(e)}`,
+    };
+  }
+  const txs = (broadcastJson.transactions ?? []) as Array<{
+    transactionType?: string;
+    contractName?: string;
+    contractAddress?: string;
+  }>;
+  const createTx = txs.find(
+    (t) => t.transactionType === "CREATE" && t.contractName === "FxSpoke",
+  );
+  if (!createTx?.contractAddress) {
     return {
       ok: false,
       reason:
-        `forge broadcast succeeded but stdout had no "FxSpoke 0x…" line. ` +
+        `forge broadcast artifact has no CREATE tx for FxSpoke. ` +
         `Refusing to corrupt the manifest with a placeholder. ` +
-        `Last 800 chars of stdout:\n${stdout.slice(-800)}`,
+        `Transactions: ${JSON.stringify(txs.map((t) => ({ type: t.transactionType, name: t.contractName })))}`,
     };
   }
-  const newAddr = match[1] as Address;
-  console.log(`  parsed new FxSpoke: ${newAddr}`);
+  const newAddr = createTx.contractAddress as Address;
+  console.log(`  parsed new FxSpoke from broadcast artifact: ${newAddr}`);
 
   // STAGE in state file BEFORE touching the manifest.
   entry.newFxSpoke = newAddr;
   writeState(state);
 
   // ── ON-CHAIN VERIFICATION ─────────────────────────────────────────────
-  console.log(`  verifying HUB_RECEIVER + ARC_DOMAIN on-chain via cast call …`);
-  const vErr = verifyDeployedSpoke(newAddr, entry.rpc, targetHub);
+  console.log(`  verifying HUB_RECEIVER + ARC_DOMAIN on-chain via viem …`);
+  const vErr = await verifyDeployedSpoke(newAddr, entry.rpc, targetHub);
   if (vErr) {
     return { ok: false, reason: `verification failed: ${vErr}` };
   }
@@ -487,7 +526,7 @@ async function runExecute(newHub: HubConfig, resuming: boolean): Promise<void> {
   for (const entry of todo) {
     console.log(`── ${entry.network} (chain ${entry.chainId}) ──`);
     const manifest = JSON.parse(readFileSync(entry.manifestPath, "utf8")) as SpokeManifest;
-    const result = runOneSpoke(entry, state, state.newHub, manifest);
+    const result = await runOneSpoke(entry, state, state.newHub, manifest);
     if (!result.ok) {
       entry.status = "failed";
       entry.lastError = result.reason;
@@ -558,7 +597,7 @@ async function runRollback(stateFilePath: string): Promise<void> {
   for (const entry of todo) {
     console.log(`── rollback ${entry.network} (chain ${entry.chainId}) ──`);
     const manifest = JSON.parse(readFileSync(entry.manifestPath, "utf8")) as SpokeManifest;
-    const result = runOneSpoke(entry, rollbackState, oldHub, manifest);
+    const result = await runOneSpoke(entry, rollbackState, oldHub, manifest);
     if (!result.ok) {
       entry.status = "failed";
       entry.lastError = result.reason;

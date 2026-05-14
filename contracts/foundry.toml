@@ -5,7 +5,9 @@ libs = ["lib"]
 test = "test"
 script = "script"
 cache_path = "cache"
-solc_version = "0.8.26"
+# Auto-detect: project files pin ^0.8.26, vendored Morpho pins 0.8.19 strictly.
+# With auto_detect_solc, Foundry downloads each version on demand via svm.
+auto_detect_solc = true
 # Arc targets the Prague hardfork (superset of Cancun), so Cancun opcodes (mcopy,
 # transient storage) are safe. RedStone's evm-connector library uses `mcopy`,
 # which requires Cancun+. The Circle SCP `evmVersion: "paris"` advice applies to
