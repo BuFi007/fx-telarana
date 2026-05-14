@@ -51,7 +51,7 @@ forge test --no-match-contract MainnetForkTest
 ETH_RPC_URL=https://ethereum-rpc.publicnode.com forge test
 ```
 
-Current status: **31 / 31 tests passing.**
+Current status: **36 / 36 tests passing** (32 unit + 4 mainnet fork).
 
 ## Phase 0 decisions (spec v0.2)
 
@@ -89,7 +89,7 @@ Pyth feed ids (verified via Hermes):
 
 ## Deferred to later phases
 
-- **Phase 0.5** — RedStone consumer payload extraction in `FxOracle.getMidWithUpdate` (currently the RedStone path is a stable ABI placeholder; deviation gate works once `_setRedstoneCacheForTest` is replaced with the real consumer wiring).
+- **Phase 0.5** — DONE. RedStone wired via `PrimaryProdDataServiceConsumerBase`; `getMidVerified()` reads signed payload from msg.data tail and runs the deviation gate.
 - **Phase 1** — Hinkal Emporium wrappers in `@bu/private-transfer-core` + fresh-SCA-per-deposit factory integration; auto-routing on AccessToken presence.
 - **Phase 2** — `FxSwapHook.sol` (Uniswap v4 hook with oracle-anchored PMM + JIT-borrow from Morpho).
 

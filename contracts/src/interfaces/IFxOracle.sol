@@ -24,27 +24,39 @@ interface IFxOracle {
     error OracleDeviation(uint256 primaryE18, uint256 secondaryE18, uint256 bpsObserved, uint256 bpsMax);
     error OracleLowConfidence(uint256 confBps, uint256 maxConfBps);
     error OracleFeedUnknown(address base, address quote);
+    error RedstoneFeedUnknown(address token);
 
     /*//////////////////////////////////////////////////////////////
                                 READS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the mid price of (base/quote) using last cached values.
-    /// @dev Reverts on staleness, deviation, or low confidence.
+    /// @notice Pyth-only mid price of (base/quote). View. Cheap.
+    /// @dev    Reverts on Pyth staleness or low confidence. Does NOT verify
+    ///         against the secondary (RedStone) source — use `getMidVerified`
+    ///         for the deviation-gated read used by liquidators and the swap hook.
     function getMid(address base, address quote)
         external
         view
         returns (uint256 midE18, uint256 publishedAt);
 
-    /// @notice Updates Pyth + RedStone price caches inline, then returns mid.
-    /// @param pythUpdate Pyth Hermes price-update payloads (variable len).
-    /// @param redstoneUpdate RedStone signed-data payload (chain-agnostic pull mode).
-    /// @dev Caller MUST forward enough msg.value to pay Pyth's `updateFee`.
+    /// @notice Pyth mid cross-checked against RedStone signed payload appended
+    ///         to msg.data (RedStone pull-mode). Reverts if RedStone signers
+    ///         disagree with Pyth beyond the configured deviation gate.
+    /// @dev    Callers MUST wrap their tx with the RedStone SDK so the signed
+    ///         price payload is in calldata tail. Use this for liquidation,
+    ///         swap, and any borrow-affecting action.
+    function getMidVerified(address base, address quote)
+        external
+        view
+        returns (uint256 midE18, uint256 publishedAt);
+
+    /// @notice Update Pyth feeds inline (pays Pyth fee from msg.value), then
+    ///         return the deviation-gated mid. RedStone payload is read from
+    ///         msg.data tail (do not pass it as an argument).
     function getMidWithUpdate(
         address base,
         address quote,
-        bytes[] calldata pythUpdate,
-        bytes calldata redstoneUpdate
+        bytes[] calldata pythUpdate
     ) external payable returns (uint256 midE18, uint256 publishedAt);
 
     /*//////////////////////////////////////////////////////////////

@@ -1,4 +1,7 @@
 {
+  "lib/evm-cctp-contracts": {
+    "rev": "4061786a5726bc05f99fcdb53b0985599f0dbaf7"
+  },
   "lib/forge-std": {
     "tag": {
       "name": "v1.16.1",

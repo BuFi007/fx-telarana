@@ -32,7 +32,7 @@
 **Still TODO before Arc testnet ship**
 - [ ] Confirm Morpho Blue address on Arc (or self-deploy — it's permissionless + immutable)
 - [ ] Confirm AdaptiveCurveIrm address on Arc (or self-deploy)
-- [ ] Phase 0.5: RedStone consumer wiring in `FxOracle.getMidWithUpdate`
+- [x] Phase 0.5: RedStone consumer wiring (`getMidVerified` reads signed payload from msg.data; deviation gate live)
 - [ ] `@bu/fx-engine` TypeScript SDK (lives in desk-v1)
 - [ ] Pasillo `/fx/*` routes (lives in desk-v1)
 - [ ] Frontend money-market + swap pages (public mode only)

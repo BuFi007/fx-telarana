@@ -59,20 +59,14 @@ contract FxLiquidator {
         address borrower,
         uint256 seizedAssets,
         uint256 repaidShares,
-        bytes[] calldata pythUpdate,
-        bytes calldata redstoneUpdate
+        bytes[] calldata pythUpdate
     ) external payable returns (uint256 seized, uint256 repaid) {
         if ((seizedAssets == 0) == (repaidShares == 0)) revert InvalidLiquidation();
 
-        // Freshen oracle in the same tx. We don't need the return value — Morpho will
-        // call the oracle itself; we just want the cached prices up to date.
+        // Freshen oracle in the same tx. RedStone signed payload is read from
+        // msg.data tail — clients must wrap their tx with RedStone SDK.
         if (pythUpdate.length > 0) {
-            ORACLE.getMidWithUpdate{value: msg.value}(
-                loanToken,
-                collateralToken,
-                pythUpdate,
-                redstoneUpdate
-            );
+            ORACLE.getMidWithUpdate{value: msg.value}(loanToken, collateralToken, pythUpdate);
         }
 
         MorphoMarketParams memory mp = _morphoParams(loanToken, collateralToken);

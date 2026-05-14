@@ -16,3 +16,6 @@
 [submodule "contracts/lib/evm-cctp-contracts"]
 	path = contracts/lib/evm-cctp-contracts
 	url = https://github.com/circlefin/evm-cctp-contracts
+[submodule "contracts/lib/redstone-oracles-monorepo"]
+	path = contracts/lib/redstone-oracles-monorepo
+	url = https://github.com/redstone-finance/redstone-oracles-monorepo
