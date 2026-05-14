@@ -49,19 +49,19 @@ const ZERO = "0x0000000000000000000000000000000000000000" as const;
 /// Addresses partitioned per chain. fx-Telarana contracts are TBD until deploy.
 export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
   [ChainId.BaseSepolia]: {
-    // fx-Telarana contracts — live deploy 2026-05-14
-    fxOracle: "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
-    fxMarketRegistry: "0x58c1a04BC4E25DB2f8474C9dF41907CfFC894A4b",
-    fxLiquidator: "0x7ba745b979e027992ECFa51207666e3F5B46cF0a",
-    fxReceiptEURC: "0xdA4c3E315ffFD0790c9D8A1730c2Ba56330Cb2EC",
-    fxReceiptUSDC: "0xf0cDaA9CF9e8d52060dcb41a045e3a6d618A9f65",
-    fxSwapHook: "0x4F9226ea4c67CE68ABA79C061474d72C1201CAc8",
+    // fx-Telarana contracts — v2 deploy 2026-05-14 (real EURC + Pyth-RedStone fallback oracle)
+    fxOracle: "0x7a2a612820f3f697b40f93c026758f2dfafcdbce",
+    fxMarketRegistry: "0x30f4c7bce1e0c5ca5d2ecd2ebdbf13f6273fe7fe",
+    fxLiquidator: "0xf4556f31cace9a80aa584059c81638a5cd344dde",
+    fxReceiptEURC: "0xf6d845da2051183b9519ca1806c39040ba5e71ba",
+    fxReceiptUSDC: "0x4e63954685241c4469f02fec3761ff1d4f34ffa9",
+    fxSwapHook: "0xc7260EF7D95D155aD6CA18ED539373a7576c8AC8",
     // External deps
     morphoBlue: "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
     adaptiveCurveIrm: "0x46415998764C29aB2a25CbeA6254146D50D22687",
     pyth: "0xA2aa501b19aff244D90cc15a4Cf739D2725B5729",
     usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-    eurc: "0x8B7041d8A4bd773a537a01e1F61175da5395714c", // MockEURC (Circle hasn't shipped canonical here)
+    eurc: "0x808456652fdb597867f38412077A9182bf77359F", // Circle's real EURC on Base Sepolia
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,

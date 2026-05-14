@@ -73,8 +73,11 @@ contract DeployBaseSepolia is Script {
             console2.log("eurc    ", eurc);
         }
 
-        // 2) FxOracle (Pyth + RedStone consumer-base; deployer is initial owner)
-        FxOracle oracle = new FxOracle(pyth, deployer, 60, 50, 30);
+        // 2) FxOracle (Pyth primary + RedStone fallback in getMid; deviation
+        //    gate enforced in getMidVerified only)
+        //    600s staleness window — Pyth on Base Sepolia testnet has wider
+        //    update gaps than mainnet. Tighten on production deploy.
+        FxOracle oracle = new FxOracle(pyth, deployer, 600, 50, 30);
         oracle.setFeed(usdc, PYTH_USDC_USD);
         oracle.setFeed(eurc, PYTH_EURC_USD);
         oracle.setRedstoneFeed(usdc, REDSTONE_USDC);

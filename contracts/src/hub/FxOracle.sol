@@ -135,11 +135,44 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
         return (maxOracleAge, maxDeviationBps, maxConfidenceBps);
     }
 
-    /// @notice Pyth-only mid. View. Reverts on staleness or low confidence.
-    /// @dev    Cheap read for non-critical paths. Use `getMidVerified` for
-    ///         liquidations, swaps, and borrow-impacting reads.
+    /// @notice Robust mid read with Pyth → RedStone fallback.
+    /// @dev    1. Try Pyth (fresh + within confidence band). If it works, return.
+    ///         2. Otherwise try RedStone payload from msg.data tail.
+    ///         3. If both fail, propagate the RedStone error (more informative).
+    ///
+    ///         Pyth is preferred when both are valid because Pyth confidence
+    ///         intervals are tracked explicitly and we set tight gates.
+    ///
+    ///         For STRICTLY-BOTH-AGREE semantics (liquidation safety), use
+    ///         `getMidVerified` which enforces deviation between the two.
     function getMid(address base, address quote)
         public
+        view
+        returns (uint256 midE18, uint256 publishedAt)
+    {
+        // Try Pyth path. View-function try/catch requires an external self-call.
+        try this.getMidFromPyth(base, quote) returns (uint256 m, uint256 t) {
+            return (m, t);
+        } catch {
+            // Pyth unavailable. Fall through to RedStone.
+        }
+        return _getMidFromRedstone(base, quote);
+    }
+
+    /// @notice Pyth-only mid. Reverts on staleness, low confidence, or unknown feed.
+    /// @dev    Marked external so `getMid` can call it via try/catch. Internally
+    ///         delegates to `_getMidFromPyth` so other internal callers keep
+    ///         their gas profile.
+    function getMidFromPyth(address base, address quote)
+        external
+        view
+        returns (uint256 midE18, uint256 publishedAt)
+    {
+        return _getMidFromPyth(base, quote);
+    }
+
+    function _getMidFromPyth(address base, address quote)
+        internal
         view
         returns (uint256 midE18, uint256 publishedAt)
     {
@@ -159,14 +192,36 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
         publishedAt = pBase.publishTime < pQuote.publishTime ? pBase.publishTime : pQuote.publishTime;
     }
 
-    /// @notice Deviation-gated mid (Pyth + RedStone). Reverts if RedStone payload
-    ///         is absent from msg.data, signers fail, or mids deviate beyond bound.
+    function _getMidFromRedstone(address base, address quote)
+        internal
+        view
+        returns (uint256 midE18, uint256 publishedAt)
+    {
+        bytes32 baseRed = redstoneFeedOf[base];
+        bytes32 quoteRed = redstoneFeedOf[quote];
+        if (baseRed == bytes32(0)) revert RedstoneFeedUnknown(base);
+        if (quoteRed == bytes32(0)) revert RedstoneFeedUnknown(quote);
+
+        bytes32[] memory ids = new bytes32[](2);
+        ids[0] = baseRed;
+        ids[1] = quoteRed;
+        uint256[] memory values = _redstoneFetch(ids);
+
+        if (values[1] == 0) revert OracleFeedUnknown(base, quote);
+        midE18 = (values[0] * 1e18) / values[1];
+        publishedAt = block.timestamp; // RedStone payload validity gated by
+                                       // validateTimestamp; we treat the read
+                                       // as "now" for downstream staleness checks.
+    }
+
+    /// @notice Strict mid: BOTH Pyth and RedStone must succeed AND agree within
+    ///         deviation bound. For liquidation safety.
     function getMidVerified(address base, address quote)
         public
         view
         returns (uint256 midE18, uint256 publishedAt)
     {
-        (midE18, publishedAt) = getMid(base, quote);
+        (midE18, publishedAt) = _getMidFromPyth(base, quote);
 
         bytes32 baseRed = redstoneFeedOf[base];
         bytes32 quoteRed = redstoneFeedOf[quote];
@@ -178,7 +233,6 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
         ids[1] = quoteRed;
         uint256[] memory values = _redstoneFetch(ids);
 
-        // RedStone returns prices scaled by 1e8. Compute redstone-mid in 1e18.
         if (values[1] == 0) revert OracleDeviation(midE18, 0, type(uint256).max, maxDeviationBps);
         uint256 redstoneMidE18 = (values[0] * 1e18) / values[1];
 

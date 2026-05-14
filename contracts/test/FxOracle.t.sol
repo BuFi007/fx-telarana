@@ -101,16 +101,43 @@ contract FxOracleTest is Test {
         assertApproxEqRel(mid, 0.9259e18, 0.001e18);
     }
 
-    function test_getMid_revertsOnStale() public {
+    function test_getMidFromPyth_revertsOnStale() public {
         skip(MAX_AGE + 1);
+        vm.expectRevert();
+        oracle.getMidFromPyth(EURC, USDC);
+    }
+
+    function test_getMidFromPyth_revertsOnLowConfidence() public {
+        _setPyth(PYTH_EURC, 1_08_000_000, 1_080_000, -8, block.timestamp);
+        vm.expectRevert();
+        oracle.getMidFromPyth(EURC, USDC);
+    }
+
+    function test_getMid_fallsBackToRedstoneOnStalePyth() public {
+        skip(MAX_AGE + 1);
+        // Pyth stale → fall back to RedStone (which we seeded in setUp)
+        (uint256 mid, ) = oracle.getMid(EURC, USDC);
+        assertApproxEqRel(mid, 1.08e18, 0.001e18);
+    }
+
+    function test_getMid_fallsBackToRedstoneOnLowPythConfidence() public {
+        _setPyth(PYTH_EURC, 1_08_000_000, 1_080_000, -8, block.timestamp);
+        // Pyth confidence too low → fall back
+        (uint256 mid, ) = oracle.getMid(EURC, USDC);
+        assertApproxEqRel(mid, 1.08e18, 0.001e18);
+    }
+
+    function test_getMid_revertsWhenBothFail() public {
+        skip(MAX_AGE + 1);
+        oracle.setRedstoneShouldRevert(true);
         vm.expectRevert();
         oracle.getMid(EURC, USDC);
     }
 
-    function test_getMid_revertsOnLowConfidence() public {
-        _setPyth(PYTH_EURC, 1_08_000_000, 1_080_000, -8, block.timestamp);
-        vm.expectRevert();
-        oracle.getMid(EURC, USDC);
+    function test_getMid_prefersPythWhenBothFresh() public view {
+        // Both paths populated; Pyth wins (it's tried first)
+        (uint256 mid, ) = oracle.getMid(EURC, USDC);
+        assertApproxEqRel(mid, 1.08e18, 0.001e18);
     }
 
     function test_getMid_revertsOnUnknownFeed() public {
@@ -119,8 +146,8 @@ contract FxOracleTest is Test {
         oracle.getMid(random, USDC);
     }
 
-    function test_getMid_doesNotCheckRedstone() public {
-        // Wildly off RedStone — getMid must NOT trip
+    function test_getMid_doesNotCheckRedstoneDeviationWhenPythSucceeds() public {
+        // Wildly off RedStone — getMid uses Pyth (not deviation-gated)
         oracle.setRedstoneValue(RS_EURC, 5_00_000_000);
         (uint256 mid, ) = oracle.getMid(EURC, USDC);
         assertApproxEqRel(mid, 1.08e18, 0.001e18);
