@@ -213,8 +213,10 @@ const RECEIVER_ABI = parseAbi([
 /**
  * Compute the storage slot for `_deposits[nonce]` inside FxHubMessageReceiver.
  *
- * Layout (post-ReentrancyGuard, which sits at slot 0):
- *   slot 1: mapping(bytes32 => StrandedDeposit) _deposits
+ * Layout (verified via `forge inspect ... storage-layout`):
+ *   slot 0: mapping(bytes32 => StrandedDeposit) _deposits
+ * ReentrancyGuard in our OpenZeppelin version uses transient storage
+ * (EIP-1153), so it consumes no permanent slot.
  *
  * StrandedDeposit packs as:
  *   slot 0: beneficiary (20B) | amount uint96 (12B)
@@ -222,7 +224,7 @@ const RECEIVER_ABI = parseAbi([
  */
 function depositSlot(nonce: Hex): { slotA: Hex; slotB: Hex; pack: (b: Address, a: bigint, t: bigint, s: number) => { a: Hex; b: Hex } } {
   const base = keccak256(
-    encodeAbiParameters([{ type: "bytes32" }, { type: "uint256" }], [nonce, 1n]),
+    encodeAbiParameters([{ type: "bytes32" }, { type: "uint256" }], [nonce, 0n]),
   );
   const slotA = base;
   // next slot: BigInt(base) + 1n, hex-padded
@@ -240,79 +242,119 @@ function depositSlot(nonce: Hex): { slotA: Hex; slotB: Hex; pack: (b: Address, a
   };
 }
 
+/// Category F-hook (admin/auth surface): non-owner calls to owner-only
+/// setters on FxSwapHook all revert. These tests assert the auth gates
+/// are wired correctly, and exercise the contract beyond the read-only
+/// accessors Drop 3 covered.
+const HOOK_ADMIN_ABI = parseAbi([
+  "function setSpreadBps(uint16) external",
+  "function setHotReservePct(uint16) external",
+  "function setKBps(uint16) external",
+]);
+
+export function categoryFAdminGuards(hub: HubManifest): TestCase[] {
+  const out: TestCase[] = [];
+  const stranger = PERSONAS.mid.address;
+
+  for (const [fn, arg] of [
+    ["setSpreadBps", 5n],
+    ["setHotReservePct", 1500n],
+    ["setKBps", 10n],
+  ] as Array<["setSpreadBps" | "setHotReservePct" | "setKBps", bigint]>) {
+    out.push({
+      id: `Auth.hook.${fn}.non-owner`,
+      description: `FxSwapHook.${fn} from non-owner — expect revert`,
+      request: {
+        network_id: String(hub.chainId),
+        from: stranger,
+        to: hub.contracts.FxSwapHook,
+        input: encodeFunctionData({
+          abi: HOOK_ADMIN_ABI,
+          functionName: fn,
+          args: [Number(arg)],
+        }),
+      },
+      expect: { kind: "revert" },
+    });
+  }
+  return out;
+}
+
 /// Category C-sweep — fake a stranded deposit via storage overrides, then
-/// (1) sweep before grace → revert, (2) sweep after grace via block_header
-/// timestamp override → pass.
+/// (1) sweep before grace → revert, (2) sweep with ancient strandedAt so
+/// current block.timestamp is naturally past grace → pass.
 export function categoryCSweep(hub: HubManifest): TestCase[] {
   const out: TestCase[] = [];
   const beneficiary = PERSONAS.mid.address;
   const amount = 1_000_000_000n; // 1000 USDC
-  const nowSec = Math.floor(Date.now() / 1000);
-  const strandedAt = BigInt(nowSec - 60); // 1 minute ago
-  const GRACE = 24n * 60n * 60n; // 24h
+  const nowSec = BigInt(Math.floor(Date.now() / 1000));
   const STATE_STRANDED = 2;
 
-  const { slotA, slotB, pack } = depositSlot(
-    "0xfeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedface" as Hex,
-  );
-  const packed = pack(beneficiary, amount, strandedAt, STATE_STRANDED);
-
-  // Also pre-fund the receiver with USDC so the sweep transfer succeeds.
-  const receiverState = {
-    [hub.contracts.FxHubMessageReceiver]: {
-      storage: {
-        [slotA]: packed.a,
-        [slotB]: packed.b,
+  // C.sweep.before-grace: strandedAt = now - 60s. Current block timestamp
+  // is roughly `nowSec`. Grace = 24h. So grace-end is ~24h in the future
+  // → call reverts GraceUnexpired.
+  {
+    const strandedAt = nowSec - 60n;
+    const { slotA, slotB, pack } = depositSlot(
+      "0xfeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedface" as Hex,
+    );
+    const packed = pack(beneficiary, amount, strandedAt, STATE_STRANDED);
+    out.push({
+      id: "C.sweep.before-grace",
+      description: "sweep stranded deposit before 24h grace — expect GraceUnexpired revert",
+      request: {
+        network_id: String(hub.chainId),
+        from: PERSONAS.whale.address,
+        to: hub.contracts.FxHubMessageReceiver,
+        input: encodeFunctionData({
+          abi: RECEIVER_ABI,
+          functionName: "sweepStrandedDeposit",
+          args: ["0xfeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedface" as Hex],
+        }),
+        state_objects: {
+          [hub.contracts.FxHubMessageReceiver]: { storage: { [slotA]: packed.a, [slotB]: packed.b } },
+          [hub.external.USDC]: {
+            storage: { [balanceSlot(hub.contracts.FxHubMessageReceiver, 9)]: hex32(amount) },
+          },
+        },
       },
-    },
-    [hub.external.USDC]: {
-      storage: {
-        [balanceSlot(hub.contracts.FxHubMessageReceiver, 9)]: hex32(amount),
+      expect: { kind: "revert" },
+    });
+  }
+
+  // C.sweep.after-grace: instead of trying to advance the chain clock,
+  // backdate the deposit. Setting strandedAt to 2024-01-01 (a year+ ago)
+  // means current block.timestamp - strandedAt is already >> 24h grace.
+  // No time-override needed — current state of the chain naturally
+  // satisfies `block.timestamp >= strandedAt + GRACE`.
+  {
+    const ancientStrandedAt = 1704067200n; // 2024-01-01 00:00:00 UTC
+    const { slotA, slotB, pack } = depositSlot(
+      "0x1111111111111111111111111111111111111111111111111111111111111111" as Hex,
+    );
+    const packed = pack(beneficiary, amount, ancientStrandedAt, STATE_STRANDED);
+    out.push({
+      id: "C.sweep.after-grace",
+      description: "sweep with strandedAt backdated to 2024 — current block is naturally past grace → expect pass",
+      request: {
+        network_id: String(hub.chainId),
+        from: PERSONAS.whale.address,
+        to: hub.contracts.FxHubMessageReceiver,
+        input: encodeFunctionData({
+          abi: RECEIVER_ABI,
+          functionName: "sweepStrandedDeposit",
+          args: ["0x1111111111111111111111111111111111111111111111111111111111111111" as Hex],
+        }),
+        state_objects: {
+          [hub.contracts.FxHubMessageReceiver]: { storage: { [slotA]: packed.a, [slotB]: packed.b } },
+          [hub.external.USDC]: {
+            storage: { [balanceSlot(hub.contracts.FxHubMessageReceiver, 9)]: hex32(amount) },
+          },
+        },
       },
-    },
-  };
-
-  // C.sweep.before-grace: same packed state, sim runs at "now" → grace
-  // unexpired → revert.
-  out.push({
-    id: "C.sweep.before-grace",
-    description: "sweep stranded deposit before 24h grace — expect GraceUnexpired revert",
-    request: {
-      network_id: String(hub.chainId),
-      from: PERSONAS.whale.address,
-      to: hub.contracts.FxHubMessageReceiver,
-      input: encodeFunctionData({
-        abi: RECEIVER_ABI,
-        functionName: "sweepStrandedDeposit",
-        args: ["0xfeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedface" as Hex],
-      }),
-      state_objects: receiverState,
-    },
-    expect: { kind: "revert" },
-  });
-
-  // C.sweep.after-grace: same state, but Tenderly simulates with a block
-  // header whose timestamp is past stranded+grace. Tenderly accepts the
-  // override via the (undocumented) `block_header.timestamp` field.
-  out.push({
-    id: "C.sweep.after-grace",
-    description: "sweep stranded deposit after 24h grace (block_header.timestamp override) — expect pass",
-    request: {
-      network_id: String(hub.chainId),
-      from: PERSONAS.whale.address,
-      to: hub.contracts.FxHubMessageReceiver,
-      input: encodeFunctionData({
-        abi: RECEIVER_ABI,
-        functionName: "sweepStrandedDeposit",
-        args: ["0xfeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedface" as Hex],
-      }),
-      state_objects: receiverState,
-      // Future timestamp = strandedAt + grace + buffer.
-      // Tenderly accepts this as a top-level override of `block_header`.
-      block_header: { timestamp: toHex(strandedAt + GRACE + 60n) },
-    } as SimulateRequest & { block_header?: { timestamp: Hex } },
-    expect: { kind: "pass" },
-  });
+      expect: { kind: "pass" },
+    });
+  }
 
   return out;
 }

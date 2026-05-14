@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { TenderlyClient } from "./client.js";
 import { categoryA, categoryB, type TestCase, type Expect } from "./matrix.js";
 import { categoryBRedeemBundle, categoryC, categoryD, fuzzer } from "./matrix-cd.js";
-import { categoryE, categoryCPrimedBorrow, categoryCSweep, fetchPythUpdate } from "./matrix-d4.js";
+import { categoryE, categoryCPrimedBorrow, categoryCSweep, categoryFAdminGuards, fetchPythUpdate } from "./matrix-d4.js";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
@@ -141,6 +141,7 @@ async function main() {
     ...categoryE(hubManifest, pythUpdate),
     ...categoryCPrimedBorrow(hubManifest, pythUpdate),
     ...categoryCSweep(hubManifest),
+    ...categoryFAdminGuards(hubManifest),
     ...fuzzer(spokes, hubManifest, 0xdeadbeef, 20),
   ];
 

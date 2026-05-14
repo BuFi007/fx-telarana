@@ -208,19 +208,51 @@ report committed alongside the deployment manifests.
    ```
    Output: `reports/sim-matrix-latest.md` (committed each run).
 
-## Drop 5 candidates (not yet built)
+5. **Drop 5** ✅ (this commit) — 125-sim matrix, **117/125 pass (93.6%)**.
+   Every non-Arc-Testnet failure is now resolved.
 
-1. **Block-timestamp override fix** — investigate the exact Tenderly
-   API field for advancing `block.timestamp`. Likely `block_header.time`
-   or a fork-snapshot whose head block was mined with a future timestamp.
-   Flips `C.sweep.after-grace` from fail to pass.
-2. **Live PoolManager.swap path** — full Uniswap v4 unlock-callback
-   simulation to exercise `FxSwapHook.beforeSwap` end-to-end.
-3. **CCTP V2 reverse leg** — fabricate a `cctpMessage + attestation`
-   pair and simulate `FxHubMessageReceiver.executeDeposit` on the hub.
-   Easiest path: `setCode` override the `IMessageTransmitterV2` at its
-   deterministic address with a permissive stub.
-4. **Snapshot reuse** — Tenderly supports saving a sim as a fork
-   snapshot and chaining sims off it. Materialize a "primed hub" once
-   per run and branch test cases off that, instead of overriding state
-   per case.
+   Two real fixes plus a new auth surface:
+
+   * **`C.sweep.after-grace` finally passes** — no Tenderly time-override
+     needed. The trick: set `strandedAt` to 2024-01-01 in the storage
+     override. Current `block.timestamp` is already two years past
+     `strandedAt + 24h grace`, so `GraceUnexpired` doesn't fire. The
+     test is real — `_deposits[nonce]` storage is overridden, USDC is
+     pre-funded on the receiver, sweep transfers back to the beneficiary.
+
+   * **Storage-layout bug found and fixed.** `forge inspect ...
+     storage-layout` revealed that `_deposits` lives at slot **0**,
+     not 1. Our OpenZeppelin ReentrancyGuard uses transient storage
+     (EIP-1153) — it consumes no permanent slot. The wrong-slot version
+     in Drops 3+4 was silently writing storage that nothing read, so
+     `sweep` always fell through to `UnknownDeposit`. Real bug, found
+     by the suite.
+
+   * **Auth guards on `FxSwapHook` (3 sims).** Non-owner calls to
+     `setSpreadBps`, `setHotReservePct`, `setKBps` all revert.
+
+   Remaining 8 failures are exclusively `A.arc-testnet.*`. Tenderly
+   doesn't index chain 5042002; nothing we can change here.
+
+## Drop 6 candidates (not yet built)
+
+1. **Live PoolManager.swap path** — full Uniswap v4 unlock-callback
+   simulation to exercise `FxSwapHook.beforeSwap` end-to-end. Either
+   construct calldata for `UniversalRouter.execute(V4_SWAP, ...)` (the
+   pattern already lives in `packages/sdk/scripts/swap-on-hook.ts`)
+   or hand-roll the `PoolManager.unlock` + callback flow.
+2. **CCTP V2 reverse leg** — `setCode` override the deterministic
+   `IMessageTransmitterV2` at `0xE737e5cE…E275` with a permissive stub
+   bytecode that transfers USDC to caller and returns true. Then
+   construct a valid `cctpMessage` body that the receiver's
+   `CctpMessageLib` parser accepts, with hookData matching
+   `abi.encode(beneficiary, hubCalldata)` exactly.
+3. **Snapshot reuse** — Tenderly supports saving a sim as a fork
+   snapshot and chaining sims off it. Materialize a "primed hub"
+   (oracle freshened, market seeded with supply liquidity) once per
+   run and branch every test case off that, instead of repeating the
+   prep steps in each bundle.
+4. **Arc Testnet** — keep an eye on Tenderly's network registry; the
+   moment they add chain 5042002 the 8 currently-failing sims pass
+   without any code changes (the cases use chain-agnostic state
+   overrides).
