@@ -11,7 +11,17 @@
     "FxReceiptEURC":         "0xdA4c3E315ffFD0790c9D8A1730c2Ba56330Cb2EC",
     "FxReceiptUSDC":         "0xf0cDaA9CF9e8d52060dcb41a045e3a6d618A9f65",
     "FxLiquidator":          "0x7ba745b979e027992ECFa51207666e3F5B46cF0a",
-    "MockEURC":              "0x8B7041d8A4bd773a537a01e1F61175da5395714c"
+    "MockEURC":              "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
+    "FxSwapHook":            "0x4F9226ea4c67CE68ABA79C061474d72C1201CAc8"
+  },
+  "fxSwapHook": {
+    "address": "0x4F9226ea4c67CE68ABA79C061474d72C1201CAc8",
+    "salt":    "0x000000000000000000000000000000000000000000000000000000000000467e",
+    "create2Factory": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+    "permissionBits": "0x0ac8",
+    "token0": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "token1": "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
+    "poolManager": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408"
   },
   "marketIds": {
     "M1_EURC_USDC": "0xbce69156929b7c78864e18908eeae98a0209e82521a3a7b08c779c7f16ae4728",
@@ -21,7 +31,11 @@
     "MorphoBlue":        "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
     "AdaptiveCurveIrm":  "0x46415998764C29aB2a25CbeA6254146D50D22687",
     "Pyth":              "0xA2aa501b19aff244D90cc15a4Cf739D2725B5729",
-    "USDC":              "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+    "USDC":              "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "UniswapV4PoolManager":    "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+    "UniswapUniversalRouter":  "0x492e6456d9528771018deb9e87ef7750ef184104",
+    "UniswapV4PositionManager":"0x4b2c77d209d3405f41a037ec6c77f7f5b8e2ca80",
+    "Permit2":           "0x000000000022D473030F116dDEE9F6B43aC78BA3"
   },
   "explorer": {
     "FxOracle":         "https://sepolia.basescan.org/address/0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",

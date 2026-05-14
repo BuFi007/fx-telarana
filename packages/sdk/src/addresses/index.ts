@@ -20,6 +20,7 @@ export interface FxAddresses {
   fxReceiptEURC: Address;
   fxHubMessageReceiver?: Address;
   fxSpoke?: Address;
+  fxSwapHook?: Address;
 
   /// External dependencies
   morphoBlue: Address;
@@ -54,6 +55,7 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     fxLiquidator: "0x7ba745b979e027992ECFa51207666e3F5B46cF0a",
     fxReceiptEURC: "0xdA4c3E315ffFD0790c9D8A1730c2Ba56330Cb2EC",
     fxReceiptUSDC: "0xf0cDaA9CF9e8d52060dcb41a045e3a6d618A9f65",
+    fxSwapHook: "0x4F9226ea4c67CE68ABA79C061474d72C1201CAc8",
     // External deps
     morphoBlue: "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
     adaptiveCurveIrm: "0x46415998764C29aB2a25CbeA6254146D50D22687",

@@ -63,6 +63,7 @@ const ARTIFACT_DIR_OF: Record<string, string> = {
   FxLiquidator: "FxLiquidator.sol",
   FxHubMessageReceiver: "FxHubMessageReceiver.sol",
   FxSpoke: "FxSpoke.sol",
+  FxSwapHook: "FxSwapHook.sol",
   MockEURC: "MockEURC.sol",
 };
 
@@ -76,6 +77,7 @@ const ARTIFACT_FILE_OF: Record<string, string> = {
   FxLiquidator: "FxLiquidator.json",
   FxHubMessageReceiver: "FxHubMessageReceiver.json",
   FxSpoke: "FxSpoke.json",
+  FxSwapHook: "FxSwapHook.json",
   MockEURC: "MockEURC.json",
 };
 
@@ -166,7 +168,11 @@ async function main() {
       console.log(`✓ imported ${slug} → ${contractId}`);
     } catch (err: unknown) {
       const message = (err as { message?: string }).message ?? String(err);
-      if (message.includes("175004") || message.toLowerCase().includes("duplicate")) {
+      const isDuplicate =
+        message.includes("175004") ||
+        message.toLowerCase().includes("duplicate") ||
+        message.toLowerCase().includes("already exists");
+      if (isDuplicate) {
         const list = await scp.listContracts({
           blockchain: circleChain as Parameters<typeof scp.listContracts>[0]["blockchain"],
         });
