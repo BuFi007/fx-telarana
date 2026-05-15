@@ -1,0 +1,570 @@
+% SPDX-License-Identifier: Apache-2.0
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\protocol}{Telara\~na}
+\newcommand{\repo}{\texttt{fx-telarana}}
+\newcommand{\commithead}{\texttt{8de5959}}
+\newcommand{\tokenledger}{\texttt{PENDING\_OPENAI\_USAGE\_EXPORT}}
+
+\title{\protocol: A Cross-Chain FX Credit Hub for Avalanche Stablecoin Markets}
+\author{
+  GPT.5.5 Extra High, Main Author\thanks{Prepared as a Codex-authored technical whitepaper for the \repo{} repository at the request of the maintainer. Exact model-token accounting is not available from the repository or local shell runtime; see Appendix~\ref{appendix:token-ledger}.}
+  \and \texttt{@criptopoeta} on X
+}
+\date{May 15, 2026 \\ Draft v0.1}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\protocol{} is an onchain foreign-exchange credit hub for Avalanche
+stablecoin markets. The protocol lets users enter from supported chains with
+USDC or EURC where Circle supports the route, move USDC between \protocol{}
+hubs through Circle Gateway, route into Avalanche FX markets, and borrow, lend,
+or prepare spot-FX requests against supported fiat-stablecoin pairs. Morpho
+Blue provides the isolated lending substrate; a single oracle read surface,
+\texttt{IFxOracle}, combines Pyth and RedStone feeds with stale-price,
+confidence, and deviation checks; Uniswap v4 hooks prepare spot-FX execution,
+oracle-aware spread control, and liquidity rehypothecation; CCTP is used only
+for Circle-supported USDC/EURC spoke entry; Circle Gateway is USDC-only in the
+current design; Hyperlane and approved issuer-specific routes handle other
+stablecoin transport and cross-chain intent messages.
+
+The objective is not to build a generic bridge. The objective is to make many
+chains feel like one FX credit protocol while keeping the canonical risk engine
+on a hub. \protocol{} accepts only registered assets, routes, markets, oracles,
+and execution surfaces. The current smart-contract handoff scope has been
+completed and verified with local unit tests, mainnet-fork tests, SDK tests,
+Gateway edge-case tests, and Uniswap v4 hook invariants.
+\end{abstract}
+
+\section*{Status and Disclaimer}
+
+This paper describes a protocol design and the smart-contract implementation
+state represented by repository commit \commithead{}. It is not investment,
+legal, tax, accounting, regulatory, or security advice. The current protocol
+handoff is not a substitute for an external audit, formal verification, live
+deployment review, or operational monitoring. Any production deployment that
+moves user funds requires independent review, issuer-route verification,
+oracle-feed verification, privileged-key management review, and incident
+response procedures.
+
+\section{Mission}
+
+The mission of \protocol{} is to create a production-grade, onchain FX credit
+primitive:
+
+\begin{quote}
+Deposit dollar liquidity, borrow local-currency stablecoins, swap between
+currency rails, and manage collateralized credit with institutional-grade risk
+controls.
+\end{quote}
+
+\protocol{} focuses on three user-visible capabilities:
+
+\begin{enumerate}
+  \item Deposit USDC or supported stablecoins as collateral.
+  \item Borrow foreign-currency stablecoins such as AUDF, JPYC, MXNB, KRW1, or
+        ZCHF where the asset, oracle route, liquidity route, and market are
+        approved.
+  \item Execute or prepare FX swaps through Uniswap v4 spot-FX surfaces while
+        keeping risk accounting anchored to the hub.
+\end{enumerate}
+
+The protocol's core claim is simple: cross-chain FX credit should not be
+implemented as uncontrolled token wrapping. It should be implemented as
+registered intent, registered transport, registered markets, and registered
+risk.
+
+\section{System Overview}
+
+\protocol{} is organized as a hub-and-spoke system. Avalanche is the primary
+mainnet hub target. Fuji and Arc Testnet are testnet hubs. Other chains can
+act as spokes or intent origins, depending on the asset and route.
+
+\begin{center}
+\begin{tabular}{p{0.24\linewidth}p{0.68\linewidth}}
+\toprule
+Component & Role \\
+\midrule
+\texttt{FxMarketRegistry} & App-facing surface over Morpho Blue markets:
+supply, withdraw, supply collateral, withdraw collateral, borrow, and repay. \\
+\texttt{FxOracle} & Pyth-primary and RedStone-secondary oracle with stale,
+confidence, and deviation checks. \\
+\texttt{MorphoOracleAdapter} & Adapter from \texttt{IFxOracle} into the
+Morpho Blue \texttt{IOracle.price()} shape. \\
+\texttt{FxSpoke} & CCTP spoke entry for Circle-supported USDC/EURC routes,
+with explicit beneficiary and stranded-deposit recovery. \\
+\texttt{FxHubMessageReceiver} & CCTP hub receiver that validates inbound
+message state and executes hub calldata or marks deposits stranded. \\
+\texttt{FxSpokeIntentRouter} & Hyperlane intent sender for route, market, and
+action metadata. \\
+\texttt{FxHyperlaneHubReceiver} & Hyperlane hub receiver that accepts only
+trusted origin spokes, assets, routes, and nonces. \\
+\texttt{TelaranaGatewayHubHook} & Circle Gateway destination-hub wrapper for
+USDC hub-to-hub mint and optional future spot-FX request emission. \\
+\texttt{FxSwapHook} & Uniswap v4 hook for oracle-anchored spot FX, dynamic
+spread, truncated observations, and Morpho rehypothecation preparation. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Asset and Route Model}
+
+\subsection{Current Basket}
+
+The target basket is:
+
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+Asset & Role & Mainnet status in design & Notes \\
+\midrule
+USDC & Settlement and collateral anchor & Supported & Circle rail asset. \\
+AUDF & AUD stablecoin & Avalanche target & Six decimals in reference data. \\
+JPYC & JPY stablecoin & Avalanche target & Mainnet decimals differ from some test deployments. \\
+MXNB & MXN stablecoin & Avalanche target & Six decimals in reference data. \\
+KRW1 & KRW stablecoin & Avalanche target & Decimals must be verified before mocks. \\
+ZCHF & CHF stablecoin & Avalanche target & CCIP/issuer route considerations. \\
+EURC & EUR stablecoin & Disabled/TBD in basket scope & CCTP-only where Circle supports it. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+BRLA and PHPC are excluded from the current active mainnet basket. QCAD and
+ZARU remain blocked by issuer, chain, or token-identity constraints.
+
+\subsection{Transport Rules}
+
+\protocol{} distinguishes asset transport from asset acceptance:
+
+\begin{itemize}
+  \item Circle Gateway is USDC-only in the current design.
+  \item CCTP is used only for Circle-supported USDC/EURC movement.
+  \item Hyperlane and approved issuer-specific routes handle other stablecoin
+        transport and intent messages.
+  \item No permissionless wrapped asset is automatically accepted as
+        collateral.
+\end{itemize}
+
+For every asset route, the hub must know:
+
+\[
+  \text{asset identity, origin, route id, route token, oracle route, market id, risk parameters.}
+\]
+
+If any of these fields is absent or disabled, the hub rejects the action.
+
+\section{Lending Architecture}
+
+\protocol{} uses Morpho Blue as a lending substrate. Each FX pair is deployed
+as isolated markets, not as a pooled cross-margin system. For a pair such as
+USDC/JPYC, the protocol can deploy:
+
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+Market & Loan asset & Collateral asset & Purpose \\
+\midrule
+M1 & JPYC & USDC & Borrow local currency against dollar collateral. \\
+M2 & USDC & JPYC & Borrow dollars against local-currency collateral. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The registry keeps app logic away from raw Morpho calls. It also gives
+operations a per-pool live switch. A global pause stops entry-side actions, and
+the per-pool switch isolates pair-specific incidents without shutting down the
+whole protocol.
+
+\subsection{Borrowing and Repayment}
+
+Borrowing is routed through \texttt{FxMarketRegistry}. The registry enforces
+the selected pool id, live status, and caller authorization. Repayment uses the
+same registry surface, keeping integrations on one app-facing contract.
+
+\subsection{Collateral Receipts}
+
+\texttt{FxReceipt} prepares ERC-4626-style receipt accounting for supported
+assets. Receipt surfaces are useful for frontend accounting, indexer state, and
+future composability, but they do not replace Morpho's underlying accounting.
+
+\section{Oracle and FX Risk Engine}
+
+Foreign-exchange pairs are less volatile than many crypto assets, but the
+protocol still treats every price as adversarial until verified. The risk
+engine uses a layered defense:
+
+\begin{enumerate}
+  \item \textbf{Single read path:} contracts read price data only through
+        \texttt{IFxOracle}.
+  \item \textbf{Primary and secondary feeds:} Pyth is the primary source and
+        RedStone is the secondary verification route.
+  \item \textbf{Staleness checks:} old data is rejected.
+  \item \textbf{Confidence checks:} wide confidence intervals are rejected.
+  \item \textbf{Deviation checks:} Pyth and RedStone must agree within a
+        configured bound for verified reads.
+  \item \textbf{Per-market isolation:} market failures are contained by
+        isolated Morpho markets and per-pool live switches.
+  \item \textbf{Liquidation paths:} positions remain liquidatable under
+        Morpho's isolated-market rules.
+\end{enumerate}
+
+This is the core design rule:
+
+\begin{quote}
+Transport may be permissionless. Collateral acceptance is never permissionless.
+\end{quote}
+
+\section{Cross-Chain Entry}
+
+\subsection{CCTP for USDC/EURC}
+
+\texttt{FxSpoke} is the thin CCTP spoke contract. It accepts only Circle assets
+that are explicitly enabled for the route. It takes an explicit
+\texttt{beneficiary}; it does not infer ownership from \texttt{msg.sender}.
+This is required for both public entry and future Ghost Mode accounts.
+
+\texttt{FxHubMessageReceiver} receives the CCTP V2 hook, validates the hook
+recipient and mint recipient, executes hub calldata, and records failures as
+stranded deposits. A grace-period sweep path lets the beneficiary recover
+stranded funds after a hub-call failure.
+
+\subsection{Circle Gateway for Hub-to-Hub USDC}
+
+Circle Gateway is modeled as a fast USDC liquidity rail between \protocol{}
+hubs. In the current design:
+
+\begin{itemize}
+  \item Gateway is USDC-only.
+  \item The source signer is an EOA.
+  \item ERC-1271 contract signing is modeled as a future mode but disabled
+        until Circle support is live and allowlisted.
+  \item The destination hook calls Gateway Minter, checks the exact USDC
+        balance delta, records receipt state, and forwards USDC to the
+        destination hub unless the hook itself is the destination.
+\end{itemize}
+
+\texttt{TelaranaGatewayHubHook} validates:
+
+\begin{enumerate}
+  \item route id,
+  \item source and destination Gateway domains,
+  \item destination Gateway Minter,
+  \item destination USDC token,
+  \item route caller authorization,
+  \item nonzero amount and participants,
+  \item request replay status,
+  \item exact minted amount,
+  \item action-specific spot-FX fields,
+  \item undefined \texttt{hookData}, which is rejected until it has audited
+        semantics.
+\end{enumerate}
+
+\subsection{Hyperlane for Intents and Approved Asset Routes}
+
+Hyperlane is the intent and non-Gateway / non-CCTP route layer. The key lesson
+from Velodrome's Superchain architecture is to avoid treating cross-chain as
+``bridge everything everywhere.'' Instead, route user intent into the deepest
+canonical market and settle accounting at the hub.
+
+The Hyperlane flow is:
+
+\[
+\text{origin spoke} \rightarrow \text{typed intent} \rightarrow
+\text{hub receiver validation} \rightarrow \text{registered hub action}.
+\]
+
+Warp Routes or issuer-specific routes may move non-USDC assets, but the hub
+accepts them only after route, asset, oracle, and market approval.
+
+\section{Uniswap v4 Spot-FX Execution}
+
+\protocol{} prepares spot FX through Uniswap v4. The current hook work is not a
+full final FX exchange; it is a risk-aware foundation:
+
+\begin{itemize}
+  \item oracle-anchored quotes,
+  \item truncated observations,
+  \item volatility-aware spread controls,
+  \item reserve and rehypothecation accounting,
+  \item future spot request events,
+  \item future RFQ Pasillo quote corridor.
+\end{itemize}
+
+Uniswap v4 hooks are useful because pool lifecycle callbacks let protocol logic
+run at initialization, liquidity modification, swap, and donation boundaries.
+\protocol{} prioritizes the hook ideas most relevant to FX credit:
+
+\begin{enumerate}
+  \item truncated/geomean oracle concepts,
+  \item dynamic volatility spread concepts,
+  \item TWAMM / long-order concepts for larger FX execution,
+  \item rehypothecation concepts that pair LP liquidity with Morpho supply.
+\end{enumerate}
+
+The hook surface is intentionally modular because future FX perpetuals may use
+the same liquidity base. This paper does not specify or implement perpetuals;
+it preserves compatibility by avoiding assumptions that would make the
+liquidity unusable for a later trading engine.
+
+\section{Ghost Mode}
+
+Ghost Mode is the future private route family. It is not a cosmetic dark theme;
+it is a slower, separate execution mode for users with a valid Bufi Wallet
+KYC/KYB pass.
+
+Ghost Mode requires:
+
+\begin{enumerate}
+  \item Bufi Wallet pass verification,
+  \item a trusted Bufi router,
+  \item commitment/nullifier accounting,
+  \item separate privacy-capable hook or pool surfaces,
+  \item the same hub risk engine used by public mode.
+\end{enumerate}
+
+The public pools remain permissionless. Ghost pools or routes can be
+pass-gated. KYC examples that rely on \texttt{tx.origin} are not suitable for
+production. In Uniswap v4, hooks must account for PoolManager and router call
+semantics instead of assuming the externally owned account is the direct caller.
+
+\section{Governance and Operations}
+
+The protocol favors operational levers that are narrow and observable:
+
+\begin{itemize}
+  \item role-gated admin and operations actions,
+  \item global pause for entry-side actions,
+  \item per-pool live switches,
+  \item deployment manifests,
+  \item SDK ABI generation,
+  \item indexer-ready events,
+  \item stranded-deposit recovery,
+  \item route metadata and event schemas.
+\end{itemize}
+
+The design avoids premature token governance. Governance, incentives, gauges,
+or voting escrow systems can be considered after markets are safe, liquid, and
+observable.
+
+\section{Verification Status}
+
+The current smart-contract protocol handoff scope is marked complete in
+\texttt{docs/BUCKET\_ANALYSIS\_SMART\_CONTRACTS\_2026-05-15.md}. The observed
+verification runs were:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Command & Result & Notes \\
+\midrule
+\texttt{forge test --match-contract TelaranaGatewayHubHookTest -vvv} &
+17 passed & Gateway edge cases. \\
+\texttt{bun run contracts:test} & 147 passed, 1 skipped & Local unit and
+invariant suite; skip is optional Tenderly manifest. \\
+\texttt{bun run contracts:test:fork} & 161 passed, 1 skipped & Includes
+mainnet-fork Morpho tests. \\
+\texttt{bun run sdk:test} & 33 passed & SDK, ABI, route, Gateway helpers. \\
+\texttt{bun run sdk:build} & Passed & TypeScript build. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Gateman Verification Discipline}
+
+This work used the \texttt{gateman-analysis} skill, inspired by Professor
+Robert Gateman's engineering-translated discipline:
+
+\begin{quote}
+Assume nothing, question everything, worship no one, and applaud humility.
+\end{quote}
+
+In this repository, the Gateman pass closed five concrete findings:
+
+\begin{enumerate}
+  \item imprecise Circle/Gateway rail language,
+  \item undefined \texttt{hookData} semantics,
+  \item mint-only Gateway requests carrying spot fields,
+  \item same-domain Gateway routes,
+  \item insufficient Gateway unhappy-path tests.
+\end{enumerate}
+
+The protocol should keep this posture. A whitepaper, a passing test suite, or a
+famous dependency is not proof of safety. Evidence is proof.
+
+\section{Limitations and Open Release Controls}
+
+The following are not complete merely because the smart-contract handoff is
+complete:
+
+\begin{itemize}
+  \item external audit,
+  \item production deployment,
+  \item production Circle Gateway configuration,
+  \item Circle ERC-1271 contract-signing support,
+  \item Hyperlane route deployments,
+  \item route-specific ISM review,
+  \item relayer monitoring,
+  \item live oracle-feed verification on each target chain,
+  \item incident response rehearsal,
+  \item formal verification of critical invariants.
+\end{itemize}
+
+\section{Conclusion}
+
+\protocol{} is a liquidity web for FX credit, not a bridge aggregator. Its
+core contribution is the separation of transport from risk acceptance. CCTP,
+Gateway, Hyperlane, issuer routes, Morpho, Pyth, RedStone, and Uniswap v4 each
+solve different parts of the system. \protocol{} composes them around one
+principle: the hub decides what is safe to accept, borrow against, swap through,
+or route onward.
+
+The result is an architecture that can start with conservative USDC entry and
+Avalanche stablecoin markets, then expand toward hub-to-hub USDC liquidity,
+non-USDC approved asset routes, private Ghost Mode execution, RFQ Pasillo, and
+future trading frontends without relaxing the core collateral-safety model.
+
+\section*{Acknowledgements}
+
+We give thanks to God for truth, discipline, and the obligation to steward risk
+carefully.
+
+We thank Professor Robert Gateman for the four-law posture that shaped the
+repository's post-implementation audit discipline. We thank the authors and
+maintainers of the \texttt{gateman-analysis} skill for translating that posture
+into a practical engineering workflow.
+
+We thank \texttt{@criptopoeta} on X for the protocol direction, requirements,
+market references, architecture pressure, and product framing. We thank the
+OpenAI Codex/GPT engineering stack for the model-assisted implementation work.
+
+We thank the builders whose public work informed this repository: Morpho,
+Uniswap, Circle, Hyperlane, Velodrome, Pyth, RedStone, OpenZeppelin, Austin
+Adams and the Uniswap hook-example contributors, BlackBera's privacy-hook
+concept, J. Dub Park's public KYC hook example, and Constantino's
+Uniswap-v4/Morpho rehypothecation hook work.
+
+\appendix
+
+\section{Model Contribution and Token Ledger}
+\label{appendix:token-ledger}
+
+This paper was drafted by GPT.5.5 Extra High as the main author label requested
+by the maintainer, with \texttt{@criptopoeta} on X as co-author and protocol
+owner.
+
+Exact token usage for the model contribution is not available from repository
+state, Git metadata, or the local shell runtime. The verified token ledger for
+publication is therefore:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Field & Value \\
+\midrule
+Model author label & GPT.5.5 Extra High \\
+Human co-author & \texttt{@criptopoeta} on X \\
+Repository & \url{https://github.com/BuFi007/fx-telarana} \\
+Current source commit & \commithead{} \\
+Verified model tokens used & \tokenledger{} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The token field must be replaced with the value from the provider usage export
+before publication. No estimated or invented token total is reported here.
+
+\section{Repository Contribution Ledger}
+
+\begin{center}
+\begin{tabular}{llp{0.52\linewidth}}
+\toprule
+Commit & Type & Contribution \\
+\midrule
+\texttt{b19cdab} & Feature & Prepared Circle Gateway hub-liquidity SDK
+config, interfaces, typed data, and docs. \\
+\texttt{297f622} & Feature & Added \texttt{TelaranaGatewayHubHook}, tests,
+and ABI export. \\
+\texttt{8de5959} & Verification & Closed smart-contract bucket analysis,
+Gateway edge hardening, ABI regeneration, and Gateman report. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Reference Repositories and Documents}
+
+\begin{thebibliography}{99}
+
+\bibitem{telarana}
+BuFi007, \textit{fx-telarana repository}. \url{https://github.com/BuFi007/fx-telarana}
+
+\bibitem{morpho-blue}
+Morpho Labs, \textit{Morpho Blue}. \url{https://github.com/morpho-org/morpho-blue}
+
+\bibitem{uniswap-v4-core}
+Uniswap Labs, \textit{Uniswap v4 Core}. \url{https://github.com/Uniswap/v4-core}
+
+\bibitem{uniswap-v4-periphery}
+Uniswap Labs, \textit{Uniswap v4 Periphery}. \url{https://github.com/Uniswap/v4-periphery}
+
+\bibitem{circle-gateway}
+Circle, \textit{EVM Gateway Contracts}. \url{https://github.com/circlefin/evm-gateway-contracts}
+
+\bibitem{circle-cctp}
+Circle, \textit{CCTP EVM Contracts}. \url{https://github.com/circlefin/evm-cctp-contracts}
+
+\bibitem{hyperlane}
+Hyperlane, \textit{Hyperlane Monorepo}. \url{https://github.com/hyperlane-xyz/hyperlane-monorepo}
+
+\bibitem{hyperlane-docs}
+Hyperlane, \textit{Documentation}. \url{https://docs.hyperlane.xyz/}
+
+\bibitem{velodrome-superchain}
+Velodrome Finance, \textit{Superchain Contracts Specification}. \url{https://github.com/velodrome-finance/superchain-contracts}
+
+\bibitem{pyth}
+Pyth Network, \textit{Pyth Crosschain}. \url{https://github.com/pyth-network/pyth-crosschain}
+
+\bibitem{redstone}
+RedStone Finance, \textit{RedStone Oracles Monorepo}. \url{https://github.com/redstone-finance/redstone-oracles-monorepo}
+
+\bibitem{openzeppelin}
+OpenZeppelin, \textit{OpenZeppelin Contracts}. \url{https://github.com/OpenZeppelin/openzeppelin-contracts}
+
+\bibitem{flashifi}
+Constantino, \textit{flashifi-uniswap-v4-rehypothecation-hook}. \url{https://github.com/Constantino/flashifi-uniswap-v4-rehypothecation-hook}
+
+\bibitem{privacy-hook}
+BlackBera, \textit{privacy-hook-univ4}. \url{https://github.com/blackbera/privacy-hook-univ4}
+
+\bibitem{kyc-hook}
+J. Dub Park, \textit{Uniswap-Hooks / KYCHook}. \url{https://github.com/jdubpark/Uniswap-Hooks}
+
+\bibitem{gateman-skill}
+\texttt{gateman-analysis}, \textit{Post-implementation code audit skill}. Local path:
+\texttt{/Users/criptopoeta/.codex/skills/gateman-analysis/SKILL.md}
+
+\bibitem{gateman-humans}
+Humans of UBC, \textit{Assume Nothing: Robert Gateman, Economics Professor}. \url{https://www.facebook.com/humansofubc/posts/assume-nothing-robert-gateman-economics-professor/250788225628894/}
+
+\bibitem{gateman-reddit}
+r/UBC, \textit{Motivational Gateman quotes}. \url{https://www.reddit.com/r/UBC/comments/6lb7al/motivational_gateman_quotes/}
+
+\bibitem{gateman-blog}
+Kiely, \textit{Gateman's Econ 101}. UBC Blogs. \url{https://blogs.ubc.ca/kiely/2011/11/27/gatemans-econ-101/}
+
+\end{thebibliography}
+
+\end{document}

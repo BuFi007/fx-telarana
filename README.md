@@ -34,6 +34,8 @@ docs/        SPEC.md (engineering spec v0.2), TODOS.md
 ```
 
 See [`contracts/README.md`](contracts/README.md) for build, test, and deploy.
+The LaTeX whitepaper source lives at
+[`docs/whitepaper/telarana_whitepaper.tex`](docs/whitepaper/telarana_whitepaper.tex).
 
 ## Status
 
