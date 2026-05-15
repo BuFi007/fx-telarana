@@ -1,0 +1,13 @@
+{
+  "adapter_AUDF_assetLoan": "0x38aa85d3aE5F6C36adcA798aF1b299EC0722647f",
+  "adapter_AUDF_usdcLoan": "0xAa173c7E6eDB06342FBC1c92d6a77eb4BAE90ea3",
+  "feed_AUDF": "0x921b564f97b14b7d73c12a72af4b7847fb5e3414f98cbe5fb5f1d8a3168c0a00",
+  "hook_AUDF": "0x8fA9336ec1053acb4F890f78E4454fA13E28CAC8",
+  "market_AUDF_assetLoan": "0x268065c04b62fe76bb56d96fb26c69c8c9d0f6fda50f91a73093f322c7312417",
+  "market_AUDF_usdcLoan": "0xaeff5a2634e71fc1eb00a76bab3e8839d1543df577e359e2fb383dd3eb9ceca3",
+  "pythInverted_AUDF": false,
+  "receipt_AUDF_asset": "0x6095921F51a6625D7C2498048bEF01c3Fce20aD4",
+  "receipt_AUDF_usdc": "0x7652c2ad71210598dC2610759986A80be2c4C922",
+  "seedAsset_AUDF": 13906000000,
+  "token_AUDF": "0x2a5B7CA2F3357742Be586c9bCa1cf49E5D4175fD"
+}

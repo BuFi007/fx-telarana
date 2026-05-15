@@ -1,0 +1,12 @@
+{
+  "CircleGatewayMinter": "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
+  "CircleGatewayWallet": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+  "TelaranaGatewayHubHook": "0x79Cb6068CF11464d3EB47c6f7D01631C3006dD59",
+  "smoke_gateway_destinationDomain": 1,
+  "smoke_gateway_destinationHub": "0x8abe2C1C1Da01bCa1052FFF7C577604C77a2433a",
+  "smoke_gateway_executor": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "smoke_gateway_metadataRef": "0x518b42693db9c91ecf18479f24e19d236b54ee0ae0f66d6a36b6064fdfb1a243",
+  "smoke_gateway_notes": "Real Circle Gateway wiring. Probes A-E executed. Full happy mint requires a Circle-signed attestation; route the relayer EOA to EXECUTOR_ROLE then call receiveGatewayMint(realAttestation, realSig, ctx).",
+  "smoke_gateway_routeId": "0x8b605b5be9e102dc245b157d0244d1aff8d7d78714b17136bd4aef2140188f4f",
+  "smoke_gateway_sourceDomain": 26
+}

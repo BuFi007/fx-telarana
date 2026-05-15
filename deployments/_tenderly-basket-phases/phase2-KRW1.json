@@ -1,0 +1,13 @@
+{
+  "adapter_KRW1_assetLoan": "0x3B6371E97224A601fe9206bCc898e3624BdD4B2d",
+  "adapter_KRW1_usdcLoan": "0xB9F81D14bDc2d96d99222aaFCAd1752eA18e80E4",
+  "feed_KRW1": "0xea556b4c40b2240fdf6176e6354f72cbb0a07e7e9bcd343f98c8dcc298aa3fa5",
+  "hook_KRW1": "0x5777D7efaF733c3d9156733253E30e51BF0D0AC8",
+  "market_KRW1_assetLoan": "0x1c5cf1c7db1d6d0cd2d885f19aa951036a3f6898ca697232dfaffb191af62882",
+  "market_KRW1_usdcLoan": "0xe70cb4df8247e5736a430519992def85fd43146ab1830400eb2295031c75ad4e",
+  "pythInverted_KRW1": true,
+  "receipt_KRW1_asset": "0x890dD908DC93457106ECEa6ff96DB26C941B21B2",
+  "receipt_KRW1_usdc": "0x8237858b398eb0Fb4150c73DaBF20B9774CCb96B",
+  "seedAsset_KRW1": 14898689,
+  "token_KRW1": "0xD5A6cB32f2635f90C3Ccb9EB2d5d2Cc59f1C333c"
+}
