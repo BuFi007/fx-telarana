@@ -214,8 +214,9 @@ Ghost Mode over Hyperlane must still validate:
 ## 5. Ghost Mode Router Stack
 
 Phase 1 uses the Ghost Mode stack below. The current v1 implementation ships
-the pass interface, spoke entry router, commitment registry, and a minimal KYC
-hook gate. Full withdrawal proofs and proof-aware swap hooks remain future work.
+the pass interface, spoke entry router, commitment registry, mockable withdrawal
+router, and a minimal KYC hook gate. Production ZK verification and proof-aware
+swap hooks remain future work.
 
 | Component | Role |
 |---|---|
@@ -226,7 +227,7 @@ hook gate. Full withdrawal proofs and proof-aware swap hooks remain future work.
 | `FxGhostCommitmentRegistry` | Stores root metadata, commitments, and nullifiers for entry/withdrawal flows. |
 | `FxGhostKycHook` | Minimal v1 v4 hook gate: PoolManager-only callbacks, trusted router, Bufi pass check, no custom deltas. |
 | `FxGhostSwapHook` | Future privacy-capable v4 hook instance for Ghost pools. |
-| `FxGhostWithdrawalRouter` | Verifies withdrawal proof/nullifier and routes funds to recipient. |
+| `FxGhostWithdrawalRouter` | Verifies mockable withdrawal proof/nullifier, checks root/pass constraints, and routes escrowed funds to recipient. |
 
 The first implementation may use fixed denomination buckets to improve privacy
 sets. Variable amount privacy should wait for audited circuits or a battle-tested

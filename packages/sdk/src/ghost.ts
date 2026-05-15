@@ -59,11 +59,33 @@ export interface GhostHookContext {
   nullifierHash?: Hex32;
 }
 
+export interface GhostWithdrawalRouteConfig {
+  routeId: Hex32;
+  token: Address;
+  minPassLevel: GhostPassLevel;
+  enabled: boolean;
+  metadataRef: Hex32;
+}
+
+export interface GhostWithdrawalRequest {
+  routeId: Hex32;
+  root: Hex32;
+  nullifierHash: Hex32;
+  passAccount: Address;
+  recipient: Address;
+  token: Address;
+  amount: bigint;
+  metadataRef: Hex32;
+  proof: `0x${string}`;
+}
+
 export const GHOST_MODE_EVENT_NAMES = [
   "GhostCommitmentRegistered",
   "GhostNullifierConsumed",
   "GhostSpokeEntered",
   "GhostRouteConfigured",
+  "GhostWithdrawalRouteConfigured",
+  "GhostWithdrawalCompleted",
 ] as const;
 
 export const GHOST_MODE_INDEXER_SCHEMA = [
@@ -86,6 +108,16 @@ export const GHOST_MODE_INDEXER_SCHEMA = [
     name: "GhostRouteConfigured",
     indexed: ["routeId", "token"],
     data: ["minPassLevel", "enabled", "metadataRef"],
+  },
+  {
+    name: "GhostWithdrawalRouteConfigured",
+    indexed: ["routeId", "token"],
+    data: ["minPassLevel", "enabled", "metadataRef"],
+  },
+  {
+    name: "GhostWithdrawalCompleted",
+    indexed: ["nullifierHash", "routeId", "recipient"],
+    data: ["token", "amount", "passLevel", "root", "metadataRef"],
   },
 ] as const;
 

@@ -43,7 +43,8 @@
 - [x] `FxGhostCommitmentRegistry` with root metadata, root expiry, and nullifier replay protection.
 - [x] `FxGhostSpokeRouter` wrapper for pass-gated `crossChainEnter` over Circle-only USDC/EURC `FxSpoke`.
 - [ ] `FxGhostRouter` wrappers for supplyCollateral, borrow, repay, fxSwap, and withdraw.
-- [ ] `FxGhostWithdrawalRouter` proof/nullifier withdrawal path.
+- [x] `FxGhostWithdrawalRouter` mockable proof/nullifier withdrawal scaffold.
+- [ ] Production ZK verifier integration and verifier-key governance for Ghost withdrawals.
 - [x] `FxGhostKycHook` v1 scaffold for Ghost pools; no `tx.origin`, PoolManager-only callbacks, trusted router + pass verification only.
 - [ ] `FxGhostSwapHook` proof-aware design for production Ghost pools.
 - [ ] `/fx/eligibility/:wallet` + `EligibilityReason` enum using Bufi Wallet pass state.

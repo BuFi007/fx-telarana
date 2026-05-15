@@ -24,6 +24,7 @@ const CONTRACTS = [
   ["TelaranaGatewayHubHook", "TelaranaGatewayHubHook"],
   ["FxGhostCommitmentRegistry", "FxGhostCommitmentRegistry"],
   ["FxGhostSpokeRouter", "FxGhostSpokeRouter"],
+  ["FxGhostWithdrawalRouter", "FxGhostWithdrawalRouter"],
   ["FxGhostKycHook", "FxGhostKycHook"],
   ["FxSpoke", "FxSpoke"],
   ["FxSpokeIntentRouter", "FxSpokeIntentRouter"],

@@ -201,6 +201,7 @@ Use the typed ABIs exported from `@bu/fx-engine`:
 - `IBufiKycPassAbi`
 - `FxGhostCommitmentRegistryAbi`
 - `FxGhostSpokeRouterAbi`
+- `FxGhostWithdrawalRouterAbi`
 - `FxGhostKycHookAbi`
 - `CircleGatewayWalletAbi`
 - `CircleGatewayMinterAbi`
@@ -247,6 +248,8 @@ Future spot FX preparation exports:
 - `GhostAction`
 - `GhostSpokeRouteConfig`
 - `GhostSpokeEntryRequest`
+- `GhostWithdrawalRouteConfig`
+- `GhostWithdrawalRequest`
 - `GhostHookContext`
 - `GHOST_MODE_EVENT_NAMES`
 - `GHOST_MODE_INDEXER_SCHEMA`
@@ -262,8 +265,8 @@ Ghost Mode contracts:
 - `IBufiKycPass` verifier
 - `FxGhostCommitmentRegistry`
 - `FxGhostSpokeRouter`
+- `FxGhostWithdrawalRouter`
 - `FxGhostKycHook`
-- future `FxGhostWithdrawalRouter`
 - future proof-aware `FxGhostSwapHook`
 
 Ghost Mode UI checks:

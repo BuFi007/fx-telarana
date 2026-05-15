@@ -1,7 +1,7 @@
 # Ghost Mode privacy hooks
 
-**Status:** V1 spoke-level scaffolding implemented. Production ZK verifier,
-withdrawal router, and audited Ghost liquidity remain future work.
+**Status:** V1 spoke-level and withdrawal scaffolding implemented. Production
+ZK verifier and audited Ghost liquidity remain future work.
 **Decision:** Ghost Mode uses Bufi Wallet KYC/KYB passes plus privacy
 hooks/routers. It does not require a third-party privacy wallet or Circle
 Wallet.
@@ -81,10 +81,13 @@ Implemented in this branch:
    an explicit `beneficiary`.
 2. `FxGhostCommitmentRegistry` stores commitments, consumed nullifiers, and
    admin-set root metadata for future verifier integration.
-3. `FxGhostKycHook` is a minimal future v4 hook gate. It accepts only
+3. `FxGhostWithdrawalRouter` verifies a mockable withdrawal proof, validates
+   active root metadata, consumes the nullifier, checks the Bufi pass level, and
+   pays out tokens already held by the route.
+4. `FxGhostKycHook` is a minimal future v4 hook gate. It accepts only
    PoolManager callbacks, trusts only configured routers, takes user identity
    from hook data, and enables no custom swap deltas in v1.
-4. SDK ABIs, Ghost entry request types, and indexer event schema are exported
+5. SDK ABIs, Ghost entry/withdrawal request types, and indexer event schema are exported
    from `@bu/fx-engine`.
 
 RO-KYC, Persona, Goofy, and Paseo remain offchain. Solidity consumes only the
@@ -94,8 +97,8 @@ minimal onchain Bufi pass interface.
 
 1. Add `/fx/eligibility/:wallet` support for Bufi Wallet KYC/KYB pass status.
 2. Add `/fx/ghost/prepare` and `/fx/ghost/proof` routes.
-3. Build `FxGhostWithdrawalRouter` with proof verification and nullifier
-   consumption.
+3. Replace the mockable withdrawal verifier with audited proof verification and
+   verifier-key governance.
 4. Add `FxGhostSwapHook` only after public `FxSwapHook` dynamic fee/oracle
    updates are stable.
 5. Add Hyperlane/CCTP Ghost entry after same-chain proof settlement works.

@@ -13,6 +13,7 @@ import {
   FxGhostCommitmentRegistryAbi,
   FxGhostKycHookAbi,
   FxGhostSpokeRouterAbi,
+  FxGhostWithdrawalRouterAbi,
   FxMarketRegistryAbi,
   FxOracleAbi,
   FxSpokeAbi,
@@ -403,24 +404,31 @@ describe("Ghost Mode prep", () => {
       "GhostNullifierConsumed",
       "GhostSpokeEntered",
       "GhostRouteConfigured",
+      "GhostWithdrawalRouteConfigured",
+      "GhostWithdrawalCompleted",
     ]);
     expect(GHOST_MODE_INDEXER_SCHEMA.map((event) => event.name)).toEqual([
       "GhostCommitmentRegistered",
       "GhostNullifierConsumed",
       "GhostSpokeEntered",
       "GhostRouteConfigured",
+      "GhostWithdrawalRouteConfigured",
+      "GhostWithdrawalCompleted",
     ]);
   });
 
-  test("exports Ghost router, registry, and hook ABIs", () => {
+  test("exports Ghost router, registry, withdrawal, and hook ABIs", () => {
     const routerFunctions = FxGhostSpokeRouterAbi.filter((x) => x.type === "function").map((x) => x.name);
     const registryFunctions = FxGhostCommitmentRegistryAbi.filter((x) => x.type === "function").map((x) => x.name);
+    const withdrawalFunctions = FxGhostWithdrawalRouterAbi.filter((x) => x.type === "function").map((x) => x.name);
     const hookFunctions = FxGhostKycHookAbi.filter((x) => x.type === "function").map((x) => x.name);
 
     expect(routerFunctions).toContain("enterHubGhost");
     expect(routerFunctions).toContain("setGhostRoute");
     expect(registryFunctions).toContain("registerCommitment");
     expect(registryFunctions).toContain("consumeNullifier");
+    expect(withdrawalFunctions).toContain("withdrawWithProof");
+    expect(withdrawalFunctions).toContain("setWithdrawalRoute");
     expect(hookFunctions).toContain("beforeSwap");
     expect(hookFunctions).toContain("getHookPermissions");
   });

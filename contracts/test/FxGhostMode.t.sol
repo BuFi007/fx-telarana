@@ -11,9 +11,11 @@ import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {BeforeSwapDelta} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
 
 import {IBufiKycPass} from "../src/interfaces/IBufiKycPass.sol";
+import {IFxGhostWithdrawalVerifier} from "../src/interfaces/IFxGhostWithdrawalVerifier.sol";
 import {FxGhostCommitmentRegistry} from "../src/ghost/FxGhostCommitmentRegistry.sol";
 import {FxGhostKycHook} from "../src/ghost/FxGhostKycHook.sol";
 import {FxGhostSpokeRouter} from "../src/ghost/FxGhostSpokeRouter.sol";
+import {FxGhostWithdrawalRouter} from "../src/ghost/FxGhostWithdrawalRouter.sol";
 import {FxSpoke} from "../src/spoke/FxSpoke.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 import {MockMessageTransmitter} from "./mocks/MockMessageTransmitter.sol";
@@ -44,6 +46,37 @@ contract MockBufiKycPass is IBufiKycPass {
     }
 }
 
+contract MockGhostWithdrawalVerifier is IFxGhostWithdrawalVerifier {
+    bool public valid = true;
+
+    function setValid(bool valid_) external {
+        valid = valid_;
+    }
+
+    function verifyGhostWithdrawal(
+        bytes32 root,
+        bytes32 nullifierHash,
+        bytes32 routeId,
+        address passAccount,
+        address token,
+        uint256 amount,
+        address recipient,
+        bytes32 metadataRef,
+        bytes calldata proof
+    ) external view override returns (bool) {
+        root;
+        nullifierHash;
+        routeId;
+        passAccount;
+        token;
+        amount;
+        recipient;
+        metadataRef;
+        proof;
+        return valid;
+    }
+}
+
 contract FxGhostModeTest is Test {
     MockERC20 internal usdc;
     MockERC20 internal eurc;
@@ -54,6 +87,8 @@ contract FxGhostModeTest is Test {
     MockBufiKycPass internal pass;
     FxGhostCommitmentRegistry internal registry;
     FxGhostSpokeRouter internal router;
+    MockGhostWithdrawalVerifier internal withdrawalVerifier;
+    FxGhostWithdrawalRouter internal withdrawalRouter;
     FxGhostKycHook internal hook;
 
     address internal admin = address(this);
@@ -90,10 +125,18 @@ contract FxGhostModeTest is Test {
         router.setGhostRoute(ROUTE_ID, address(usdc), 1, true, keccak256("ghost-usdc-route"));
         router.setGhostRoute(KYB_ROUTE_ID, address(usdc), 2, true, keccak256("ghost-usdc-kyb-route"));
 
+        withdrawalVerifier = new MockGhostWithdrawalVerifier();
+        withdrawalRouter =
+            new FxGhostWithdrawalRouter(address(pass), address(withdrawalVerifier), address(registry), admin);
+        registry.setNullifierConsumer(address(withdrawalRouter), true);
+        withdrawalRouter.setWithdrawalRoute(ROUTE_ID, address(usdc), 1, true, keccak256("ghost-usdc-withdraw"));
+        withdrawalRouter.setWithdrawalRoute(KYB_ROUTE_ID, address(usdc), 2, true, keccak256("ghost-usdc-kyb-withdraw"));
+
         hook = new FxGhostKycHook(poolManager, address(pass), admin);
         hook.setTrustedRouter(trustedSwapRouter, true);
 
         usdc.mint(alice, 10_000_000);
+        usdc.mint(address(withdrawalRouter), 10_000_000);
         eurc.mint(alice, 10_000_000);
         randomToken.mint(alice, 10_000_000);
         vm.startPrank(alice);
@@ -256,6 +299,99 @@ contract FxGhostModeTest is Test {
         vm.expectRevert(abi.encodeWithSelector(FxGhostCommitmentRegistry.UnauthorizedNullifierConsumer.selector, alice));
         vm.prank(alice);
         registry.consumeNullifier(keccak256("nullifier"));
+    }
+
+    function test_withdrawalRouter_verifiesConsumesAndPaysRecipient() public {
+        pass.setPass(alice, MockBufiKycPass.Status.Valid, 1);
+        registry.setRoot(ROOT, true, uint64(block.timestamp + 1 days), keccak256("root-metadata"));
+
+        bytes32 nullifier = keccak256("withdraw-nullifier");
+        uint256 recipientBefore = usdc.balanceOf(beneficiary);
+
+        vm.expectEmit(true, true, true, true);
+        emit FxGhostWithdrawalRouter.GhostWithdrawalCompleted(
+            nullifier, ROUTE_ID, beneficiary, address(usdc), 1_000_000, 1, ROOT, keccak256("proof-metadata")
+        );
+        withdrawalRouter.withdrawWithProof(
+            ROUTE_ID, ROOT, nullifier, alice, beneficiary, 1_000_000, keccak256("proof-metadata"), hex"1234"
+        );
+
+        assertTrue(registry.nullifierConsumed(nullifier));
+        assertEq(usdc.balanceOf(beneficiary), recipientBefore + 1_000_000);
+    }
+
+    function test_withdrawalRouter_rejectsDuplicateNullifier() public {
+        pass.setPass(alice, MockBufiKycPass.Status.Valid, 1);
+        registry.setRoot(ROOT, true, uint64(block.timestamp + 1 days), bytes32(0));
+        bytes32 nullifier = keccak256("duplicate-withdraw-nullifier");
+
+        withdrawalRouter.withdrawWithProof(ROUTE_ID, ROOT, nullifier, alice, beneficiary, 1_000_000, bytes32(0), "");
+
+        vm.expectRevert(abi.encodeWithSelector(FxGhostCommitmentRegistry.DuplicateNullifier.selector, nullifier));
+        withdrawalRouter.withdrawWithProof(ROUTE_ID, ROOT, nullifier, alice, beneficiary, 1_000_000, bytes32(0), "");
+    }
+
+    function test_withdrawalRouter_rejectsZeroInputs() public {
+        vm.expectRevert(FxGhostWithdrawalRouter.ZeroRoot.selector);
+        withdrawalRouter.withdrawWithProof(
+            ROUTE_ID, bytes32(0), keccak256("nullifier"), alice, beneficiary, 1_000_000, bytes32(0), ""
+        );
+
+        vm.expectRevert(FxGhostWithdrawalRouter.ZeroNullifier.selector);
+        withdrawalRouter.withdrawWithProof(ROUTE_ID, ROOT, bytes32(0), alice, beneficiary, 1_000_000, bytes32(0), "");
+
+        vm.expectRevert(FxGhostWithdrawalRouter.ZeroAddress.selector);
+        withdrawalRouter.withdrawWithProof(
+            ROUTE_ID, ROOT, keccak256("nullifier"), address(0), beneficiary, 1_000_000, bytes32(0), ""
+        );
+
+        vm.expectRevert(FxGhostWithdrawalRouter.ZeroAmount.selector);
+        withdrawalRouter.withdrawWithProof(
+            ROUTE_ID, ROOT, keccak256("nullifier"), alice, beneficiary, 0, bytes32(0), ""
+        );
+    }
+
+    function test_withdrawalRouter_rejectsInvalidRootProofAndPass() public {
+        bytes32 nullifier = keccak256("invalid-withdraw-nullifier");
+
+        pass.setPass(alice, MockBufiKycPass.Status.Valid, 1);
+        vm.expectRevert(abi.encodeWithSelector(FxGhostWithdrawalRouter.InvalidRoot.selector, ROOT));
+        withdrawalRouter.withdrawWithProof(ROUTE_ID, ROOT, nullifier, alice, beneficiary, 1_000_000, bytes32(0), "");
+
+        registry.setRoot(ROOT, true, uint64(block.timestamp - 1), bytes32(0));
+        vm.expectRevert(
+            abi.encodeWithSelector(FxGhostWithdrawalRouter.RootExpired.selector, ROOT, uint64(block.timestamp - 1))
+        );
+        withdrawalRouter.withdrawWithProof(ROUTE_ID, ROOT, nullifier, alice, beneficiary, 1_000_000, bytes32(0), "");
+
+        registry.setRoot(ROOT, true, uint64(block.timestamp + 1 days), bytes32(0));
+        pass.setPass(alice, MockBufiKycPass.Status.Revoked, 1);
+        vm.expectRevert(abi.encodeWithSelector(FxGhostWithdrawalRouter.InvalidPass.selector, alice, 1, 1));
+        withdrawalRouter.withdrawWithProof(ROUTE_ID, ROOT, nullifier, alice, beneficiary, 1_000_000, bytes32(0), "");
+
+        pass.setPass(alice, MockBufiKycPass.Status.Valid, 1);
+        withdrawalVerifier.setValid(false);
+        vm.expectRevert(abi.encodeWithSelector(FxGhostWithdrawalRouter.InvalidWithdrawalProof.selector, nullifier));
+        withdrawalRouter.withdrawWithProof(ROUTE_ID, ROOT, nullifier, alice, beneficiary, 1_000_000, bytes32(0), "");
+    }
+
+    function test_withdrawalRouter_enforcesKybRouteAndAdminConfig() public {
+        registry.setRoot(ROOT, true, uint64(block.timestamp + 1 days), bytes32(0));
+        pass.setPass(alice, MockBufiKycPass.Status.Valid, 1);
+
+        vm.expectRevert(abi.encodeWithSelector(FxGhostWithdrawalRouter.InvalidPass.selector, alice, 1, 2));
+        withdrawalRouter.withdrawWithProof(
+            KYB_ROUTE_ID, ROOT, keccak256("kyb-withdraw"), alice, beneficiary, 1_000_000, bytes32(0), ""
+        );
+
+        vm.prank(alice);
+        vm.expectRevert(FxGhostWithdrawalRouter.NotOwner.selector);
+        withdrawalRouter.setWithdrawalRoute(ROUTE_ID, address(usdc), 1, false, bytes32(0));
+
+        pass.setPass(alice, MockBufiKycPass.Status.Valid, 2);
+        withdrawalRouter.withdrawWithProof(
+            KYB_ROUTE_ID, ROOT, keccak256("kyb-withdraw"), alice, beneficiary, 1_000_000, bytes32(0), ""
+        );
     }
 
     function test_publicFxSpokeStillWorks() public {

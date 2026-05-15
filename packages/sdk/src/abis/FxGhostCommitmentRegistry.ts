@@ -89,6 +89,25 @@ export const FxGhostCommitmentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "commitmentRegistered",
+    "inputs": [
+      {
+        "name": "commitment",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "registered",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "consumeNullifier",
     "inputs": [
       {

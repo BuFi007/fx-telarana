@@ -8,6 +8,7 @@ export { FxHyperlaneHubReceiverAbi } from "./FxHyperlaneHubReceiver.js";
 export { TelaranaGatewayHubHookAbi } from "./TelaranaGatewayHubHook.js";
 export { FxGhostCommitmentRegistryAbi } from "./FxGhostCommitmentRegistry.js";
 export { FxGhostSpokeRouterAbi } from "./FxGhostSpokeRouter.js";
+export { FxGhostWithdrawalRouterAbi } from "./FxGhostWithdrawalRouter.js";
 export { FxGhostKycHookAbi } from "./FxGhostKycHook.js";
 export { FxSpokeAbi } from "./FxSpoke.js";
 export { FxSpokeIntentRouterAbi } from "./FxSpokeIntentRouter.js";
