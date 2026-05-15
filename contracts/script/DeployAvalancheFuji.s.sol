@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {Script, console2} from "forge-std/Script.sol";
@@ -17,7 +17,6 @@ import {FxHubMessageReceiver} from "../src/hub/FxHubMessageReceiver.sol";
 import {MorphoOracleAdapter} from "../src/hub/MorphoOracleAdapter.sol";
 import {FxTimelock} from "../src/governance/FxTimelock.sol";
 import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
-import {MockEURC} from "../src/test-helpers/MockEURC.sol";
 
 /// @notice fx-Telaraña hub deployment for Avalanche Fuji (chainId 43113).
 ///
@@ -29,8 +28,7 @@ import {MockEURC} from "../src/test-helpers/MockEURC.sol";
 ///   2. AdaptiveCurveIrm isn't available in the Morpho lib we vendor;
 ///      we use Morpho's bundled `IrmMock` for testnet. Self-deployed,
 ///      enabled on the new Morpho.
-///   3. EURC isn't deployed on Fuji at any canonical Circle address;
-///      we deploy MockEURC.
+///   3. EURC is Circle's canonical Fuji deployment. Do not deploy MockEURC.
 ///   4. Pyth lives at the Fuji-specific 0x23f0e8FA…7509 (not the
 ///      mainnet 0x4305FB66… address).
 ///   5. CCTP V2 MessageTransmitter is at the same deterministic address
@@ -42,12 +40,13 @@ import {MockEURC} from "../src/test-helpers/MockEURC.sol";
 /// Optional env overrides:
 ///   FUJI_PYTH               default 0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509
 ///   FUJI_USDC               default 0x5425890298aed601595a70AB815c96711a31Bc65
-///   FUJI_EURC               if unset, deploys MockEURC
+///   FUJI_EURC               default 0x5E44db7996c682E92a960b65AC713a54AD815c6B
 ///   FUJI_CCTP_MT            default 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275
 ///   FX_HUB_LLTV             default 860000000000000000 (0.86e18)
 contract DeployAvalancheFuji is Script {
-    address constant DEFAULT_PYTH    = 0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509;
-    address constant DEFAULT_USDC    = 0x5425890298aed601595a70AB815c96711a31Bc65;
+    address constant DEFAULT_PYTH = 0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509;
+    address constant DEFAULT_USDC = 0x5425890298aed601595a70AB815c96711a31Bc65;
+    address constant DEFAULT_EURC = 0x5E44db7996c682E92a960b65AC713a54AD815c6B;
     address constant DEFAULT_CCTP_MT = 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275;
 
     bytes32 constant PYTH_USDC_USD = 0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a;
@@ -65,30 +64,24 @@ contract DeployAvalancheFuji is Script {
         // ^0.8.26 script). Caller must enable the IRM + LLTV on Morpho
         // before running this script.
         address morphoAddr = vm.envAddress("MORPHO_FUJI");
-        address irmAddr    = vm.envAddress("IRM_FUJI");
+        address irmAddr = vm.envAddress("IRM_FUJI");
         IMorpho morpho = IMorpho(morphoAddr);
 
-        address pyth   = vm.envOr("FUJI_PYTH", DEFAULT_PYTH);
-        address usdc   = vm.envOr("FUJI_USDC", DEFAULT_USDC);
-        address eurc   = vm.envOr("FUJI_EURC", address(0));
+        address pyth = vm.envOr("FUJI_PYTH", DEFAULT_PYTH);
+        address usdc = vm.envOr("FUJI_USDC", DEFAULT_USDC);
+        address eurc = vm.envOr("FUJI_EURC", DEFAULT_EURC);
         address cctpMt = vm.envOr("FUJI_CCTP_MT", DEFAULT_CCTP_MT);
-        uint256 lltv   = vm.envOr("FX_HUB_LLTV", uint256(860000000000000000));
+        uint256 lltv = vm.envOr("FX_HUB_LLTV", uint256(860000000000000000));
 
         console2.log("deployer", deployer);
         console2.log("morpho  ", morphoAddr);
         console2.log("irm     ", irmAddr);
         console2.log("pyth    ", pyth);
         console2.log("usdc    ", usdc);
+        console2.log("eurc    ", eurc);
         console2.log("cctp mt ", cctpMt);
 
         vm.startBroadcast(pk);
-
-        // 3) MockEURC if no real EURC on Fuji.
-        if (eurc == address(0)) {
-            MockEURC mockEurc = new MockEURC();
-            eurc = address(mockEurc);
-            console2.log("MockEURC", eurc);
-        }
 
         // 4) FxOracle (Pyth primary on Fuji). Spec §8 production defaults:
         //    staleness=300s, deviation=50 bps, confidence=30 bps.
@@ -195,11 +188,11 @@ contract DeployAvalancheFuji is Script {
         FxMarketRegistry registry,
         FxLiquidator liquidator
     ) internal view {
-        require(oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), timelock),         "handoff: oracle admin != timelock");
-        require(!oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), deployer),        "handoff: deployer still oracle admin");
-        require(registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), timelock),     "handoff: registry admin != timelock");
-        require(!registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), deployer),    "handoff: deployer still registry admin");
+        require(oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), timelock), "handoff: oracle admin != timelock");
+        require(!oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), deployer), "handoff: deployer still oracle admin");
+        require(registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), timelock), "handoff: registry admin != timelock");
+        require(!registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), deployer), "handoff: deployer still registry admin");
         require(liquidator.hasRole(liquidator.DEFAULT_ADMIN_ROLE(), timelock), "handoff: liq admin != timelock");
-        require(!liquidator.hasRole(liquidator.DEFAULT_ADMIN_ROLE(), deployer),"handoff: deployer still liq admin");
+        require(!liquidator.hasRole(liquidator.DEFAULT_ADMIN_ROLE(), deployer), "handoff: deployer still liq admin");
     }
 }

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
@@ -188,6 +188,28 @@ contract MainnetForkTest is Test {
         vm.stopPrank();
 
         // Borrower now has +30k USDC + remaining EURC
+        assertGe(IERC20(USDC).balanceOf(borrower), 1_030_000e6 - 1);
+    }
+
+    function test_fork_borrowDelegated_againstCollateral() public whenFork {
+        address delegate = address(0xDE1E64A7E);
+
+        vm.startPrank(lender);
+        IERC20(USDC).approve(address(registry), type(uint256).max);
+        registry.supply(USDC, EURC, 100_000e6, lender);
+        vm.stopPrank();
+
+        vm.startPrank(borrower);
+        IERC20(EURC).approve(address(registry), type(uint256).max);
+        registry.supplyCollateral(USDC, EURC, 50_000e6, borrower);
+        morpho.setAuthorization(address(registry), true);
+        registry.setBorrowDelegate(delegate, true);
+        vm.stopPrank();
+
+        vm.prank(delegate);
+        uint256 borrowedShares = registry.borrowDelegated(USDC, EURC, 30_000e6, borrower, borrower);
+
+        assertGt(borrowedShares, 0, "delegated borrow minted no debt shares");
         assertGe(IERC20(USDC).balanceOf(borrower), 1_030_000e6 - 1);
     }
 

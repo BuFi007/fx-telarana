@@ -1,13 +1,10 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 
-import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
-import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
-import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 
@@ -18,6 +15,7 @@ import {FxSwapHook} from "../src/hub/FxSwapHook.sol";
 import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
 import {MockStablecoin} from "../src/test-helpers/MockStablecoin.sol";
 import {MockPyth} from "./mocks/MockPyth.sol";
+import {FxV4RouterHarness} from "./utils/FxV4RouterHarness.sol";
 
 /// @notice Address-based Tenderly vnet drill. Unlike AvalancheBasketSmokeTest,
 ///         this attaches to already-deployed contracts from a persisted
@@ -41,7 +39,7 @@ contract AvalancheBasketManifestTest is Test {
     FxMarketRegistry internal registry;
     IMorpho internal morpho;
     address internal poolManager;
-    PoolSwapTest internal swapRouter;
+    FxV4RouterHarness internal swapRouter;
 
     address internal trader = address(0xCAFE);
 
@@ -55,8 +53,7 @@ contract AvalancheBasketManifestTest is Test {
     }
 
     function setUp() public {
-        manifestPath =
-            vm.envOr("FXT_BASKET_MANIFEST", string("../deployments/tenderly-avalanche-fuji-basket.json"));
+        manifestPath = vm.envOr("FXT_BASKET_MANIFEST", string("../deployments/tenderly-avalanche-fuji-basket.json"));
         if (!vm.isFile(manifestPath)) {
             vm.skip(true, "Tenderly basket manifest missing");
         }
@@ -71,7 +68,7 @@ contract AvalancheBasketManifestTest is Test {
         registry = FxMarketRegistry(vm.parseJsonAddress(manifestJson, ".FxMarketRegistry"));
         morpho = IMorpho(vm.parseJsonAddress(manifestJson, ".MorphoBlue"));
         poolManager = vm.parseJsonAddress(manifestJson, ".PoolManager");
-        swapRouter = PoolSwapTest(vm.parseJsonAddress(manifestJson, ".PoolSwapTest"));
+        swapRouter = new FxV4RouterHarness(IPoolManager(poolManager));
 
         _refreshPrices();
     }
@@ -83,7 +80,7 @@ contract AvalancheBasketManifestTest is Test {
         _assertHasCode(address(registry), "FxMarketRegistry");
         _assertHasCode(address(morpho), "MorphoBlue");
         _assertHasCode(poolManager, "PoolManager");
-        _assertHasCode(address(swapRouter), "PoolSwapTest");
+        _assertHasCode(address(swapRouter), "FxV4RouterHarness");
 
         IFxMarketRegistry.MarketParams[] memory pools = registry.listPools();
         assertEq(pools.length, 10, "basket should register two markets per asset");
@@ -158,29 +155,21 @@ contract AvalancheBasketManifestTest is Test {
 
         vm.startPrank(deployer);
         usdc.mint(trader, amountIn);
-        usdc.mint(poolManager, amountIn);
         vm.stopPrank();
 
         uint256 assetBefore = asset.balanceOf(trader);
         vm.startPrank(trader);
         usdc.approve(address(swapRouter), type(uint256).max);
-        BalanceDelta delta = swapRouter.swap(
-            key,
-            IPoolManager.SwapParams({
-                zeroForOne: Currency.unwrap(key.currency0) == address(usdc),
-                amountSpecified: -int256(amountIn),
-                sqrtPriceLimitX96: Currency.unwrap(key.currency0) == address(usdc)
-                    ? TickMath.MIN_SQRT_PRICE + 1
-                    : TickMath.MAX_SQRT_PRICE - 1
-            }),
-            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false}),
-            ""
+        uint256 amountOut = swapRouter.swapExactInputSingle(
+            key, Currency.unwrap(key.currency0) == address(usdc), amountIn, quoted, trader
         );
         vm.stopPrank();
 
-        delta;
         assertEq(usdc.balanceOf(trader), 0, string.concat(c.symbol, " input not consumed"));
-        assertGt(asset.balanceOf(trader), assetBefore, string.concat(c.symbol, " output missing"));
+        assertEq(asset.balanceOf(trader) - assetBefore, amountOut, string.concat(c.symbol, " output mismatch"));
+        assertGe(amountOut, quoted, string.concat(c.symbol, " output below quote"));
+        assertEq(usdc.balanceOf(poolManager), 0, string.concat(c.symbol, " manager kept USDC"));
+        assertEq(asset.balanceOf(poolManager), 0, string.concat(c.symbol, " manager kept asset"));
     }
 
     function _runLendBorrowCase(AssetCase memory c) internal {
@@ -231,8 +220,7 @@ contract AvalancheBasketManifestTest is Test {
         vm.startPrank(lender);
         morpho.setAuthorization(address(registry), true);
         loanToken.approve(address(registry), lenderSupply);
-        uint256 supplyShares =
-            registry.supply(address(loanToken), address(collateralToken), lenderSupply, lender);
+        uint256 supplyShares = registry.supply(address(loanToken), address(collateralToken), lenderSupply, lender);
         vm.stopPrank();
         assertGt(supplyShares, 0, string.concat(label, ": no lender shares"));
 
@@ -256,9 +244,7 @@ contract AvalancheBasketManifestTest is Test {
         assertEq(repaidShares, borrowedShares, string.concat(label, ": repay did not clear borrow shares"));
 
         uint256 collateralBeforeWithdraw = collateralToken.balanceOf(borrower);
-        registry.withdrawCollateral(
-            address(loanToken), address(collateralToken), collateralAmount, borrower, borrower
-        );
+        registry.withdrawCollateral(address(loanToken), address(collateralToken), collateralAmount, borrower, borrower);
         assertEq(
             collateralToken.balanceOf(borrower),
             collateralBeforeWithdraw + collateralAmount,

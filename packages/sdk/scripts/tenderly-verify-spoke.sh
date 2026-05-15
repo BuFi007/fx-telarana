@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Tenderly verify-contract for an `FxSpoke` deployed to a non-hub chain.
 #

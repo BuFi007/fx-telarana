@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=../schema.json
+blockExplorers:
+  - apiUrl: https://testnet.arcscan.app/api
+    family: etherscan
+    name: ArcScan
+    url: https://testnet.arcscan.app
+blocks:
+  confirmations: 1
+  estimateBlockTime: 1
+  reorgPeriod: 1
+chainId: 5042002
+displayName: Arc Testnet
+domainId: 5042002
+isTestnet: true
+name: arctestnet
+nativeToken:
+  decimals: 18
+  name: USDC
+  symbol: USDC
+protocol: ethereum
+rpcUrls:
+  - http: https://rpc.testnet.arc.network
+  - http: https://rpc.blockdaemon.testnet.arc.network
+  - http: https://rpc.drpc.testnet.arc.network
+technicalStack: other

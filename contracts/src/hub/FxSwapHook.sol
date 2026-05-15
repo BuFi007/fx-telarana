@@ -1,8 +1,10 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
@@ -14,7 +16,7 @@ import {BeforeSwapDelta, toBeforeSwapDelta} from "@uniswap/v4-core/src/types/Bef
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {CurrencySettler} from "@uniswap/v4-core/test/utils/CurrencySettler.sol";
 
-import {IMorpho, MarketParams as MorphoMarketParams, Id} from "morpho-blue/interfaces/IMorpho.sol";
+import {IMorpho, MarketParams as MorphoMarketParams} from "morpho-blue/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "morpho-blue/libraries/MarketParamsLib.sol";
 import {MorphoBalancesLib} from "morpho-blue/libraries/periphery/MorphoBalancesLib.sol";
 
@@ -50,6 +52,17 @@ import {IFxMarketRegistry} from "../interfaces/IFxMarketRegistry.sol";
 /// * exactOutput swap path. Universal Router defaults to exactInput.
 /// * True JIT-borrow against same-pair collateral. For the stable pair
 ///   the JIT-withdraw path is gas-cheaper and effectively equivalent.
+/// * TWAMM order scheduling. Long-running institutional and future perp
+///   hedging flows should settle through a separate router/hook module that
+///   consumes this hook's liquidity and observation signal.
+///
+/// ## Oracle/volatility signal
+///
+/// The hook records a truncated, pair-canonical mid-price observation from
+/// `IFxOracle(TOKEN0, TOKEN1)`. Sudden mid-price moves are clipped per
+/// observation and converted into an additive spread. This is inspired by
+/// Uniswap's truncated oracle and volatility oracle hook examples, but keeps
+/// `IFxOracle` as the only price read path.
 ///
 /// ## Permission bits
 ///
@@ -59,6 +72,8 @@ import {IFxMarketRegistry} from "../interfaces/IFxMarketRegistry.sol";
 /// `HookMiner` so the low-order bits match `getHookPermissions`.
 contract FxSwapHook is IHooks, ReentrancyGuard {
     using SafeERC20 for IERC20;
+    using SafeCast for uint256;
+    using SafeCast for int256;
     using CurrencySettler for Currency;
     using MarketParamsLib for MorphoMarketParams;
     using MorphoBalancesLib for IMorpho;
@@ -75,6 +90,8 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     /// @notice Pair tokens. TOKEN0 < TOKEN1 by address.
     address public immutable TOKEN0;
     address public immutable TOKEN1;
+    uint8 public immutable TOKEN0_DECIMALS;
+    uint8 public immutable TOKEN1_DECIMALS;
 
     /*//////////////////////////////////////////////////////////////
                                 MUTABLE STATE
@@ -85,6 +102,8 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     /// @notice PMM knobs (see _quote).
     uint16 public spreadBps;
     uint16 public kBps;
+    uint16 public maxObservationChangeBps;
+    uint16 public volatilitySpreadMultiplierBps;
 
     /// @notice Fraction of LP value kept as hot reserve in the hook (bps).
     ///         Remainder is rehypothecated into Morpho. 0 = full
@@ -97,6 +116,29 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     uint16 public constant DEFAULT_SPREAD_BPS  = 30;
     uint16 public constant DEFAULT_K_BPS       = 50;
     uint16 public constant DEFAULT_HOT_RESERVE_PCT = 2_000;  // 20%
+    uint16 public constant DEFAULT_MAX_OBSERVATION_CHANGE_BPS = 100; // 1%
+    uint16 public constant DEFAULT_VOLATILITY_SPREAD_MULTIPLIER_BPS = 10_000; // 1x
+    uint16 public constant MAX_OBSERVATION_CHANGE_BPS = 1_000; // 10%
+    uint16 public constant MAX_VOLATILITY_SPREAD_MULTIPLIER_BPS = 50_000; // 5x
+    uint16 public constant OBSERVATION_CARDINALITY = 256;
+
+    /// @notice Truncated oracle observation used by swaps and future risk consumers.
+    struct OracleObservation {
+        /// @dev Block timestamp for the observation.
+        uint32 timestamp;
+        /// @dev Truncated TOKEN0/TOKEN1 mid, 1e18-scaled.
+        uint224 midE18;
+        /// @dev Truncated move from the previous observation.
+        uint16 volatilityBps;
+        /// @dev Spread that swaps use after volatility add-on.
+        uint16 effectiveSpreadBps;
+    }
+
+    OracleObservation[OBSERVATION_CARDINALITY] public oracleObservations;
+    uint16 public oracleObservationIndex;
+    uint16 public oracleObservationCardinality;
+    uint256 public latestTruncatedMidE18;
+    uint16 public latestVolatilityBps;
 
     /// @notice Our own bookkeeping of Morpho supply shares per loan token.
     ///         loanToken → supply shares held by this contract. Updated on
@@ -121,6 +163,8 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     error SpreadOutOfRange(uint16 requested, uint16 maxBps);
     error KOutOfRange(uint16 requested, uint16 maxBps);
     error HotReservePctOutOfRange(uint16 requested);
+    error ObservationChangeOutOfRange(uint16 requested, uint16 maxBps);
+    error VolatilityMultiplierOutOfRange(uint16 requested, uint16 maxBps);
     error HookNotEnabled(bytes4 hook);
     error PoolKeyMismatch();
     error InsufficientLiquidity(uint256 effectiveReserveOut, uint256 amountOutRequested);
@@ -128,6 +172,7 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     error ZeroAmount();
     error TokensNotSorted();
     error InvalidSellToken(address sellToken);
+    error DecimalsOutOfRange(address token, uint8 decimals);
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -136,6 +181,20 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     event SpreadSet(uint16 oldBps, uint16 newBps);
     event KSet(uint16 oldBps, uint16 newBps);
     event HotReservePctSet(uint16 oldBps, uint16 newBps);
+    event OracleGuardrailsSet(
+        uint16 oldMaxObservationChangeBps,
+        uint16 newMaxObservationChangeBps,
+        uint16 oldVolatilitySpreadMultiplierBps,
+        uint16 newVolatilitySpreadMultiplierBps
+    );
+    event OracleObservationRecorded(
+        uint16 indexed index,
+        uint32 timestamp,
+        uint256 rawMidE18,
+        uint256 truncatedMidE18,
+        uint16 volatilityBps,
+        uint16 effectiveSpreadBps
+    );
     event Deposited(address indexed lp, uint256 amount0, uint256 amount1, uint256 shares);
     event Redeemed(address indexed lp, uint256 shares, uint256 amount0, uint256 amount1);
     event Rehypothecated(address indexed loanToken, uint256 assetsSupplied, uint256 sharesAfter);
@@ -195,9 +254,13 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         owner         = owner_;
         TOKEN0        = token0_;
         TOKEN1        = token1_;
+        TOKEN0_DECIMALS = _readDecimals(token0_);
+        TOKEN1_DECIMALS = _readDecimals(token1_);
         spreadBps     = DEFAULT_SPREAD_BPS;
         kBps          = DEFAULT_K_BPS;
         hotReservePct = DEFAULT_HOT_RESERVE_PCT;
+        maxObservationChangeBps = DEFAULT_MAX_OBSERVATION_CHANGE_BPS;
+        volatilitySpreadMultiplierBps = DEFAULT_VOLATILITY_SPREAD_MULTIPLIER_BPS;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -224,6 +287,28 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         hotReservePct = newBps;
     }
 
+    function setOracleGuardrails(uint16 newMaxObservationChangeBps, uint16 newVolatilitySpreadMultiplierBps)
+        external
+        onlyOwner
+    {
+        if (newMaxObservationChangeBps > MAX_OBSERVATION_CHANGE_BPS) {
+            revert ObservationChangeOutOfRange(newMaxObservationChangeBps, MAX_OBSERVATION_CHANGE_BPS);
+        }
+        if (newVolatilitySpreadMultiplierBps > MAX_VOLATILITY_SPREAD_MULTIPLIER_BPS) {
+            revert VolatilityMultiplierOutOfRange(
+                newVolatilitySpreadMultiplierBps, MAX_VOLATILITY_SPREAD_MULTIPLIER_BPS
+            );
+        }
+        emit OracleGuardrailsSet(
+            maxObservationChangeBps,
+            newMaxObservationChangeBps,
+            volatilitySpreadMultiplierBps,
+            newVolatilitySpreadMultiplierBps
+        );
+        maxObservationChangeBps = newMaxObservationChangeBps;
+        volatilitySpreadMultiplierBps = newVolatilitySpreadMultiplierBps;
+    }
+
     function transferOwner(address newOwner) external onlyOwner {
         if (newOwner == address(0)) revert ZeroAddress();
         owner = newOwner;
@@ -234,6 +319,25 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     function rebalance() external onlyOwner {
         _rebalanceToken(TOKEN0);
         _rebalanceToken(TOKEN1);
+    }
+
+    /// @notice Permissionless keeper entrypoint that records the pair-canonical
+    ///         truncated oracle observation without executing a swap.
+    function recordOracleObservation()
+        external
+        returns (uint256 rawMidE18, uint256 truncatedMidE18, uint16 volatilityBps, uint16 effectiveSpread)
+    {
+        (rawMidE18, ) = ORACLE.getMid(TOKEN0, TOKEN1);
+        (truncatedMidE18, volatilityBps, effectiveSpread) = _recordObservation(rawMidE18);
+    }
+
+    function previewOracleObservation()
+        external
+        view
+        returns (uint256 rawMidE18, uint256 truncatedMidE18, uint16 volatilityBps, uint16 effectiveSpread)
+    {
+        (rawMidE18, ) = ORACLE.getMid(TOKEN0, TOKEN1);
+        (truncatedMidE18, volatilityBps, effectiveSpread) = _previewObservation(rawMidE18);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -392,8 +496,13 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         uint256 effReserveIn  = IERC20(inputToken).balanceOf(address(this)) + _morphoSupplyAssets(inputToken);
         uint256 effReserveOut = hotOut + morphoOut;
 
-        (uint256 midE18, ) = ORACLE.getMid(inputToken, outputToken);
-        uint256 amountOut  = _quote(amountIn, effReserveIn, effReserveOut, midE18, spreadBps, kBps);
+        (uint256 canonicalMidE18, ) = ORACLE.getMid(TOKEN0, TOKEN1);
+        (uint256 truncatedCanonicalMidE18,, uint16 dynamicSpreadBps) = _recordObservation(canonicalMidE18);
+        uint256 midE18 = params.zeroForOne ? truncatedCanonicalMidE18 : _invertE18(truncatedCanonicalMidE18);
+        uint8 inputDecimals = params.zeroForOne ? TOKEN0_DECIMALS : TOKEN1_DECIMALS;
+        uint8 outputDecimals = params.zeroForOne ? TOKEN1_DECIMALS : TOKEN0_DECIMALS;
+        uint256 amountOut =
+            _quote(amountIn, effReserveIn, effReserveOut, midE18, dynamicSpreadBps, kBps, inputDecimals, outputDecimals);
 
         if (amountOut > effReserveOut) {
             revert InsufficientLiquidity(effReserveOut, amountOut);
@@ -419,8 +528,8 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         );
 
         BeforeSwapDelta hookDelta = toBeforeSwapDelta(
-            int128(int256(amountIn)),
-            -int128(int256(amountOut))
+            amountIn.toInt256().toInt128(),
+            -amountOut.toInt256().toInt128()
         );
         return (IHooks.beforeSwap.selector, hookDelta, 0);
     }
@@ -463,10 +572,14 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         uint256 reserveOut,
         uint256 midE18,
         uint16  spread,
-        uint16  k
+        uint16  k,
+        uint8   inputDecimals,
+        uint8   outputDecimals
     ) internal pure returns (uint256 amountOut) {
         uint256 spreadAdj = uint256(10_000 - spread);
-        uint256 baseOut = (amountIn * midE18 * spreadAdj) / 1e18 / 10_000;
+        uint256 amountInE18 = _rawToE18(amountIn, inputDecimals);
+        uint256 baseOutE18 = (amountInE18 * midE18 * spreadAdj) / 1e18 / 10_000;
+        uint256 baseOut = _e18ToRaw(baseOutE18, outputDecimals);
 
         if (k == 0 || amountIn == 0) return baseOut;
 
@@ -484,8 +597,12 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         address outputToken = zeroForOne ? TOKEN1 : TOKEN0;
         uint256 reserveIn   = _totalAssets(inputToken);
         uint256 reserveOut  = _totalAssets(outputToken);
-        (uint256 midE18, )  = ORACLE.getMid(inputToken, outputToken);
-        return _quote(amountIn, reserveIn, reserveOut, midE18, spreadBps, kBps);
+        (uint256 rawCanonicalMidE18, ) = ORACLE.getMid(TOKEN0, TOKEN1);
+        (uint256 truncatedCanonicalMidE18,, uint16 dynamicSpreadBps) = _previewObservation(rawCanonicalMidE18);
+        uint256 midE18 = zeroForOne ? truncatedCanonicalMidE18 : _invertE18(truncatedCanonicalMidE18);
+        uint8 inputDecimals = zeroForOne ? TOKEN0_DECIMALS : TOKEN1_DECIMALS;
+        uint8 outputDecimals = zeroForOne ? TOKEN1_DECIMALS : TOKEN0_DECIMALS;
+        return _quote(amountIn, reserveIn, reserveOut, midE18, dynamicSpreadBps, kBps, inputDecimals, outputDecimals);
     }
 
     /// @notice Token-addressed exact-input quote — spec §6.1 integrator surface.
@@ -504,8 +621,24 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         address buyToken = zeroForOne ? TOKEN1 : TOKEN0;
         uint256 reserveIn  = _totalAssets(sellToken);
         uint256 reserveOut = _totalAssets(buyToken);
-        (oraclePriceE18, ) = ORACLE.getMid(sellToken, buyToken);
-        buyAmount = _quote(sellAmount, reserveIn, reserveOut, oraclePriceE18, spreadBps, kBps);
+        (uint256 rawCanonicalMidE18, ) = ORACLE.getMid(TOKEN0, TOKEN1);
+        (uint256 truncatedCanonicalMidE18,, uint16 dynamicSpreadBps) = _previewObservation(rawCanonicalMidE18);
+        oraclePriceE18 = zeroForOne ? truncatedCanonicalMidE18 : _invertE18(truncatedCanonicalMidE18);
+        (uint8 inputDecimals, uint8 outputDecimals) = _decimalsFor(sellToken, buyToken);
+        buyAmount = _quote(
+            sellAmount,
+            reserveIn,
+            reserveOut,
+            oraclePriceE18,
+            dynamicSpreadBps,
+            kBps,
+            inputDecimals,
+            outputDecimals
+        );
+    }
+
+    function effectiveSpreadBps() external view returns (uint16) {
+        return _effectiveSpreadBps(latestVolatilityBps);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -586,6 +719,100 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
             if (current != 0) token.forceApprove(spender, 0);
             token.forceApprove(spender, type(uint256).max);
         }
+    }
+
+    function _rawToE18(uint256 amount, uint8 decimals_) internal pure returns (uint256) {
+        return amount * (10 ** uint256(18 - decimals_));
+    }
+
+    function _e18ToRaw(uint256 amountE18, uint8 decimals_) internal pure returns (uint256) {
+        return amountE18 / (10 ** uint256(18 - decimals_));
+    }
+
+    function _readDecimals(address token) internal view returns (uint8 decimals_) {
+        decimals_ = IERC20Metadata(token).decimals();
+        if (decimals_ > 18) revert DecimalsOutOfRange(token, decimals_);
+    }
+
+    function _decimalsFor(address inputToken, address outputToken)
+        internal
+        view
+        returns (uint8 inputDecimals, uint8 outputDecimals)
+    {
+        inputDecimals = inputToken == TOKEN0 ? TOKEN0_DECIMALS : TOKEN1_DECIMALS;
+        outputDecimals = outputToken == TOKEN0 ? TOKEN0_DECIMALS : TOKEN1_DECIMALS;
+    }
+
+    function _recordObservation(uint256 rawMidE18)
+        internal
+        returns (uint256 truncatedMidE18, uint16 volatilityBps, uint16 effectiveSpread)
+    {
+        uint32 timestamp = uint32(block.timestamp);
+        if (oracleObservationCardinality != 0 && oracleObservations[oracleObservationIndex].timestamp == timestamp) {
+            truncatedMidE18 = latestTruncatedMidE18;
+            volatilityBps = latestVolatilityBps;
+            effectiveSpread = _effectiveSpreadBps(volatilityBps);
+            return (truncatedMidE18, volatilityBps, effectiveSpread);
+        }
+
+        (truncatedMidE18, volatilityBps, effectiveSpread) = _previewObservation(rawMidE18);
+
+        uint16 nextIndex = oracleObservationCardinality == 0
+            ? 0
+            : uint16((uint256(oracleObservationIndex) + 1) % uint256(OBSERVATION_CARDINALITY));
+        oracleObservations[nextIndex] = OracleObservation({
+            timestamp: timestamp,
+            midE18: truncatedMidE18.toUint224(),
+            volatilityBps: volatilityBps,
+            effectiveSpreadBps: effectiveSpread
+        });
+        oracleObservationIndex = nextIndex;
+        if (oracleObservationCardinality < OBSERVATION_CARDINALITY) {
+            oracleObservationCardinality += 1;
+        }
+        latestTruncatedMidE18 = truncatedMidE18;
+        latestVolatilityBps = volatilityBps;
+
+        emit OracleObservationRecorded(
+            nextIndex, timestamp, rawMidE18, truncatedMidE18, volatilityBps, effectiveSpread
+        );
+    }
+
+    function _previewObservation(uint256 rawMidE18)
+        internal
+        view
+        returns (uint256 truncatedMidE18, uint16 volatilityBps, uint16 effectiveSpread)
+    {
+        uint256 previous = latestTruncatedMidE18;
+        if (previous == 0) {
+            return (rawMidE18, 0, _effectiveSpreadBps(0));
+        }
+
+        uint256 maxDelta = (previous * uint256(maxObservationChangeBps)) / 10_000;
+        if (rawMidE18 > previous + maxDelta) {
+            truncatedMidE18 = previous + maxDelta;
+        } else if (rawMidE18 + maxDelta < previous) {
+            truncatedMidE18 = previous - maxDelta;
+        } else {
+            truncatedMidE18 = rawMidE18;
+        }
+
+        uint256 delta = rawMidE18 > previous ? truncatedMidE18 - previous : previous - truncatedMidE18;
+        uint256 vol = previous == 0 ? 0 : (delta * 10_000) / previous;
+        if (vol > type(uint16).max) vol = type(uint16).max;
+        volatilityBps = vol.toUint16();
+        effectiveSpread = _effectiveSpreadBps(volatilityBps);
+    }
+
+    function _effectiveSpreadBps(uint16 volatilityBps) internal view returns (uint16) {
+        uint256 addOn = (uint256(volatilityBps) * uint256(volatilitySpreadMultiplierBps)) / 10_000;
+        uint256 total = uint256(spreadBps) + addOn;
+        if (total > MAX_SPREAD_BPS) total = MAX_SPREAD_BPS;
+        return total.toUint16();
+    }
+
+    function _invertE18(uint256 midE18) internal pure returns (uint256) {
+        return (1e18 * 1e18) / midE18;
     }
 
     /*//////////////////////////////////////////////////////////////

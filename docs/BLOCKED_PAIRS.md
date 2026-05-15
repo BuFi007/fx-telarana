@@ -11,15 +11,15 @@ Last reviewed: 2026-05-14.
 
 ## Active blocks
 
-### USDC ↔ KRW (KRW1) — decimals pending on-chain probe
+No Phase 3 basket pair is blocked on oracle/decimal readiness as of the 2026-05-15 review. KRW1 moved to "Recently unblocked" below.
 
-- **Reason — decimals not yet confirmed.** KRW1 is **natively live on Avalanche mainnet** at `0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318` (and on Plume at `0x8304d1b1d04c968270ae66a0c7758f7471b8ec3f`). Decimals are not in Tomás's reference; mock testnet contract cannot be deployed until confirmed, since JPYC's Sepolia/mainnet decimal mismatch is the cautionary tale.
-- **Status:** ✅ Avalanche-native — Phase 3 Hub (Avalanche mainnet) gets KRW1 for free, no mock needed for production. Arc testnet still needs a mock until BDACS deploys to Arc (or the project accepts mock-only for testnet).
-- **Unblock criteria:**
-  1. `cast call 0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318 "decimals()" --rpc-url https://api.avax.network/ext/bc/C/rpc` — single command, 1 minute.
-  2. Pyth + RedStone confirm KRW/USD feed availability on Avalanche.
-  3. (Testnet only) Arc deployment available OR project approves mock at confirmed decimals.
-- **Owner:** Implementing agent — decimals probe is a one-liner; can run before next deploy.
+## Recently unblocked
+
+### USDC ↔ KRW (KRW1)
+
+- **Resolution — decimals confirmed.** KRW1 is **natively live on Avalanche mainnet** at `0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318` (and on Plume at `0x8304d1b1d04c968270ae66a0c7758f7471b8ec3f`). On 2026-05-14, `decimals()` was probed on Avalanche and returned `0`; `name()`, `symbol()`, and `totalSupply()` returned `KRW1`, `KRW1`, and `10000000`.
+- **Resolution — oracle coverage confirmed.** Pyth publishes `USD/KRW` (`0xe539120487c29b4defdf9a53d337316ea022a2688978a468f9efd847201be7e3`) and RedStone publishes `KRW`. `FxOracle.setPythFeedConfig(token, feed, true)` now supports this inverse-feed shape.
+- **Status:** Avalanche-native — Phase 3 Hub gets KRW1 with issuer decimals = 0. Arc testnet can deploy `mKRW1` at 0 decimals until BDACS deploys to Arc.
 
 ### USDC ↔ CAD (QCAD)
 

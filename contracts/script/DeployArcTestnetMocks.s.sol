@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {Script, console2} from "forge-std/Script.sol";
@@ -12,10 +12,9 @@ import {MockStablecoin} from "../src/test-helpers/MockStablecoin.sol";
 ///   mAUDF (6 dec)   — Forte AUDF stand-in
 ///   mJPYC (18 dec)  — JPYC Inc JPYC stand-in (mirrors MAINNET decimals, NOT Sepolia's 6)
 ///   mMXNB (6 dec)   — Bitso/Juno MXNB stand-in
+///   mKRW1 (0 dec)   — BDACS KRW1 stand-in (mirrors Avalanche mainnet decimals)
 ///   mZCHF (18 dec)  — Frankencoin ZCHF stand-in (no CCIP integration in this phase)
 ///
-/// KRW1 omitted — decimals pending on-chain probe via Avalanche mainnet
-///   `cast call 0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318 decimals()`.
 /// PHPC + BRLA dropped from Phase 3 basket entirely — see `docs/BLOCKED_PAIRS.md`
 ///   §Excluded from Phase 3 basket.
 ///
@@ -48,26 +47,29 @@ contract DeployArcTestnetMocks is Script {
 
         vm.startBroadcast(pk);
 
-        MockStablecoin mAUDF = new MockStablecoin("Mock AUDF (test)", "mAUDF", 6,  owner);
-        MockStablecoin mJPYC = new MockStablecoin("Mock JPYC (test)", "mJPYC", 18, owner);
-        MockStablecoin mMXNB = new MockStablecoin("Mock MXNB (test)", "mMXNB", 6,  owner);
-        MockStablecoin mZCHF = new MockStablecoin("Mock ZCHF (test)", "mZCHF", 18, owner);
+        MockStablecoin mAudf = new MockStablecoin("Mock AUDF (test)", "mAUDF", 6, owner);
+        MockStablecoin mJpyc = new MockStablecoin("Mock JPYC (test)", "mJPYC", 18, owner);
+        MockStablecoin mMxnb = new MockStablecoin("Mock MXNB (test)", "mMXNB", 6, owner);
+        MockStablecoin mKrw1 = new MockStablecoin("Mock KRW1 (test)", "mKRW1", 0, owner);
+        MockStablecoin mZchf = new MockStablecoin("Mock ZCHF (test)", "mZCHF", 18, owner);
 
         if (openFaucets && owner == deployer) {
-            mAUDF.setFaucetOpen(true);
-            mJPYC.setFaucetOpen(true);
-            mMXNB.setFaucetOpen(true);
-            mZCHF.setFaucetOpen(true);
+            mAudf.setFaucetOpen(true);
+            mJpyc.setFaucetOpen(true);
+            mMxnb.setFaucetOpen(true);
+            mKrw1.setFaucetOpen(true);
+            mZchf.setFaucetOpen(true);
         }
 
         vm.stopBroadcast();
 
         console2.log("");
         console2.log("======== Deployed mock stablecoins ========");
-        console2.log("mAUDF (6  dec):", address(mAUDF));
-        console2.log("mJPYC (18 dec):", address(mJPYC));
-        console2.log("mMXNB (6  dec):", address(mMXNB));
-        console2.log("mZCHF (18 dec):", address(mZCHF));
+        console2.log("mAUDF (6  dec):", address(mAudf));
+        console2.log("mJPYC (18 dec):", address(mJpyc));
+        console2.log("mMXNB (6  dec):", address(mMxnb));
+        console2.log("mKRW1 (0  dec):", address(mKrw1));
+        console2.log("mZCHF (18 dec):", address(mZchf));
         console2.log("===========================================");
         console2.log("");
         console2.log("Next step: persist these to deployments/arc-testnet-mocks.json");
@@ -76,18 +78,19 @@ contract DeployArcTestnetMocks is Script {
         // Emit a copy-paste-friendly JSON skeleton for the operator.
         console2.log("");
         console2.log("---BEGIN JSON SKELETON---");
-        console2.log('{');
+        console2.log("{");
         console2.log('  "network": "arc-testnet",');
         console2.log('  "chainId": 5042002,');
         console2.log('  "deployer":', deployer);
         console2.log('  "owner":', owner);
         console2.log('  "mocks": {');
-        console2.log('    "mAUDF":', address(mAUDF));
-        console2.log('    "mJPYC":', address(mJPYC));
-        console2.log('    "mMXNB":', address(mMXNB));
-        console2.log('    "mZCHF":', address(mZCHF));
-        console2.log('  }');
-        console2.log('}');
+        console2.log('    "mAUDF":', address(mAudf));
+        console2.log('    "mJPYC":', address(mJpyc));
+        console2.log('    "mMXNB":', address(mMxnb));
+        console2.log('    "mKRW1":', address(mKrw1));
+        console2.log('    "mZCHF":', address(mZchf));
+        console2.log("  }");
+        console2.log("}");
         console2.log("---END JSON SKELETON---");
     }
 }

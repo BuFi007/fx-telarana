@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -61,6 +61,11 @@ contract FxMarketRegistry is IFxMarketRegistry, AccessControl, Pausable {
     /// @notice Enumerable list of every registered market id. Order is registration order.
     ///         Spec §6.1 integrator surface — fed to `listPools()` for indexers/monitors.
     bytes32[] private _allMarketIds;
+
+    /// @notice account → delegate → may borrow through this registry.
+    /// @dev    This is intentionally borrow-only. Withdraw/collateral withdraw
+    ///         remain self-gated because delegation there can directly drain assets.
+    mapping(address account => mapping(address delegate => bool allowed)) public borrowDelegateOf;
 
     /*//////////////////////////////////////////////////////////////
                                 ERRORS
@@ -151,6 +156,15 @@ contract FxMarketRegistry is IFxMarketRegistry, AccessControl, Pausable {
         bytes32 marketId = marketIdOf(loanToken, collateralToken);
         _isLive[marketId] = isLive;
         emit PoolLiveSet(marketId, isLive);
+    }
+
+    /// @notice Allow or revoke a delegate to borrow on `msg.sender`'s behalf.
+    /// @dev    Cross-chain intent receivers need this because Morpho authorization
+    ///         is account-scoped while this registry also gates caller identity.
+    function setBorrowDelegate(address delegate, bool allowed) external {
+        if (delegate == address(0)) revert ZeroAddress();
+        borrowDelegateOf[msg.sender][delegate] = allowed;
+        emit BorrowDelegateSet(msg.sender, delegate, allowed);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -246,6 +260,26 @@ contract FxMarketRegistry is IFxMarketRegistry, AccessControl, Pausable {
         returns (uint256 borrowedShares)
     {
         if (onBehalf != msg.sender) revert NotAuthorizedForOnBehalf(onBehalf, msg.sender);
+        borrowedShares = _borrow(loanToken, collateralToken, assets, onBehalf, receiver);
+    }
+
+    function borrowDelegated(
+        address loanToken,
+        address collateralToken,
+        uint256 assets,
+        address onBehalf,
+        address receiver
+    ) external whenNotPaused returns (uint256 borrowedShares) {
+        if (!borrowDelegateOf[onBehalf][msg.sender]) {
+            revert NotAuthorizedForOnBehalf(onBehalf, msg.sender);
+        }
+        borrowedShares = _borrow(loanToken, collateralToken, assets, onBehalf, receiver);
+    }
+
+    function _borrow(address loanToken, address collateralToken, uint256 assets, address onBehalf, address receiver)
+        internal
+        returns (uint256 borrowedShares)
+    {
         bytes32 marketId = marketIdOf(loanToken, collateralToken);
         _assertPairLive(marketId);
         MorphoMarketParams memory mp = _toMorpho(_paramsOf[marketId]);

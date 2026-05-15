@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// SPDX-License-Identifier: AGPL-3.0-only
 // Register fx-Telarana contracts into Circle Smart Contract Platform.
 //
 // Usage:
@@ -112,6 +113,7 @@ const EVENTS_OF: Record<string, string[]> = {
   ],
   FxOracle: [
     "FeedSet(address,bytes32)",
+    "PythFeedConfigSet(address,bytes32,bool)",
     "RedstoneFeedSet(address,bytes32)",
     "ConfigUpdated(uint256,uint256,uint256)",
     ...ACCESS_CONTROL_EVENTS,

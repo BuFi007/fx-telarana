@@ -1,0 +1,53 @@
+{
+  "network": "Arc Testnet",
+  "chainId": 5042002,
+  "hyperlaneDomain": 5042002,
+  "deployedAt": "2026-05-15",
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "owner": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "relayer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "registry": "hyperlane/registry/chains/arctestnet/addresses.yaml",
+  "coreConfig": "hyperlane/arc-testnet/core-config.yaml",
+  "coreReadback": "hyperlane/arc-testnet/core-read.yaml",
+  "agentConfig": "hyperlane/arc-testnet/agent-config.json",
+  "contracts": {
+    "mailbox": "0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9",
+    "proxyAdmin": "0x32b7aF2464c654B77B8E0Fe2516FB8b1029CA419",
+    "trustedRelayerIsm": "0x263DA0b912EFD06Ea3E8C954Dd2B60A3fdC79241",
+    "merkleTreeHook": "0xccceb5B90d9C1d9c5f8CcF755E4f37A849C8Ca11",
+    "protocolFee": "0x971b6ED14521f354eD13d64506Bf47D84E70F4fc",
+    "interchainAccountRouter": "0x113A539625D208b5EcC59f300Be14b9b3508E559",
+    "validatorAnnounce": "0xbBc9AE9dbd3F6D3dB672F0CA2419d0f4C8513062",
+    "quotedCalls": "0x1527f0230e07B202812A0F0E437995323A1a98cB",
+    "testRecipient": "0x144bf6521C4B843091BC35E98d80F6Ce402d20f9",
+    "interchainGasPaymaster": "0x0000000000000000000000000000000000000000"
+  },
+  "fujiAppSpecificIsmForArcOrigin": {
+    "chainId": 43113,
+    "hyperlaneDomain": 43113,
+    "type": "trustedRelayerIsm",
+    "address": "0x3f5d9B44aa1D59D26B20862D91533d60B32d9aFa",
+    "config": "hyperlane/fuji/arc-testnet-trusted-relayer-ism.yaml",
+    "readback": "hyperlane/fuji/arc-testnet-trusted-relayer-ism-read.yaml"
+  },
+  "smokeTests": {
+    "fujiToArcSelfRelay": {
+      "status": "pass",
+      "messageId": "0xb5987ac64421df6c127f9d425559a5b7ddee68258110666553ef55e27ff752ca",
+      "dispatchTx": "0x547f95648479363a7ab5affe37cf901fd521039599ca25902e82ad35bf279dc1",
+      "relayTx": "0x33ea34bb784c8332a8e4564da07bbe7114978703b937d47e84670af6b52e09be"
+    },
+    "arcToFujiDispatch": {
+      "status": "pass-dispatch-only",
+      "messageId": "0x80b50f405aa6b4ee2a95d6a67c19f7442fed650b7b3f0043c8cbf8079becdc9d",
+      "dispatchTx": "0x156dbb93d61d726a3c7676678245163042f6e2525fc3b965f9d1936a30daf619",
+      "note": "Full Arc -> Fuji processing requires a Fuji recipient that exposes the app-specific ISM."
+    }
+  },
+  "notes": [
+    "Arc native gas is USDC-like with 18 decimal fee units; ERC-20 USDC remains 6 decimals.",
+    "The bootstrap deployment has no Interchain Gas Paymaster. Relayers must be directly funded.",
+    "ArcScan/SnowTrace verification was not completed because the Hyperlane CLI could not use the configured explorer API without an API key.",
+    "Replace trustedRelayerIsm with multisig ISM before value-bearing production traffic."
+  ]
+}

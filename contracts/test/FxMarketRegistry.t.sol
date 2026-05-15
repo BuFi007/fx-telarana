@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
@@ -25,38 +25,36 @@ contract FxMarketRegistryAuthTest is Test {
 
     function test_withdraw_revertsIfOnBehalfNotCaller() public {
         vm.prank(mallory);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IFxMarketRegistry.NotAuthorizedForOnBehalf.selector,
-                alice,
-                mallory
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IFxMarketRegistry.NotAuthorizedForOnBehalf.selector, alice, mallory));
         registry.withdraw(address(0xAAAA), address(0xBBBB), 1, alice, mallory);
     }
 
     function test_withdrawCollateral_revertsIfOnBehalfNotCaller() public {
         vm.prank(mallory);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IFxMarketRegistry.NotAuthorizedForOnBehalf.selector,
-                alice,
-                mallory
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IFxMarketRegistry.NotAuthorizedForOnBehalf.selector, alice, mallory));
         registry.withdrawCollateral(address(0xAAAA), address(0xBBBB), 1, alice, mallory);
     }
 
     function test_borrow_revertsIfOnBehalfNotCaller() public {
         vm.prank(mallory);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IFxMarketRegistry.NotAuthorizedForOnBehalf.selector,
-                alice,
-                mallory
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IFxMarketRegistry.NotAuthorizedForOnBehalf.selector, alice, mallory));
         registry.borrow(address(0xAAAA), address(0xBBBB), 1, alice, mallory);
+    }
+
+    function test_setBorrowDelegate_emitsAndStoresDelegate() public {
+        vm.expectEmit(true, true, false, true);
+        emit IFxMarketRegistry.BorrowDelegateSet(alice, mallory, true);
+
+        vm.prank(alice);
+        registry.setBorrowDelegate(mallory, true);
+
+        assertTrue(registry.borrowDelegateOf(alice, mallory));
+    }
+
+    function test_borrowDelegated_revertsWithoutDelegate() public {
+        vm.prank(mallory);
+        vm.expectRevert(abi.encodeWithSelector(IFxMarketRegistry.NotAuthorizedForOnBehalf.selector, alice, mallory));
+        registry.borrowDelegated(address(0xAAAA), address(0xBBBB), 1, alice, mallory);
     }
 
     function testFuzz_anyAttackerCannotRouteToVictim(address attacker, address victim, address receiver_) public {
@@ -64,13 +62,7 @@ contract FxMarketRegistryAuthTest is Test {
         vm.assume(attacker != address(0));
 
         vm.prank(attacker);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IFxMarketRegistry.NotAuthorizedForOnBehalf.selector,
-                victim,
-                attacker
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IFxMarketRegistry.NotAuthorizedForOnBehalf.selector, victim, attacker));
         registry.withdraw(address(0xAAAA), address(0xBBBB), 1, victim, receiver_);
     }
 }

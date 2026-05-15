@@ -2,7 +2,7 @@
   "name": "@bu/fx-engine",
   "version": "0.1.0",
   "description": "TypeScript SDK for the fx-Telarana Hub-and-Spoke FX money market protocol",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -19,6 +19,10 @@
     "./addresses": {
       "types": "./dist/addresses/index.d.ts",
       "default": "./dist/addresses/index.js"
+    },
+    "./ghost": {
+      "types": "./dist/ghost.d.ts",
+      "default": "./dist/ghost.js"
     }
   },
   "files": [

@@ -7,6 +7,8 @@ dist/
 contracts/out/
 contracts/cache/
 contracts/broadcast/
+hyperlane/**/hyperlane_db*/
+hyperlane/**/validator-signatures*/
 
 # bun
 .bun-cache/

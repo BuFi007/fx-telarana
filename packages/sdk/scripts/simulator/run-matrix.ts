@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Drop 2 of the simulator test suite — full category A (8 spokes × 4
  * personas × 2 deposit sizes = 64 cases) plus an initial category B mint

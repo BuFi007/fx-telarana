@@ -2,14 +2,21 @@
   "name": "fx-telarana",
   "version": "0.1.0",
   "description": "Forex Telaraña Protocol — decentralized cross-currency money market and FX engine on Arc",
+  "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "workspaces": ["packages/*"],
   "scripts": {
     "sdk:build": "cd packages/sdk && bun run build",
     "sdk:test": "cd packages/sdk && bun test",
     "sdk:abis:sync": "cd packages/sdk && bun run abis:sync",
-    "contracts:test": "cd contracts && forge test --no-match-contract MainnetForkTest",
-    "contracts:test:fork": "cd contracts && ETH_RPC_URL=https://ethereum-rpc.publicnode.com forge test",
-    "sdk:circle:register": "cd packages/sdk && bun scripts/register-contracts.ts"
+    "contracts:test": "cd contracts && forge build --force test/MorphoArtifacts.t.sol && forge test --no-match-contract MainnetForkTest",
+    "contracts:test:fork": "cd contracts && forge build --force test/MorphoArtifacts.t.sol && ETH_RPC_URL=https://ethereum-rpc.publicnode.com forge test",
+    "contracts:smoke:basket": "cd contracts && forge build --force test/MorphoArtifacts.t.sol && forge test --match-contract AvalancheBasketSmokeTest",
+    "sdk:circle:register": "cd packages/sdk && bun scripts/register-contracts.ts",
+    "hyperlane:arc:deploy-core": "npx @hyperlane-xyz/cli core deploy --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --chain arctestnet --config ./hyperlane/arc-testnet/core-config.yaml --yes",
+    "hyperlane:fuji:deploy-arc-ism": "npx @hyperlane-xyz/cli ism deploy --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --chain fuji --config ./hyperlane/fuji/arc-testnet-trusted-relayer-ism.yaml --out ./hyperlane/fuji/arc-testnet-trusted-relayer-ism-address.json --yes",
+    "hyperlane:arc:agent-config": "npx @hyperlane-xyz/cli registry agent-config --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --chains arctestnet fuji --out ./hyperlane/arc-testnet/agent-config.json --yes",
+    "hyperlane:arc:test-dispatch": "npx @hyperlane-xyz/cli send message --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --origin arctestnet --destination fuji --body fx-telarana-arc-hyperlane-dispatch --quick --yes",
+    "hyperlane:fuji:test-message": "npx @hyperlane-xyz/cli send message --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --origin fuji --destination arctestnet --body fx-telarana-fuji-to-arc-smoke --relay --yes"
   }
 }

@@ -1,0 +1,127 @@
+{
+  "chains": {
+    "arctestnet": {
+      "blockExplorers": [
+        {
+          "apiUrl": "https://testnet.arcscan.app/api",
+          "family": "etherscan",
+          "name": "ArcScan",
+          "url": "https://testnet.arcscan.app"
+        }
+      ],
+      "blocks": {
+        "confirmations": 1,
+        "estimateBlockTime": 1,
+        "reorgPeriod": 1
+      },
+      "chainId": 5042002,
+      "displayName": "Arc Testnet",
+      "domainId": 5042002,
+      "isTestnet": true,
+      "name": "arctestnet",
+      "nativeToken": {
+        "decimals": 18,
+        "name": "USDC",
+        "symbol": "USDC"
+      },
+      "protocol": "ethereum",
+      "rpcUrls": [
+        {
+          "http": "https://rpc.testnet.arc.network"
+        },
+        {
+          "http": "https://rpc.blockdaemon.testnet.arc.network"
+        },
+        {
+          "http": "https://rpc.drpc.testnet.arc.network"
+        }
+      ],
+      "technicalStack": "other",
+      "domainRoutingIsmFactory": "0x8769cFC19a7a122d0E18748F73fA979Cef431651",
+      "incrementalDomainRoutingIsmFactory": "0x02a7956cc0a0883ccC8037F5ba450bB37e3ef415",
+      "interchainAccountRouter": "0x113A539625D208b5EcC59f300Be14b9b3508E559",
+      "mailbox": "0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9",
+      "merkleTreeHook": "0xccceb5B90d9C1d9c5f8CcF755E4f37A849C8Ca11",
+      "proxyAdmin": "0x32b7aF2464c654B77B8E0Fe2516FB8b1029CA419",
+      "quotedCalls": "0x1527f0230e07B202812A0F0E437995323A1a98cB",
+      "staticAggregationHookFactory": "0x4178F9D64F64eD05C25B0D6284f64522436A2a1F",
+      "staticAggregationIsmFactory": "0xB573Bd5F157d55e1f71c49f5271122753a3eB6D4",
+      "staticMerkleRootMultisigIsmFactory": "0x01339Ab29B65A8b86671d103C62f748aD937137b",
+      "staticMerkleRootWeightedMultisigIsmFactory": "0x0Ec043f5cc9dDefe92AeCde8EdF1384c19EE892E",
+      "staticMessageIdMultisigIsmFactory": "0x19b04cCC10E818100894459c0e447fAF0E221d72",
+      "staticMessageIdWeightedMultisigIsmFactory": "0xe5D7f24809A9ebD6158A964FE7cDa5A6b953530d",
+      "testRecipient": "0x144bf6521C4B843091BC35E98d80F6Ce402d20f9",
+      "validatorAnnounce": "0xbBc9AE9dbd3F6D3dB672F0CA2419d0f4C8513062",
+      "interchainGasPaymaster": "0x0000000000000000000000000000000000000000",
+      "index": {
+        "from": 42355242
+      }
+    },
+    "fuji": {
+      "blockExplorers": [
+        {
+          "apiUrl": "https://api.routescan.io/v2/network/testnet/evm/43113/etherscan/api",
+          "family": "etherscan",
+          "name": "SnowTrace",
+          "url": "https://testnet.snowtrace.io"
+        }
+      ],
+      "blocks": {
+        "confirmations": 3,
+        "estimateBlockTime": 2,
+        "reorgPeriod": 3
+      },
+      "chainId": 43113,
+      "deployer": {
+        "name": "Abacus Works",
+        "url": "https://www.hyperlane.xyz"
+      },
+      "displayName": "Fuji",
+      "domainId": 43113,
+      "gasCurrencyCoinGeckoId": "avalanche-2",
+      "isTestnet": true,
+      "name": "fuji",
+      "nativeToken": {
+        "decimals": 18,
+        "name": "Avalanche",
+        "symbol": "AVAX"
+      },
+      "protocol": "ethereum",
+      "rpcUrls": [
+        {
+          "http": "https://api.avax-test.network/ext/bc/C/rpc",
+          "pagination": {
+            "maxBlockRange": 2048
+          }
+        }
+      ],
+      "aggregationHook": "0x8E9b4006171c6B75111823e7545Ee5400CEce0B3",
+      "domainRoutingIsm": "0xe82EbDCC1B546CEDa0cf5B5495728700f6dE41B4",
+      "domainRoutingIsmFactory": "0x683a81E0e1a238dcA7341e04c08d3bba6f0Cb74f",
+      "fallbackRoutingHook": "0xc684f7F50DB4b2563218512e021fBdd0BeD6b57E",
+      "interchainGasPaymaster": "0x6895d3916B94b386fAA6ec9276756e16dAe7480E",
+      "interchainSecurityModule": "0x1b601775F20054b842249A553CFA166D7FC4256F",
+      "mailbox": "0x5b6CFf85442B851A8e6eaBd2A4E4507B5135B3B0",
+      "merkleTreeHook": "0x9ff6ac3dAf63103620BBf76136eA1AFf43c2F612",
+      "pausableHook": "0x495e9E119b2aa848b418EF6A4d30b42803de43A9",
+      "pausableIsm": "0x8e3D9139547be48942Aa4a489bc250FEa51679fa",
+      "protocolFee": "0xEbA64c8a9b4a61a9210d5fe7E4375380999C821b",
+      "proxyAdmin": "0x378dA02f7dC3c23A8B5ecE32b8056CdF01e8d477",
+      "staticAggregationHookFactory": "0x99554CC33cBCd6EDDd2f3fc9c7C9194Cb3b5df1E",
+      "staticAggregationIsm": "0xdDB75f480841A8333A31c4198ecf1780936B222D",
+      "staticAggregationIsmFactory": "0xF588129ed84F219A1f0f921bE7Aa1B2176516858",
+      "staticMerkleRootMultisigIsmFactory": "0x93F50Ac4E5663DAAb03508008d592f6260964f62",
+      "staticMerkleRootWeightedMultisigIsmFactory": "0xff93F32997Ac5450995121385aCE96b184efe89E",
+      "staticMessageIdMultisigIsmFactory": "0x90e1F9918F304645e4F6324E5C0EAc70138C84Ce",
+      "staticMessageIdWeightedMultisigIsmFactory": "0x8eAB8cBb9037e818C321f675c0bc2EA4649003CF",
+      "storageGasOracle": "0x9305dE34306886d615B096Bdf23b94a978f6a6c0",
+      "testRecipient": "0x44a7e1d76fD8AfA244AdE7278336E3D5C658D398",
+      "testTokenRecipient": "0x9CC10c844B3Bbae2444E39991aB027C4A05D1F2e",
+      "timelockController": "0x0000000000000000000000000000000000000000",
+      "validatorAnnounce": "0x4f7179A691F8a684f56cF7Fed65171877d30739a",
+      "index": {
+        "from": 26503317
+      }
+    }
+  }
+}

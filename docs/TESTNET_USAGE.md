@@ -48,13 +48,13 @@ cast send <mockAddr> "faucet()" --rpc-url $ARC_TESTNET_RPC --private-key $PRIVAT
 | mAUDF | 6 | 1000 mAUDF (= 1_000_000_000 raw) |
 | mJPYC | 18 | 1000 mJPYC (= 1e21 raw) |
 | mMXNB | 6 | 1000 mMXNB (= 1_000_000_000 raw) |
+| mKRW1 | 0 | 1000 mKRW1 (= 1000 raw) |
 | mZCHF | 18 | 1000 mZCHF (= 1e21 raw) |
 
 Faucet is gated by `faucetOpen` (default off). Owner enables via `setFaucetOpen(true)`. Closes before any mainnet-shape rehearsal.
 
 ### 2.3 Tokens NOT mocked on Arc
 
-- `mKRW1` — deferred until BDACS decimals confirmed via Avalanche mainnet probe (see `docs/BLOCKED_PAIRS.md`).
 - `mPHPC`, `mBRLA` — explicitly excluded from Phase 3 basket.
 
 ---

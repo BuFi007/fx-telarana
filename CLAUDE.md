@@ -2,6 +2,10 @@
 
 Per-repo guidance for Claude Code agents working in this codebase.
 
+## Product framing
+
+Forex Telaraña is a cross-chain FX credit hub. Users can enter from any supported chain with USDC or EURC where Circle supports it, route into Avalanche hub FX markets, and borrow or lend against currency-pair collateral. Hyperlane powers cross-chain intents and non-Circle asset routes; CCTP stays Circle-only for canonical USDC and EURC movement; the hub risk engine decides what assets are valid collateral.
+
 ## Status
 
 - **Live on real Base Sepolia** (chainId 84532, deployer `0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69`). All 8 contracts deployed + both Morpho markets created on the real Morpho Blue singleton + registered with Circle SCP. Addresses: `deployments/base-sepolia.json` and `packages/sdk/src/addresses/index.ts` (`ChainId.BaseSepolia`).
@@ -43,9 +47,13 @@ When we deploy to Arc testnet, run the same script with `deployments/arc-testnet
 
 ## Key project conventions
 
+- **License split:** Apache-2.0 for smart contracts, hooks, SDKs, and public
+  protocol libraries; AGPL-3.0-only for backend/API/indexer/agent/workflow
+  services; MIT for examples, templates, and frontend demo components. Add SPDX
+  headers on new source files.
 - **Solidity 0.8.26**, `evm_version = "cancun"` (Arc targets Prague, a superset). Don't change to `paris` — RedStone's evm-connector library uses `mcopy`, which is Cancun-only.
 - **`IFxOracle` is the only price-read surface.** No contract calls Pyth/RedStone SDK directly. New oracles drop in behind this interface.
-- **`IFxSpoke.enterHub(token, amount, beneficiary, hubCalldata)`** — explicit `beneficiary` arg, NEVER `msg.sender`-derived. Hinkal-wrapped flows (Phase 1) pass user's fresh SCA; public mode passes EOA/SCA.
+- **`IFxSpoke.enterHub(token, amount, beneficiary, hubCalldata)`** — explicit `beneficiary` arg, NEVER `msg.sender`-derived. Ghost Mode flows pass the Bufi Ghost router/action account selected by the privacy route; public mode passes the user EOA/SCA.
 - **`sweepStrandedDeposit(messageNonce)` 24h grace** — the only recovery path for CCTP V2 hook reverts on the Hub side.
 
 ## Tenderly testnet workflow
