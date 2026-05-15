@@ -84,18 +84,36 @@ Each phase runs:
 - Phase 2 × 5 (assets) — one per JPYC/MXNB/AUDF/KRW1/ZCHF. Each ~17 txs.
 - Phase 3 (handoff) — `FxTimelock + admin role transfers + assert deployer renounced`. ~7 txs.
 
-### Stage 2 — Fuji gateway smoke (~0.1 AVAX, ~1 min)
+### Stage 2 — Fuji gateway-wiring smoke against REAL Circle Gateway (~0.1 AVAX, ~1 min)
+
+**Real Circle Gateway is live on Fuji + Arc** at deterministic CREATE2 addresses (confirmed via `circle contract address gateway`):
+
+```
+GatewayWallet  0x0077777d7EBA4688BDeF3E311b846F25870A19B9
+GatewayMinter  0x0022222ABE238Cc2C7Bb1f21003F0a260052475B
+```
+
+Same addresses on both chains. The new smoke `SmokeGatewayWiring.s.sol` deploys a `TelaranaGatewayHubHook` pointed at the real Circle Minter on the current chain and runs **5 in-broadcast probes** that don't need a real Circle-signed attestation:
+
+| Probe | What it asserts |
+|---|---|
+| A — `setGatewayRoute` | Route config accepted by the hook (real Circle minter + real USDC) |
+| B — `gatewayRoute(routeId)` read | Configured slots round-trip correctly |
+| C — disabled route | `receiveGatewayMint` reverts when `enabled=false` (short-circuits before minter call) |
+| D — Pausable gate | `pause()` blocks entry-side `receiveGatewayMint`; `unpause()` restores |
+| E — real-minter call with fake attestation | Circle's real minter rejects the fabricated signature — proves the call **path** is physically wired through Circle |
 
 ```bash
 cd /Users/criptopoeta/coding-dojo/fx-onchain/contracts
-forge script script/SmokeTenderlyGatewayAvaxToArc.s.sol:SmokeTenderlyGatewayAvaxToArc \
+FXT_GATEWAY_DESTINATION_HUB="$(jq -r '.hubStack.FxHubMessageReceiver' ../deployments/hub-config-fuji.json)" \
+  forge script script/SmokeGatewayWiring.s.sol:SmokeGatewayWiring \
   --rpc-url "$FUJI_RPC_URL" --broadcast --slow --legacy \
   --private-key "$DEPLOYER_PRIVATE_KEY"
 ```
 
-Proves the Avalanche-side destination-hub gateway hook path with a mock Circle Gateway Minter. Three probes: happy mint+forward, duplicate-requestId revert, disabled-route revert.
+The full happy-path mint (deposit-on-source + Circle-signed attestation + real cross-chain mint into our hook) requires the relayer EOA to hold `EXECUTOR_ROLE` on the hook and the depositor to call `circle gateway deposit` on the source chain. That's a separate operator drill — `SmokeGatewayWiring.s.sol` proves the contract-level wiring is in place; the rest is done via the `circle` CLI + the Circle Gateway relayer.
 
-The real cross-chain piece — Circle Gateway Wallet on a source chain mints into our destination hook — requires Circle to ship testnet Gateway Wallet+Minter contracts. Track via [Circle's docs](https://developers.circle.com/stablecoin/docs/cctp-getting-started).
+A legacy `SmokeTenderlyGatewayAvaxToArc.s.sol` is preserved for Tenderly-vnet / mock-minter coverage; it tests the happy mint+forward+idempotency logic without needing real Circle infrastructure.
 
 ### Stage 3 — Arc Testnet hub (~5 USDC, ~12 min)
 
@@ -120,17 +138,40 @@ bash scripts/deploy-tenderly-basket-phased.sh
 
 (Phase 1 needs a small adapt to accept `FXT_USDC` + skip MockUSDC if set; same for `FXT_PYTH`.)
 
-### Stage 4 — Arc gateway smoke (~0.5 USDC, ~1 min)
+### Stage 4 — Arc gateway-wiring smoke (~0.5 USDC, ~1 min)
 
-Same smoke script, this time on Arc. The route inverts: `sourceDomain = 26` (Arc), `destinationDomain = 1` (Avax). Add an env override:
+Same `SmokeGatewayWiring.s.sol`, on Arc. The script auto-detects `chainid` and picks the right (sourceDomain, destinationDomain, local USDC) tuple — no flag needed.
 
 ```bash
-forge script script/SmokeTenderlyGatewayAvaxToArc.s.sol:SmokeTenderlyGatewayAvaxToArc \
+cd /Users/criptopoeta/coding-dojo/fx-onchain/contracts
+FXT_GATEWAY_DESTINATION_HUB="<Arc-side FxHubMessageReceiver after Stage 3>" \
+  forge script script/SmokeGatewayWiring.s.sol:SmokeGatewayWiring \
   --rpc-url "$ARC_TESTNET_RPC" --broadcast --slow --legacy \
   --private-key "$DEPLOYER_PRIVATE_KEY"
 ```
 
-(Smoke script's source/destination domains are hardcoded to 1/26 today. For Arc, we'd flip them via an env or a small refactor — TBD in follow-up commit.)
+Result: Arc-side `TelaranaGatewayHubHook` wired to the same Circle Gateway Minter, route configured for "Fuji → this Arc hub" (sourceDomain=1, destDomain=26).
+
+### Stage 4b — Real cross-chain Gateway USDC flow (end-to-end)
+
+Once both hubs have their gateway hooks wired (Stages 2 + 4), the full hub-to-hub USDC liquidity flow runs via the `circle` CLI on the source side + Circle's relayer on the destination side:
+
+```bash
+# Source-side: deposit USDC into Circle Gateway Wallet on Fuji.
+circle gateway deposit --chain AVAX-FUJI --amount 5
+
+# Wait for the relayer to sign the attestation (Circle's API).
+# Then the relayer EOA (must hold EXECUTOR_ROLE on the destination hook)
+# calls receiveGatewayMint on the Arc-side hook with the real attestation.
+
+# Status check during the flow:
+circle gateway balance --chain AVAX-FUJI
+circle gateway balance --chain ARC-TESTNET
+```
+
+The destination hook's `receiveGatewayMint` calls Circle's real GatewayMinter; on a real attestation the mint lands, the hook forwards USDC to the configured destination hub (the `FxHubMessageReceiver`), and the receipt records under `gatewayRequestState(requestId) == MINTED`.
+
+**This is the Spider Web's hub-to-hub leg.** Spokes feed USDC into either hub via CCTP V2; hubs share liquidity via Circle Gateway.
 
 ### Stage 5 — Spoke fleet retest (optional, ~0.1 ETH per chain)
 
@@ -168,7 +209,7 @@ After each stage, verify:
 - Cross-chain spoke entry via real CCTP V2 (Circle's testnet attestation service is live).
 
 **What we CANNOT test fully tonight (depends on upstream):**
-- Real Circle Gateway Wallet → Circle Gateway Minter end-to-end. Circle's testnet Gateway infra may not be available yet; check [developers.circle.com/stablecoin](https://developers.circle.com/stablecoin/docs).
+- Real Circle Gateway happy-path mint requires Circle's relayer signing a deposit attestation. The contract wiring is complete (`SmokeGatewayWiring.s.sol` Probe E exercises the call path against the real minter); the cross-chain end-to-end runs via `circle gateway deposit` from a depositor + Circle's relayer pushing a signed attestation to an `EXECUTOR_ROLE` holder on the destination hook.
 - Real ZK proof generation for Ghost withdrawals. Mock proof verifier is wired; real circuit + prover are Phase 1+ work per `docs/TODOS.md`.
 - v4 Universal Router quote/swap path through the new hooks — needs UR deployment on Fuji + Arc (separate ask).
 
