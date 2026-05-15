@@ -4,6 +4,9 @@ pragma solidity ^0.8.26;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+
 import {IMorpho, MarketParams as MorphoMarketParams, Id} from "morpho-blue/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "morpho-blue/libraries/MarketParamsLib.sol";
 
@@ -20,9 +23,16 @@ import {IFxOracle} from "../interfaces/IFxOracle.sol";
 ///   3. Morpho enforces health-factor breach internally — this contract is just the conduit.
 ///
 /// Bonus + LLTV semantics are inherited verbatim from Morpho Blue. No FX-bespoke logic.
-contract FxLiquidator {
+contract FxLiquidator is AccessControl, Pausable {
     using SafeERC20 for IERC20;
     using MarketParamsLib for MorphoMarketParams;
+
+    /*//////////////////////////////////////////////////////////////
+                                ROLES
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Spec §10.4: pause is a hot action, bypasses timelock.
+    bytes32 public constant OPERATIONS_ROLE = keccak256("OPERATIONS_ROLE");
 
     /*//////////////////////////////////////////////////////////////
                                 STATE
@@ -40,11 +50,31 @@ contract FxLiquidator {
                                 CTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(address morpho_, address registry_, address oracle_) {
+    /// @param initialAdmin Address that initially holds `DEFAULT_ADMIN_ROLE`
+    ///                     AND `OPERATIONS_ROLE`. Deploy scripts atomically
+    ///                     hand DEFAULT_ADMIN_ROLE to FxTimelock post-deploy.
+    constructor(address morpho_, address registry_, address oracle_, address initialAdmin) {
         if (morpho_ == address(0) || registry_ == address(0) || oracle_ == address(0)) revert ZeroAddress();
+        if (initialAdmin == address(0)) revert ZeroAddress();
         MORPHO = IMorpho(morpho_);
         REGISTRY = IFxMarketRegistry(registry_);
         ORACLE = IFxOracle(oracle_);
+
+        _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
+        _grantRole(OPERATIONS_ROLE, initialAdmin);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                PAUSE
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Stop new liquidations (e.g. during oracle incident).
+    function pause() external onlyRole(OPERATIONS_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(OPERATIONS_ROLE) {
+        _unpause();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -70,7 +100,7 @@ contract FxLiquidator {
         uint256 maxRepayAssets,
         bool useVerified,
         bytes[] calldata pythUpdate
-    ) external payable returns (uint256 seized, uint256 repaid) {
+    ) external payable whenNotPaused returns (uint256 seized, uint256 repaid) {
         if ((seizedAssets == 0) == (repaidShares == 0)) revert InvalidLiquidation();
 
         // Freshen oracle in the same tx.

@@ -41,6 +41,70 @@ export const IFxMarketRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "isPoolLive",
+    "inputs": [
+      {
+        "name": "loanToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "collateralToken",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "listPools",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple[]",
+        "internalType": "struct IFxMarketRegistry.MarketParams[]",
+        "components": [
+          {
+            "name": "loanToken",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "collateralToken",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "oracle",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "irm",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "lltv",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "marketIdOf",
     "inputs": [
       {
@@ -146,6 +210,29 @@ export const IFxMarketRegistryAbi = [
         "internalType": "uint256"
       }
     ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setPoolLive",
+    "inputs": [
+      {
+        "name": "loanToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "collateralToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "isLive",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "outputs": [],
     "stateMutability": "nonpayable"
   },
   {
@@ -320,6 +407,25 @@ export const IFxMarketRegistryAbi = [
     "anonymous": false
   },
   {
+    "type": "event",
+    "name": "PoolLiveSet",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "isLive",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
     "type": "error",
     "name": "InvalidParams",
     "inputs": []
@@ -327,6 +433,33 @@ export const IFxMarketRegistryAbi = [
   {
     "type": "error",
     "name": "MarketAlreadyRegistered",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "NotAuthorizedForOnBehalf",
+    "inputs": [
+      {
+        "name": "onBehalf",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PoolNotLive",
     "inputs": [
       {
         "name": "marketId",

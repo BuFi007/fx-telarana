@@ -31,18 +31,30 @@ import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
 ///   CCTP_MT
 ///   LLTV
 contract DeployPatchV4 is Script {
+    error DeployPatchV4Archived();
+
+    /// @notice Archival v3→v4 patch script. This script is intentionally
+    ///         non-broadcastable because it predates the PR-6 governance
+    ///         migration and would leave the deployer holding
+    ///         DEFAULT_ADMIN_ROLE on freshly deployed contracts.
+    /// @dev    Use DeployFxHub, DeployBaseSepolia, DeployAvalancheFuji, or
+    ///         DeployArcTestnet instead; those fresh-deploy scripts atomically
+    ///         deploy FxTimelock, grant it DEFAULT_ADMIN_ROLE, renounce the
+    ///         deployer admin role, and assert the post-conditions.
     function run() external {
-        uint256 pk        = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address deployer  = vm.addr(pk);
-        address oracle    = vm.envAddress("V3_ORACLE");
+        this.revertArchived();
+
+        uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        address deployer = vm.addr(pk);
+        address oracle = vm.envAddress("V3_ORACLE");
         address adapterM1 = vm.envAddress("V3_ADAPTER_M1");
         address adapterM2 = vm.envAddress("V3_ADAPTER_M2");
-        address usdc      = vm.envAddress("USDC");
-        address eurc      = vm.envAddress("EURC");
-        address morpho    = vm.envAddress("MORPHO");
-        address irm       = vm.envAddress("ADAPTIVE_IRM");
-        address cctpMt    = vm.envAddress("CCTP_MT");
-        uint256 lltv      = vm.envUint("LLTV");
+        address usdc = vm.envAddress("USDC");
+        address eurc = vm.envAddress("EURC");
+        address morpho = vm.envAddress("MORPHO");
+        address irm = vm.envAddress("ADAPTIVE_IRM");
+        address cctpMt = vm.envAddress("CCTP_MT");
+        uint256 lltv = vm.envUint("LLTV");
 
         console2.log("deployer   ", deployer);
         console2.log("oracle (v3)", oracle);
@@ -58,24 +70,19 @@ contract DeployPatchV4 is Script {
         //    don't call createMarket again. registerMarket just records
         //    the (loan, collateral) → id mapping inside our registry.
         IFxMarketRegistry.MarketParams memory m1 = IFxMarketRegistry.MarketParams({
-            loanToken: eurc,
-            collateralToken: usdc,
-            oracle: adapterM1,
-            irm: irm,
-            lltv: lltv
+            loanToken: eurc, collateralToken: usdc, oracle: adapterM1, irm: irm, lltv: lltv
         });
         IFxMarketRegistry.MarketParams memory m2 = IFxMarketRegistry.MarketParams({
-            loanToken: usdc,
-            collateralToken: eurc,
-            oracle: adapterM2,
-            irm: irm,
-            lltv: lltv
+            loanToken: usdc, collateralToken: eurc, oracle: adapterM2, irm: irm, lltv: lltv
         });
         bytes32 m1Id = registry.registerMarket(m1);
         bytes32 m2Id = registry.registerMarket(m2);
 
-        // 3) New FxLiquidator (rebind to the patched registry)
-        FxLiquidator liquidator = new FxLiquidator(morpho, address(registry), oracle);
+        // 3) New FxLiquidator (rebind to the patched registry).
+        //    Deployer takes initial admin; PR-6 added AccessControl. Production
+        //    follow-up: transfer DEFAULT_ADMIN_ROLE to FxTimelock post-deploy
+        //    (this v4 patch script is intentionally minimal — no timelock here).
+        FxLiquidator liquidator = new FxLiquidator(morpho, address(registry), oracle, deployer);
 
         // 4) New FxHubMessageReceiver (CCTP V2 inbound) bound to the patched registry
         FxHubMessageReceiver receiver = new FxHubMessageReceiver(cctpMt, usdc, address(registry));
@@ -92,5 +99,9 @@ contract DeployPatchV4 is Script {
         console2.logBytes32(m1Id);
         console2.log("Market M2 (USDC/EURC)    ");
         console2.logBytes32(m2Id);
+    }
+
+    function revertArchived() external pure {
+        revert DeployPatchV4Archived();
     }
 }
