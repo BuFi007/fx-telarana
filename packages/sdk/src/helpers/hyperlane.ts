@@ -109,3 +109,11 @@ export function planExecuteHyperlaneIntent(intentId: Hex): Hex {
     args: [intentId],
   });
 }
+
+export function planExecuteRoutedHyperlaneIntent(intentId: Hex): Hex {
+  return encodeFunctionData({
+    abi: FxHyperlaneHubReceiverAbi,
+    functionName: "executeRoutedIntent",
+    args: [intentId],
+  });
+}

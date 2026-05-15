@@ -12,8 +12,8 @@ import {ITokenMessengerV2, IMessageTransmitterV2} from "../interfaces/ICctp.sol"
 ///
 /// CCTP scope:
 ///   * Circle assets only: USDC and EURC where Circle supports CCTP for the route.
-///   * This deployment stores one configured Circle token as `USDC`; deploy a
-///     second instance or generalized allowlist for EURC routing.
+///   * The constructor token is the initial USDC-style asset; governance can
+///     add EURC with `setCircleTokenAllowed` when Circle supports that route.
 ///   * Non-Circle assets must use Hyperlane/issuer routes, never this adapter.
 ///   * `beneficiary` is the Hub-side position owner. Public mode → user's
 ///     EOA/SCA. Ghost Mode → Bufi Ghost router/action account.
@@ -32,6 +32,11 @@ contract FxSpoke is IFxSpoke {
     IERC20 public immutable USDC;
     address public immutable HUB_RECEIVER; // destination Hub receiver, encoded as bytes32 for CCTP
     uint32 public immutable ARC_DOMAIN; // destination Hub CCTP domain; legacy getter name
+    address public owner;
+
+    /// @notice Circle assets accepted by this spoke. CCTP remains Circle-only:
+    ///         USDC and EURC where the route is supported by Circle.
+    mapping(address token => bool allowed) public circleTokenAllowed;
 
     /// @notice Default max-fee in USDC (6 decimals) the user is willing to pay
     ///         CCTP V2 for fast transport. Configurable per call via `enterHubWithFee`.
@@ -42,6 +47,7 @@ contract FxSpoke is IFxSpoke {
     uint32 public constant FINALITY_FINALIZED = 2000;
 
     error UnsupportedFinality(uint32 threshold);
+    error NotOwner();
 
     /*//////////////////////////////////////////////////////////////
                                 CTOR
@@ -55,6 +61,23 @@ contract FxSpoke is IFxSpoke {
         USDC = IERC20(usdc);
         HUB_RECEIVER = hubReceiver;
         ARC_DOMAIN = arcDomain;
+        owner = msg.sender;
+        circleTokenAllowed[usdc] = true;
+        emit CircleTokenAllowedSet(usdc, true);
+    }
+
+    function setCircleTokenAllowed(address token, bool allowed) external {
+        if (msg.sender != owner) revert NotOwner();
+        if (token == address(0)) revert UnsupportedToken(address(0));
+        circleTokenAllowed[token] = allowed;
+        emit CircleTokenAllowedSet(token, allowed);
+    }
+
+    function transferOwner(address newOwner) external {
+        if (msg.sender != owner) revert NotOwner();
+        if (newOwner == address(0)) revert InvalidBeneficiary();
+        emit OwnerTransferred(owner, newOwner);
+        owner = newOwner;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -78,14 +101,15 @@ contract FxSpoke is IFxSpoke {
         uint256 maxFee,
         uint32 minFinalityThreshold
     ) public returns (bytes32 messageNonce) {
-        if (token != address(USDC)) revert UnsupportedToken(token);
+        if (!circleTokenAllowed[token]) revert UnsupportedToken(token);
         if (beneficiary == address(0)) revert InvalidBeneficiary();
         if (minFinalityThreshold != FINALITY_FAST && minFinalityThreshold != FINALITY_FINALIZED) {
             revert UnsupportedFinality(minFinalityThreshold);
         }
 
-        USDC.safeTransferFrom(msg.sender, address(this), amount);
-        _ensureApproval(USDC, address(TOKEN_MESSENGER), amount);
+        IERC20 circleToken = IERC20(token);
+        circleToken.safeTransferFrom(msg.sender, address(this), amount);
+        _ensureApproval(circleToken, address(TOKEN_MESSENGER), amount);
 
         bytes memory hookData = abi.encode(beneficiary, hubCalldata);
 
@@ -93,7 +117,7 @@ contract FxSpoke is IFxSpoke {
             amount,
             ARC_DOMAIN,
             _toBytes32(HUB_RECEIVER),
-            address(USDC),
+            token,
             _toBytes32(HUB_RECEIVER), // destinationCaller: only the hub receiver may dispatch
             maxFee,
             minFinalityThreshold,
@@ -112,20 +136,34 @@ contract FxSpoke is IFxSpoke {
     //////////////////////////////////////////////////////////////*/
 
     function exitHub(bytes calldata cctpMessage, bytes calldata attestation, address recipient) external {
-        if (recipient == address(0)) revert InvalidBeneficiary();
+        _exitHubForToken(cctpMessage, attestation, recipient, address(USDC));
+    }
 
-        uint256 balBefore = USDC.balanceOf(address(this));
+    function exitHubForToken(bytes calldata cctpMessage, bytes calldata attestation, address recipient, address token)
+        external
+    {
+        _exitHubForToken(cctpMessage, attestation, recipient, token);
+    }
+
+    function _exitHubForToken(bytes calldata cctpMessage, bytes calldata attestation, address recipient, address token)
+        internal
+    {
+        if (recipient == address(0)) revert InvalidBeneficiary();
+        if (!circleTokenAllowed[token]) revert UnsupportedToken(token);
+
+        IERC20 circleToken = IERC20(token);
+        uint256 balBefore = circleToken.balanceOf(address(this));
 
         // Get the MessageTransmitter address. CCTP V2 wires it inside TokenMessenger;
         // expose a getter call rather than a separate immutable to keep deploy simple.
         IMessageTransmitterV2 mt = _getMessageTransmitter();
         mt.receiveMessage(cctpMessage, attestation);
 
-        uint256 received = USDC.balanceOf(address(this)) - balBefore;
-        if (received == 0) revert UnsupportedToken(address(USDC));
+        uint256 received = circleToken.balanceOf(address(this)) - balBefore;
+        if (received == 0) revert UnsupportedToken(token);
 
-        USDC.safeTransfer(recipient, received);
-        emit Exited(bytes32(0), recipient, address(USDC), received);
+        circleToken.safeTransfer(recipient, received);
+        emit Exited(bytes32(0), recipient, token, received);
     }
 
     /*//////////////////////////////////////////////////////////////

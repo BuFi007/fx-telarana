@@ -19,8 +19,8 @@ import {FxHyperlaneIntentLib} from "../libraries/FxHyperlaneIntentLib.sol";
 /// │          └─► Hyperlane Mailbox.dispatch → FxHyperlaneHubReceiver       │
 /// │                                                                       │
 /// │ Token movement is intentionally out of this contract. CCTP remains    │
-/// │ canonical for USDC; Hyperlane Warp Routes can later fund non-USDC      │
-/// │ hub assets, but the hub only accepts registered route assets.          │
+/// │ canonical for Circle USDC/EURC; Hyperlane Warp Routes can fund         │
+/// │ non-Circle hub assets, but the hub only accepts registered routes.     │
 /// └───────────────────────────────────────────────────────────────────────┘
 contract FxSpokeIntentRouter is ReentrancyGuard {
     IHyperlaneMailbox public immutable MAILBOX;
@@ -149,6 +149,8 @@ contract FxSpokeIntentRouter is ReentrancyGuard {
         if (FxHyperlaneIntentLib.isTokenFunded(intent.action)) {
             if (inputAmount == 0 || route == address(0)) revert InvalidIntent();
             if (inputToken != FxHyperlaneIntentLib.requiredInputToken(intent)) revert InvalidIntent();
+        } else if (intent.action == FxHyperlaneIntentLib.Action.Borrow) {
+            if (inputToken != address(0) || inputAmount == 0 || route != address(0)) revert InvalidIntent();
         } else {
             if (inputToken != address(0) || inputAmount != 0 || route != address(0)) revert InvalidIntent();
         }

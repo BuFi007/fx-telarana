@@ -233,12 +233,20 @@ Non-USDC asset spokes:
   `FxSpokeIntentRouter.quoteIntent(...)`, then
   `FxSpokeIntentRouter.sendIntent{value: fee}(action, beneficiary, inputToken,
   inputAmount, loanToken, collateralToken, route)`. The SDK exports
-  `planFxSpokeIntent`, `planExecuteHyperlaneIntent`, and `FxHyperlaneAction`.
+  `planFxSpokeIntent`, `planExecuteHyperlaneIntent`,
+  `planExecuteRoutedHyperlaneIntent`, and `FxHyperlaneAction`.
 - After the routed asset is available on the hub and the user has approved
-  `FxHyperlaneHubReceiver`, call `executeIntent(intentId)`. First-pass
-  executable actions are `Supply`, `SupplyCollateral`, and `Repay`; `Borrow`
-  intents are accepted for coordination but execution is blocked until registry
-  delegation is designed.
+  `FxHyperlaneHubReceiver`, the beneficiary can call `executeIntent(intentId)`
+  for pull-based `Supply`, `SupplyCollateral`, or `Repay`.
+- For Hyperlane Warp transfer-and-call, the allowlisted route should deliver the
+  hub asset to `FxHyperlaneHubReceiver`, then call
+  `executeRoutedIntent(intentId)`. The receiver revalidates origin, route,
+  token, market liveness, and exact balance before approving the registry.
+- `Borrow` intents use `inputToken = address(0)`, `route = address(0)`, and
+  `inputAmount = borrowAmount`. Before execution, the beneficiary must call
+  `FxMarketRegistry.setBorrowDelegate(fxHyperlaneHubReceiver, true)` and must
+  still authorize `FxMarketRegistry` in Morpho. The beneficiary then calls
+  `executeIntent(intentId)`, which routes through `borrowDelegated(...)`.
 - For a route transfer, quote fees immediately before transfer using
   `quoteTransferRemote(destinationDomain, recipientBytes32, amount)`, then call
   `transferRemote(destinationDomain, recipientBytes32, amount)` on the route

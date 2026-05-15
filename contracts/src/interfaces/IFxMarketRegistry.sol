@@ -38,6 +38,7 @@ interface IFxMarketRegistry {
         bytes32 indexed marketId, address indexed loanToken, address indexed collateralToken, address irm, uint256 lltv
     );
     event PoolLiveSet(bytes32 indexed marketId, bool isLive);
+    event BorrowDelegateSet(address indexed account, address indexed delegate, bool allowed);
 
     /*//////////////////////////////////////////////////////////////
                                 STRUCTS
@@ -73,6 +74,12 @@ interface IFxMarketRegistry {
     /// @notice Sets whether entry-side actions are live for a pair.
     function setPoolLive(address loanToken, address collateralToken, bool isLive) external;
 
+    /// @notice Returns whether `delegate` may borrow through this registry for `account`.
+    function borrowDelegateOf(address account, address delegate) external view returns (bool);
+
+    /// @notice Grant/revoke delegated borrow execution. Used by cross-chain intent receivers.
+    function setBorrowDelegate(address delegate, bool allowed) external;
+
     /*//////////////////////////////////////////////////////////////
                                 ACTIONS
     //////////////////////////////////////////////////////////////*/
@@ -104,6 +111,16 @@ interface IFxMarketRegistry {
     function borrow(address loanToken, address collateralToken, uint256 assets, address onBehalf, address receiver)
         external
         returns (uint256 borrowedShares);
+
+    /// @notice Borrow through an account-approved delegate. `msg.sender` must be
+    ///         enabled by `onBehalf` via `setBorrowDelegate`.
+    function borrowDelegated(
+        address loanToken,
+        address collateralToken,
+        uint256 assets,
+        address onBehalf,
+        address receiver
+    ) external returns (uint256 borrowedShares);
 
     /// @notice Repay an existing debt position.
     function repay(address loanToken, address collateralToken, uint256 assets, address onBehalf)

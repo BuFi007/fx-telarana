@@ -28,10 +28,13 @@ import {FxHyperlaneIntentLib} from "../libraries/FxHyperlaneIntentLib.sol";
 /// │   ├─► FxMarketRegistry.isPoolLive(loan, collateral) must be true      │
 /// │   └─► nonce must be fresh; intent is stored for beneficiary execution │
 /// │                                                                       │
-/// │ beneficiary.executeIntent(id)                                         │
-/// │   ├─► pull exact input token from beneficiary                         │
-/// │   ├─► approve FxMarketRegistry exactly for that input                 │
-/// │   └─► call supply / supplyCollateral / repay on behalf of beneficiary │
+/// │ executeIntent(id)                                                     │
+/// │   ├─► token-funded: beneficiary pulls exact input into registry       │
+/// │   └─► borrow: account-approved receiver borrows to beneficiary        │
+/// │                                                                       │
+/// │ executeRoutedIntent(id)                                               │
+/// │   ├─► allowlisted Warp route has already delivered funds here         │
+/// │   └─► route executes supply / collateral / repay for beneficiary      │
 /// └───────────────────────────────────────────────────────────────────────┘
 contract FxHyperlaneHubReceiver is
     IHyperlaneRecipient,
@@ -93,6 +96,16 @@ contract FxHyperlaneHubReceiver is
     event IntentExecuted(
         bytes32 indexed intentId,
         address indexed beneficiary,
+        FxHyperlaneIntentLib.Action action,
+        address inputToken,
+        uint256 inputAmount,
+        uint256 shares
+    );
+    event RoutedIntentExecuted(
+        bytes32 indexed intentId,
+        uint32 indexed origin,
+        address indexed route,
+        address beneficiary,
         FxHyperlaneIntentLib.Action action,
         address inputToken,
         uint256 inputAmount,
@@ -180,17 +193,47 @@ contract FxHyperlaneHubReceiver is
         FxHyperlaneIntentLib.Intent memory current = _intent[intentId];
         if (msg.sender != current.beneficiary) revert NotIntentBeneficiary(current.beneficiary, msg.sender);
 
-        if (current.action == FxHyperlaneIntentLib.Action.Borrow) {
+        _validateIntentForExecution(_intentOrigin[intentId], current);
+
+        _intentState[intentId] = IntentState.Executed;
+        uint256 shares =
+            current.action == FxHyperlaneIntentLib.Action.Borrow ? _executeBorrow(current) : _pullAndExecute(current);
+
+        emit IntentExecuted(
+            intentId, current.beneficiary, current.action, current.inputToken, current.inputAmount, shares
+        );
+    }
+
+    /// @notice Execute an accepted, token-funded intent using assets that a
+    ///         trusted Hyperlane route has already delivered to this receiver.
+    /// @dev    This is the Warp Route / transfer-and-call path. `msg.sender`
+    ///         must be the allowlisted route recorded in the intent, and this
+    ///         contract must already hold at least `inputAmount`.
+    function executeRoutedIntent(bytes32 intentId) external nonReentrant {
+        if (_intentState[intentId] != IntentState.Accepted) revert IntentNotAccepted(intentId);
+
+        FxHyperlaneIntentLib.Intent memory current = _intent[intentId];
+        if (!FxHyperlaneIntentLib.isTokenFunded(current.action)) {
             revert UnsupportedIntentAction(current.action);
+        }
+        if (msg.sender != current.route) {
+            revert RouteAssetNotAllowed(_intentOrigin[intentId], msg.sender, current.inputToken);
         }
 
         _validateIntentForExecution(_intentOrigin[intentId], current);
 
         _intentState[intentId] = IntentState.Executed;
-        uint256 shares = _pullAndExecute(current);
+        uint256 shares = _executeFromReceiverBalance(current);
 
-        emit IntentExecuted(
-            intentId, current.beneficiary, current.action, current.inputToken, current.inputAmount, shares
+        emit RoutedIntentExecuted(
+            intentId,
+            _intentOrigin[intentId],
+            current.route,
+            current.beneficiary,
+            current.action,
+            current.inputToken,
+            current.inputAmount,
+            shares
         );
     }
 
@@ -233,7 +276,7 @@ contract FxHyperlaneHubReceiver is
                 revert RouteAssetNotAllowed(origin, current.route, current.inputToken);
             }
         } else if (current.action == FxHyperlaneIntentLib.Action.Borrow) {
-            if (current.inputToken != address(0) || current.inputAmount != 0 || current.route != address(0)) {
+            if (current.inputToken != address(0) || current.inputAmount == 0 || current.route != address(0)) {
                 revert InvalidIntent();
             }
         } else {
@@ -244,10 +287,18 @@ contract FxHyperlaneHubReceiver is
     function _validateIntentForExecution(uint32 origin, FxHyperlaneIntentLib.Intent memory current) internal view {
         if (current.version != FxHyperlaneIntentLib.VERSION || current.nonce == bytes32(0)) revert InvalidIntent();
         if (!MARKET_REGISTRY.isPoolLive(current.loanToken, current.collateralToken)) revert InvalidIntent();
-        if (current.inputToken != FxHyperlaneIntentLib.requiredInputToken(current)) revert InvalidIntent();
-        if (current.inputAmount == 0 || current.route == address(0)) revert InvalidIntent();
-        if (!routeAssetAllowed[origin][current.route][current.inputToken]) {
-            revert RouteAssetNotAllowed(origin, current.route, current.inputToken);
+        if (FxHyperlaneIntentLib.isTokenFunded(current.action)) {
+            if (current.inputToken != FxHyperlaneIntentLib.requiredInputToken(current)) revert InvalidIntent();
+            if (current.inputAmount == 0 || current.route == address(0)) revert InvalidIntent();
+            if (!routeAssetAllowed[origin][current.route][current.inputToken]) {
+                revert RouteAssetNotAllowed(origin, current.route, current.inputToken);
+            }
+        } else if (current.action == FxHyperlaneIntentLib.Action.Borrow) {
+            if (current.inputToken != address(0) || current.inputAmount == 0 || current.route != address(0)) {
+                revert InvalidIntent();
+            }
+        } else {
+            revert UnsupportedIntentAction(current.action);
         }
     }
 
@@ -277,5 +328,44 @@ contract FxHyperlaneHubReceiver is
             revert UnsupportedIntentAction(current.action);
         }
         token.forceApprove(address(MARKET_REGISTRY), 0);
+    }
+
+    function _executeFromReceiverBalance(FxHyperlaneIntentLib.Intent memory current) internal returns (uint256 shares) {
+        IERC20 token = IERC20(current.inputToken);
+        uint256 balance = token.balanceOf(address(this));
+        if (balance < current.inputAmount) {
+            revert TokenTransferShortfall(current.inputToken, current.inputAmount, balance);
+        }
+
+        token.forceApprove(address(MARKET_REGISTRY), current.inputAmount);
+        shares = _executeFundedRegistryAction(current);
+        token.forceApprove(address(MARKET_REGISTRY), 0);
+    }
+
+    function _executeFundedRegistryAction(FxHyperlaneIntentLib.Intent memory current)
+        internal
+        returns (uint256 shares)
+    {
+        if (current.action == FxHyperlaneIntentLib.Action.Supply) {
+            shares = MARKET_REGISTRY.supply(
+                current.loanToken, current.collateralToken, current.inputAmount, current.beneficiary
+            );
+        } else if (current.action == FxHyperlaneIntentLib.Action.SupplyCollateral) {
+            MARKET_REGISTRY.supplyCollateral(
+                current.loanToken, current.collateralToken, current.inputAmount, current.beneficiary
+            );
+        } else if (current.action == FxHyperlaneIntentLib.Action.Repay) {
+            shares = MARKET_REGISTRY.repay(
+                current.loanToken, current.collateralToken, current.inputAmount, current.beneficiary
+            );
+        } else {
+            revert UnsupportedIntentAction(current.action);
+        }
+    }
+
+    function _executeBorrow(FxHyperlaneIntentLib.Intent memory current) internal returns (uint256 shares) {
+        shares = MARKET_REGISTRY.borrowDelegated(
+            current.loanToken, current.collateralToken, current.inputAmount, current.beneficiary, current.beneficiary
+        );
     }
 }

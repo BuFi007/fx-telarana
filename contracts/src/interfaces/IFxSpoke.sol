@@ -40,6 +40,8 @@ interface IFxSpoke {
 
     event Stranded(bytes32 indexed messageNonce, address indexed beneficiary, uint256 amount, bytes reason);
     event Swept(bytes32 indexed messageNonce, address indexed beneficiary, uint256 amount);
+    event CircleTokenAllowedSet(address indexed token, bool allowed);
+    event OwnerTransferred(address indexed previousOwner, address indexed newOwner);
 
     /*//////////////////////////////////////////////////////////////
                                 ENTRY
@@ -58,6 +60,16 @@ interface IFxSpoke {
         payable
         returns (bytes32 messageNonce);
 
+    /// @notice Grant/revoke a Circle CCTP token. Intended for USDC and EURC only.
+    function setCircleTokenAllowed(address token, bool allowed) external;
+
+    /// @notice Transfer CCTP allowlist ownership to protocol governance.
+    function transferOwner(address newOwner) external;
+
     /// @notice Receive a CCTP V2 burn from the Hub and forward minted tokens to `recipient`.
     function exitHub(bytes calldata cctpMessage, bytes calldata attestation, address recipient) external;
+
+    /// @notice Receive a CCTP V2 burn and account for the specific local Circle token.
+    function exitHubForToken(bytes calldata cctpMessage, bytes calldata attestation, address recipient, address token)
+        external;
 }

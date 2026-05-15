@@ -13,7 +13,7 @@ pragma solidity ^0.8.26;
 /// │ Hub: FxHyperlaneHubReceiver                                           │
 /// │   decode body → validate spoke/route/asset/market/nonce → store intent │
 /// │        │                                                              │
-/// │        └─► beneficiary executes typed registry action on the hub       │
+/// │        └─► beneficiary or trusted route executes typed Hub action      │
 /// └───────────────────────────────────────────────────────────────────────┘
 library FxHyperlaneIntentLib {
     uint8 internal constant VERSION = 1;

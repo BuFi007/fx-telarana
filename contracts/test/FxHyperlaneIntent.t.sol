@@ -23,6 +23,8 @@ contract MockFxMarketRegistry {
 
     uint256 public supplyShares = 111;
     uint256 public repayShares = 222;
+    uint256 public borrowShares = 333;
+    mapping(address account => mapping(address delegate => bool allowed)) public borrowDelegateOf;
 
     function setLive(bool live_) external {
         live = live_;
@@ -55,6 +57,23 @@ contract MockFxMarketRegistry {
         IERC20(loanToken).safeTransferFrom(msg.sender, address(this), assets);
         _record("repay", loanToken, collateralToken, assets, onBehalf);
         return repayShares;
+    }
+
+    function setBorrowDelegate(address delegate, bool allowed) external {
+        borrowDelegateOf[msg.sender][delegate] = allowed;
+    }
+
+    function borrowDelegated(
+        address loanToken,
+        address collateralToken,
+        uint256 assets,
+        address onBehalf,
+        address receiver
+    ) external returns (uint256 borrowedShares) {
+        require(borrowDelegateOf[onBehalf][msg.sender], "not delegate");
+        MockERC20(loanToken).mint(receiver, assets);
+        _record("borrowDelegated", loanToken, collateralToken, assets, onBehalf);
+        return borrowShares;
     }
 
     function _record(string memory action, address loanToken, address collateralToken, uint256 amount, address onBehalf)
@@ -216,12 +235,12 @@ contract FxHyperlaneIntentTest is Test {
         assertEq(usdc.allowance(address(hub), address(registry)), 0);
     }
 
-    function test_borrowIntentIsAcceptedButExecutionUnsupported() public {
+    function test_executeBorrowIntentUsesRegistryDelegate() public {
         bytes memory body = _body(
             FxHyperlaneIntentLib.Action.Borrow,
             alice,
             address(0),
-            0,
+            10e18,
             address(jpyc),
             address(usdc),
             address(0),
@@ -233,13 +252,68 @@ contract FxHyperlaneIntentTest is Test {
         mailbox.deliver(address(hub), SPOKE_DOMAIN, _addressToBytes32(address(router)), body);
         assertEq(uint8(hub.intentState(intentId)), uint8(FxHyperlaneHubReceiver.IntentState.Accepted));
 
+        vm.prank(alice);
+        registry.setBorrowDelegate(address(hub), true);
+
+        vm.prank(alice);
+        hub.executeIntent(intentId);
+
+        assertEq(uint8(hub.intentState(intentId)), uint8(FxHyperlaneHubReceiver.IntentState.Executed));
+        assertEq(registry.lastAction(), keccak256("borrowDelegated"));
+        assertEq(registry.lastLoanToken(), address(jpyc));
+        assertEq(registry.lastCollateralToken(), address(usdc));
+        assertEq(registry.lastAmount(), 10e18);
+        assertEq(registry.lastOnBehalf(), alice);
+        assertEq(jpyc.balanceOf(alice), 10e18);
+    }
+
+    function test_borrowIntentRejectsZeroBorrowAmount() public {
+        bytes memory body = _body(
+            FxHyperlaneIntentLib.Action.Borrow,
+            alice,
+            address(0),
+            0,
+            address(jpyc),
+            address(usdc),
+            address(0),
+            keccak256("borrow")
+        );
+
+        vm.expectRevert(FxHyperlaneHubReceiver.InvalidIntent.selector);
+        mailbox.deliver(address(hub), SPOKE_DOMAIN, _addressToBytes32(address(router)), body);
+    }
+
+    function test_executeRoutedIntentUsesWarpDeliveredBalance() public {
+        (bytes32 intentId, bytes memory body) = _dispatchSupplyCollateralIntent(3_000_000);
+        mailbox.deliver(address(hub), SPOKE_DOMAIN, _addressToBytes32(address(router)), body);
+
+        usdc.mint(address(hub), 3_000_000);
+
+        vm.prank(route);
+        hub.executeRoutedIntent(intentId);
+
+        assertEq(uint8(hub.intentState(intentId)), uint8(FxHyperlaneHubReceiver.IntentState.Executed));
+        assertEq(registry.lastAction(), keccak256("supplyCollateral"));
+        assertEq(registry.lastLoanToken(), address(jpyc));
+        assertEq(registry.lastCollateralToken(), address(usdc));
+        assertEq(registry.lastAmount(), 3_000_000);
+        assertEq(registry.lastOnBehalf(), alice);
+        assertEq(usdc.balanceOf(address(registry)), 3_000_000);
+        assertEq(usdc.balanceOf(address(hub)), 0);
+    }
+
+    function test_executeRoutedIntentRequiresRouteCaller() public {
+        (bytes32 intentId, bytes memory body) = _dispatchSupplyCollateralIntent(3_000_000);
+        mailbox.deliver(address(hub), SPOKE_DOMAIN, _addressToBytes32(address(router)), body);
+        usdc.mint(address(hub), 3_000_000);
+
         vm.expectRevert(
             abi.encodeWithSelector(
-                FxHyperlaneHubReceiver.UnsupportedIntentAction.selector, FxHyperlaneIntentLib.Action.Borrow
+                FxHyperlaneHubReceiver.RouteAssetNotAllowed.selector, SPOKE_DOMAIN, alice, address(usdc)
             )
         );
         vm.prank(alice);
-        hub.executeIntent(intentId);
+        hub.executeRoutedIntent(intentId);
     }
 
     function test_replayNonceRejected() public {

@@ -20,6 +20,7 @@ import {
   hyperlaneAddressToBytes32,
   resolveRouteMode,
   planExecuteHyperlaneIntent,
+  planExecuteRoutedHyperlaneIntent,
   planFxSpokeIntent,
   planHyperlaneIcaCallRemote,
   planHyperlaneWarpTransferRemote,
@@ -36,6 +37,7 @@ const EURC = "0x000000000000000000000000000000000000eefc" as const;
 const ALICE = "0x000000000000000000000000000000000000a11c" as const;
 const ROUTE = "0x000000000000000000000000000000000000a0df" as const;
 const INTENT_ID = "0x1111111111111111111111111111111111111111111111111111111111111111" as const;
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 
 describe("address registry", () => {
   test("Base Sepolia includes Morpho + Pyth + USDC", () => {
@@ -346,11 +348,39 @@ describe("Hyperlane helpers", () => {
     expect(data).toBe(ref);
   });
 
+  test("encodes FxSpokeIntentRouter borrow intent without route token", () => {
+    const data = planFxSpokeIntent({
+      action: FxHyperlaneAction.Borrow,
+      beneficiary: ALICE,
+      inputToken: ZERO_ADDRESS,
+      inputAmount: 1_000_000n,
+      loanToken: EURC,
+      collateralToken: USDC,
+      route: ZERO_ADDRESS,
+    });
+    const ref = encodeFunctionData({
+      abi: FxSpokeIntentRouterAbi,
+      functionName: "sendIntent",
+      args: [FxHyperlaneAction.Borrow, ALICE, ZERO_ADDRESS, 1_000_000n, EURC, USDC, ZERO_ADDRESS],
+    });
+    expect(data).toBe(ref);
+  });
+
   test("encodes FxHyperlaneHubReceiver executeIntent", () => {
     const data = planExecuteHyperlaneIntent(INTENT_ID);
     const ref = encodeFunctionData({
       abi: FxHyperlaneHubReceiverAbi,
       functionName: "executeIntent",
+      args: [INTENT_ID],
+    });
+    expect(data).toBe(ref);
+  });
+
+  test("encodes FxHyperlaneHubReceiver executeRoutedIntent", () => {
+    const data = planExecuteRoutedHyperlaneIntent(INTENT_ID);
+    const ref = encodeFunctionData({
+      abi: FxHyperlaneHubReceiverAbi,
+      functionName: "executeRoutedIntent",
       args: [INTENT_ID],
     });
     expect(data).toBe(ref);
@@ -377,12 +407,28 @@ describe("ABI exports", () => {
     const fnNames: string[] = FxMarketRegistryAbi
       .filter((x) => x.type === "function")
       .map((x) => x.name);
-    for (const required of ["supply", "withdraw", "borrow", "repay", "supplyCollateral", "withdrawCollateral", "marketIdOf", "paramsOf"]) {
+    for (const required of [
+      "supply",
+      "withdraw",
+      "borrow",
+      "borrowDelegated",
+      "repay",
+      "supplyCollateral",
+      "withdrawCollateral",
+      "setBorrowDelegate",
+      "marketIdOf",
+      "paramsOf",
+    ]) {
       expect(fnNames).toContain(required);
     }
   });
 
-  test("FxSpoke ABI exposes enterHub with explicit beneficiary arg", () => {
+  test("FxSpoke ABI exposes Circle-only spoke controls", () => {
+    const fnNames = FxSpokeAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(fnNames).toContain("setCircleTokenAllowed");
+    expect(fnNames).toContain("transferOwner");
+    expect(fnNames).toContain("exitHubForToken");
+
     const enterHub = FxSpokeAbi.find((x) => x.type === "function" && x.name === "enterHub");
     expect(enterHub).toBeDefined();
     if (enterHub && enterHub.type === "function") {
@@ -398,6 +444,9 @@ describe("ABI exports", () => {
     ).toBe(true);
     expect(FxSpokeIntentRouterAbi.some((x) => x.type === "function" && x.name === "sendIntent")).toBe(true);
     expect(FxHyperlaneHubReceiverAbi.some((x) => x.type === "function" && x.name === "executeIntent")).toBe(true);
+    expect(FxHyperlaneHubReceiverAbi.some((x) => x.type === "function" && x.name === "executeRoutedIntent")).toBe(
+      true,
+    );
   });
 
   test("Bufi pass ABI exposes the Ghost Mode verifier surface", () => {

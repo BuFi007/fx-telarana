@@ -134,13 +134,18 @@ The implemented low-level flow is:
    - route + input token are allowlisted,
    - market is live in `FxMarketRegistry`,
    - nonce has not been consumed.
-5. Beneficiary executes `FxHyperlaneHubReceiver.executeIntent(intentId)` on the
-   hub after the route-settled asset is available and approved.
+5. Either:
+   - the beneficiary executes `FxHyperlaneHubReceiver.executeIntent(intentId)`
+     after approving the receiver for pull-based actions, or
+   - the allowlisted Warp route delivers funds to the receiver and calls
+     `executeRoutedIntent(intentId)`.
 
-Supported execution actions in this first pass are `Supply`,
-`SupplyCollateral`, and `Repay`. `Borrow` intents can be accepted for UI/state
-coordination but execution is intentionally blocked until the registry has a
-safe delegation model; `FxMarketRegistry.borrow` is self-gated by design.
+Supported execution actions are `Supply`, `SupplyCollateral`, `Repay`, and
+`Borrow`. Token-funded actions require a registered route and exact input token.
+`Borrow` uses `inputToken = address(0)` and `route = address(0)`, and requires
+the beneficiary to approve the hub receiver as a borrow delegate with
+`FxMarketRegistry.setBorrowDelegate(...)` while still authorizing the registry
+inside Morpho.
 
 ### 5.2 Transfer-and-call with ICA
 
@@ -152,10 +157,9 @@ This is the one-click target, but it must preserve user recovery. If the hub cal
 fails, tokens stay in the user's ICA, not in a shared protocol account.
 
 Registry implication: `FxMarketRegistry.borrow`, `withdraw`, and
-`withdrawCollateral` require `onBehalf == msg.sender`. If the ICA executes those
-calls, the position owner is the ICA. A future router/delegation change is
-required before an EOA can use a remote ICA while keeping the Morpho position
-under the EOA address.
+`withdrawCollateral` remain self-gated. Only `borrowDelegated(...)` is exposed
+for account-approved delegates; withdraw paths are intentionally not delegated.
+If an ICA executes self-gated calls, the position owner is the ICA.
 
 ## 6. Market onboarding checklist
 
@@ -187,8 +191,9 @@ The app should present CCTP and Hyperlane as different lanes:
 - For Hyperlane, quote route fees immediately before transfer using
   `quoteTransferRemote(destination, recipient, amount)`.
 - For Hyperlane intent messages, quote with `quoteIntent(...)`, submit with
-  `sendIntent(...)`, then have the beneficiary call `executeIntent(intentId)` on
-  the hub after the asset is available there.
+  `sendIntent(...)`, then use `executeIntent(intentId)` for beneficiary-pulled
+  actions or `executeRoutedIntent(intentId)` for allowlisted route-delivered
+  actions.
 - The `_amount` in `transferRemote` is exact amount out; the approval may need
   more than `_amount` when route token fees exist.
 - Use `hyperlaneAddressToBytes32` from the SDK for EVM recipients.
