@@ -7,11 +7,11 @@
 - [ ] **Verify Pyth + RedStone feed availability on Arc** for EUR/USD, USDC/USD, EURC/USD. List feed ids in `@bu/fx-engine/addresses/`.
 
 ## Implementation guardrails (track these explicitly)
-- [ ] `IFxOracle` is the single read path. Lint rule + code-review check.
-- [ ] `IFxSpoke.enterHub` MUST take explicit `beneficiary` arg.
-- [ ] `sweepStrandedDeposit(messageNonce, beneficiary)` ships with `FxSpoke`.
-- [ ] `EligibilityReason` enum lives in `@bu/fx-engine`, not duplicated.
-- [ ] Every contract file has an ASCII data-flow diagram in the file header comment.
+- [x] `IFxOracle` is the single read path. Enforced by `bun run contracts:guardrails`.
+- [x] `IFxSpoke.enterHub` MUST take explicit `beneficiary` arg. Enforced by `bun run contracts:guardrails`.
+- [x] `sweepStrandedDeposit(messageNonce)` ships with `FxHubMessageReceiver` and sweeps to the stored beneficiary after grace. Enforced by `bun run contracts:guardrails`.
+- [x] `EligibilityReason` enum lives in `@bu/fx-engine`, not duplicated. Enforced by `bun run contracts:guardrails`.
+- [x] Every production contract file has an ASCII data-flow diagram in the file header comment. Enforced by `bun run contracts:guardrails`.
 - [x] Ghost Mode privacy path uses Bufi Wallet pass + commitment/nullifier routing. No third-party privacy wallet or Circle Wallet dependency.
 
 ## Phase 0 deliverables (public-only ship)

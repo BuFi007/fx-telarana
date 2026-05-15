@@ -70,6 +70,17 @@ import {IFxMarketRegistry} from "../interfaces/IFxMarketRegistry.sol";
 /// must go through `deposit`/`redeem`. `beforeSwap` + `afterSwap` +
 /// `beforeSwapReturnDelta` enable the PMM. Mine the deploy address with
 /// `HookMiner` so the low-order bits match `getHookPermissions`.
+///
+/// Data flow:
+///   LP deposit / v4 swap
+///       |
+///       v
+///   FxSwapHook -- read IFxOracle + PMM quote --> Uniswap v4 PoolManager
+///       |
+///       +-- hot reserve / JIT withdraw -------> Morpho Blue via registry params
+///       |
+///       v
+///   swap output delivered; idle input rehypothecated
 contract FxSwapHook is IHooks, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;

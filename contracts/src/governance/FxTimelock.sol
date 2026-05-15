@@ -26,6 +26,15 @@ import {TimelockController} from "@openzeppelin/contracts/governance/TimelockCon
 /// Phase 3 spec §10.2:
 ///   - `DEFAULT_ADMIN_ROLE` on each admin contract = this Timelock (24-48h).
 ///   - `OPERATIONS_ROLE` = multisig (hot actions, no timelock).
+///
+/// Data flow:
+///   governance proposer
+///       |
+///       v
+///   FxTimelock -- schedule / execute --> FxOracle / FxMarketRegistry / FxLiquidator
+///       |
+///       v
+///   delayed admin action becomes live after minDelay
 contract FxTimelock is TimelockController {
     /// @param minDelay   Minimum delay in seconds. Phase 3 default = 24 hours.
     /// @param proposers  Addresses allowed to queue operations (typically the

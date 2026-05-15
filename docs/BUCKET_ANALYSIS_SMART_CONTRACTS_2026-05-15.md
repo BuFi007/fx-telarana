@@ -20,8 +20,10 @@ not missing smart-contract implementation for this branch.
 | B6 Circle Gateway hub liquidity | 100% | Gateway SDK config, interfaces, `TelaranaGatewayHubHook`, route validation, replay protection, edge tests. |
 | B7 Uniswap v4 swap preparation | 100% | Spot request/router interfaces, hook config, event schema, swap harness settlement tests, hook invariants. |
 | B8 Governance and operations | 100% | Role gates, pausing, per-pool live switch, deployment manifests, Circle SCP registration surface. |
-| B9 Testing | 100% | Unit, fork, SDK, hook, Gateway edge-case, and manifest coverage for current scope. |
+| B9 Testing | 100% | Unit, fork, SDK, hook, Gateway edge-case, Ghost Mode, invariant, and manifest coverage for current scope. |
 | B10 Frontend/indexer handoff | 100% | ABIs, typed SDK exports, route configs, event schemas, frontend prompt docs. |
+| B11 Ghost Mode current scope | 100% | Bufi pass interface, Ghost spoke router, commitment/nullifier registry, mockable withdrawal router, minimal KYC hook, SDK ABIs/events, and edge tests. |
+| B12 Guardrails | 100% | `bun run contracts:guardrails` enforces oracle dependency boundaries, explicit spoke beneficiary, stranded sweep, SDK-owned `EligibilityReason`, no `tx.origin`, and production contract data-flow headers. |
 
 ## Gateman Findings Closed
 
@@ -32,17 +34,21 @@ not missing smart-contract implementation for this branch.
 | G3 Mint-only Gateway requests could carry spot fields. | Mint-only requests now reject nonzero `tokenOut`, `spotRouteId`, or `minAmountOut`. |
 | G4 Same-domain Gateway routes were not explicitly rejected. | `setGatewayRoute` now rejects `sourceDomain == destinationDomain` with `SameGatewayDomain`. |
 | G5 Gateway edge tests were too happy-path heavy. | Added pause, route, token, minter, hook data, mint-only spot-field, self-destination, settlement role, and settlement action tests. |
+| G6 Ghost Mode could regress into unsafe public-pool KYC or `tx.origin` checks. | Added `FxGhostKycHook` with PoolManager-only callbacks, trusted router identity, hook-data account checks, and guardrail scan for `tx.origin`. |
+| G7 Ghost withdrawal replay surface needed explicit ownership. | Added `FxGhostWithdrawalRouter`, `IFxGhostWithdrawalVerifier`, root expiry checks, pass-level checks, nullifier consumption, and duplicate/invalid proof tests. |
+| G8 Review guardrails were prose-only. | Added `scripts/check-contract-guardrails.mjs` and `bun run contracts:guardrails`; TODO guardrails now have executable coverage. |
 
 ## Verification Runs
 
 | Command | Result |
 |---|---|
 | `forge test --match-contract TelaranaGatewayHubHookTest -vvv` | 17 passed, 0 failed. |
-| `bun run contracts:test` | 147 passed, 0 failed, 1 skipped optional Tenderly manifest. |
-| `bun run contracts:test:fork` | 161 passed, 0 failed, 1 skipped optional Tenderly manifest. |
-| `bun run sdk:test` | 33 passed, 0 failed. |
+| `bun run contracts:guardrails` | Passed. |
+| `bun run contracts:test` | 168 passed, 0 failed, 1 skipped optional Tenderly manifest. |
+| `bun run contracts:test:fork` | 182 passed, 0 failed, 1 skipped optional Tenderly manifest. |
+| `bun run sdk:test` | 35 passed, 0 failed. |
 | `bun run sdk:build` | Passed. |
-| `bun run sdk:abis:sync` | Regenerated SDK ABIs, including `TelaranaGatewayHubHook`. |
+| `bun run sdk:abis:sync` | Regenerated SDK ABIs, including Gateway and Ghost Mode surfaces. |
 
 ## Remaining Release Controls
 

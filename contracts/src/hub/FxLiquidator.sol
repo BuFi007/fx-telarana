@@ -23,6 +23,17 @@ import {IFxOracle} from "../interfaces/IFxOracle.sol";
 ///   3. Morpho enforces health-factor breach internally — this contract is just the conduit.
 ///
 /// Bonus + LLTV semantics are inherited verbatim from Morpho Blue. No FX-bespoke logic.
+///
+/// Data flow:
+///   keeper + fresh oracle payload
+///       |
+///       v
+///   FxLiquidator -- freshen IFxOracle --> FxOracle
+///       |
+///       +-- repay debt token ---------> Morpho Blue
+///       |
+///       v
+///   seized collateral returns to keeper
 contract FxLiquidator is AccessControl, Pausable {
     using SafeERC20 for IERC20;
     using MarketParamsLib for MorphoMarketParams;

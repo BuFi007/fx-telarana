@@ -21,6 +21,17 @@ import {ITokenMessengerV2, IMessageTransmitterV2} from "../interfaces/ICctp.sol"
 /// The `hookData` carried by CCTP V2 is `abi.encode(beneficiary, hubCalldata)`,
 /// which `FxHubMessageReceiver` re-derives on the destination and matches via
 /// keccak. Any tamper invalidates the hub call.
+///
+/// Data flow:
+///   user / Ghost router
+///       |
+///       v
+///   FxSpoke.enterHub(token, amount, beneficiary, hubCalldata)
+///       |
+///       +-- burn Circle token through CCTP V2 TokenMessenger
+///       |
+///       v
+///   Hub receiver executes explicit beneficiary action
 contract FxSpoke is IFxSpoke {
     using SafeERC20 for IERC20;
 

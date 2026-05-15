@@ -16,6 +16,15 @@ interface IERC20Decimals {
 ///     price * 10^(36 + loanDecimals - collateralDecimals)
 ///
 /// One adapter per Morpho market. Cheap to deploy; immutable.
+///
+/// Data flow:
+///   Morpho Blue market
+///       |
+///       v
+///   MorphoOracleAdapter.price() -- getMid(collateral, loan) --> IFxOracle
+///       |
+///       v
+///   Morpho-scaled collateral price
 contract MorphoOracleAdapter is IOracle {
     IFxOracle public immutable FX_ORACLE;
     address  public immutable LOAN_TOKEN;

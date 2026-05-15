@@ -61,6 +61,17 @@ interface IFxRouterSwapAdapter {
 /// No bespoke financial math, no oracle math, no AMM math. Math lives in
 /// `FxRouterLib` (pure) + `FxSwapHook` (already audited surface). This
 /// contract orchestrates auth, replay protection, fee skim, and routing.
+///
+/// Data flow:
+///   signed FxIntent + Permit2 permit
+///       |
+///       v
+///   FxRouter -- verify signature / replay / fees --> Permit2 + treasury
+///       |
+///       +-- sell token net amount -----------------> IFxRouterSwapAdapter
+///       |
+///       v
+///   buy token delivered to signed recipient
 contract FxRouter is IFxRouter, EIP712, Ownable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 

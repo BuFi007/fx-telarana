@@ -22,6 +22,15 @@ import {MathLib} from "morpho-blue/libraries/MathLib.sol";
 ///
 /// Conversion math defers to Morpho Blue's `SharesMathLib` so receipt redemption
 /// always matches what `IMorpho.withdraw` would return.
+///
+/// Data flow:
+///   lender
+///       |
+///       v
+///   FxReceipt.deposit/redeem -- supply/withdraw --> Morpho Blue
+///       |
+///       v
+///   ERC-4626 receipt shares track one isolated market supply position
 contract FxReceipt is ERC4626 {
     using SafeERC20 for IERC20;
     using MarketParamsLib for MorphoMarketParams;

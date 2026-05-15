@@ -11,6 +11,7 @@
     "sdk:abis:sync": "cd packages/sdk && bun run abis:sync",
     "contracts:test": "cd contracts && forge build --force test/MorphoArtifacts.t.sol && forge test --no-match-contract MainnetForkTest",
     "contracts:test:fork": "cd contracts && forge build --force test/MorphoArtifacts.t.sol && ETH_RPC_URL=https://ethereum-rpc.publicnode.com forge test",
+    "contracts:guardrails": "node scripts/check-contract-guardrails.mjs",
     "contracts:smoke:basket": "cd contracts && forge build --force test/MorphoArtifacts.t.sol && forge test --match-contract AvalancheBasketSmokeTest",
     "sdk:circle:register": "cd packages/sdk && bun scripts/register-contracts.ts",
     "hyperlane:arc:deploy-core": "npx @hyperlane-xyz/cli core deploy --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --chain arctestnet --config ./hyperlane/arc-testnet/core-config.yaml --yes",
