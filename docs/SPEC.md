@@ -213,15 +213,19 @@ Ghost Mode over Hyperlane must still validate:
 
 ## 5. Ghost Mode Router Stack
 
-Phase 1 uses the Ghost Mode stack below:
+Phase 1 uses the Ghost Mode stack below. The current v1 implementation ships
+the pass interface, spoke entry router, commitment registry, and a minimal KYC
+hook gate. Full withdrawal proofs and proof-aware swap hooks remain future work.
 
 | Component | Role |
 |---|---|
 | `BufiWallet` | User-facing wallet and signer surface. Holds or proves KYC/KYB pass. |
 | `IBufiKycPass` verifier | Small contract interface used by Ghost routers/hooks. |
-| `FxGhostRouter` | App-facing route planner/executor for Ghost supply, borrow, repay, swap, withdraw, and cross-chain enter. |
-| `FxGhostCommitmentRegistry` | Stores Merkle roots and nullifiers for deposits/withdrawals. |
-| `FxGhostSwapHook` | Privacy-capable v4 hook instance for Ghost pools. |
+| `FxGhostSpokeRouter` | App-facing route executor for pass-gated cross-chain USDC/EURC entry over `FxSpoke`. |
+| `FxGhostRouter` | Future route planner/executor for Ghost supply, borrow, repay, swap, and withdraw. |
+| `FxGhostCommitmentRegistry` | Stores root metadata, commitments, and nullifiers for entry/withdrawal flows. |
+| `FxGhostKycHook` | Minimal v1 v4 hook gate: PoolManager-only callbacks, trusted router, Bufi pass check, no custom deltas. |
+| `FxGhostSwapHook` | Future privacy-capable v4 hook instance for Ghost pools. |
 | `FxGhostWithdrawalRouter` | Verifies withdrawal proof/nullifier and routes funds to recipient. |
 
 The first implementation may use fixed denomination buckets to improve privacy
@@ -349,7 +353,9 @@ Ghost Mode increases audit scope. Required checks:
 - verifier key governance and timelock,
 - rescue path for failed cross-chain execution,
 - `IFxOracle` as the only price path,
-- `beforeSwapReturnDelta` accounting reviewed independently for every Ghost hook.
+- v1 Ghost hooks must not enable custom swap deltas; any future
+  `beforeSwapReturnDelta` accounting must be reviewed independently before
+  production liquidity.
 
 Ship order:
 1. Public basket markets and swap hooks.

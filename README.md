@@ -20,7 +20,7 @@ engine decides what assets are valid collateral.
 - **Cross-chain spokes** via Circle's CCTP V2 — bring USDC, and EURC where Circle supports it, from CCTP-supported chains and open positions on the Hub. CCTP is never used for non-Circle stablecoins.
 - **Circle Gateway hub liquidity** — Gateway-aware SDK config, ABIs, and `TelaranaGatewayHubHook` for fast USDC movement between Avalanche/Fuji and Arc hubs. Current signing mode is EOA; ERC-1271 contract signing is modeled as a future mode and remains disabled until Circle support is live.
 - **Permissionless, decentralized oracle** — Pyth primary + RedStone secondary. 24/7. No forex-hours circuit breakers. USDC and EURC are ERC-20s onchain.
-- **Ghost Mode** (Phase 1) — Bufi Wallet KYC/KYB pass-gated privacy hooks and routers for slower private deposit, withdrawal, swap, and cross-chain entry flows. No third-party privacy wallet dependency and no Circle Wallet dependency.
+- **Ghost Mode** (Phase 1) — Bufi Wallet / RO-KYC pass-gated spoke entry, commitment/nullifier registry, and minimal v4 KYC hook scaffolding for slower private routes. No third-party privacy wallet dependency and no Circle Wallet dependency.
 - **Future Uniswap v4 spot FX execution** — request/config/event surfaces are
   prepared, while full hook execution stays out of this branch.
 - **Future RFQ Pasillo** — quote-request corridor docs, SDK types, and interface
@@ -41,7 +41,7 @@ The LaTeX whitepaper source lives at
 
 - **Phase 0 contracts** — complete, 31/31 tests passing, fork-verified against the real Morpho Blue singleton (`0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb`) on Ethereum mainnet.
 - **Phase 0.5** — RedStone consumer payload wiring (next).
-- **Phase 1** — Ghost Mode with Bufi Wallet pass verification, privacy hooks, and commitment/nullifier withdrawal routing.
+- **Phase 1** — Ghost Mode with Bufi Wallet pass verification, spoke-level privacy entry, minimal KYC hook scaffolding, and commitment/nullifier routing.
 - **Phase 2** — future Uniswap v4 spot FX execution.
 
 ## Tenderly Virtual TestNet

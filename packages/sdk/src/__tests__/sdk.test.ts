@@ -10,6 +10,9 @@ import {
   FxRouteMode,
   FxHyperlaneAction,
   FxHyperlaneHubReceiverAbi,
+  FxGhostCommitmentRegistryAbi,
+  FxGhostKycHookAbi,
+  FxGhostSpokeRouterAbi,
   FxMarketRegistryAbi,
   FxOracleAbi,
   FxSpokeAbi,
@@ -24,6 +27,8 @@ import {
   GATEWAY_HUB_ACTION_IDS,
   GATEWAY_HUB_EVENT_NAMES,
   GATEWAY_HUB_INDEXER_SCHEMA,
+  GHOST_MODE_EVENT_NAMES,
+  GHOST_MODE_INDEXER_SCHEMA,
   TELARANA_GATEWAY_HUB_ROUTES,
   TELARANA_GATEWAY_TESTNET_CHAINS,
   TELARANA_AVALANCHE_SPOT_TOKEN_PAIRS,
@@ -388,6 +393,36 @@ describe("eligibility enum", () => {
         { deployed: false },
       ),
     ).toBe(FxRouteMode.Public);
+  });
+});
+
+describe("Ghost Mode prep", () => {
+  test("exports indexer-ready Ghost event names", () => {
+    expect(GHOST_MODE_EVENT_NAMES).toEqual([
+      "GhostCommitmentRegistered",
+      "GhostNullifierConsumed",
+      "GhostSpokeEntered",
+      "GhostRouteConfigured",
+    ]);
+    expect(GHOST_MODE_INDEXER_SCHEMA.map((event) => event.name)).toEqual([
+      "GhostCommitmentRegistered",
+      "GhostNullifierConsumed",
+      "GhostSpokeEntered",
+      "GhostRouteConfigured",
+    ]);
+  });
+
+  test("exports Ghost router, registry, and hook ABIs", () => {
+    const routerFunctions = FxGhostSpokeRouterAbi.filter((x) => x.type === "function").map((x) => x.name);
+    const registryFunctions = FxGhostCommitmentRegistryAbi.filter((x) => x.type === "function").map((x) => x.name);
+    const hookFunctions = FxGhostKycHookAbi.filter((x) => x.type === "function").map((x) => x.name);
+
+    expect(routerFunctions).toContain("enterHubGhost");
+    expect(routerFunctions).toContain("setGhostRoute");
+    expect(registryFunctions).toContain("registerCommitment");
+    expect(registryFunctions).toContain("consumeNullifier");
+    expect(hookFunctions).toContain("beforeSwap");
+    expect(hookFunctions).toContain("getHookPermissions");
   });
 });
 

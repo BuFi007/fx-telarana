@@ -1,6 +1,7 @@
 # Ghost Mode privacy hooks
 
-**Status:** Architecture direction, not production-ready contracts.
+**Status:** V1 spoke-level scaffolding implemented. Production ZK verifier,
+withdrawal router, and audited Ghost liquidity remain future work.
 **Decision:** Ghost Mode uses Bufi Wallet KYC/KYB passes plus privacy
 hooks/routers. It does not require a third-party privacy wallet or Circle
 Wallet.
@@ -70,16 +71,35 @@ smallest possible interface.
   liquidation state unless the position itself is held behind the Ghost account
   abstraction or a future shielded accounting layer.
 
-## First implementation sequence
+## Current implementation
 
-1. Add SDK/UI route-mode support: `PUBLIC` and `GHOST`.
-2. Add `/fx/eligibility/:wallet` support for Bufi Wallet KYC/KYB pass status.
-3. Build `FxGhostCommitmentRegistry` and proof interfaces with mock verifier.
-4. Build `FxGhostRouter` for same-chain Fuji deposits and withdrawals.
-5. Add `FxGhostSwapHook` only after public `FxSwapHook` dynamic fee/oracle
+Implemented in this branch:
+
+1. `FxGhostSpokeRouter` wraps `FxSpoke.enterHub(...)` for Circle-only
+   USDC/EURC routes. It requires `IBufiKycPass.hasValidPass(account)` and a
+   route minimum pass level, records an explicit commitment, and always forwards
+   an explicit `beneficiary`.
+2. `FxGhostCommitmentRegistry` stores commitments, consumed nullifiers, and
+   admin-set root metadata for future verifier integration.
+3. `FxGhostKycHook` is a minimal future v4 hook gate. It accepts only
+   PoolManager callbacks, trusts only configured routers, takes user identity
+   from hook data, and enables no custom swap deltas in v1.
+4. SDK ABIs, Ghost entry request types, and indexer event schema are exported
+   from `@bu/fx-engine`.
+
+RO-KYC, Persona, Goofy, and Paseo remain offchain. Solidity consumes only the
+minimal onchain Bufi pass interface.
+
+## Remaining implementation sequence
+
+1. Add `/fx/eligibility/:wallet` support for Bufi Wallet KYC/KYB pass status.
+2. Add `/fx/ghost/prepare` and `/fx/ghost/proof` routes.
+3. Build `FxGhostWithdrawalRouter` with proof verification and nullifier
+   consumption.
+4. Add `FxGhostSwapHook` only after public `FxSwapHook` dynamic fee/oracle
    updates are stable.
-6. Add Hyperlane/CCTP Ghost entry after same-chain proof settlement works.
-7. Audit before any production Ghost liquidity.
+5. Add Hyperlane/CCTP Ghost entry after same-chain proof settlement works.
+6. Audit before any production Ghost liquidity.
 
 ## Frontend contract
 

@@ -199,6 +199,9 @@ Use the typed ABIs exported from `@bu/fx-engine`:
 - `HyperlaneWarpRouteAbi`
 - `HyperlaneInterchainAccountRouterAbi`
 - `IBufiKycPassAbi`
+- `FxGhostCommitmentRegistryAbi`
+- `FxGhostSpokeRouterAbi`
+- `FxGhostKycHookAbi`
 - `CircleGatewayWalletAbi`
 - `CircleGatewayMinterAbi`
 - `TelaranaGatewayHubHookAbi`
@@ -240,19 +243,28 @@ Future spot FX preparation exports:
 - `gatewayBurnIntentToJson`
 - `encodeGatewayMintCalldata`
 - `evmAddressToGatewayBytes32`
+- `FxRouteMode`
+- `GhostAction`
+- `GhostSpokeRouteConfig`
+- `GhostSpokeEntryRequest`
+- `GhostHookContext`
+- `GHOST_MODE_EVENT_NAMES`
+- `GHOST_MODE_INDEXER_SCHEMA`
 
 Ghost Mode is not a third-party privacy wallet and not Circle Wallet. It is a
-Bufi Wallet KYC/KYB-pass route that will use privacy hooks/routers. For now,
-wire the UI to the SDK route mode and eligibility types, then hide Ghost actions
-until the matching Ghost contracts are deployed.
+Bufi Wallet KYC/KYB-pass route that uses spoke-level commitment/nullifier
+routing now, with fuller privacy proofs and withdrawal routing later. For now,
+wire the UI to the SDK route mode, eligibility types, and deployed Ghost route
+config, then hide Ghost actions whose route/hook is unavailable.
 
-Planned Ghost Mode contracts:
+Ghost Mode contracts:
 
 - `IBufiKycPass` verifier
-- `FxGhostRouter`
 - `FxGhostCommitmentRegistry`
-- `FxGhostSwapHook`
-- `FxGhostWithdrawalRouter`
+- `FxGhostSpokeRouter`
+- `FxGhostKycHook`
+- future `FxGhostWithdrawalRouter`
+- future proof-aware `FxGhostSwapHook`
 
 Ghost Mode UI checks:
 
@@ -260,7 +272,7 @@ Ghost Mode UI checks:
 - pass status is valid KYC or KYB,
 - selected action has a deployed Ghost route/hook,
 - selected market is live,
-- proof generation succeeds,
+- proof generation succeeds when the selected route requires a proof,
 - fallback public mode is shown with exact `EligibilityReason` when unavailable.
 
 For Morpho authorization, use this minimal ABI:

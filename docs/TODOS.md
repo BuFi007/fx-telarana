@@ -3,7 +3,7 @@
 ## Blocking before Phase 0 starts
 - [ ] **Verify Morpho Blue on Arc testnet.** Check Morpho Labs deployment registry. If absent, decide on self-deploy (Morpho Blue is permissionless + immutable).
 - [ ] **Verify Uniswap v4 PoolManager on Arc.** Phase 2 +2 weeks if self-deploy is needed.
-- [ ] **Bufi Wallet KYC/KYB pass verifier.** Define the minimal onchain verifier interface and revocation semantics for Ghost Mode.
+- [x] **Bufi Wallet KYC/KYB pass verifier interface.** Minimal `IBufiKycPass` interface and revocation semantics defined for Ghost Mode. Concrete RO-KYC verifier remains offchain/Pasillo-owned.
 - [ ] **Verify Pyth + RedStone feed availability on Arc** for EUR/USD, USDC/USD, EURC/USD. List feed ids in `@bu/fx-engine/addresses/`.
 
 ## Implementation guardrails (track these explicitly)
@@ -12,7 +12,7 @@
 - [ ] `sweepStrandedDeposit(messageNonce, beneficiary)` ships with `FxSpoke`.
 - [ ] `EligibilityReason` enum lives in `@bu/fx-engine`, not duplicated.
 - [ ] Every contract file has an ASCII data-flow diagram in the file header comment.
-- [ ] Ghost Mode privacy path uses Bufi Wallet pass + commitment/nullifier routing. No third-party privacy wallet or Circle Wallet dependency.
+- [x] Ghost Mode privacy path uses Bufi Wallet pass + commitment/nullifier routing. No third-party privacy wallet or Circle Wallet dependency.
 
 ## Phase 0 deliverables (public-only ship)
 
@@ -39,11 +39,13 @@
 - [ ] End-to-end testnet drill: Base USDC → Arc Morpho supply, withdraw, borrow EURC, repay, liquidation
 
 ## Phase 1 deliverables (Ghost Mode)
-- [ ] Bufi Wallet KYC/KYB pass verifier contract/interface.
-- [ ] `FxGhostCommitmentRegistry` with Merkle roots, root expiry, and nullifier replay protection.
-- [ ] `FxGhostRouter` wrappers for supplyCollateral, borrow, repay, fxSwap, crossChainEnter, and withdraw.
+- [x] Bufi Wallet KYC/KYB pass verifier interface.
+- [x] `FxGhostCommitmentRegistry` with root metadata, root expiry, and nullifier replay protection.
+- [x] `FxGhostSpokeRouter` wrapper for pass-gated `crossChainEnter` over Circle-only USDC/EURC `FxSpoke`.
+- [ ] `FxGhostRouter` wrappers for supplyCollateral, borrow, repay, fxSwap, and withdraw.
 - [ ] `FxGhostWithdrawalRouter` proof/nullifier withdrawal path.
-- [ ] `FxGhostSwapHook` design for Ghost pools; no `tx.origin`, trusted router + pass verification only.
+- [x] `FxGhostKycHook` v1 scaffold for Ghost pools; no `tx.origin`, PoolManager-only callbacks, trusted router + pass verification only.
+- [ ] `FxGhostSwapHook` proof-aware design for production Ghost pools.
 - [ ] `/fx/eligibility/:wallet` + `EligibilityReason` enum using Bufi Wallet pass state.
 - [ ] `/fx/ghost/prepare` and `/fx/ghost/proof` routes.
 - [ ] Frontend shows Ghost Mode only when Bufi Wallet pass and route support are live.

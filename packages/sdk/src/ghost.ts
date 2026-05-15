@@ -32,6 +32,63 @@ export interface GhostRouteSupport {
   deployed: boolean;
 }
 
+export type Hex32 = `0x${string}`;
+
+export type GhostPassLevel = 1 | 2;
+
+export interface GhostSpokeRouteConfig {
+  routeId: Hex32;
+  token: Address;
+  minPassLevel: GhostPassLevel;
+  enabled: boolean;
+  metadataRef: Hex32;
+}
+
+export interface GhostSpokeEntryRequest {
+  routeId: Hex32;
+  commitment: Hex32;
+  token: Address;
+  amount: bigint;
+  beneficiary: Address;
+  hubCalldata: `0x${string}`;
+}
+
+export interface GhostHookContext {
+  account: Address;
+  commitment: Hex32;
+  nullifierHash?: Hex32;
+}
+
+export const GHOST_MODE_EVENT_NAMES = [
+  "GhostCommitmentRegistered",
+  "GhostNullifierConsumed",
+  "GhostSpokeEntered",
+  "GhostRouteConfigured",
+] as const;
+
+export const GHOST_MODE_INDEXER_SCHEMA = [
+  {
+    name: "GhostCommitmentRegistered",
+    indexed: ["commitment", "routeId", "account"],
+    data: ["beneficiary", "token", "amount", "metadataRef"],
+  },
+  {
+    name: "GhostNullifierConsumed",
+    indexed: ["nullifierHash", "consumer"],
+    data: [],
+  },
+  {
+    name: "GhostSpokeEntered",
+    indexed: ["messageNonce", "routeId", "commitment"],
+    data: ["account", "beneficiary", "token", "amount", "passLevel", "metadataRef"],
+  },
+  {
+    name: "GhostRouteConfigured",
+    indexed: ["routeId", "token"],
+    data: ["minPassLevel", "enabled", "metadataRef"],
+  },
+] as const;
+
 export function resolveRouteMode(
   eligibility: EligibilityResult,
   requestedMode: FxRouteMode,
