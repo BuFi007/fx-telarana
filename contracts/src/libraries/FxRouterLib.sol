@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 /// @title FxRouterLib
@@ -19,8 +19,9 @@ library FxRouterLib {
     ///         StableFX's `TakerDetails` so a single client envelope can be
     ///         routed to either rail by Pasillo (or any aggregator).
     /// @param taker              Signer; must equal SignatureChecker-validated address.
-    /// @param recipient          Where buyToken lands. Always signed, never msg.sender-derived
-    ///                           (Hinkal-wrapped flow requires fresh-SCA recipient discipline).
+    /// @param recipient          Where buyToken lands. Always signed, never
+    ///                           msg.sender-derived. Ghost Mode recipients are
+    ///                           selected by the Bufi privacy route.
     /// @param sellToken          Token pulled from taker via Permit2.
     /// @param buyToken           Token delivered to recipient.
     /// @param sellAmount         Exact sell amount (this phase = exact-input only).

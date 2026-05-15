@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Drop 3 matrix additions: categories C (risk + recovery), D (swap-hook
  * edges), and bundle-based redeem cases.

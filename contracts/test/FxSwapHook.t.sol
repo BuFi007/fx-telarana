@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
@@ -131,6 +131,8 @@ contract FxSwapHookTest is Test {
         assertEq(fresh.spreadBps(), fresh.DEFAULT_SPREAD_BPS());
         assertEq(fresh.kBps(), fresh.DEFAULT_K_BPS());
         assertEq(fresh.hotReservePct(), fresh.DEFAULT_HOT_RESERVE_PCT());
+        assertEq(fresh.maxObservationChangeBps(), fresh.DEFAULT_MAX_OBSERVATION_CHANGE_BPS());
+        assertEq(fresh.volatilitySpreadMultiplierBps(), fresh.DEFAULT_VOLATILITY_SPREAD_MULTIPLIER_BPS());
         assertEq(fresh.TOKEN0(), address(token0));
         assertEq(fresh.TOKEN1(), address(token1));
     }
@@ -150,6 +152,25 @@ contract FxSwapHookTest is Test {
         vm.prank(owner);
         hook.setHotReservePct(2_000);
         assertEq(hook.hotReservePct(), 2_000);
+    }
+
+    function test_setOracleGuardrails_updatesDynamicFeeControls() public {
+        vm.prank(owner);
+        hook.setOracleGuardrails(250, 20_000);
+        assertEq(hook.maxObservationChangeBps(), 250);
+        assertEq(hook.volatilitySpreadMultiplierBps(), 20_000);
+    }
+
+    function test_setOracleGuardrails_revertsAboveCaps() public {
+        uint16 maxObservationChange = hook.MAX_OBSERVATION_CHANGE_BPS();
+        uint16 maxVolatilityMultiplier = hook.MAX_VOLATILITY_SPREAD_MULTIPLIER_BPS();
+
+        vm.startPrank(owner);
+        vm.expectRevert();
+        hook.setOracleGuardrails(maxObservationChange + 1, 10_000);
+        vm.expectRevert();
+        hook.setOracleGuardrails(100, maxVolatilityMultiplier + 1);
+        vm.stopPrank();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -265,6 +286,90 @@ contract FxSwapHookTest is Test {
         assertApproxEqRel(smallRate, bigRate, 0.0001e18);
     }
 
+    function test_recordOracleObservation_initializesCanonicalMid() public {
+        (uint256 rawMid, uint256 truncatedMid, uint16 volatilityBps, uint16 effectiveSpread) =
+            hook.recordOracleObservation();
+
+        assertEq(rawMid, 1e18);
+        assertEq(truncatedMid, 1e18);
+        assertEq(volatilityBps, 0);
+        assertEq(effectiveSpread, hook.DEFAULT_SPREAD_BPS());
+        assertEq(hook.latestTruncatedMidE18(), 1e18);
+        assertEq(hook.latestVolatilityBps(), 0);
+        assertEq(hook.oracleObservationCardinality(), 1);
+    }
+
+    function test_previewOracleObservation_truncatesSuddenMoveAndWidensSpread() public {
+        hook.recordOracleObservation();
+
+        vm.warp(block.timestamp + 60);
+        pyth.setPrice(PYTH_T0, 2_00_000_000, 100, -8, block.timestamp);
+
+        (uint256 rawMid, uint256 truncatedMid, uint16 volatilityBps, uint16 effectiveSpread) =
+            hook.previewOracleObservation();
+
+        assertEq(rawMid, 2e18);
+        assertEq(truncatedMid, 1_010_000_000_000_000_000);
+        assertEq(volatilityBps, 100);
+        assertEq(effectiveSpread, 130);
+    }
+
+    function test_quoteExactInput_usesTruncatedObservationAndVolatilitySpread() public {
+        vm.prank(alice);
+        hook.deposit(1_000_000_000, 1_000_000_000);
+        hook.recordOracleObservation();
+
+        vm.warp(block.timestamp + 60);
+        pyth.setPrice(PYTH_T0, 2_00_000_000, 100, -8, block.timestamp);
+
+        (uint256 buyAmount, uint256 oraclePriceE18) = hook.quoteExactInput(address(token0), 1_000);
+        assertEq(oraclePriceE18, 1_010_000_000_000_000_000);
+        // 1000 * 1.01 less 130 bps spread, with tiny size impact.
+        assertApproxEqAbs(buyAmount, 996, 1);
+    }
+
+    function test_quoteExactInput_scalesSixDecimalUsdcToEighteenDecimalJpyc() public {
+        MockERC20 usdc = new MockERC20("USD Coin", "USDC", 6);
+        MockERC20 jpyc = new MockERC20("JPYC", "JPYC", 18);
+        FxSwapHook h = _newHotOnlyHook(usdc, jpyc, 1_00_000_000, 640_000); // JPYC/USD = 0.0064
+
+        usdc.mint(alice, 10_000e6);
+        jpyc.mint(alice, 1_562_500e18);
+        vm.startPrank(alice);
+        usdc.approve(address(h), type(uint256).max);
+        jpyc.approve(address(h), type(uint256).max);
+        _depositSorted(h, address(usdc), 10_000e6, address(jpyc), 1_562_500e18);
+        vm.stopPrank();
+
+        vm.prank(owner);
+        h.setKBps(0);
+
+        (uint256 buyAmount, uint256 oraclePriceE18) = h.quoteExactInput(address(usdc), 1e6);
+        assertApproxEqRel(oraclePriceE18, 156.25e18, 0.0001e18);
+        assertApproxEqRel(buyAmount, 155.78125e18, 0.0001e18); // 156.25 JPYC less 30 bps spread
+    }
+
+    function test_quoteExactInput_scalesSixDecimalUsdcToZeroDecimalKrw1() public {
+        MockERC20 usdc = new MockERC20("USD Coin", "USDC", 6);
+        MockERC20 krw1 = new MockERC20("KRW1", "KRW1", 0);
+        FxSwapHook h = _newHotOnlyHook(usdc, krw1, 1_00_000_000, 67_120); // KRW1/USD ~= 0.00067120
+
+        usdc.mint(alice, 10_000e6);
+        krw1.mint(alice, 14_898_689);
+        vm.startPrank(alice);
+        usdc.approve(address(h), type(uint256).max);
+        krw1.approve(address(h), type(uint256).max);
+        _depositSorted(h, address(usdc), 10_000e6, address(krw1), 14_898_689);
+        vm.stopPrank();
+
+        vm.prank(owner);
+        h.setKBps(0);
+
+        (uint256 buyAmount, uint256 oraclePriceE18) = h.quoteExactInput(address(usdc), 1e6);
+        assertApproxEqRel(oraclePriceE18, 1489.868891e18, 0.0001e18);
+        assertEq(buyAmount, 1485); // 0-decimal output floors after spread
+    }
+
     /*//////////////////////////////////////////////////////////////
                           POOL KEY ENFORCEMENT
     //////////////////////////////////////////////////////////////*/
@@ -290,5 +395,37 @@ contract FxSwapHookTest is Test {
         new FxSwapHook(address(0), address(oracle), registry, owner, address(token0), address(token1), address(0x4444));
         vm.expectRevert();
         new FxSwapHook(poolManager, address(oracle), registry, owner, address(token0), address(token1), address(0));
+    }
+
+    function _newHotOnlyHook(MockERC20 a, MockERC20 b, int64 priceA, int64 priceB)
+        internal
+        returns (FxSwapHook h)
+    {
+        MockPyth p = new MockPyth();
+        FxOracle o = new FxOracle(address(p), owner, 60, 50, 30);
+
+        bytes32 feedA = keccak256(abi.encodePacked(address(a)));
+        bytes32 feedB = keccak256(abi.encodePacked(address(b)));
+        vm.startPrank(owner);
+        o.setFeed(address(a), feedA);
+        o.setFeed(address(b), feedB);
+        vm.stopPrank();
+
+        p.setPrice(feedA, priceA, 100, -8, block.timestamp);
+        p.setPrice(feedB, priceB, 100, -8, block.timestamp);
+
+        (address t0, address t1) = address(a) < address(b) ? (address(a), address(b)) : (address(b), address(a));
+        h = new FxSwapHook(poolManager, address(o), registry, owner, t0, t1, address(0x4444));
+        vm.prank(owner);
+        h.setHotReservePct(10_000);
+    }
+
+    function _depositSorted(FxSwapHook h, address tokenA, uint256 amountA, address tokenB, uint256 amountB) internal {
+        if (h.TOKEN0() == tokenA) {
+            h.deposit(amountA, amountB);
+        } else {
+            assertEq(h.TOKEN0(), tokenB);
+            h.deposit(amountB, amountA);
+        }
     }
 }

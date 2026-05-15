@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -8,12 +8,15 @@ import {IFxSpoke} from "../interfaces/IFxSpoke.sol";
 import {ITokenMessengerV2, IMessageTransmitterV2} from "../interfaces/ICctp.sol";
 
 /// @title FxSpoke
-/// @notice Per-spoke-chain entrypoint to the fx-Telaraña Hub on Arc.
+/// @notice Per-spoke-chain entrypoint to the fx-Telaraña Hub.
 ///
-/// At Phase 0:
-///   * Only USDC is supported (CCTP V2). EURC bridge path lands in Phase 1.
+/// CCTP scope:
+///   * Circle assets only: USDC and EURC where Circle supports CCTP for the route.
+///   * This deployment stores one configured Circle token as `USDC`; deploy a
+///     second instance or generalized allowlist for EURC routing.
+///   * Non-Circle assets must use Hyperlane/issuer routes, never this adapter.
 ///   * `beneficiary` is the Hub-side position owner. Public mode → user's
-///     EOA/SCA. Confidential mode (Phase 1) → Hinkal-managed fresh SCA.
+///     EOA/SCA. Ghost Mode → Bufi Ghost router/action account.
 ///
 /// The `hookData` carried by CCTP V2 is `abi.encode(beneficiary, hubCalldata)`,
 /// which `FxHubMessageReceiver` re-derives on the destination and matches via
@@ -27,12 +30,12 @@ contract FxSpoke is IFxSpoke {
 
     ITokenMessengerV2 public immutable TOKEN_MESSENGER;
     IERC20 public immutable USDC;
-    address public immutable HUB_RECEIVER;        // address on Arc, encoded as bytes32 for CCTP
-    uint32  public immutable ARC_DOMAIN;          // Arc CCTP domain = 26
+    address public immutable HUB_RECEIVER; // destination Hub receiver, encoded as bytes32 for CCTP
+    uint32 public immutable ARC_DOMAIN; // destination Hub CCTP domain; legacy getter name
 
     /// @notice Default max-fee in USDC (6 decimals) the user is willing to pay
     ///         CCTP V2 for fast transport. Configurable per call via `enterHubWithFee`.
-    uint256 public constant DEFAULT_MAX_FEE = 1_000;   // 0.001 USDC
+    uint256 public constant DEFAULT_MAX_FEE = 1_000; // 0.001 USDC
 
     /// @notice CCTP V2 finality threshold. 2000 = standard finalized; lower is faster.
     uint32 public constant FINALITY_FAST = 1000;
@@ -44,12 +47,7 @@ contract FxSpoke is IFxSpoke {
                                 CTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(
-        address tokenMessenger,
-        address usdc,
-        address hubReceiver,
-        uint32  arcDomain
-    ) {
+    constructor(address tokenMessenger, address usdc, address hubReceiver, uint32 arcDomain) {
         if (tokenMessenger == address(0) || usdc == address(0) || hubReceiver == address(0)) {
             revert UnsupportedToken(address(0));
         }
@@ -63,12 +61,11 @@ contract FxSpoke is IFxSpoke {
                                 ENTRY
     //////////////////////////////////////////////////////////////*/
 
-    function enterHub(
-        address token,
-        uint256 amount,
-        address beneficiary,
-        bytes calldata hubCalldata
-    ) external payable returns (bytes32 messageNonce) {
+    function enterHub(address token, uint256 amount, address beneficiary, bytes calldata hubCalldata)
+        external
+        payable
+        returns (bytes32 messageNonce)
+    {
         return enterHubWithFee(token, amount, beneficiary, hubCalldata, DEFAULT_MAX_FEE, FINALITY_FAST);
     }
 
@@ -79,7 +76,7 @@ contract FxSpoke is IFxSpoke {
         address beneficiary,
         bytes calldata hubCalldata,
         uint256 maxFee,
-        uint32  minFinalityThreshold
+        uint32 minFinalityThreshold
     ) public returns (bytes32 messageNonce) {
         if (token != address(USDC)) revert UnsupportedToken(token);
         if (beneficiary == address(0)) revert InvalidBeneficiary();
@@ -97,7 +94,7 @@ contract FxSpoke is IFxSpoke {
             ARC_DOMAIN,
             _toBytes32(HUB_RECEIVER),
             address(USDC),
-            _toBytes32(HUB_RECEIVER),  // destinationCaller: only the hub receiver may dispatch
+            _toBytes32(HUB_RECEIVER), // destinationCaller: only the hub receiver may dispatch
             maxFee,
             minFinalityThreshold,
             hookData
@@ -114,11 +111,7 @@ contract FxSpoke is IFxSpoke {
                                 EXIT
     //////////////////////////////////////////////////////////////*/
 
-    function exitHub(
-        bytes calldata cctpMessage,
-        bytes calldata attestation,
-        address recipient
-    ) external {
+    function exitHub(bytes calldata cctpMessage, bytes calldata attestation, address recipient) external {
         if (recipient == address(0)) revert InvalidBeneficiary();
 
         uint256 balBefore = USDC.balanceOf(address(this));
@@ -156,9 +149,8 @@ contract FxSpoke is IFxSpoke {
     ///         If the selector differs on a given CCTP deployment, override at deploy time
     ///         by reading from a known immutable on `TOKEN_MESSENGER` via a custom getter.
     function _getMessageTransmitter() internal view returns (IMessageTransmitterV2) {
-        (bool ok, bytes memory data) = address(TOKEN_MESSENGER).staticcall(
-            abi.encodeWithSignature("localMessageTransmitter()")
-        );
+        (bool ok, bytes memory data) =
+            address(TOKEN_MESSENGER).staticcall(abi.encodeWithSignature("localMessageTransmitter()"));
         require(ok && data.length >= 32, "messageTransmitter() failed");
         return IMessageTransmitterV2(abi.decode(data, (address)));
     }

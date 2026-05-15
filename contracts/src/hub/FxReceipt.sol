@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -17,7 +17,8 @@ import {MathLib} from "morpho-blue/libraries/MathLib.sol";
 ///
 /// One FxReceipt per loan asset (`fxUSDC` wraps the USDC supply position in market
 /// M2; `fxEURC` wraps the EURC supply position in market M1). Lenders get a single
-/// receipt token they can transfer, list on DEXes, or wrap further (Hinkal etc.).
+/// receipt token they can transfer, list on DEXes, or route through a Ghost
+/// privacy wrapper.
 ///
 /// Conversion math defers to Morpho Blue's `SharesMathLib` so receipt redemption
 /// always matches what `IMorpho.withdraw` would return.

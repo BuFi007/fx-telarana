@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import type { Address, PublicClient } from "viem";
 import { FxOracleAbi } from "../abis/index.js";
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Drop 4 matrix additions:
  *   E — Pyth-fresh oracle sims (bundle a Hermes payload + getMidWithUpdatePyth)

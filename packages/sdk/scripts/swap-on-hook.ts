@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// SPDX-License-Identifier: AGPL-3.0-only
 // Live end-to-end swap test through FxSwapHook on Base Sepolia.
 // Validates:
 //   1. Pyth Hermes payload → FxOracle.getMidWithUpdate refresh

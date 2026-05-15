@@ -1,11 +1,11 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {Script, console2} from "forge-std/Script.sol";
 import {FxSpoke} from "../src/spoke/FxSpoke.sol";
 
 /// @notice Per-spoke-chain deploy of `FxSpoke`. Detects chainId at runtime and applies
-///         built-in defaults for CCTP V2 + USDC + the live Base-Sepolia hub.
+///         built-in defaults for CCTP V2 + USDC + the selected testnet hub.
 ///
 /// Required env:
 ///   DEPLOYER_PRIVATE_KEY
@@ -19,15 +19,20 @@ import {FxSpoke} from "../src/spoke/FxSpoke.sol";
 /// Supported chains today:
 ///   * Unichain Sepolia  (1301)
 ///   * Avalanche Fuji    (43113)
-///   * Base Sepolia      (84532) — only useful for self-loop testing
+///   * Base Sepolia      (84532) — self-loop testing
 contract DeployFxSpoke is Script {
     // CCTP V2 testnet uses the same deterministic addresses across chains.
     address constant CCTP_V2_TOKEN_MESSENGER     = 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA;
     // address constant CCTP_V2_MESSAGE_TRANSMITTER = 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275;
 
-    // Live Base Sepolia hub (v3, deployed 2026-05-14).
-    address constant DEFAULT_HUB_RECEIVER = 0x758c17BfA85D1b26A81423B524397b8b2D271818;
-    uint32  constant DEFAULT_HUB_DOMAIN   = 6; // Base Sepolia CCTP V2 domain
+    // Live patched Base Sepolia hub (v4, deployed 2026-05-14).
+    address constant BASE_SEPOLIA_HUB_RECEIVER = 0x17AFd89bD6888C393b8c5d7E7c0BAeE8259581A5;
+    uint32  constant BASE_SEPOLIA_HUB_DOMAIN   = 6; // Base Sepolia CCTP V2 domain
+
+    // Live Fuji hub (deployed 2026-05-14). This is the default when deploying
+    // a Fuji spoke so testnet entry paths stay entirely on Avalanche infrastructure.
+    address constant FUJI_HUB_RECEIVER = 0x365DE300dDa61C81a33bcE3606A5d524eD964362;
+    uint32  constant FUJI_HUB_DOMAIN   = 1; // Avalanche Fuji CCTP V2 domain
 
     function run() external {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
@@ -35,10 +40,12 @@ contract DeployFxSpoke is Script {
 
         (address defaultUsdc, string memory chainName) = _defaults(chainId);
 
+        (address defaultHubReceiver, uint32 defaultHubDomain) = _defaultHub(chainId);
+
         address usdc        = vm.envOr("SPOKE_USDC", defaultUsdc);
         address tokenMsgr   = vm.envOr("SPOKE_CCTP_TOKEN_MESSENGER", CCTP_V2_TOKEN_MESSENGER);
-        address hubReceiver = vm.envOr("HUB_RECEIVER", DEFAULT_HUB_RECEIVER);
-        uint32  hubDomain   = uint32(vm.envOr("HUB_DOMAIN", uint256(DEFAULT_HUB_DOMAIN)));
+        address hubReceiver = vm.envOr("HUB_RECEIVER", defaultHubReceiver);
+        uint32  hubDomain   = uint32(vm.envOr("HUB_DOMAIN", uint256(defaultHubDomain)));
 
         console2.log("chain   ", chainName);
         console2.log("chainId ", chainId);
@@ -103,5 +110,10 @@ contract DeployFxSpoke is Script {
             return (0x3600000000000000000000000000000000000000, "arc-testnet");
         }
         revert("unsupported chainId: pass SPOKE_USDC + SPOKE_CCTP_TOKEN_MESSENGER explicitly");
+    }
+
+    function _defaultHub(uint256 chainId) internal pure returns (address hubReceiver, uint32 hubDomain) {
+        if (chainId == 43113) return (FUJI_HUB_RECEIVER, FUJI_HUB_DOMAIN);
+        return (BASE_SEPOLIA_HUB_RECEIVER, BASE_SEPOLIA_HUB_DOMAIN);
     }
 }

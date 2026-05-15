@@ -11,8 +11,8 @@
 
 1. **Hub mainnet = Avalanche C-Chain (`chainId 43114`).** 5 of 6 basket stablecoins are natively live on Avalanche (USDC, AUDF, JPYC, MXNB, KRW1) + ZCHF via CCIP. Zero mocks at mainnet — live demo with real assets.
 2. **Hub testnet = Arc Testnet (`chainId 5042002`).** All Phase 2.5 / 2.6 / 2.6R / Phase 3 work iterates here. `MockStablecoin` instances stand in for the basket where issuer-canonical contracts don't exist on Arc.
-3. **Spokes = every EVM chain that hosts a stablecoin in our basket OR is a major USDC entry point.** Spokes are thin: CCTP V2 burn-and-mint of USDC into the Hub, plus stranded-deposit recovery. Existing `FxSpoke` contract handles this.
-4. **Local stablecoins live on the Hub.** Users don't bridge AUDF / JPYC / MXNB / KRW1 / ZCHF cross-chain. They send USDC from any spoke → Hub mints local stablecoin liquidity via Morpho borrow → FX swap → return USDC via CCTP.
+3. **Spokes = every EVM chain that hosts Circle USDC/EURC or is a major Circle-asset entry point.** Spokes are thin: CCTP V2 burn-and-mint of USDC/EURC into the Hub, plus stranded-deposit recovery. Existing `FxSpoke` contract handles this lane.
+4. **Local non-Circle stablecoins live on the Hub or use Hyperlane routes.** Users don't bridge AUDF / JPYC / MXNB / KRW1 / ZCHF through CCTP. They send USDC/EURC from any supported Circle spoke → Hub mints local stablecoin liquidity via Morpho borrow → FX swap → return USDC/EURC via CCTP where Circle supports it.
 5. **No new contracts at mainnet.** Every contract used is already on the §2 whitelist of `SPEC_PHASE_3_MULTI_STABLECOIN.md`. This doc is deployment plumbing only.
 
 ---
@@ -52,11 +52,11 @@ Source: official Circle/Arc docs, last verified 2026-05-14.
 | MXNB | Not deployed | **Deploy MockMXNB (6 dec)** on Arc testnet. |
 | AUDF | Not deployed | **Deploy MockAUDF (6 dec)** on Arc testnet. |
 | ZCHF | Not deployed | **Deploy MockZCHF (18 dec)** on Arc testnet. |
-| KRW1 | Pending — Avalanche-native at `0x25a8…0318` | Probe decimals via Avalanche mainnet first; then deploy mock at confirmed decimals. See `docs/BLOCKED_PAIRS.md`. |
+| KRW1 | Not deployed on Arc; Avalanche-native at `0x25a8…0318` | Deploy MockKRW1 at 0 decimals; Avalanche `decimals()` probe completed 2026-05-14. |
 | Morpho Blue | Not deployed | Confirmed blocker. Either wait for Morpho Labs or self-deploy (immutable singleton, ~3KB). |
 | AdaptiveCurveIRM | Not deployed | Same — co-deploy with Morpho self-deploy if going that route. |
-| Pyth | Confirm per pair | `0x2880aB155794e7179c9eE2e38200202908C17B43` per current SDK — verify each FX pair feed is live on Arc. |
-| RedStone | Confirm signer set | Verify production signer set publishes Arc-targeted payloads. |
+| Pyth | Confirm per pair | `0x2880aB155794e7179c9eE2e38200202908C17B43` per current SDK. Feed IDs confirmed for Phase 3 FX basket; inverse feeds use `FxOracle.setPythFeedConfig(..., true)`. |
+| RedStone | Confirm signer set | Feed symbols confirmed (`AUD`, `JPY`, `MXN`, `KRW`, `CHF`); verify production signer payload path on Arc during broadcast rehearsal. |
 
 ---
 
@@ -69,10 +69,10 @@ All addresses below are Avalanche C-Chain (`chainId 43114`) unless flagged. Issu
 | Asset | Avalanche address | Decimals | Phase 3 tier | Notes |
 |---|---|---|---|---|
 | **USDC** | `0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E` | 6 | Tier 0 | Circle-native on Avalanche. |
-| **EURC** | TBD ([confirm](https://developers.circle.com/stablecoins/usdc-contract-addresses)) | 6 | Tier 0 | Circle-native; pin before Tier 0 deploy. |
+| **EURC** | `0xC891EB4cbdEFf6e073e859e987815Ed1505c2ACD` | 6 | Tier 0 | Circle-native on Avalanche C-Chain. |
 | **AUDF** | `0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b` | 6 | Tier 2 | Forte; same address on all EVMs. |
 | **JPYC** | `0x431D5dfF03120AFA4bDf332c61A6e1766eF37BDB` | 18 | Tier 1 anchor | JPYC Inc. |
-| **KRW1** | `0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318` | TBD ([probe](https://api.avax.network/ext/bc/C/rpc) `decimals()`) | Tier 2 | BDACS; decimals confirmation pending. |
+| **KRW1** | `0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318` | 0 | Tier 2 | BDACS; Avalanche `decimals()` probe returned 0 on 2026-05-14. |
 | **MXNB** | `0xF197FFC28c23E0309B5559e7a166f2c6164C80aA` | 6 | Tier 1 anchor | Bitso/Juno; same address on all EVMs. |
 | **ZCHF** | `0xD4dD9e2F021BB459D5A5f6c24C12fE09c5D45553` | 18 | Tier 3 | Frankencoin CCIP-bridged on Avalanche; treat as single-chain pair on Hub. |
 
@@ -95,7 +95,19 @@ All addresses below are Avalanche C-Chain (`chainId 43114`) unless flagged. Issu
 | Pyth Network | per [pyth.network](https://docs.pyth.network/price-feeds/contract-addresses/evm) at deploy time | Permissionless pull |
 | RedStone | evm-connector pattern (no fixed address) | Cancun-required; already in foundry.toml |
 
-Confirm per-pair Pyth feed IDs (USDC/USD, JPY/USD, MXN/USD, AUD/USD, KRW/USD, CHF/USD, EUR/USD) before tier deploy.
+Confirmed Phase 3 Pyth feed IDs:
+
+| Asset | Feed | Feed id | `FxOracle` config |
+|---|---|---|---|
+| USDC | `USDC/USD` | `0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a` | direct |
+| EURC | `EURC/USD` | `0x76fa85158bf14ede77087fe3ae472f66213f6ea2f5b411cb2de472794990fa5c` | direct |
+| AUDF | `AUD/USD` | `0x67a6f93030420c1c9e3fe37c1ab6b77966af82f995944a9fefce357a22854a80` | direct |
+| JPYC | `USD/JPY` | `0xef2c98c804ba503c6a707e38be4dfbb16683775f195b091252bf24693042fd52` | inverted |
+| MXNB | `USD/MXN` | `0xe13b1c1ffb32f34e1be9545583f01ef385fde7f42ee66049d30570dc866b77ca` | inverted |
+| KRW1 | `USD/KRW` | `0xe539120487c29b4defdf9a53d337316ea022a2688978a468f9efd847201be7e3` | inverted |
+| ZCHF | `USD/CHF` | `0x0b1e3297e69f162877b577b0d6a47a0d63b2392bc8499e6540da4187a63e28f8` | inverted |
+
+RedStone feed symbols confirmed through the public price API: `USDC`, `EUR`, `AUD`, `JPY`, `MXN`, `KRW`, `CHF`. `EURC` still uses the existing deploy-time config path and should be rechecked before Tier 0 if Avalanche EURC is used.
 
 ---
 
@@ -114,9 +126,10 @@ Confirm per-pair Pyth feed IDs (USDC/USD, JPY/USD, MXN/USD, AUD/USD, KRW/USD, CH
 | `mAUDF` | "Mock AUDF (test)" | 6 | Stand in for Forte AUDF on Arc testnet. |
 | `mJPYC` | "Mock JPYC (test)" | **18** | **Mirror mainnet 18-dec, NOT Sepolia 6-dec.** |
 | `mMXNB` | "Mock MXNB (test)" | 6 | Stand in for Bitso/Juno MXNB. |
+| `mKRW1` | "Mock KRW1 (test)" | 0 | Stand in for BDACS KRW1. |
 | `mZCHF` | "Mock ZCHF (test)" | 18 | Stand in for Frankencoin ZCHF. |
 
-`mKRW1` deferred — pending Avalanche-mainnet decimals probe. PHPC + BRLA explicitly excluded from Phase 3.
+PHPC + BRLA explicitly excluded from Phase 3.
 
 Deploy script: `contracts/script/DeployArcTestnetMocks.s.sol`. Logs all addresses to `deployments/arc-testnet-mocks.json`.
 
@@ -129,12 +142,14 @@ The Hub deploy script reads stablecoin addresses from env vars per chain. Testne
 export FXT_TOKEN_AUDF=$(jq -r .mocks.mAUDF deployments/arc-testnet-mocks.json)
 export FXT_TOKEN_JPYC=$(jq -r .mocks.mJPYC deployments/arc-testnet-mocks.json)
 export FXT_TOKEN_MXNB=$(jq -r .mocks.mMXNB deployments/arc-testnet-mocks.json)
+export FXT_TOKEN_KRW1=$(jq -r .mocks.mKRW1 deployments/arc-testnet-mocks.json)
 export FXT_TOKEN_ZCHF=$(jq -r .mocks.mZCHF deployments/arc-testnet-mocks.json)
 
 # Avalanche mainnet (production)
 export FXT_TOKEN_AUDF=0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b
 export FXT_TOKEN_JPYC=0x431D5dfF03120AFA4bDf332c61A6e1766eF37BDB
 export FXT_TOKEN_MXNB=0xF197FFC28c23E0309B5559e7a166f2c6164C80aA
+export FXT_TOKEN_KRW1=0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318
 export FXT_TOKEN_ZCHF=0xD4dD9e2F021BB459D5A5f6c24C12fE09c5D45553
 ```
 
@@ -145,7 +160,7 @@ For testnet pairs that use mocks, we need a mock-friendly Pyth/RedStone path. Tw
 - **Option A (preferred):** still use real Pyth on Arc testnet (assuming feed exists). Mock stablecoin price tracks the real-world rate. This is most realistic.
 - **Option B (fallback):** use `MockOracle.sol` (extends `IFxOracle`) that returns admin-set prices. Use only when real Pyth feed not available on Arc testnet for that FX pair.
 
-Pre-deploy check per pair: confirm Pyth feed exists on Arc testnet. If yes → Option A. If no → log to `docs/BLOCKED_PAIRS.md` and use Option B for development only; production deploy waits for real feed.
+Pre-deploy check per pair: confirm Pyth feed exists on Arc testnet and configure inverse feeds where Pyth publishes `USD/X` instead of `X/USD`. If yes → Option A. If no → log to `docs/BLOCKED_PAIRS.md` and use Option B for development only; production deploy waits for real feed.
 
 ---
 
@@ -189,11 +204,36 @@ Total: 8 core contracts + N hook instances (one per pair).
 9. Register all contracts with Circle SCP via `bun run sdk:circle:register`.
 10. Update `packages/sdk/src/addresses/index.ts` under `ChainId.AvalancheMainnet`.
 
+Fresh basket deploy script: `contracts/script/DeployAvalancheBasketHub.s.sol`.
+
+```bash
+export DEPLOYER_PRIVATE_KEY=...
+export AVALANCHE_PYTH=...
+export AVALANCHE_MORPHO_BLUE=...
+export AVALANCHE_MORPHO_IRM=...
+export AVALANCHE_POOL_MANAGER=...
+export AVALANCHE_CCTP_MESSAGE_TRANSMITTER=...
+
+forge script contracts/script/DeployAvalancheBasketHub.s.sol:DeployAvalancheBasketHub \
+  --rpc-url $TENDERLY_AVALANCHE_VNET_RPC \
+  --broadcast
+```
+
+Optional seed env vars are raw token units, e.g. `FXT_SEED_USDC_JPYC=10000000000` and `FXT_SEED_JPYC=1562500000000000000000000`.
+
+Cold local smoke drill:
+
+```bash
+bun run contracts:smoke:basket
+```
+
+This deploys all five Phase 3 pairs, creates the two Morpho markets per pair, mines and initializes the v4 hook pool, seeds LP, verifies Morpho rehypothecation, and executes a v4 hook swap callback for USDC→JPYC/MXNB/AUDF/KRW1/ZCHF.
+
 ---
 
 ## 5. Spoke deployment matrix
 
-Spokes are thin — each chain that holds a stablecoin we route to, OR is a major USDC entry point, gets a `FxSpoke` deployment.
+Spokes are thin — each chain that holds Circle USDC/EURC, or is a major Circle-asset entry point, gets a CCTP `FxSpoke` deployment. Non-Circle basket assets use Hyperlane/issuer routes instead.
 
 ### 5.1 Spoke priorities (chains)
 
@@ -214,7 +254,7 @@ Order by usefulness for the basket. Avalanche is the Hub; spokes feed USDC into 
 
 ### 5.2 What changes per spoke
 
-Nothing in the spoke contract. It's chain-agnostic — burns USDC via CCTP V2 to the Hub, receives USDC back via CCTP V2. **Local stablecoins are never bridged.** They exist on the Hub (Avalanche), get FX'd there, and the user receives the *output* (USDC) back via CCTP V2.
+Nothing in the spoke contract for non-Circle assets. The CCTP lane is Circle-only: burns USDC/EURC via CCTP V2 to the Hub and receives USDC/EURC back via CCTP V2 where Circle supports the asset. **Local non-Circle stablecoins are never bridged through CCTP.** They exist on the Hub (Avalanche) or arrive through a separately approved Hyperlane/issuer route, get FX'd there, and the user receives the Circle output asset back via CCTP when available.
 
 ### 5.3 Spoke deploy commands
 
@@ -231,19 +271,19 @@ Per-spoke needs:
 ### 6.1 Hub readiness (Avalanche mainnet)
 
 - [ ] Avalanche mainnet RPC pinned + funded deployer EOA confirmed.
-- [ ] Circle USDC + EURC addresses on Avalanche verified (EURC TBD per §2.1).
+- [x] Circle USDC + EURC addresses on Avalanche verified (see `docs/CIRCLE_USDC_EURC_ADDRESSES.md`).
 - [ ] CCTP V2 TokenMessenger + MessageTransmitter addresses on Avalanche pinned.
 - [ ] Permit2 canonical address verified (`0x000000000022D473030F116dDEE9F6B43aC78BA3`).
 - [ ] Morpho Blue deployed to Avalanche (verify Morpho Labs status; self-deploy if absent).
-- [ ] Pyth Network on Avalanche, with feed IDs confirmed for: EUR/USD, JPY/USD, MXN/USD, AUD/USD, KRW/USD, CHF/USD.
-- [ ] RedStone production signer set confirmed publishing on Avalanche for same pairs.
+- [x] Pyth Network feed IDs confirmed for: EUR/USD, EURC/USD, AUD/USD, USD/JPY, USD/MXN, USD/KRW, USD/CHF.
+- [x] RedStone public symbols confirmed for: USDC, EUR, AUD, JPY, MXN, KRW, CHF.
 - [ ] Smart-contract audit complete (CertiK or Spearbit) for FxSwapHook + FxRouter + adapter layer. Findings remediated.
 
 ### 6.2 Per-pair readiness (Tier 1 anchors — JPYC, MXNB)
 
 - [ ] Issuer-canonical address on Avalanche confirmed (JPYC `0x431D…7BDB`, MXNB `0xF197…C80aA`).
 - [ ] Issuer contacted, communication channel established for incident response.
-- [ ] Pyth + RedStone feeds verified for the pair.
+- [x] Pyth + RedStone feeds verified for the pair; JPYC/MXNB use inverse Pyth feeds.
 - [ ] Risk params set in `FxMarketRegistry`: cap $1M initial, lltv 80%, fee 5-15 bps, max oracle deviation 50 bps.
 - [ ] Morpho markets created (both directions), market IDs recorded.
 - [ ] FxSwapHook deployed at HookMiner-mined address, permission bits verified.
@@ -253,7 +293,8 @@ Per-spoke needs:
 ### 6.3 Per-pair readiness (Tier 2 — AUDF, KRW1)
 
 - [ ] AUDF: same checklist as Tier 1 (address `0xd2a5…7456b`).
-- [ ] KRW1: decimals probe complete (one-line `cast call`); mock-vs-real switch decision logged.
+- [x] AUDF/KRW1 oracle feeds verified; KRW1 uses inverse Pyth `USD/KRW`.
+- [x] KRW1: decimals probe complete (`decimals() == 0` on Avalanche mainnet, 2026-05-14); mock-vs-real switch decision logged.
 
 ### 6.4 Spoke readiness (per chain)
 
@@ -287,7 +328,7 @@ This is the immediate work. Mainnet waits on §6 checklist completion.
 ### 7.1 Mock token deploy (Arc testnet) — code LANDED
 
 1. ✅ Implement `contracts/src/test-helpers/MockStablecoin.sol` (PR-1 gift).
-2. ✅ Implement `contracts/script/DeployArcTestnetMocks.s.sol` (mAUDF / mJPYC / mMXNB / mZCHF basket).
+2. ✅ Implement `contracts/script/DeployArcTestnetMocks.s.sol` (mAUDF / mJPYC / mMXNB / mKRW1 / mZCHF basket).
 3. ⏳ `forge script ... --broadcast` against Arc testnet RPC (operator step).
 4. ⏳ Log addresses to `deployments/arc-testnet-mocks.json`.
 5. ⏳ Update `packages/sdk/src/addresses/index.ts` `ChainId.ArcTestnet` token map.
@@ -298,7 +339,7 @@ This is the immediate work. Mainnet waits on §6 checklist completion.
 2. Run existing `DeployArcTestnet.s.sol` with env pointing to:
    - Real USDC (`0x3600…0000`)
    - Real EURC (`0x89B5…D72a`)
-   - Mock JPYC / MXNB / AUDF / ZCHF addresses (from `deployments/arc-testnet-mocks.json`)
+   - Mock JPYC / MXNB / AUDF / KRW1 / ZCHF addresses (from `deployments/arc-testnet-mocks.json`)
    - Real Pyth + RedStone (if feeds confirmed)
    - Real CCTP V2 (Domain 26)
    - Real Permit2 (canonical)
@@ -349,9 +390,9 @@ Triggered when all checkboxes in §6 are green. Estimated path:
 
 ## 10. Open questions for project owner
 
-1. **EURC on Avalanche mainnet address.** Pin from Circle's canonical page before Tier 0 deploy.
+1. **EURC on Avalanche mainnet address.** Pinned from Circle's canonical page: `0xC891EB4cbdEFf6e073e859e987815Ed1505c2ACD`.
 2. **Morpho on Avalanche.** Confirm Morpho Labs deployment status; self-deploy fallback path if absent.
-3. **KRW1 decimals.** One-line `cast call` against Avalanche RPC; once resolved, move out of `BLOCKED_PAIRS.md`.
+3. **Arc/Tenderly broadcast prep.** Oracle feeds and KRW1 decimals are confirmed; next code-facing blocker is a deployment script that creates all basket Morpho markets/hooks and runs the Tenderly smoke matrix.
 4. **Per-pair launch cap.** Default $1M conservative — confirm or adjust based on Pasillo's institutional pipeline.
 5. **Audit firm.** CertiK vs Spearbit vs Sherlock contest. Recommend Spearbit + a Sherlock contest before mainnet.
 

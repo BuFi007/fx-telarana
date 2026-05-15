@@ -1,8 +1,10 @@
+// SPDX-License-Identifier: Apache-2.0
 import type { Address } from "viem";
 
 /// Chain IDs the SDK knows about. Add new entries as we deploy.
 export const ChainId = {
   EthereumMainnet: 1,
+  AvalancheMainnet: 43114,
   Sepolia: 11155111,
   OpSepolia: 11155420,
   ArbitrumSepolia: 421614,
@@ -36,10 +38,13 @@ export interface FxAddresses {
   cctpTokenMessengerV2?: Address;
   cctpMessageTransmitterV2?: Address;
   cctpDomain?: number;
+  hyperlane?: HyperlaneChainAddresses;
+  hyperlaneWarpRoutes?: HyperlaneWarpRouteConfig[];
 
   /// Tokens
   usdc: Address;
   eurc: Address;
+  stablecoinBasket?: StablecoinBasketAddresses;
 
   /// Pyth feed IDs (chain-agnostic, included here for convenience)
   pythFeedUSDC: `0x${string}`;
@@ -47,11 +52,118 @@ export interface FxAddresses {
   pythFeedEURUSD: `0x${string}`;
 }
 
+export interface StablecoinBasketToken {
+  symbol: "AUDF" | "BRLA" | "JPYC" | "KRW1" | "MXNB" | "PHPC" | "ZCHF";
+  address?: Address;
+  decimals?: number;
+  pythFeedId?: `0x${string}`;
+  pythFeedInverted?: boolean;
+  redstoneFeedId?: "AUD" | "BRL" | "JPY" | "KRW" | "MXN" | "PHP" | "CHF";
+  source: "issuer" | "mock" | "blocked" | "excluded";
+  blockedReason?: string;
+}
+
+export interface StablecoinBasketAddresses {
+  audf: StablecoinBasketToken;
+  brla: StablecoinBasketToken;
+  jpyc: StablecoinBasketToken;
+  krw1: StablecoinBasketToken;
+  mxnb: StablecoinBasketToken;
+  phpc: StablecoinBasketToken;
+  zchf: StablecoinBasketToken;
+}
+
+export interface HyperlaneChainAddresses {
+  /// Hyperlane domain id. It often matches the EVM chain id, but callers should
+  /// use this value rather than assuming equality.
+  domain: number;
+  mailbox?: Address;
+  interchainGasPaymaster?: Address;
+  interchainAccountRouter?: Address;
+  merkleTreeHook?: Address;
+  protocolFee?: Address;
+  validatorAnnounce?: Address;
+  appSpecificIsms?: Partial<Record<number, Address>>;
+}
+
+export interface HyperlaneWarpRouteConfig {
+  symbol: StablecoinBasketToken["symbol"] | "USDC" | "EURC";
+  status: "planned" | "deployed" | "disabled";
+  routeId?: string;
+  routeTokenType: "collateral" | "synthetic" | "collateralVault" | "native" | "fiatToken" | "xERC20";
+  hubChainId: ChainIdValue;
+  hubToken?: Address;
+  hubTokenSource: "issuer" | "mock" | "collateralReleased" | "hyperlaneSynthetic" | "pending";
+  originChains: ChainIdValue[];
+  notes?: string;
+}
+
 const PYTH_FEED_USDC_USD = "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a" as const;
 const PYTH_FEED_EURC_USD = "0x76fa85158bf14ede77087fe3ae472f66213f6ea2f5b411cb2de472794990fa5c" as const;
 const PYTH_FEED_EUR_USD  = "0xa995d00bb36a63cef7fd2c287dc105fc8f3d93779f062f09551b0af3e81ec30b" as const;
+const PYTH_FEED_AUD_USD  = "0x67a6f93030420c1c9e3fe37c1ab6b77966af82f995944a9fefce357a22854a80" as const;
+const PYTH_FEED_USD_JPY  = "0xef2c98c804ba503c6a707e38be4dfbb16683775f195b091252bf24693042fd52" as const;
+const PYTH_FEED_USD_KRW  = "0xe539120487c29b4defdf9a53d337316ea022a2688978a468f9efd847201be7e3" as const;
+const PYTH_FEED_USD_MXN  = "0xe13b1c1ffb32f34e1be9545583f01ef385fde7f42ee66049d30570dc866b77ca" as const;
+const PYTH_FEED_USD_CHF  = "0x0b1e3297e69f162877b577b0d6a47a0d63b2392bc8499e6540da4187a63e28f8" as const;
 
 const ZERO = "0x0000000000000000000000000000000000000000" as const;
+
+const HYPERLANE_AVALANCHE_MAINNET: HyperlaneChainAddresses = {
+  domain: 43114,
+  mailbox: "0xFf06aFcaABaDDd1fb08371f9ccA15D73D51FeBD6",
+  interchainGasPaymaster: "0x95519ba800BBd0d34eeAE026fEc620AD978176C0",
+  interchainAccountRouter: "0x2c58687fFfCD5b7043a5bF256B196216a98a6587",
+};
+
+const HYPERLANE_FUJI: HyperlaneChainAddresses = {
+  domain: 43113,
+  mailbox: "0x5b6CFf85442B851A8e6eaBd2A4E4507B5135B3B0",
+  interchainGasPaymaster: "0x6895d3916B94b386fAA6ec9276756e16dAe7480E",
+  appSpecificIsms: {
+    [ChainId.ArcTestnet]: "0x3f5d9B44aa1D59D26B20862D91533d60B32d9aFa",
+  },
+};
+
+const HYPERLANE_ARC_TESTNET: HyperlaneChainAddresses = {
+  domain: 5042002,
+  mailbox: "0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9",
+  interchainGasPaymaster: ZERO,
+  interchainAccountRouter: "0x113A539625D208b5EcC59f300Be14b9b3508E559",
+  merkleTreeHook: "0xccceb5B90d9C1d9c5f8CcF755E4f37A849C8Ca11",
+  protocolFee: "0x971b6ED14521f354eD13d64506Bf47D84E70F4fc",
+  validatorAnnounce: "0xbBc9AE9dbd3F6D3dB672F0CA2419d0f4C8513062",
+};
+
+const HYPERLANE_SEPOLIA: HyperlaneChainAddresses = {
+  domain: 11155111,
+  mailbox: "0xfFAEF09B3cd11D9b20d1a19bECca54EEC2884766",
+  interchainGasPaymaster: "0x6f2756380FD49228ae25Aa7F2817993cB74Ecc56",
+};
+
+const HYPERLANE_OP_SEPOLIA: HyperlaneChainAddresses = {
+  domain: 11155420,
+  mailbox: "0x6966b0E55883d49BFB24539356a2f8A673E02039",
+  interchainGasPaymaster: "0x28B02B97a850872C4D33C3E024fab6499ad96564",
+};
+
+const HYPERLANE_ARBITRUM_SEPOLIA: HyperlaneChainAddresses = {
+  domain: 421614,
+  mailbox: "0x598facE78a4302f11E3de0bee1894Da0b2Cb71F8",
+  interchainGasPaymaster: "0xc756cFc1b7d0d4646589EDf10eD54b201237F5e8",
+};
+
+const HYPERLANE_BASE_SEPOLIA: HyperlaneChainAddresses = {
+  domain: 84532,
+  mailbox: "0x6966b0E55883d49BFB24539356a2f8A673E02039",
+  interchainGasPaymaster: "0x28B02B97a850872C4D33C3E024fab6499ad96564",
+};
+
+const HYPERLANE_POLYGON_AMOY: HyperlaneChainAddresses = {
+  domain: 80002,
+  mailbox: "0x54148470292C24345fb828B003461a9444414517",
+  interchainGasPaymaster: "0x6c13643B3927C57DB92c790E4E3E7Ee81e13f78C",
+};
 
 /// Addresses partitioned per chain. fx-Telarana contracts are TBD until deploy.
 export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
@@ -81,6 +193,7 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
     cctpDomain: 6,
+    hyperlane: HYPERLANE_BASE_SEPOLIA,
     usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     eurc: "0x808456652fdb597867f38412077A9182bf77359F", // Circle's real EURC on Base Sepolia
     pythFeedUSDC: PYTH_FEED_USDC_USD,
@@ -101,16 +214,27 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.AvalancheFuji]: {
-    // FxSpoke — deployed 2026-05-14
-    fxSpoke: "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
+    // Fuji hub + self-loop spoke. FxSpoke redeployed 2026-05-15 to target
+    // the Fuji hub receiver below, not the older Base Sepolia hub.
+    fxOracle: "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b",
+    fxMarketRegistry: "0x7ba745b979e027992ecfa51207666e3f5b46cf0a",
+    fxLiquidator: "0x2900599ff0e6dd057493d62fac856e5a8f93c6eb",
+    fxReceiptEURC: "0xefd7cf5ad5a2db9a3c23e2807f2279de92c730d2",
+    fxReceiptUSDC: "0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e",
+    fxHubMessageReceiver: "0x365DE300dDa61C81a33bcE3606A5d524eD964362",
+    fxSpoke: "0xAa875a68b0155da4bD6A528ee9e1137017D18b41",
+    morphoBlue: "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
+    adaptiveCurveIrm: "0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA",
+    pyth: "0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509",
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
     cctpDomain: 1,
+    hyperlane: HYPERLANE_FUJI,
     usdc: "0x5425890298aed601595a70AB815c96711a31Bc65",
+    eurc: "0x5E44db7996c682E92a960b65AC713a54AD815c6B",
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
-    // fxSpoke: <set after deploy>
   },
   [ChainId.ArcTestnet]: {
     // FxSpoke — deployed 2026-05-14. Phase 1: swap Base Sepolia hub for an
@@ -124,10 +248,180 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
     cctpDomain: 26,
+    hyperlane: HYPERLANE_ARC_TESTNET,
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
+    stablecoinBasket: {
+      audf: {
+        symbol: "AUDF",
+        decimals: 6,
+        pythFeedId: PYTH_FEED_AUD_USD,
+        pythFeedInverted: false,
+        redstoneFeedId: "AUD",
+        source: "mock",
+      },
+      brla: {
+        symbol: "BRLA",
+        source: "excluded",
+        blockedReason: "Excluded from Phase 3 until Avenia deploys BRLA natively on Avalanche.",
+      },
+      jpyc: {
+        symbol: "JPYC",
+        decimals: 18,
+        pythFeedId: PYTH_FEED_USD_JPY,
+        pythFeedInverted: true,
+        redstoneFeedId: "JPY",
+        source: "mock",
+      },
+      krw1: {
+        symbol: "KRW1",
+        decimals: 0,
+        pythFeedId: PYTH_FEED_USD_KRW,
+        pythFeedInverted: true,
+        redstoneFeedId: "KRW",
+        source: "mock",
+      },
+      mxnb: {
+        symbol: "MXNB",
+        decimals: 6,
+        pythFeedId: PYTH_FEED_USD_MXN,
+        pythFeedInverted: true,
+        redstoneFeedId: "MXN",
+        source: "mock",
+      },
+      phpc: {
+        symbol: "PHPC",
+        source: "excluded",
+        blockedReason: "Excluded from Phase 3; PHPC is not natively live on Avalanche.",
+      },
+      zchf: {
+        symbol: "ZCHF",
+        decimals: 18,
+        pythFeedId: PYTH_FEED_USD_CHF,
+        pythFeedInverted: true,
+        redstoneFeedId: "CHF",
+        source: "mock",
+      },
+    },
     // morphoBlue + adaptiveCurveIrm: TBD on Arc
+  },
+  [ChainId.AvalancheMainnet]: {
+    usdc: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
+    eurc: "0xC891EB4cbdEFf6e073e859e987815Ed1505c2ACD",
+    hyperlane: HYPERLANE_AVALANCHE_MAINNET,
+    hyperlaneWarpRoutes: [
+      {
+        symbol: "AUDF",
+        status: "planned",
+        routeTokenType: "collateral",
+        hubChainId: ChainId.AvalancheMainnet,
+        hubToken: "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+        hubTokenSource: "collateralReleased",
+        originChains: [ChainId.EthereumMainnet, ChainId.BaseSepolia],
+        notes: "Use only if the Avalanche route is collateral-backed and funded to release issuer AUDF; otherwise list the Hyperlane synthetic as a separate asset.",
+      },
+      {
+        symbol: "JPYC",
+        status: "planned",
+        routeTokenType: "collateral",
+        hubChainId: ChainId.AvalancheMainnet,
+        hubToken: "0x431D5dfF03120AFA4bDf332c61A6e1766eF37BDB",
+        hubTokenSource: "collateralReleased",
+        originChains: [ChainId.EthereumMainnet],
+        notes: "Mainnet route must preserve 18 decimals. Do not use JPYC Sepolia's 6-decimal test token as production metadata.",
+      },
+      {
+        symbol: "MXNB",
+        status: "planned",
+        routeTokenType: "collateral",
+        hubChainId: ChainId.AvalancheMainnet,
+        hubToken: "0xF197FFC28c23E0309B5559e7a166f2c6164C80aA",
+        hubTokenSource: "collateralReleased",
+        originChains: [ChainId.EthereumMainnet],
+        notes: "MXNB is also live on Arbitrum One; add that chain id to the SDK before publishing an Arbitrum-origin route.",
+      },
+      {
+        symbol: "KRW1",
+        status: "planned",
+        routeTokenType: "collateral",
+        hubChainId: ChainId.AvalancheMainnet,
+        hubToken: "0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318",
+        hubTokenSource: "collateralReleased",
+        originChains: [],
+        notes: "No EVM origin route until BDACS publishes additional chain deployments or we intentionally deploy a synthetic route.",
+      },
+      {
+        symbol: "ZCHF",
+        status: "disabled",
+        routeTokenType: "synthetic",
+        hubChainId: ChainId.AvalancheMainnet,
+        hubToken: "0xD4dD9e2F021BB459D5A5f6c24C12fE09c5D45553",
+        hubTokenSource: "issuer",
+        originChains: [],
+        notes: "Avalanche ZCHF is the CCIP-bridged issuer asset. Do not replace it with a Hyperlane synthetic without separate risk approval.",
+      },
+    ],
+    pythFeedUSDC: PYTH_FEED_USDC_USD,
+    pythFeedEURC: PYTH_FEED_EURC_USD,
+    pythFeedEURUSD: PYTH_FEED_EUR_USD,
+    stablecoinBasket: {
+      audf: {
+        symbol: "AUDF",
+        address: "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+        decimals: 6,
+        pythFeedId: PYTH_FEED_AUD_USD,
+        pythFeedInverted: false,
+        redstoneFeedId: "AUD",
+        source: "issuer",
+      },
+      brla: {
+        symbol: "BRLA",
+        source: "excluded",
+        blockedReason: "Polygon-only in Phase 3 research; not natively live on Avalanche.",
+      },
+      jpyc: {
+        symbol: "JPYC",
+        address: "0x431D5dfF03120AFA4bDf332c61A6e1766eF37BDB",
+        decimals: 18,
+        pythFeedId: PYTH_FEED_USD_JPY,
+        pythFeedInverted: true,
+        redstoneFeedId: "JPY",
+        source: "issuer",
+      },
+      krw1: {
+        symbol: "KRW1",
+        address: "0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318",
+        decimals: 0,
+        pythFeedId: PYTH_FEED_USD_KRW,
+        pythFeedInverted: true,
+        redstoneFeedId: "KRW",
+        source: "issuer",
+      },
+      mxnb: {
+        symbol: "MXNB",
+        address: "0xF197FFC28c23E0309B5559e7a166f2c6164C80aA",
+        decimals: 6,
+        pythFeedId: PYTH_FEED_USD_MXN,
+        pythFeedInverted: true,
+        redstoneFeedId: "MXN",
+        source: "issuer",
+      },
+      phpc: {
+        symbol: "PHPC",
+        source: "excluded",
+        blockedReason: "Polygon/Ronin only in Phase 3 research; not natively live on Avalanche.",
+      },
+      zchf: {
+        symbol: "ZCHF",
+        address: "0xD4dD9e2F021BB459D5A5f6c24C12fE09c5D45553",
+        decimals: 18,
+        pythFeedId: PYTH_FEED_USD_CHF,
+        pythFeedInverted: true,
+        redstoneFeedId: "CHF",
+        source: "issuer",
+      },
+    },
   },
   [ChainId.EthereumMainnet]: {
     morphoBlue: "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
@@ -146,6 +440,7 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
     cctpDomain: 0,
+    hyperlane: HYPERLANE_SEPOLIA,
     usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
     morphoBlue: "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
     adaptiveCurveIrm: "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
@@ -160,6 +455,7 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
     cctpDomain: 2,
+    hyperlane: HYPERLANE_OP_SEPOLIA,
     usdc: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
@@ -172,6 +468,7 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
     cctpDomain: 3,
+    hyperlane: HYPERLANE_ARBITRUM_SEPOLIA,
     usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d",
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
@@ -184,6 +481,7 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
     cctpDomain: 7,
+    hyperlane: HYPERLANE_POLYGON_AMOY,
     usdc: "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582",
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
@@ -25,12 +25,7 @@ contract TestableFxOracle is FxOracle {
         redstoneShouldRevert = v;
     }
 
-    function _redstoneFetch(bytes32[] memory feedIds)
-        internal
-        view
-        override
-        returns (uint256[] memory)
-    {
+    function _redstoneFetch(bytes32[] memory feedIds) internal view override returns (uint256[] memory) {
         if (redstoneShouldRevert) revert("RedStone unavailable");
         uint256[] memory values = new uint256[](feedIds.length);
         for (uint256 i; i < feedIds.length; ++i) {
@@ -56,12 +51,15 @@ contract FxOracleTest is Test {
 
     address internal constant USDC = address(0x10ce);
     address internal constant EURC = address(0xe0ce);
+    address internal constant JPYC = address(0x9001);
 
     bytes32 internal constant PYTH_USDC = bytes32(uint256(1));
     bytes32 internal constant PYTH_EURC = bytes32(uint256(2));
+    bytes32 internal constant PYTH_USD_JPY = bytes32(uint256(3));
 
     bytes32 internal constant RS_USDC = bytes32("USDC");
     bytes32 internal constant RS_EURC = bytes32("EURC");
+    bytes32 internal constant RS_JPY = bytes32("JPY");
 
     uint256 internal constant MAX_AGE = 60;
     uint256 internal constant MAX_DEV_BPS = 50;
@@ -74,16 +72,20 @@ contract FxOracleTest is Test {
         vm.startPrank(owner);
         oracle.setFeed(USDC, PYTH_USDC);
         oracle.setFeed(EURC, PYTH_EURC);
+        oracle.setPythFeedConfig(JPYC, PYTH_USD_JPY, true);
         oracle.setRedstoneFeed(USDC, RS_USDC);
         oracle.setRedstoneFeed(EURC, RS_EURC);
+        oracle.setRedstoneFeed(JPYC, RS_JPY);
         vm.stopPrank();
 
-        _setPyth(PYTH_USDC, 1_00_000_000, 100, -8, block.timestamp);   // USDC/USD = 1.00, conf 1bps
-        _setPyth(PYTH_EURC, 1_08_000_000, 108, -8, block.timestamp);   // EURC/USD = 1.08, conf 1bps
+        _setPyth(PYTH_USDC, 1_00_000_000, 100, -8, block.timestamp); // USDC/USD = 1.00, conf 1bps
+        _setPyth(PYTH_EURC, 1_08_000_000, 108, -8, block.timestamp); // EURC/USD = 1.08, conf 1bps
+        _setPyth(PYTH_USD_JPY, 156_25_000_000, 156_250, -8, block.timestamp); // USD/JPY = 156.25
 
         // RedStone returns 1e8 scaled values (matches Pyth normal feed scale).
         oracle.setRedstoneValue(RS_USDC, 1_00_000_000);
         oracle.setRedstoneValue(RS_EURC, 1_08_000_000);
+        oracle.setRedstoneValue(RS_JPY, 640_000); // JPY/USD = 0.0064
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -97,8 +99,23 @@ contract FxOracleTest is Test {
     }
 
     function test_getMid_USDC_EURC_isReciprocal() public view {
-        (uint256 mid, ) = oracle.getMid(USDC, EURC);
+        (uint256 mid,) = oracle.getMid(USDC, EURC);
         assertApproxEqRel(mid, 0.9259e18, 0.001e18);
+    }
+
+    function test_priceOf_invertsUsdDenominatedPythFeed() public view {
+        (uint256 price,) = oracle.priceOf(JPYC);
+        assertApproxEqRel(price, 0.0064e18, 0.0001e18);
+    }
+
+    function test_getMidFromPyth_supportsInvertedBaseFeed() public view {
+        (uint256 mid,) = oracle.getMidFromPyth(JPYC, USDC);
+        assertApproxEqRel(mid, 0.0064e18, 0.0001e18);
+    }
+
+    function test_getMidVerified_supportsInvertedPythAgainstDirectRedstone() public view {
+        (uint256 mid,) = oracle.getMidVerified(JPYC, USDC);
+        assertApproxEqRel(mid, 0.0064e18, 0.0001e18);
     }
 
     function test_getMidFromPyth_revertsOnStale() public {
@@ -116,14 +133,14 @@ contract FxOracleTest is Test {
     function test_getMid_fallsBackToRedstoneOnStalePyth() public {
         skip(MAX_AGE + 1);
         // Pyth stale → fall back to RedStone (which we seeded in setUp)
-        (uint256 mid, ) = oracle.getMid(EURC, USDC);
+        (uint256 mid,) = oracle.getMid(EURC, USDC);
         assertApproxEqRel(mid, 1.08e18, 0.001e18);
     }
 
     function test_getMid_fallsBackToRedstoneOnLowPythConfidence() public {
         _setPyth(PYTH_EURC, 1_08_000_000, 1_080_000, -8, block.timestamp);
         // Pyth confidence too low → fall back
-        (uint256 mid, ) = oracle.getMid(EURC, USDC);
+        (uint256 mid,) = oracle.getMid(EURC, USDC);
         assertApproxEqRel(mid, 1.08e18, 0.001e18);
     }
 
@@ -136,7 +153,7 @@ contract FxOracleTest is Test {
 
     function test_getMid_prefersPythWhenBothFresh() public view {
         // Both paths populated; Pyth wins (it's tried first)
-        (uint256 mid, ) = oracle.getMid(EURC, USDC);
+        (uint256 mid,) = oracle.getMid(EURC, USDC);
         assertApproxEqRel(mid, 1.08e18, 0.001e18);
     }
 
@@ -149,7 +166,7 @@ contract FxOracleTest is Test {
     function test_getMid_doesNotCheckRedstoneDeviationWhenPythSucceeds() public {
         // Wildly off RedStone — getMid uses Pyth (not deviation-gated)
         oracle.setRedstoneValue(RS_EURC, 5_00_000_000);
-        (uint256 mid, ) = oracle.getMid(EURC, USDC);
+        (uint256 mid,) = oracle.getMid(EURC, USDC);
         assertApproxEqRel(mid, 1.08e18, 0.001e18);
     }
 
@@ -158,7 +175,7 @@ contract FxOracleTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_getMidVerified_passesWhenWithinTolerance() public view {
-        (uint256 mid, ) = oracle.getMidVerified(EURC, USDC);
+        (uint256 mid,) = oracle.getMidVerified(EURC, USDC);
         assertApproxEqRel(mid, 1.08e18, 0.001e18);
     }
 
@@ -172,7 +189,7 @@ contract FxOracleTest is Test {
     function test_getMidVerified_revertsOnUnknownRedstoneFeed() public {
         address newToken = address(0xBEEF);
         vm.startPrank(owner);
-        oracle.setFeed(newToken, bytes32(uint256(99)));    // Pyth feed set
+        oracle.setFeed(newToken, bytes32(uint256(99))); // Pyth feed set
         // RedStone feed NOT set
         vm.stopPrank();
         _setPyth(bytes32(uint256(99)), 1_00_000_000, 100, -8, block.timestamp);
@@ -184,7 +201,7 @@ contract FxOracleTest is Test {
     function test_getMidVerified_passesWithSmallDeviation() public {
         // 4.6 bps deviation — within 50bps default
         oracle.setRedstoneValue(RS_EURC, 1_08_050_000);
-        (uint256 mid, ) = oracle.getMidVerified(EURC, USDC);
+        (uint256 mid,) = oracle.getMidVerified(EURC, USDC);
         assertApproxEqRel(mid, 1.08e18, 0.001e18);
     }
 
@@ -204,7 +221,7 @@ contract FxOracleTest is Test {
         updates[0] = hex"00";
 
         uint256 balBefore = address(this).balance;
-        (uint256 mid, ) = oracle.getMidWithUpdate{value: 0.01 ether}(EURC, USDC, updates);
+        (uint256 mid,) = oracle.getMidWithUpdate{value: 0.01 ether}(EURC, USDC, updates);
         assertApproxEqRel(mid, 1.08e18, 0.001e18);
         uint256 balAfter = address(this).balance;
         assertEq(balBefore - balAfter, 0.001 ether);

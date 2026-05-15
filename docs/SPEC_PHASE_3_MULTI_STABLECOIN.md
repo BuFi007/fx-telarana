@@ -2,9 +2,9 @@
 
 **Status:** Implementation-ready architecture spec. Composition-only — no bespoke core contracts beyond what already exists.
 **Last revision:** 2026-05-14 — Hub mainnet pivoted from Arc-when-GA → **Avalanche C-Chain** (most of the basket is natively live there); PHPC + BRLA dropped from basket.
-**Scope:** Onboard StableFX-aligned stablecoins at the *decentralized* level. **Permissionless public rail only.** No KYB, no USYC, no institutional tier in this protocol. EM (emerging-market) pairs are the wedge.
+**Scope:** Onboard StableFX-aligned stablecoins at the *decentralized* level. The public rail stays permissionless. Ghost Mode is a separate Bufi Wallet KYC/KYB-pass route using privacy hooks and routers. EM (emerging-market) pairs are the wedge.
 **Branch:** `tcxcx/fx-onchain-hub-arc` (legacy name; the destination is Avalanche).
-**Constitutional rule:** **We do not write new core financial logic. We compose audited OpenZeppelin + Morpho + Uniswap v4 + Permit2 + CCTP V2 primitives.** Every new contract is a thin adapter or wrapper. If something else seems necessary, stop and re-architect.
+**Constitutional rule:** **We do not write new core financial logic. We compose audited OpenZeppelin + Morpho + Uniswap v4 + Permit2 + CCTP V2 + Hyperlane primitives.** Every new contract is a thin adapter or wrapper. If something else seems necessary, stop and re-architect.
 
 **Hub topology (canonical):**
 - **Mainnet Hub** = Avalanche C-Chain (`chainId 43114`). Chosen because 5 of the 6 basket assets (USDC, AUDF, JPYC, MXNB, KRW1) are natively deployed there, plus ZCHF via CCIP — no bridging or permanent mocking required for a live demo.
@@ -15,7 +15,8 @@
 **Companion specs:**
 - `docs/SPEC_FX_ROUTER_AND_PASILLO_QUOTE_API.md` (Phase 2.6R) — signed-intent EIP-712 + Permit2 RFQ entry point. Built in parallel; this spec assumes it exists.
 - `docs/DEPLOY_MAINNET_HUB.md` — deployment plumbing (Avalanche mainnet + Arc testnet + spoke fleet).
-- `.context/PASILLO_HANDOFF_USYC_KYB_INSTITUTIONAL.md` — institutional/USYC/KYB content punted to Pasillo (separate repo, separate company). Not built in this protocol.
+- `docs/HYPERLANE_ASSET_SPOKES.md` — non-Circle asset spoke model using Hyperlane Warp Routes + optional Interchain Accounts.
+- `docs/GHOST_MODE_PRIVACY_HOOKS.md` — Ghost Mode privacy-hook and Bufi Wallet pass architecture. No third-party privacy wallet or Circle Wallet dependency.
 
 ---
 
@@ -24,15 +25,15 @@
 ### Goals
 1. **Multi-stablecoin coverage for EM pairs first.** USDC↔JPYC, USDC↔MXNB, USDC↔KRW1, USDC↔AUDF before more USDC↔EURC depth. EM borrow demand is where real Morpho APY lives.
 2. **One playbook per asset.** Adding stablecoin N+1 is a deterministic checklist (§3), not a new design.
-3. **Permissionless throughout.** Anyone deposits. Anyone swaps. No KYB at the protocol layer. Any integrator (Pasillo, third-party aggregators, Hashflow-style RFQ apps) can route through `FxRouter`.
+3. **Permissionless public rail, pass-gated Ghost rail.** Anyone deposits and swaps in public mode. Ghost Mode requires a valid Bufi Wallet KYC/KYB pass and a deployed Ghost route/hook.
 4. **Composition only.** Audit-surface = sum of contracts on the §2 whitelist. Nothing else touches balances.
 5. **EM wedge narrative.** Position the protocol as "the on-chain home for EM-stablecoin borrow markets and EM FX," not "yet another USDC/EURC pool."
 
 ### Non-goals (defer or punt)
 - **USYC integration.** Moved to Pasillo. KYB-gated yield substrate is not a protocol responsibility.
-- **KYB token / permission registry.** Moved to Pasillo. Protocol pools accept any address.
+- **KYC/KYB gating public pools.** Public protocol pools accept any address. Bufi Wallet pass checks belong only to Ghost Mode routers/hooks.
 - **Permissionless RWA yield substrate** (sUSDS, USDM, etc.). Track in §9 watchlist; do not build now.
-- **Two-tier rail.** There is one rail. Permissionless.
+- **Circle Wallet dependency.** Ghost Mode uses Bufi Wallet passes, not Circle Wallet accounts.
 - **Sera-style orderbook clone.** Out of scope (settled in prior analysis).
 - **Cross-chain SOR.** Compose at the Pasillo / integrator layer, not in this protocol.
 - **BRLA + PHPC.** Dropped from Phase 3 basket — neither is natively live on Avalanche mainnet (the chosen Hub). Re-evaluation in `docs/BLOCKED_PAIRS.md` §Excluded.
@@ -71,10 +72,10 @@ Sourced from Tomás's mainnet stablecoin mapping for Forex Telaraña spokes, dat
 | Asset | Issuer | Decimals | Avalanche mainnet address | Other chains | Phase 3 status |
 |---|---|---|---|---|---|
 | **USDC** | Circle | 6 | ● `0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E` (Avalanche native) | All CCTP V2 chains | Tier 0 — anchor |
-| **EURC** | Circle | 6 | ◐ confirm — Circle's canonical addresses page | Ethereum, Base, Arc (testnet) | Tier 0 — anchor (Avalanche address pending Circle confirmation) |
+| **EURC** | Circle | 6 | `0xC891EB4cbdEFf6e073e859e987815Ed1505c2ACD` on Avalanche | Ethereum, Base, Avalanche, Arc (testnet) | Tier 0 — anchor |
 | **AUDF** | Forte (Australia) | 6 | ● `0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b` (same on all EVMs) | Ethereum, Polygon, Base, Redbelly | Tier 2 |
 | **JPYC** | JPYC Inc (Japan) | 18 | ● `0x431D5dfF03120AFA4bDf332c61A6e1766eF37BDB` | Ethereum, Polygon | Tier 1 anchor |
-| **KRW1** | BDACS (South Korea) | TBD ([probe](#krw1-decimals-probe)) | ● `0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318` | Plume `0x8304…ec3f`; others pending | Tier 2 (blocked on decimals confirmation — `docs/BLOCKED_PAIRS.md`) |
+| **KRW1** | BDACS (South Korea) | 0 (Avalanche `decimals()` probe, 2026-05-14) | ● `0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318` | Plume `0x8304…ec3f`; others pending | Tier 2 |
 | **MXNB** | Bitso / Juno (Mexico) | 6 | ● `0xF197FFC28c23E0309B5559e7a166f2c6164C80aA` (same on all EVMs) | Arbitrum, Ethereum | Tier 1 anchor |
 | **ZCHF** | Frankencoin DAO (Switzerland) | 18 | ● `0xD4dD9e2F021BB459D5A5f6c24C12fE09c5D45553` (CCIP-bridged on Avalanche) | Native on Ethereum; CCIP-bridged on Base/Arb/OP/Polygon/Avax/Gnosis/Sonic | Tier 3 |
 
@@ -92,11 +93,18 @@ Sourced from Tomás's mainnet stablecoin mapping for Forex Telaraña spokes, dat
 - **18-decimal assets** (JPYC, ZCHF): pair math must scale USDC's 6-dec amount up by 1e12 when comparing to these assets. Existing `FxOracle` already handles asymmetric decimals via per-asset scaling — verify the path for each new asset in tests.
 - **JPYC Sepolia trap:** their unofficial Sepolia uses 6 dec, mainnet uses 18 dec. **Mock our Arc testnet JPYC at 18 dec** to mirror production. Do not use their Sepolia contract.
 - **6-decimal alignment** (USDC, EURC, AUDF, MXNB): no scaling needed against USDC; cheapest pair math.
-- **KRW1 decimals probe:** `cast call 0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318 "decimals()" --rpc-url https://api.avax.network/ext/bc/C/rpc` — one-liner, must run before mock deploy or production listing.
+- **KRW1 decimal result:** `cast call 0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318 "decimals()(uint8)" --rpc-url https://api.avax.network/ext/bc/C/rpc` returned `0` on 2026-05-14. Arc testnet mock should mirror 0 decimals.
 
-#### 2.1.2 Bridging models — CCTP V2 vs CCIP
+#### 2.1.2 Bridging models — CCTP V2 vs Hyperlane vs CCIP
 
-The protocol assumes **USDC-via-CCTP-V2** as the canonical cross-chain settlement asset. Local stablecoins live on the Hub chain (Avalanche) and don't need to cross-chain themselves — users send USDC to the Hub, the Hub executes FX into the local stablecoin, then USDC is sent back out via CCTP V2.
+The protocol assumes **Circle assets via CCTP V2** as the canonical cross-chain settlement lane: USDC and EURC only, and only where Circle supports the asset on both ends. Local non-Circle stablecoins live on the Hub chain (Avalanche) and can be used directly for the first live demo.
+
+For non-Circle assets that users hold away from the Hub, use **Hyperlane Warp Routes** as the permissionless asset-spoke lane. This does not change the CCTP-specific `FxSpoke`; CCTP remains USDC/EURC-only. Hyperlane adds a sibling spoke component, `FxSpokeIntentRouter`, for typed route/market/action messages. Hyperlane route tokens must be classified before listing:
+
+- `collateralReleased`: a funded hub route releases the issuer token already listed on Avalanche.
+- `hyperlaneSynthetic`: the route mints a synthetic representation on Avalanche. This is a separate asset address with separate market ids, caps, and monitoring.
+
+Hyperlane transfer-and-call uses Interchain Accounts when we want one-click "bridge then supply/borrow/swap"; the safe baseline is two-step "bridge to hub, then user calls the hub." See `docs/HYPERLANE_ASSET_SPOKES.md`.
 
 **Exception: ZCHF.** Frankencoin uses Chainlink CCIP for cross-chain. The CCIP-bridged ZCHF on Avalanche (`0xD4dD9e2F021BB459D5A5f6c24C12fE09c5D45553`) is fine as a Hub-resident token. If we ever need to *move* ZCHF cross-chain at the protocol level, we'd need a separate CCIP integration. **For Phase 3, treat ZCHF as a single-chain pair on the Hub.** Do not build a CCIP integration in this phase.
 
@@ -117,8 +125,13 @@ The protocol assumes **USDC-via-CCTP-V2** as the canonical cross-chain settlemen
 ### 2.4 Cross-chain
 | Contract | Role | Audit | Notes |
 |---|---|---|---|
-| **CCTP V2 TokenMessenger** | Burn USDC on source | Circle internal + Halborn | Used by FxSpoke. |
-| **CCTP V2 MessageTransmitter** | Mint USDC on destination, callback to hook | Same | Same. |
+| **CCTP V2 TokenMessenger** | Burn USDC or EURC on source | Circle internal + Halborn | Used by FxSpoke. No non-Circle assets. |
+| **CCTP V2 MessageTransmitter** | Mint USDC or EURC on destination, callback to hook | Same | Same. |
+| **Hyperlane Mailbox** | General message passing | Hyperlane audits | Used by `FxSpokeIntentRouter` and `FxHyperlaneHubReceiver` for typed spoke intents. |
+| **FxSpokeIntentRouter** (ours) | Spoke-side Hyperlane intent dispatcher | Internal + pre-mainnet audit pending | No token custody. Builds typed `Supply`, `SupplyCollateral`, `Repay`, or `Borrow` intent payloads. |
+| **FxHyperlaneHubReceiver** (ours) | Hub-side Hyperlane acceptance layer | Internal + pre-mainnet audit pending | Validates registered origin/spoke, route asset, live market, and nonce before beneficiary execution. |
+| **Hyperlane Warp Routes** | Permissionless ERC-20 asset bridge | Hyperlane audits + route-specific config review | One route per non-Circle asset; token identity must be `collateralReleased` or separate `hyperlaneSynthetic`. |
+| **Hyperlane Interchain Accounts** | Remote execution on the Hub | Hyperlane audits | Optional one-click mode; positions belong to the ICA unless registry delegation changes. |
 
 ### 2.5 Governance + access (OZ-first)
 | Contract | Role | Audit | Notes |
@@ -152,7 +165,7 @@ Adding a stablecoin = deterministic checklist. No new architecture per asset.
 - [ ] Issuer's public audit available, ≤12 months old.
 - [ ] Documented freeze/blacklist policy (Circle: yes; Mento: no — affects per-pool risk profile).
 - [ ] Canonical address on Avalanche mainnet confirmed.
-- [ ] Pyth feed ID for the FX pair exists (e.g., `MXN/USD`, `KRW/USD`). If not — **block this asset** until available. Document in `docs/BLOCKED_PAIRS.md`.
+- [ ] Pyth feed ID for the FX pair exists. If Pyth publishes `USD/X` instead of `X/USD`, configure `FxOracle.setPythFeedConfig(token, feedId, true)`. If neither direct nor inverse feed exists — **block this asset** until available. Document in `docs/BLOCKED_PAIRS.md`.
 - [ ] RedStone feed for same pair exists (deviation cross-check).
 - [ ] Stablecoin has ≥$10M circulating supply on target chain.
 
@@ -161,7 +174,7 @@ Adding a stablecoin = deterministic checklist. No new architecture per asset.
 For each new stablecoin `X` paired with `Y` (typically USDC):
 
 1. **Register oracle feeds** in `FxOracle.sol`:
-   - Primary: Pyth feed IDs for `X/USD` and `Y/USD`.
+   - Primary: Pyth feed IDs for `X/USD` and `Y/USD`; for inverse Pyth feeds (`USD/X`), set the token's `inverted` flag.
    - Secondary: RedStone feed IDs for same.
    - Deviation gate: max 50 bps between primary/secondary, max 5 min staleness.
 2. **Create Morpho markets** (two, one per loan-token direction):
@@ -213,7 +226,7 @@ The two pairs that prove the FX-trial thesis, both with deep Avalanche-native li
 
 ### Tier 2 — second wave (Q4 2026)
 - **USDC ↔ AUDF** — Australian Dollar, 6-dec, live on 5 chains (same address). Establishes G10 baseline pair for institutional flow.
-- **USDC ↔ KRW1** — Korean Won, live on Avalanche + Plume. Blocked on decimals confirmation (one-line `cast call`) — once cleared, list.
+- **USDC ↔ KRW1** — Korean Won, live on Avalanche + Plume. Decimals confirmed as 0; oracle coverage confirmed via inverse Pyth `USD/KRW` + RedStone `KRW`.
 
 ### Tier 3 — CHF + cross-stables (Q1 2027)
 - **USDC ↔ ZCHF** — Swiss Franc / Frankencoin, 18-dec, available on Avalanche via CCIP. **Treat as single-chain pair on Hub** (no CCIP integration in this phase).
@@ -235,14 +248,14 @@ The two pairs that prove the FX-trial thesis, both with deep Avalanche-native li
 
 Confirm Pyth + RedStone feed availability for **every pair** before scheduling:
 
-| Pair | Pyth feed needed | RedStone feed needed | Likely available? |
+| Pair | Pyth feed needed | RedStone feed needed | Status |
 |---|---|---|---|
 | USDC/EURC | EUR/USD | EUR/USD | ✅ Both, deep coverage |
-| USDC/JPY | JPY/USD | JPY/USD | ✅ Both, deep coverage |
-| USDC/MXN | MXN/USD | MXN/USD | ✅ Both |
+| USDC/JPY | USD/JPY (inverted in `FxOracle`) | JPY | ✅ Both, deep coverage |
+| USDC/MXN | USD/MXN (inverted in `FxOracle`) | MXN | ✅ Both |
 | USDC/AUD | AUD/USD | AUD/USD | ✅ Both, deep coverage |
-| USDC/KRW | KRW/USD | KRW/USD | ⚠️ Confirm both — emerging-market coverage |
-| USDC/CHF | CHF/USD | CHF/USD | ✅ Both |
+| USDC/KRW | USD/KRW (inverted in `FxOracle`) | KRW | ✅ Both |
+| USDC/CHF | USD/CHF (inverted in `FxOracle`) | CHF | ✅ Both |
 
 For any pair where Pyth or RedStone is missing, **do not list it.** Document in `docs/BLOCKED_PAIRS.md` and escalate to oracle teams. Listing without a deviation cross-check breaks our oracle discipline.
 
@@ -252,10 +265,16 @@ For any pair where Pyth or RedStone is missing, **do not list it.** Document in 
 
 CCTP V2 chains supported (existing): Avalanche (Hub mainnet), Base, Ethereum, Arbitrum, Optimism, Polygon, Unichain, Arc (testnet target), Solana (Spoke-only).
 
+Hyperlane-supported chains are used for non-Circle asset movement where a Warp
+Route exists. Hyperlane domain ids are not inferred from CCTP domains; use the
+SDK `hyperlane.domain` values.
+
 Rules:
 - **Hub:** Avalanche C-Chain mainnet (`chainId 43114`). Testnet: Arc Testnet (`5042002`).
 - **Spokes:** every CCTP V2 chain. Spoke logic is thin (CCTP burn + `enterHub` post). Already implemented; deployed on Base Sepolia, Unichain Sepolia, Avalanche Fuji, Sepolia, OP Sepolia, Arbitrum Sepolia, Polygon Amoy, WorldChain Sepolia, Arc Testnet.
-- **Stablecoin coverage:** Tier 1-3 pairs deployed on Hub chain only. Spokes accept USDC (CCTP-universal); local stablecoins live on Hub.
+- **Stablecoin coverage:** Tier 1-3 pairs deployed on Hub chain first. Spokes accept USDC and EURC through CCTP only where Circle supports the asset. Non-Circle stablecoins use Hyperlane Warp Routes only after the route token address, route type, ISM, and caps are committed. `FxSpokeIntentRouter` may carry the route/market/action intent before route execution is one-click.
+- **Same-chain hub:** no spoke call. The app calls `FxMarketRegistry`, `FxSwapHook`, or `FxRouter` directly.
+- **Hyperlane transfer-and-call:** optional. If the remote caller is an ICA, Morpho positions are owned by that ICA unless a future delegation/router layer changes the registry auth model.
 
 ---
 
@@ -278,7 +297,7 @@ This protocol is permissionless. Any integrator can build on top. The surface th
 - `FxMarketRegistry` pool registration events.
 
 ### 6.4 What integrators (Pasillo and others) handle, NOT this protocol
-- KYB onboarding (Pasillo / their concern).
+- Bufi Wallet pass issuance/renewal. The protocol reads the verifier; the app owns onboarding.
 - Quote aggregation across multiple protocols / RFQ rails.
 - Compliance reporting per jurisdiction.
 - Yield wrapping (USYC, sUSDS, etc.) — integrators wrap LP shares with off-protocol yield products if they want to.
@@ -311,7 +330,7 @@ When a permissionless yield substrate matures, we *could* adopt it via a thin ad
 
 Per pair `X/Y`:
 
-- **Pyth feed:** confirm feed IDs for `X/USD` and `Y/USD`. Cross-derive `X/Y = (X/USD) / (Y/USD)`.
+- **Pyth feed:** confirm feed IDs for `X/USD` and `Y/USD`, or inverse `USD/X`/`USD/Y` feeds configured through `FxOracle.setPythFeedConfig(..., true)`. Cross-derive `X/Y = (X/USD) / (Y/USD)` after inversion.
 - **RedStone feed:** same as cross-check, via evm-connector (Cancun required).
 - **Deviation gate:** ≤ 50 bps between Pyth and RedStone, else revert swap.
 - **Staleness gate:** price age ≤ 5 min Pyth / equivalent RedStone.
@@ -337,9 +356,12 @@ Test surface additions:
 - Per-pool cap: deposit reverts at cap.
 - LP share-inflation defense: pre-seeded pool resists first-LP attacks (R1 fix verified via Morpho-side donation test, NOT direct transfer — see `reports/CODEX_ADVERSARIAL_v1.2.1.md`).
 
-### 9.2 Cross-chain (new stablecoin via Spoke)
-- Spoke → Hub on new stablecoin: CCTP V2 burn, mint, hook callback.
-- Stranded-deposit recovery: `sweepStrandedDeposit` 24h grace works.
+### 9.2 Cross-chain
+- CCTP spoke -> Hub on USDC/EURC only: burn, mint, hook callback, and stranded-deposit recovery.
+- Hyperlane intent -> Hub on non-Circle basket token: `FxSpokeIntentRouter` dispatches typed route/market/action metadata; `FxHyperlaneHubReceiver` validates registered spoke, route asset, live market, and fresh nonce before beneficiary execution.
+- Hyperlane Warp Route -> Hub on non-Circle basket token: transfer to user or ICA, then supply collateral / borrow / repay / withdraw on the Hub.
+- Hyperlane failure path: if a transfer-and-call hub action fails, funds remain in the user's hub account/ICA and can be retried or withdrawn.
+- Route-token identity: tests must prove whether the hub asset is issuer-canonical or a separate Hyperlane synthetic before the market is enabled.
 
 ### 9.3 Asset-specific edge cases
 - Freezable Circle assets: pool behavior if issuer freezes a counterparty mid-swap (should: revert cleanly, no stuck state).
@@ -387,9 +409,11 @@ Test surface additions:
 | Pyth + RedStone joint manipulation | Very Low | High | Deviation gate + pause-on-disagreement. |
 | Smart contract bug in FxSwapHook / FxRouter | Medium | High | Pre-mainnet audit (CertiK or Spearbit); bounty; gradual TVL ramp via per-pool caps. |
 | CCTP V2 failure | Very Low | High | `sweepStrandedDeposit` 24h recovery in Spoke; Circle SCP monitoring. |
+| Hyperlane route / ISM misconfiguration | Medium | High | Per-route manifest, custom/aggregate ISM review, route limits, and route-token identity gates before market registration. |
+| Hyperlane synthetic mistaken for issuer token | Medium | High | SDK `hubTokenSource` classification; synthetic route tokens get separate markets/caps and cannot reuse issuer labels. |
 | ZCHF CCIP minter failure on Avalanche | Low | Medium | Single-chain pair on Hub; if minter pauses, pause the pair; users can route via direct CCIP path. |
 | Pasillo (or any integrator) compromised | N/A to protocol | N/A | Integrator concern. Protocol exposes permissionless surface; their compromise doesn't reach our balances unless they hold an `EXECUTOR_ROLE` — and that role is narrow + rotatable. |
-| Regulatory pressure on protocol | Low | Low | Pure DeFi posture, no KYB, no MSB, no fiat custody. No US-entity legal exposure at the protocol layer. |
+| Regulatory pressure on protocol | Medium | Medium | Public rail remains permissionless and non-custodial. Ghost Mode is explicitly Bufi Wallet KYC/KYB-pass gated and must be reviewed with counsel before production liquidity. |
 
 ---
 
@@ -409,10 +433,10 @@ This phase completes when:
 
 ## 13. Open questions
 
-1. **EURC on Avalanche mainnet** — Circle's canonical address; pin before Tier 0 deploy.
+1. **EURC on Avalanche mainnet** — Circle canonical address pinned: `0xC891EB4cbdEFf6e073e859e987815Ed1505c2ACD`.
 2. **Multi-pair vs one-pair-per-router** — Phase 2.6R open question. For multi-stablecoin economics, multi-pair is required. Finalize before building.
 3. **EM pair cap defaults** — $1M initial / $5M after 30 days / $25M after 90 days reasonable? Conservative is fine for v1.
 4. **`OPERATIONS_ROLE` multisig members** — defined per the Pasillo legal structure. Out of scope here; flag for governance kickoff.
-5. **KRW1 decimals** — `cast call` one-liner pending against Avalanche mainnet RPC. Once resolved, KRW1 moves out of blocked.
+5. **Tenderly pair drill** — Pyth/RedStone feed coverage and KRW1 decimals are confirmed. Build the Avalanche fork smoke matrix around USDC/JPYC, USDC/MXNB, USDC/AUDF, USDC/KRW1, and USDC/ZCHF.
 
 — end of spec —

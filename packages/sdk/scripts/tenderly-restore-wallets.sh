@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Idempotent restore of every deployer-wallet entry across the chains
 # we've deployed to. Designed to run on a loop until Pro quota propagates.

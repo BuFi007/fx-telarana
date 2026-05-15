@@ -2,9 +2,13 @@
   "network": "avalanche-fuji",
   "chainId": 43113,
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
-  "deployedAt": "2026-05-14",
+  "deployedAt": "2026-05-15",
   "contracts": {
-    "FxSpoke": "0x8B7041d8A4bd773a537a01e1F61175da5395714c"
+    "FxSpoke": "0xAa875a68b0155da4bD6A528ee9e1137017D18b41"
+  },
+  "deprecated": {
+    "BaseSepoliaHubFxSpoke": "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
+    "reason": "Deployed 2026-05-14 with HUB_RECEIVER on Base Sepolia and HUB_DOMAIN=6. Superseded by the Avalanche-Fuji self-loop spoke targeting the Fuji hub receiver."
   },
   "external": {
     "CctpTokenMessengerV2":     "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
@@ -13,9 +17,12 @@
     "USDC":                     "0x5425890298aed601595a70AB815c96711a31Bc65"
   },
   "hub": {
-    "network":         "base-sepolia",
-    "chainId":         84532,
-    "messageReceiver": "0x758c17BfA85D1b26A81423B524397b8b2D271818",
-    "cctpDomain":      6
+    "network":         "avalanche-fuji",
+    "chainId":         43113,
+    "messageReceiver": "0x365DE300dDa61C81a33bcE3606A5d524eD964362",
+    "cctpDomain":      1
+  },
+  "deploymentTx": {
+    "FxSpoke": "0x278c87f3370cc20f7818ff520ab87efbc9c952db2aefcd1338d07db63ba87725"
   }
 }

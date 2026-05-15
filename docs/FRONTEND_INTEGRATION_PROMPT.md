@@ -7,19 +7,21 @@ protocol into the app. Source repo:
 - Remote: `https://github.com/BuFi007/fx-telarana`
 - SDK package in repo: `packages/sdk`
 - Source of truth for deployed addresses: `deployments/*.json`
+- Non-USDC asset spoke architecture: `docs/HYPERLANE_ASSET_SPOKES.md`
 
 ## Prompt
 
 You are integrating the fx-Telarana onchain FX credit protocol into our app.
-Use Dynamic as the wallet provider and viem for reads/writes. The product lets a
-user connect a wallet, deposit USDC or supported stablecoins, lend/borrow through
-Morpho-backed isolated markets, and swap through fx-Telarana Uniswap v4 hooks
-when hook addresses are available.
+Use Bufi Wallet for Ghost Mode and viem for reads/writes. Public mode can still
+support Dynamic or another EVM connector if the app wants broader wallet access.
+The product lets a user connect a wallet, deposit USDC or supported stablecoins,
+lend/borrow through Morpho-backed isolated markets, and swap through fx-Telarana
+Uniswap v4 hooks when hook addresses are available.
 
 Build a testing UI first, not marketing pages. The first screen should be an
-operator/testing console with chain selector, wallet state, balances, market
-cards, approval state, lend/borrow/repay/withdraw forms, cross-chain spoke entry,
-and swap/quote panels.
+operator/testing console with chain selector, wallet state, Bufi Wallet pass
+state, balances, market cards, approval state, lend/borrow/repay/withdraw forms,
+cross-chain spoke entry, Ghost Mode route state, and swap/quote panels.
 
 ## Current Testing Hub
 
@@ -45,7 +47,8 @@ Avalanche Fuji hub:
 | CCTP MessageTransmitterV2 | `0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275` |
 | CCTP domain | `1` |
 | USDC | `0x5425890298aed601595a70AB815c96711a31Bc65` |
-| MockEURC | `0x50c4ba39caa7f56152d0df4914e1f6b907194992` |
+| Circle EURC | `0x5E44db7996c682E92a960b65AC713a54AD815c6B` |
+| Legacy MockEURC | `0x50c4ba39caa7f56152d0df4914e1f6b907194992` |
 | FxReceiptEURC | `0xefd7cf5ad5a2db9a3c23e2807f2279de92c730d2` |
 | FxReceiptUSDC | `0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e` |
 
@@ -56,14 +59,21 @@ Fuji market ids:
 | M1 | loan `EURC`, collateral `USDC` | `0x7d99088a9fe61331c49a92eb16fa3794b0bc2862b211f5a70f31a64cef25029e` |
 | M2 | loan `USDC`, collateral `EURC` | `0x1700104cf29eceb113e01a1bcdc913e5e10d3d37314cee235752aa88bf153197` |
 
+The live Fuji hub was originally deployed against the legacy mock. The deploy
+script now defaults to Circle Fuji EURC. Do not label real EURC markets active
+until the new deployment manifest contains the Circle EURC address and matching
+market ids.
+
 Same-chain hub UX should call `FxMarketRegistry` directly. Do not route a Fuji
 hub user through the Fuji `FxSpoke` unless explicitly testing CCTP self-loop
 behavior.
 
 ## Current Spokes To Avalanche Fuji Hub
 
-All spokes burn USDC via CCTP V2 and target the Fuji hub receiver
+The currently listed deployed spokes burn USDC via CCTP V2 and target the Fuji hub receiver
 `0x365de300dda61c81a33bce3606a5d524ed964362` with hub CCTP domain `1`.
+EURC uses the same Circle-only CCTP lane only on chains where Circle has
+published EURC and the matching spoke/manifest entry exists.
 
 | Spoke chain | Chain id | FxSpoke | Spoke USDC | Spoke CCTP domain |
 |---|---:|---|---|---:|
@@ -92,7 +102,7 @@ BRLA or PHPC as supported in Phase 3.
 | MXNB | `0xF197FFC28c23E0309B5559e7a166f2c6164C80aA` | 6 | issuer |
 | KRW1 | `0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318` | 0 | issuer |
 | ZCHF | `0xD4dD9e2F021BB459D5A5f6c24C12fE09c5D45553` | 18 | issuer, CCIP-bridged |
-| EURC | TBD | 6 | do not enable on Avalanche mainnet until canonical address is pinned |
+| EURC | `0xC891EB4cbdEFf6e073e859e987815Ed1505c2ACD` | 6 | Circle issuer |
 | BRLA | n/a | 18 | excluded: not natively live on Avalanche |
 | PHPC | n/a | 6 | excluded: not natively live on Avalanche |
 
@@ -122,6 +132,33 @@ Use the typed ABIs exported from `@bu/fx-engine`:
 - `FxReceiptAbi`
 - `FxLiquidatorAbi`
 - `FxHubMessageReceiverAbi`
+- `FxSpokeIntentRouterAbi`
+- `FxHyperlaneHubReceiverAbi`
+- `HyperlaneWarpRouteAbi`
+- `HyperlaneInterchainAccountRouterAbi`
+- `IBufiKycPassAbi`
+
+Ghost Mode is not a third-party privacy wallet and not Circle Wallet. It is a
+Bufi Wallet KYC/KYB-pass route that will use privacy hooks/routers. For now,
+wire the UI to the SDK route mode and eligibility types, then hide Ghost actions
+until the matching Ghost contracts are deployed.
+
+Planned Ghost Mode contracts:
+
+- `IBufiKycPass` verifier
+- `FxGhostRouter`
+- `FxGhostCommitmentRegistry`
+- `FxGhostSwapHook`
+- `FxGhostWithdrawalRouter`
+
+Ghost Mode UI checks:
+
+- connected wallet is Bufi Wallet,
+- pass status is valid KYC or KYB,
+- selected action has a deployed Ghost route/hook,
+- selected market is live,
+- proof generation succeeds,
+- fallback public mode is shown with exact `EligibilityReason` when unavailable.
 
 For Morpho authorization, use this minimal ABI:
 
@@ -165,14 +202,54 @@ Cross-chain entry:
 FxSpoke.enterHub(token, amount, beneficiary, hubCalldata)
 ```
 
-- `token` should be spoke-chain USDC.
-- `amount` is raw USDC units on the spoke chain.
+- `token` should be spoke-chain USDC or EURC only. CCTP is not a path for
+  AUDF/JPYC/MXNB/KRW1/ZCHF or other non-Circle stablecoins.
+- `amount` is raw token units on the spoke chain.
 - `beneficiary` must be the user's hub-chain EVM address.
 - `hubCalldata` is ABI-encoded `FxMarketRegistry` calldata, usually built by
   `planSupply`, `planSupplyCollateral`, or `planRepay` from `packages/sdk`.
 - If the hub execution reverts after CCTP mint, the hub marks the deposit as
   stranded; recovery is via `FxHubMessageReceiver.sweepStrandedDeposit(...)`
   after the configured grace window.
+
+Non-USDC asset spokes:
+
+- Use Hyperlane Warp Routes plus the Hyperlane intent lane for
+  AUDF/JPYC/MXNB/KRW1/ZCHF when the user starts on a non-hub chain. Keep
+  `FxSpoke` for CCTP USDC/EURC only.
+- Read `addresses[chainId].hyperlane` from the SDK for Hyperlane domain,
+  Mailbox, Interchain Gas Paymaster if present, ICA router, and app-specific
+  ISM addresses.
+- Arc Testnet Hyperlane core is deployed at Mailbox
+  `0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9`; its bootstrap
+  `interchainGasPaymaster` is `0x0`, so the relayer is directly funded rather
+  than origin-fee funded.
+- Fuji hub receivers that accept Arc-origin Hyperlane intents must expose
+  app-specific ISM `0x3f5d9B44aa1D59D26B20862D91533d60B32d9aFa` through
+  `interchainSecurityModule()`.
+- Hide any Hyperlane route until `hyperlaneWarpRoutes[].status === "deployed"`
+  and route token addresses are present in the deployment manifest.
+- For a route/market/action intent, call
+  `FxSpokeIntentRouter.quoteIntent(...)`, then
+  `FxSpokeIntentRouter.sendIntent{value: fee}(action, beneficiary, inputToken,
+  inputAmount, loanToken, collateralToken, route)`. The SDK exports
+  `planFxSpokeIntent`, `planExecuteHyperlaneIntent`, and `FxHyperlaneAction`.
+- After the routed asset is available on the hub and the user has approved
+  `FxHyperlaneHubReceiver`, call `executeIntent(intentId)`. First-pass
+  executable actions are `Supply`, `SupplyCollateral`, and `Repay`; `Borrow`
+  intents are accepted for coordination but execution is blocked until registry
+  delegation is designed.
+- For a route transfer, quote fees immediately before transfer using
+  `quoteTransferRemote(destinationDomain, recipientBytes32, amount)`, then call
+  `transferRemote(destinationDomain, recipientBytes32, amount)` on the route
+  contract. The SDK exports `HyperlaneWarpRouteAbi`,
+  `planHyperlaneWarpTransferRemote`, and `hyperlaneAddressToBytes32`.
+- For one-click bridge-then-action, use Hyperlane Interchain Accounts only after
+  route testing. If the ICA executes `FxMarketRegistry`, the Morpho position is
+  owned by the ICA because protected registry calls require
+  `onBehalf == msg.sender`.
+- Treat `hubTokenSource === "hyperlaneSynthetic"` as a separate asset from the
+  issuer token. It needs its own market ids, caps, labels, and monitoring.
 
 Swaps:
 
@@ -187,9 +264,11 @@ Swaps:
   allows the deployment. Until that manifest exists, gate swap UI behind
   "hook not deployed on this environment".
 
-## Dynamic Wallet Requirements
+## Wallet Requirements
 
-Use Dynamic to connect EVM wallets and switch chains. Required chains:
+Use Bufi Wallet for Ghost Mode. Dynamic may be used for public EVM wallet
+connection and chain switching if the existing app stack requires it, but do not
+build Ghost Mode on Circle Wallet. Required chains:
 
 - Avalanche Fuji `43113`
 - Ethereum Sepolia `11155111`
@@ -206,9 +285,11 @@ For the first testing release:
 2. If chain is Avalanche Fuji, show hub actions directly.
 3. If chain is a spoke, show only USDC balance, USDC approval to `FxSpoke`,
    and `enterHub(...)` forms.
-4. Add a "hub destination preview" that decodes `hubCalldata` and shows the
+4. If the user selects Ghost Mode, require Bufi Wallet pass eligibility and show
+   the planned Ghost route/hook status before any transaction.
+5. Add a "hub destination preview" that decodes `hubCalldata` and shows the
    resulting hub action before the user burns USDC.
-5. Read hub positions from Morpho/FxReceipt where possible, and always expose
+6. Read hub positions from Morpho/FxReceipt where possible, and always expose
    raw transaction hashes.
 
 Use viem with Dynamic's wallet client. Example flow for hub borrow:
@@ -238,7 +319,7 @@ await walletClient.writeContract({
   address: "0x7ba745b979e027992ecfa51207666e3f5b46cf0a",
   abi: FxMarketRegistryAbi,
   functionName: "supplyCollateral",
-  args: [mockEurc, usdc, collateralAmount, userAddress],
+  args: [eurc, usdc, collateralAmount, userAddress],
 });
 
 // 4. Borrow the loan token.
@@ -247,7 +328,7 @@ await walletClient.writeContract({
   address: "0x7ba745b979e027992ecfa51207666e3f5b46cf0a",
   abi: FxMarketRegistryAbi,
   functionName: "borrow",
-  args: [mockEurc, usdc, borrowAmount, userAddress, userAddress],
+  args: [eurc, usdc, borrowAmount, userAddress, userAddress],
 });
 ```
 

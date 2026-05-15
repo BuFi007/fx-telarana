@@ -1,7 +1,7 @@
 # fx-Telaraña — Contracts
 
 Phase 0 Solidity for the fx-Telaraña Hub-and-Spoke protocol on Arc.
-Spec: `../docs/SPEC.md` (v0.2).
+Spec: `../docs/SPEC.md` (v0.3).
 
 ## Layout
 
@@ -58,14 +58,14 @@ Current status: **36 / 36 tests passing** (32 unit + 4 mainnet fork).
 | ID | Decision | Where in code |
 |---|---|---|
 | D1 | Morpho Blue substrate, two isolated markets | `FxMarketRegistry.sol`, `MorphoOracleAdapter.sol` |
-| D2 | Pasillo proxies Bufi-KYC → Hinkal AccessToken | Off-chain (Phase 1) |
+| D2 | Bufi Wallet KYC/KYB pass gates Ghost Mode | Off-chain + pass verifier (Phase 1) |
 | D3 | Pyth primary + RedStone secondary, both permissionless | `FxOracle.sol` (RedStone consumer extraction = Phase 0.5) |
-| D4 | Fresh SCA per deposit; Phase 0 = public-only first | `FxHubMessageReceiver.sol` accepts any `beneficiary` |
+| D4 | Ghost Mode uses privacy hooks/routers; Phase 0 = public-only first | `FxHubMessageReceiver.sol` accepts explicit `beneficiary` |
 
 ## Implementation guardrails enforced
 
 - `IFxOracle` is the only price-read surface. Pool, hook, liquidator, frontend never call Pyth/RedStone SDK directly.
-- `IFxSpoke.enterHub(token, amount, beneficiary, hubCalldata)` takes explicit `beneficiary` (NEVER `msg.sender`-derived) — confidential-mode flows pass the user's fresh SCA, public mode passes the EOA/SCA.
+- `IFxSpoke.enterHub(token, amount, beneficiary, hubCalldata)` takes explicit `beneficiary` (NEVER `msg.sender`-derived) — Ghost Mode flows pass the route-selected Bufi Ghost action account, public mode passes the EOA/SCA.
 - `FxHubMessageReceiver.sweepStrandedDeposit(messageNonce)` recovers funds after a 24h grace window when the hub-call reverted on a CCTP-mint hook.
 - All Solidity 0.8.26, optimizer 1M runs, `via_ir`, `cancun` EVM.
 
@@ -90,7 +90,7 @@ Pyth feed ids (verified via Hermes):
 ## Deferred to later phases
 
 - **Phase 0.5** — DONE. RedStone wired via `PrimaryProdDataServiceConsumerBase`; `getMidVerified()` reads signed payload from msg.data tail and runs the deviation gate.
-- **Phase 1** — Hinkal Emporium wrappers in `@bu/private-transfer-core` + fresh-SCA-per-deposit factory integration; auto-routing on AccessToken presence.
+- **Phase 1** — Bufi Wallet KYC/KYB pass verifier + Ghost Mode privacy hooks/routers with commitment/nullifier withdrawal routing.
 - **Phase 2** — `FxSwapHook.sol` (Uniswap v4 hook with oracle-anchored PMM + JIT-borrow from Morpho).
 
 ## Deploy
@@ -110,8 +110,9 @@ DEPLOYER_PRIVATE_KEY=<your-funded-key> \
     --broadcast --verify
 ```
 
-Base Sepolia uses real Morpho Blue + real Pyth + real USDC. A MockEURC is deployed
-automatically since Circle hasn't shipped canonical EURC there yet.
+Base Sepolia, Avalanche Fuji, and Arc Testnet use Circle-published testnet EURC
+addresses. Do not deploy `MockEURC` on those chains; use `MockStablecoin` only
+for the non-Circle basket assets that do not have issuer testnet deployments.
 
 ### Arc testnet (waiting on Morpho Blue Arc address)
 
@@ -126,3 +127,10 @@ forge script script/DeployFxHub.s.sol --rpc-url arc_testnet --broadcast --verify
 SPOKE_USDC=... SPOKE_CCTP_TOKEN_MESSENGER=... ARC_HUB_RECEIVER=... ARC_DOMAIN=26 \
   forge script script/DeployFxSpoke.s.sol --rpc-url ethereum --broadcast --verify
 ```
+
+## License
+
+First-party smart contracts, deployment scripts, hooks, Solidity interfaces, and
+protocol libraries in this package are Apache-2.0 unless a file-level SPDX
+header says otherwise. Vendored dependencies under `contracts/lib/` keep their
+upstream licenses.

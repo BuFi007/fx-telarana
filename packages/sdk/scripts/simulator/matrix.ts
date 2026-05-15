@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Declarative test-case definitions for the Tenderly simulator suite.
  *
