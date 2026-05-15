@@ -17,10 +17,10 @@
 \newcommand{\commithead}{\texttt{8de5959}}
 \newcommand{\tokenledger}{\texttt{PENDING\_OPENAI\_USAGE\_EXPORT}}
 
-\title{\protocol: A Cross-Chain FX Credit Hub for Avalanche Stablecoin Markets}
+\title{\protocol: A Cross-Chain Onchain Forex Credit Hub}
 \author{
   GPT.5.5 Extra High, Main Author\thanks{Prepared as a Codex-authored technical whitepaper for the \repo{} repository at the request of the maintainer. Exact model-token accounting is not available from the repository or local shell runtime; see Appendix~\ref{appendix:token-ledger}.}
-  \and \texttt{@criptopoeta} on X
+  \and Tom\'as Cordero
 }
 \date{May 15, 2026 \\ Draft v0.1}
 
@@ -28,12 +28,12 @@
 \maketitle
 
 \begin{abstract}
-\protocol{} is an onchain foreign-exchange credit hub for Avalanche
-stablecoin markets. The protocol lets users enter from supported chains with
-USDC or EURC where Circle supports the route, move USDC between \protocol{}
-hubs through Circle Gateway, route into Avalanche FX markets, and borrow, lend,
-or prepare spot-FX requests against supported fiat-stablecoin pairs. Morpho
-Blue provides the isolated lending substrate; a single oracle read surface,
+\protocol{} is a cross-chain onchain forex credit hub. The protocol lets users
+enter from supported chains with USDC or EURC where Circle supports the route,
+move USDC between \protocol{} hubs through Circle Gateway, route into hub FX
+markets, and borrow, lend, or prepare spot-FX requests against supported
+fiat-stablecoin pairs. Morpho Blue provides the isolated lending substrate; a
+single oracle read surface,
 \texttt{IFxOracle}, combines Pyth and RedStone feeds with stale-price,
 confidence, and deviation checks; Uniswap v4 hooks prepare spot-FX execution,
 oracle-aware spread control, and liquidity rehypothecation; CCTP is used only
@@ -52,7 +52,7 @@ Gateway edge-case tests, and Uniswap v4 hook invariants.
 \section*{Status and Disclaimer}
 
 This paper describes a protocol design and the smart-contract implementation
-state represented by repository commit \commithead{}. It is not investment,
+state represented by protocol verification commit \commithead{}. It is not investment,
 legal, tax, accounting, regulatory, or security advice. The current protocol
 handoff is not a substitute for an external audit, formal verification, live
 deployment review, or operational monitoring. Any production deployment that
@@ -89,9 +89,11 @@ risk.
 
 \section{System Overview}
 
-\protocol{} is organized as a hub-and-spoke system. Avalanche is the primary
-mainnet hub target. Fuji and Arc Testnet are testnet hubs. Other chains can
-act as spokes or intent origins, depending on the asset and route.
+\protocol{} is organized as a hub-and-spoke system. Avalanche is the first
+mainnet hub target because the current listed basket has unusually strong
+coverage there today; it is not the protocol's identity or long-term boundary.
+Fuji and Arc Testnet are testnet hubs. Other chains can act as hubs, spokes, or
+intent origins depending on asset availability, route safety, and market depth.
 
 \begin{center}
 \begin{tabular}{p{0.24\linewidth}p{0.68\linewidth}}
@@ -129,14 +131,14 @@ The target basket is:
 \begin{center}
 \begin{tabular}{llll}
 \toprule
-Asset & Role & Mainnet status in design & Notes \\
+Asset & Role & Initial hub status in design & Notes \\
 \midrule
 USDC & Settlement and collateral anchor & Supported & Circle rail asset. \\
-AUDF & AUD stablecoin & Avalanche target & Six decimals in reference data. \\
-JPYC & JPY stablecoin & Avalanche target & Mainnet decimals differ from some test deployments. \\
-MXNB & MXN stablecoin & Avalanche target & Six decimals in reference data. \\
-KRW1 & KRW stablecoin & Avalanche target & Decimals must be verified before mocks. \\
-ZCHF & CHF stablecoin & Avalanche target & CCIP/issuer route considerations. \\
+AUDF & AUD stablecoin & Initial hub target & Six decimals in reference data. \\
+JPYC & JPY stablecoin & Initial hub target & Mainnet decimals differ from some test deployments. \\
+MXNB & MXN stablecoin & Initial hub target & Six decimals in reference data. \\
+KRW1 & KRW stablecoin & Initial hub target & Decimals must be verified before mocks. \\
+ZCHF & CHF stablecoin & Initial hub target & CCIP/issuer route considerations. \\
 EURC & EUR stablecoin & Disabled/TBD in basket scope & CCTP-only where Circle supports it. \\
 \bottomrule
 \end{tabular}
@@ -432,9 +434,10 @@ principle: the hub decides what is safe to accept, borrow against, swap through,
 or route onward.
 
 The result is an architecture that can start with conservative USDC entry and
-Avalanche stablecoin markets, then expand toward hub-to-hub USDC liquidity,
-non-USDC approved asset routes, private Ghost Mode execution, RFQ Pasillo, and
-future trading frontends without relaxing the core collateral-safety model.
+the deepest available fiat-stablecoin hub markets, then expand toward
+hub-to-hub USDC liquidity, non-USDC approved asset routes, private Ghost Mode
+execution, RFQ Pasillo, and future trading frontends without relaxing the core
+collateral-safety model.
 
 \section*{Acknowledgements}
 
@@ -446,8 +449,8 @@ repository's post-implementation audit discipline. We thank the authors and
 maintainers of the \texttt{gateman-analysis} skill for translating that posture
 into a practical engineering workflow.
 
-We thank \texttt{@criptopoeta} on X for the protocol direction, requirements,
-market references, architecture pressure, and product framing. We thank the
+We thank Tom\'as Cordero for the protocol direction, requirements, market
+references, architecture pressure, and product framing. We thank the
 OpenAI Codex/GPT engineering stack for the model-assisted implementation work.
 
 We thank the builders whose public work informed this repository: Morpho,
@@ -462,8 +465,7 @@ Uniswap-v4/Morpho rehypothecation hook work.
 \label{appendix:token-ledger}
 
 This paper was drafted by GPT.5.5 Extra High as the main author label requested
-by the maintainer, with \texttt{@criptopoeta} on X as co-author and protocol
-owner.
+by the maintainer, with Tom\'as Cordero as co-author and protocol owner.
 
 Exact token usage for the model contribution is not available from repository
 state, Git metadata, or the local shell runtime. The verified token ledger for
@@ -475,9 +477,9 @@ publication is therefore:
 Field & Value \\
 \midrule
 Model author label & GPT.5.5 Extra High \\
-Human co-author & \texttt{@criptopoeta} on X \\
+Human co-author & Tom\'as Cordero \\
 Repository & \url{https://github.com/BuFi007/fx-telarana} \\
-Current source commit & \commithead{} \\
+Protocol verification commit & \commithead{} \\
 Verified model tokens used & \tokenledger{} \\
 \bottomrule
 \end{tabular}

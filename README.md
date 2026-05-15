@@ -1,22 +1,22 @@
 # Telaraña Protocol
 
-Telaraña is an onchain FX liquidity web for Avalanche stablecoin markets.
+Telaraña is a cross-chain onchain forex credit hub.
 
-> *Telaraña — "spider's web" — for the hub-and-spoke topology that pulls FX liquidity from supported chains into Avalanche stablecoin markets.*
+> *Telaraña — "spider's web" — for the hub-and-spoke topology that pulls FX liquidity from supported chains into canonical hub markets.*
 
 ## Product framing
 
 Users can enter from supported chains with USDC or EURC where Circle supports
 the route, move USDC between Telaraña hubs through Circle Gateway, route into
-Avalanche FX markets, and borrow, lend, or prepare spot FX requests against
-supported stablecoin pairs. Gateway is USDC-only in the current design. CCTP is
-used only for Circle-supported USDC/EURC movement; Hyperlane and approved
-issuer-specific routes handle other stablecoin transport and intent messages.
-The hub risk engine decides what assets are valid collateral.
+hub FX markets, and borrow, lend, or prepare spot FX requests against supported
+stablecoin pairs. Gateway is USDC-only in the current design. CCTP is used only
+for Circle-supported USDC/EURC movement; Hyperlane and approved issuer-specific
+routes handle other stablecoin transport and intent messages. The hub risk
+engine decides what assets are valid collateral.
 
 ## What it is
 
-- **FX money market** built over **Morpho Blue** isolated markets (USDC↔EURC at MVP, Avalanche basket next).
+- **FX money market** built over **Morpho Blue** isolated markets (USDC↔EURC at MVP, initial hub basket next; Avalanche currently has the strongest listed-basket coverage).
 - **Cross-chain spokes** via Circle's CCTP V2 — bring USDC, and EURC where Circle supports it, from CCTP-supported chains and open positions on the Hub. CCTP is never used for non-Circle stablecoins.
 - **Circle Gateway hub liquidity** — Gateway-aware SDK config, ABIs, and `TelaranaGatewayHubHook` for fast USDC movement between Avalanche/Fuji and Arc hubs. Current signing mode is EOA; ERC-1271 contract signing is modeled as a future mode and remains disabled until Circle support is live.
 - **Permissionless, decentralized oracle** — Pyth primary + RedStone secondary. 24/7. No forex-hours circuit breakers. USDC and EURC are ERC-20s onchain.
