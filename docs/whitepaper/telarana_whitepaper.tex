@@ -445,9 +445,9 @@ We give thanks to God for truth, discipline, and the obligation to steward risk
 carefully.
 
 We thank Professor Robert Gateman for the four-law posture that shaped the
-repository's post-implementation audit discipline. We thank the authors and
-maintainers of the \texttt{gateman-analysis} skill for translating that posture
-into a practical engineering workflow.
+repository's post-implementation audit discipline. The
+\texttt{gateman-analysis} reference in this paper is an ethos reference: assume
+nothing, question everything, worship no one, and applaud humility.
 
 We thank Tom\'as Cordero for the protocol direction, requirements, market
 references, architecture pressure, and product framing. We thank the
@@ -507,65 +507,111 @@ Gateway edge hardening, ABI regeneration, and Gateman report. \\
 
 \section{Reference Repositories and Documents}
 
+\subsection*{Reference Versioning Convention}
+
+GitHub references below include the repository commit observed on
+2026-05-15. The commit hash means: this is the version of the referenced source
+we chose to inspect or cite for this paper. It is not an endorsement claim by
+that project, and it is not a statement that later versions are equivalent.
+Non-GitHub documents are marked with the same consulted date where no commit
+identifier is available.
+
 \begin{thebibliography}{99}
 
 \bibitem{telarana}
-BuFi007, \textit{fx-telarana repository}. \url{https://github.com/BuFi007/fx-telarana}
+BuFi007, \textit{fx-telarana repository}. Protocol verification commit:
+\commithead{}. Whitepaper scope-correction commit:
+\texttt{1b14a7c02cfb5ad338dadec6f218fc5ea6402668}. Consulted 2026-05-15.
+\url{https://github.com/BuFi007/fx-telarana}
 
 \bibitem{morpho-blue}
-Morpho Labs, \textit{Morpho Blue}. \url{https://github.com/morpho-org/morpho-blue}
+Morpho Labs, \textit{Morpho Blue}. Observed repository HEAD on 2026-05-15:
+\texttt{1478e9cfe1b4d514f80682b3b60e4e12ff3ee45a}.
+\url{https://github.com/morpho-org/morpho-blue}
 
 \bibitem{uniswap-v4-core}
-Uniswap Labs, \textit{Uniswap v4 Core}. \url{https://github.com/Uniswap/v4-core}
+Uniswap Labs, \textit{Uniswap v4 Core}. Observed repository HEAD on
+2026-05-15: \texttt{46c6834698c48bc4a463a86d8420f4eb1d7f3b75}.
+\url{https://github.com/Uniswap/v4-core}
 
 \bibitem{uniswap-v4-periphery}
-Uniswap Labs, \textit{Uniswap v4 Periphery}. \url{https://github.com/Uniswap/v4-periphery}
+Uniswap Labs, \textit{Uniswap v4 Periphery}. Observed repository HEAD on
+2026-05-15: \texttt{9dafaaecc1e2e1e824eda9d941085f96517d827b}.
+\url{https://github.com/Uniswap/v4-periphery}
 
 \bibitem{circle-gateway}
-Circle, \textit{EVM Gateway Contracts}. \url{https://github.com/circlefin/evm-gateway-contracts}
+Circle, \textit{EVM Gateway Contracts}. Observed repository HEAD on
+2026-05-15: \texttt{ee628dc35ee67bc8ad30ba0606cc70888688a3f1}.
+\url{https://github.com/circlefin/evm-gateway-contracts}
 
 \bibitem{circle-cctp}
-Circle, \textit{CCTP EVM Contracts}. \url{https://github.com/circlefin/evm-cctp-contracts}
+Circle, \textit{CCTP EVM Contracts}. Observed repository HEAD on 2026-05-15:
+\texttt{4061786a5726bc05f99fcdb53b0985599f0dbaf7}.
+\url{https://github.com/circlefin/evm-cctp-contracts}
 
 \bibitem{hyperlane}
-Hyperlane, \textit{Hyperlane Monorepo}. \url{https://github.com/hyperlane-xyz/hyperlane-monorepo}
+Hyperlane, \textit{Hyperlane Monorepo}. Observed repository HEAD on
+2026-05-15: \texttt{4adf2797d67965698fbb8a034c17aab5e06161f0}.
+\url{https://github.com/hyperlane-xyz/hyperlane-monorepo}
 
 \bibitem{hyperlane-docs}
-Hyperlane, \textit{Documentation}. \url{https://docs.hyperlane.xyz/}
+Hyperlane, \textit{Documentation}. Consulted 2026-05-15.
+\url{https://docs.hyperlane.xyz/}
 
 \bibitem{velodrome-superchain}
-Velodrome Finance, \textit{Superchain Contracts Specification}. \url{https://github.com/velodrome-finance/superchain-contracts}
+Velodrome Finance, \textit{Superchain Contracts Specification}. Observed
+repository HEAD on 2026-05-15:
+\texttt{c93c466a2fcd1fd9dc79ba569f6b81c42bb50d61}.
+\url{https://github.com/velodrome-finance/superchain-contracts}
 
 \bibitem{pyth}
-Pyth Network, \textit{Pyth Crosschain}. \url{https://github.com/pyth-network/pyth-crosschain}
+Pyth Network, \textit{Pyth Crosschain}. Observed repository HEAD on
+2026-05-15: \texttt{50263968b6a327bc3cd911bad6df7fd6e4b4417d}.
+\url{https://github.com/pyth-network/pyth-crosschain}
 
 \bibitem{redstone}
-RedStone Finance, \textit{RedStone Oracles Monorepo}. \url{https://github.com/redstone-finance/redstone-oracles-monorepo}
+RedStone Finance, \textit{RedStone Oracles Monorepo}. Observed repository HEAD
+on 2026-05-15: \texttt{fb254312c3ad76e24e955ae5eaff813b853e997a}.
+\url{https://github.com/redstone-finance/redstone-oracles-monorepo}
 
 \bibitem{openzeppelin}
-OpenZeppelin, \textit{OpenZeppelin Contracts}. \url{https://github.com/OpenZeppelin/openzeppelin-contracts}
+OpenZeppelin, \textit{OpenZeppelin Contracts}. Observed repository HEAD on
+2026-05-15: \texttt{cd05883078060e0cd8a7bd36636944570dbe1722}.
+\url{https://github.com/OpenZeppelin/openzeppelin-contracts}
 
 \bibitem{flashifi}
-Constantino, \textit{flashifi-uniswap-v4-rehypothecation-hook}. \url{https://github.com/Constantino/flashifi-uniswap-v4-rehypothecation-hook}
+Constantino, \textit{flashifi-uniswap-v4-rehypothecation-hook}. Observed
+repository HEAD on 2026-05-15:
+\texttt{d3fa3a5639cd8a4b886d67b5d299386a1d3225e5}.
+\url{https://github.com/Constantino/flashifi-uniswap-v4-rehypothecation-hook}
 
 \bibitem{privacy-hook}
-BlackBera, \textit{privacy-hook-univ4}. \url{https://github.com/blackbera/privacy-hook-univ4}
+BlackBera, \textit{privacy-hook-univ4}. Observed repository HEAD on
+2026-05-15: \texttt{7b8a3371dcff524cff3ab6277a7be7d16770d113}.
+\url{https://github.com/blackbera/privacy-hook-univ4}
 
 \bibitem{kyc-hook}
-J. Dub Park, \textit{Uniswap-Hooks / KYCHook}. \url{https://github.com/jdubpark/Uniswap-Hooks}
+J. Dub Park, \textit{Uniswap-Hooks / KYCHook}. Observed repository HEAD on
+2026-05-15: \texttt{e104478f7275b7131d732d12f691c4d163154315}.
+\url{https://github.com/jdubpark/Uniswap-Hooks}
 
 \bibitem{gateman-skill}
-\texttt{gateman-analysis}, \textit{Post-implementation code audit skill}. Local path:
+\texttt{gateman-analysis}, \textit{Post-implementation code audit ethos used
+as a local engineering rubric}. Local path consulted 2026-05-15:
 \texttt{/Users/criptopoeta/.codex/skills/gateman-analysis/SKILL.md}
 
 \bibitem{gateman-humans}
-Humans of UBC, \textit{Assume Nothing: Robert Gateman, Economics Professor}. \url{https://www.facebook.com/humansofubc/posts/assume-nothing-robert-gateman-economics-professor/250788225628894/}
+Humans of UBC, \textit{Assume Nothing: Robert Gateman, Economics Professor}.
+Consulted 2026-05-15.
+\url{https://www.facebook.com/humansofubc/posts/assume-nothing-robert-gateman-economics-professor/250788225628894/}
 
 \bibitem{gateman-reddit}
-r/UBC, \textit{Motivational Gateman quotes}. \url{https://www.reddit.com/r/UBC/comments/6lb7al/motivational_gateman_quotes/}
+r/UBC, \textit{Motivational Gateman quotes}. Consulted 2026-05-15.
+\url{https://www.reddit.com/r/UBC/comments/6lb7al/motivational_gateman_quotes/}
 
 \bibitem{gateman-blog}
-Kiely, \textit{Gateman's Econ 101}. UBC Blogs. \url{https://blogs.ubc.ca/kiely/2011/11/27/gatemans-econ-101/}
+Kiely, \textit{Gateman's Econ 101}. UBC Blogs. Consulted 2026-05-15.
+\url{https://blogs.ubc.ca/kiely/2011/11/27/gatemans-econ-101/}
 
 \end{thebibliography}
 
