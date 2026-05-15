@@ -6,10 +6,11 @@
 hub action can execute. No Warp Route is live until a `routeId` and per-chain
 route token addresses are added to the deployment manifest.
 
-**Purpose:** CCTP V2 is still the canonical path for Circle assets only: USDC
-and EURC where Circle supports that route. Hyperlane Warp Routes are the path
-for non-Circle FX assets that a user holds on another chain and wants to bring
-to the Avalanche hub as collateral, lend supply, or swap input.
+**Purpose:** Circle Gateway is USDC-only in the current design, and CCTP V2 is
+used only for Circle-supported USDC/EURC routes. Hyperlane Warp Routes and
+approved issuer-specific routes are the path for other FX assets that a user
+holds on another chain and wants to bring to the Avalanche hub as collateral,
+lend supply, or swap input.
 
 Hyperlane docs used for this integration:
 
@@ -30,14 +31,14 @@ Hyperlane docs used for this integration:
 | USDC | Circle CCTP V2 | Canonical USDC burn/mint between supported chains | Existing `FxSpoke.enterHub(...)` and `FxHubMessageReceiver` |
 | EURC | Circle CCTP V2 where Circle supports EURC on both ends | Canonical EURC burn/mint only on Circle-supported routes | Same CCTP lane; never mock EURC where Circle testnet EURC exists |
 | Cross-chain intent | Hyperlane Mailbox | Spoke command lane for route + market + action metadata | `FxSpokeIntentRouter.sendIntent(...)` to `FxHyperlaneHubReceiver.handle(...)` |
-| AUDF, JPYC, MXNB, KRW1 | Hyperlane Warp Routes | Bring non-Circle ERC-20 assets to the Avalanche hub | Warp Route transfer to user, ICA, or hub receiver after route deployment |
+| AUDF, JPYC, MXNB, KRW1 | Hyperlane Warp Routes or approved issuer-specific routes | Bring approved ERC-20 FX assets to the Avalanche hub | Route transfer to user, ICA, or hub receiver after route deployment |
 | ZCHF | Issuer/CCIP asset on Avalanche | Treat Avalanche ZCHF as the supported hub asset | Do not replace with a Hyperlane synthetic without risk approval |
 
 Do not turn the CCTP `FxSpoke` into an arbitrary ERC-20 bridge. CCTP remains
-strictly scoped to USDC and EURC. Hyperlane is a second spoke component:
-`FxSpokeIntentRouter` carries typed user intent and route metadata, while Warp
-Routes handle non-Circle asset movement under separate manifests, monitoring,
-and risk treatment.
+strictly scoped to Circle-supported USDC and EURC routes. Hyperlane is a second
+spoke component: `FxSpokeIntentRouter` carries typed user intent and route
+metadata, while Warp Routes or approved issuer-specific routes handle other
+asset movement under separate manifests, monitoring, and risk treatment.
 
 ## 2. Token identity rule
 

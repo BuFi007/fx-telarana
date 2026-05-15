@@ -2,6 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {ICircleGatewayMinter} from "../src/interfaces/ICircleGateway.sol";
 import {ITelaranaGatewayHubHook} from "../src/interfaces/ITelaranaGatewayHubHook.sol";
@@ -127,6 +128,49 @@ contract TelaranaGatewayHubHookTest is Test {
         hook.receiveGatewayMint("attestation", "signature", _context(REQUEST_ID, 100e6));
     }
 
+    function test_receiveGatewayMint_revertsWhenPaused() public {
+        hook.pause();
+        minter.setMint(address(hook), 100e6);
+
+        vm.prank(executor);
+        vm.expectRevert(Pausable.EnforcedPause.selector);
+        hook.receiveGatewayMint("attestation", "signature", _context(REQUEST_ID, 100e6));
+    }
+
+    function test_receiveGatewayMint_revertsOnUnexpectedHookData() public {
+        minter.setMint(address(hook), 100e6);
+        ITelaranaGatewayHubHook.GatewayMintContext memory context = _context(REQUEST_ID, 100e6);
+        context.hookData = "future-hook-data";
+
+        vm.prank(executor);
+        vm.expectRevert(TelaranaGatewayHubHook.UnexpectedHookData.selector);
+        hook.receiveGatewayMint("attestation", "signature", context);
+    }
+
+    function test_receiveGatewayMint_revertsOnMintToHubWithSpotFields() public {
+        minter.setMint(address(hook), 100e6);
+        ITelaranaGatewayHubHook.GatewayMintContext memory context = _context(REQUEST_ID, 100e6);
+        context.tokenOut = address(jpyc);
+        context.minAmountOut = 1_000e18;
+        context.spotRouteId = SPOT_ROUTE_ID;
+
+        vm.prank(executor);
+        vm.expectRevert(TelaranaGatewayHubHook.InvalidSpotRequest.selector);
+        hook.receiveGatewayMint("attestation", "signature", context);
+    }
+
+    function test_receiveGatewayMint_canKeepFundsWhenDestinationHubIsHook() public {
+        hook.setGatewayRoute(ROUTE_ID, _routeWithDestination(address(hook)));
+        minter.setMint(address(hook), 100e6);
+
+        vm.prank(executor);
+        uint256 amountReceived = hook.receiveGatewayMint("attestation", "signature", _context(REQUEST_ID, 100e6));
+
+        assertEq(amountReceived, 100e6);
+        assertEq(usdc.balanceOf(address(hook)), 100e6);
+        assertEq(usdc.balanceOf(destinationHub), 0);
+    }
+
     function test_receiveGatewayMint_recordsSpotRequestAndSettlement() public {
         bytes32 requestId = keccak256("spot-request");
         minter.setMint(address(hook), 250e6);
@@ -155,6 +199,35 @@ contract TelaranaGatewayHubHookTest is Test {
         assertEq(uint8(hook.gatewayRequestState(requestId)), uint8(ITelaranaGatewayHubHook.GatewayRequestState.SETTLED));
     }
 
+    function test_markGatewayAtomicFxSwapSettled_revertsForMintOnlyRequest() public {
+        minter.setMint(address(hook), 100e6);
+
+        vm.prank(executor);
+        hook.receiveGatewayMint("attestation", "signature", _context(REQUEST_ID, 100e6));
+
+        vm.prank(executor);
+        vm.expectRevert(TelaranaGatewayHubHook.InvalidSpotRequest.selector);
+        hook.markGatewayAtomicFxSwapSettled(REQUEST_ID, 1_000e18);
+    }
+
+    function test_markGatewayAtomicFxSwapSettled_revertsForNonExecutor() public {
+        bytes32 requestId = keccak256("spot-request");
+        minter.setMint(address(hook), 250e6);
+
+        ITelaranaGatewayHubHook.GatewayMintContext memory context = _context(requestId, 250e6);
+        context.action = ITelaranaGatewayHubHook.GatewayHubAction.MINT_AND_REQUEST_SPOT_FX;
+        context.tokenOut = address(jpyc);
+        context.minAmountOut = 1_000e18;
+        context.spotRouteId = SPOT_ROUTE_ID;
+
+        vm.prank(executor);
+        hook.receiveGatewayMint("attestation", "signature", context);
+
+        vm.prank(address(0xBEEF));
+        vm.expectRevert();
+        hook.markGatewayAtomicFxSwapSettled(requestId, 1_050e18);
+    }
+
     function test_setGatewaySignerMode_canDisableRouteMode() public {
         hook.setGatewaySignerMode(ROUTE_ID, ITelaranaGatewayHubHook.GatewaySignerMode.EOA, false);
         minter.setMint(address(hook), 100e6);
@@ -162,6 +235,34 @@ contract TelaranaGatewayHubHookTest is Test {
         vm.prank(executor);
         vm.expectRevert(abi.encodeWithSelector(TelaranaGatewayHubHook.RouteDisabled.selector, ROUTE_ID));
         hook.receiveGatewayMint("attestation", "signature", _context(REQUEST_ID, 100e6));
+    }
+
+    function test_setGatewayRoute_revertsSameDomain() public {
+        ITelaranaGatewayHubHook.GatewayHubRoute memory route = _route(true, executor);
+        route.destinationDomain = route.sourceDomain;
+
+        vm.expectRevert(abi.encodeWithSelector(TelaranaGatewayHubHook.SameGatewayDomain.selector, route.sourceDomain));
+        hook.setGatewayRoute(keccak256("same-domain-route"), route);
+    }
+
+    function test_setGatewayRoute_revertsWrongMinter() public {
+        ITelaranaGatewayHubHook.GatewayHubRoute memory route = _route(true, executor);
+        route.destinationGatewayMinter = address(0xBAD);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(TelaranaGatewayHubHook.RouteMinterMismatch.selector, address(minter), address(0xBAD))
+        );
+        hook.setGatewayRoute(keccak256("wrong-minter-route"), route);
+    }
+
+    function test_setGatewayRoute_revertsWrongDestinationUsdc() public {
+        ITelaranaGatewayHubHook.GatewayHubRoute memory route = _route(true, executor);
+        route.destinationUsdc = address(jpyc);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(TelaranaGatewayHubHook.RouteTokenMismatch.selector, address(usdc), address(jpyc))
+        );
+        hook.setGatewayRoute(keccak256("wrong-usdc-route"), route);
     }
 
     function _route(bool enabled, address whitelistedCaller)
@@ -182,6 +283,15 @@ contract TelaranaGatewayHubHookTest is Test {
             enabled: enabled,
             metadataRef: keccak256("telarana-gateway-fuji-arc-v0")
         });
+    }
+
+    function _routeWithDestination(address routeDestinationHub)
+        internal
+        view
+        returns (ITelaranaGatewayHubHook.GatewayHubRoute memory route)
+    {
+        route = _route(true, executor);
+        route.destinationHub = routeDestinationHub;
     }
 
     function _context(bytes32 requestId, uint256 amount)
@@ -205,4 +315,3 @@ contract TelaranaGatewayHubHookTest is Test {
         });
     }
 }
-

@@ -100,9 +100,12 @@ CCTP spoke call: both sides are hubs in this flow.
 
 Gateway scope:
 
-- CCTP remains Circle-only for USDC and EURC spoke entry.
-- Gateway is currently USDC-only in the Telaraña config.
-- Hyperlane remains the non-Circle asset and cross-chain intent path.
+- Gateway is USDC-only in the current Telaraña config. Do not assume EURC or
+  any other stablecoin is supported by Gateway until Circle publishes support
+  and the route is explicitly allowlisted.
+- CCTP is used only for Circle-supported USDC/EURC spoke entry.
+- Hyperlane and approved issuer-specific routes handle other stablecoin
+  transport and cross-chain intent messages.
 - Current Gateway signing mode is EOA.
 - ERC-1271 contract signing is a future mode; keep it disabled until Circle's
   published support and allowlisting are live.
@@ -314,9 +317,9 @@ FxSpoke.enterHub(token, amount, beneficiary, hubCalldata)
 
 Non-USDC asset spokes:
 
-- Use Hyperlane Warp Routes plus the Hyperlane intent lane for
-  AUDF/JPYC/MXNB/KRW1/ZCHF when the user starts on a non-hub chain. Keep
-  `FxSpoke` for CCTP USDC/EURC only.
+- Use Hyperlane Warp Routes or approved issuer-specific routes plus the
+  Hyperlane intent lane for AUDF/JPYC/MXNB/KRW1/ZCHF when the user starts on a
+  non-hub chain. Keep `FxSpoke` for CCTP USDC/EURC only.
 - Read `addresses[chainId].hyperlane` from the SDK for Hyperlane domain,
   Mailbox, Interchain Gas Paymaster if present, ICA router, and app-specific
   ISM addresses.

@@ -45,6 +45,8 @@ contract TelaranaGatewayHubHook is ITelaranaGatewayHubHook, AccessControl, Pausa
     error RequestNotMinted(bytes32 requestId);
     error InvalidMintAmount(uint256 expected, uint256 actual);
     error InvalidSpotRequest();
+    error SameGatewayDomain(uint32 domain);
+    error UnexpectedHookData();
 
     constructor(address usdc_, address gatewayMinter_, address initialAdmin) {
         if (usdc_ == address(0) || gatewayMinter_ == address(0) || initialAdmin == address(0)) {
@@ -194,6 +196,7 @@ contract TelaranaGatewayHubHook is ITelaranaGatewayHubHook, AccessControl, Pausa
         ) {
             revert ZeroAddress();
         }
+        if (context.hookData.length != 0) revert UnexpectedHookData();
 
         route = _gatewayRoutes[context.routeId];
         if (route.destinationGatewayMinter == address(0)) revert InvalidRoute(context.routeId);
@@ -214,7 +217,13 @@ contract TelaranaGatewayHubHook is ITelaranaGatewayHubHook, AccessControl, Pausa
             revert UnauthorizedRouteCaller(context.routeId, msg.sender);
         }
 
-        if (context.action == GatewayHubAction.MINT_AND_REQUEST_SPOT_FX) {
+        if (uint8(context.action) > uint8(GatewayHubAction.MINT_AND_REQUEST_SPOT_FX)) {
+            revert InvalidSpotRequest();
+        } else if (context.action == GatewayHubAction.MINT_TO_HUB) {
+            if (context.tokenOut != address(0) || context.spotRouteId != bytes32(0) || context.minAmountOut != 0) {
+                revert InvalidSpotRequest();
+            }
+        } else if (context.action == GatewayHubAction.MINT_AND_REQUEST_SPOT_FX) {
             if (context.tokenOut == address(0) || context.spotRouteId == bytes32(0) || context.minAmountOut == 0) {
                 revert InvalidSpotRequest();
             }
@@ -223,6 +232,7 @@ contract TelaranaGatewayHubHook is ITelaranaGatewayHubHook, AccessControl, Pausa
 
     function _validateRoute(bytes32 routeId, GatewayHubRoute calldata route) internal view {
         if (routeId == bytes32(0)) revert InvalidRoute(routeId);
+        if (route.sourceDomain == route.destinationDomain) revert SameGatewayDomain(route.sourceDomain);
         if (
             route.sourceUsdc == address(0) || route.destinationUsdc == address(0)
                 || route.sourceGatewayWallet == address(0) || route.destinationGatewayMinter == address(0)
@@ -238,4 +248,3 @@ contract TelaranaGatewayHubHook is ITelaranaGatewayHubHook, AccessControl, Pausa
         }
     }
 }
-

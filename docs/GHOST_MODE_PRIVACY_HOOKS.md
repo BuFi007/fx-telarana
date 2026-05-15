@@ -60,7 +60,9 @@ smallest possible interface.
   "stacked" onto the public `FxSwapHook` by adding a second hook.
 - Public and Ghost pools should be separate if the Ghost pool needs proof checks
   inside swap execution.
-- CCTP remains USDC/EURC-only. Hyperlane remains the non-Circle asset lane.
+- Gateway remains USDC-only in the current design. CCTP remains scoped to
+  Circle-supported USDC/EURC routes. Hyperlane and approved issuer-specific
+  routes handle other stablecoin transport and intent messages.
 - Permissionless Hyperlane routes are not automatically accepted collateral.
 - Ghost deposits and withdrawals must use nullifiers to prevent replay.
 - Root updates and verifier-key updates must be timelocked.

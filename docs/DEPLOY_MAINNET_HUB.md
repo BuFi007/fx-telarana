@@ -11,8 +11,8 @@
 
 1. **Hub mainnet = Avalanche C-Chain (`chainId 43114`).** 5 of 6 basket stablecoins are natively live on Avalanche (USDC, AUDF, JPYC, MXNB, KRW1) + ZCHF via CCIP. Zero mocks at mainnet — live demo with real assets.
 2. **Hub testnet = Arc Testnet (`chainId 5042002`).** All Phase 2.5 / 2.6 / 2.6R / Phase 3 work iterates here. `MockStablecoin` instances stand in for the basket where issuer-canonical contracts don't exist on Arc.
-3. **Spokes = every EVM chain that hosts Circle USDC/EURC or is a major Circle-asset entry point.** Spokes are thin: CCTP V2 burn-and-mint of USDC/EURC into the Hub, plus stranded-deposit recovery. Existing `FxSpoke` contract handles this lane.
-4. **Local non-Circle stablecoins live on the Hub or use Hyperlane routes.** Users don't bridge AUDF / JPYC / MXNB / KRW1 / ZCHF through CCTP. They send USDC/EURC from any supported Circle spoke → Hub mints local stablecoin liquidity via Morpho borrow → FX swap → return USDC/EURC via CCTP where Circle supports it.
+3. **Spokes = every EVM chain that hosts Circle-supported USDC/EURC routes or is a major USDC/EURC entry point.** Spokes are thin: CCTP V2 burn-and-mint of USDC/EURC into the Hub, plus stranded-deposit recovery. Existing `FxSpoke` contract handles this lane.
+4. **Local basket stablecoins live on the Hub or use Hyperlane / issuer-specific routes.** Users don't bridge AUDF / JPYC / MXNB / KRW1 / ZCHF through CCTP. They send USDC/EURC from any supported Circle spoke → Hub mints local stablecoin liquidity via Morpho borrow → FX swap → return USDC/EURC via CCTP where Circle supports it.
 5. **No new contracts at mainnet.** Every contract used is already on the §2 whitelist of `SPEC_PHASE_3_MULTI_STABLECOIN.md`. This doc is deployment plumbing only.
 
 ---
@@ -233,7 +233,7 @@ This deploys all five Phase 3 pairs, creates the two Morpho markets per pair, mi
 
 ## 5. Spoke deployment matrix
 
-Spokes are thin — each chain that holds Circle USDC/EURC, or is a major Circle-asset entry point, gets a CCTP `FxSpoke` deployment. Non-Circle basket assets use Hyperlane/issuer routes instead.
+Spokes are thin — each chain that holds Circle-supported USDC/EURC routes, or is a major USDC/EURC entry point, gets a CCTP `FxSpoke` deployment. Basket assets outside that CCTP scope use Hyperlane or issuer-specific routes instead.
 
 ### 5.1 Spoke priorities (chains)
 
@@ -254,7 +254,7 @@ Order by usefulness for the basket. Avalanche is the Hub; spokes feed USDC into 
 
 ### 5.2 What changes per spoke
 
-Nothing in the spoke contract for non-Circle assets. The CCTP lane is Circle-only: burns USDC/EURC via CCTP V2 to the Hub and receives USDC/EURC back via CCTP V2 where Circle supports the asset. **Local non-Circle stablecoins are never bridged through CCTP.** They exist on the Hub (Avalanche) or arrive through a separately approved Hyperlane/issuer route, get FX'd there, and the user receives the Circle output asset back via CCTP when available.
+Nothing in the CCTP spoke contract for basket assets outside USDC/EURC. The CCTP lane burns USDC/EURC via CCTP V2 to the Hub and receives USDC/EURC back via CCTP V2 where Circle supports the asset and route. **AUDF / JPYC / MXNB / KRW1 / ZCHF are never bridged through CCTP.** They exist on the Hub (Avalanche) or arrive through a separately approved Hyperlane/issuer route, get FX'd there, and the user receives the Circle output asset back via CCTP when available.
 
 ### 5.3 Spoke deploy commands
 

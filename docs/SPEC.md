@@ -17,11 +17,13 @@
 ## 1. Product Thesis
 
 Forex Telarana is a cross-chain FX credit hub. Users can enter from supported
-chains with USDC or EURC where Circle supports it, route into Avalanche hub FX
-markets, and borrow or lend against currency-pair collateral. Circle Gateway
-powers fast USDC movement between hubs, Hyperlane powers cross-chain intents
-and non-Circle asset routes, CCTP stays Circle-only for canonical USDC and EURC
-spoke entry, and the hub risk engine decides what assets are valid collateral.
+chains with USDC or EURC where Circle supports the route, move USDC between
+Telarana hubs through Circle Gateway, route into Avalanche hub FX markets, and
+borrow or lend against currency-pair collateral. Gateway is USDC-only in the
+current design. CCTP is used only for Circle-supported USDC/EURC spoke entry;
+Hyperlane and approved issuer-specific routes handle other stablecoin transport
+and cross-chain intent messages. The hub risk engine decides what assets are
+valid collateral.
 
 The product should feel like an onchain FX credit primitive:
 
@@ -191,8 +193,10 @@ verification is added.
 
 ### 4.6 Hyperlane Asset Spokes
 
-Hyperlane is the non-Circle asset lane. It handles:
-- non-Circle asset routing,
+Hyperlane is the allowlisted non-Gateway / non-CCTP asset and intent lane. It
+handles:
+- approved stablecoin routes that are not supported by the current Gateway or
+  CCTP configuration,
 - typed cross-chain intent messages,
 - optional Interchain Accounts for one-click transfer-and-call flows.
 

@@ -1,10 +1,11 @@
 # Circle Gateway Hub Liquidity
 
 Circle Gateway is the planned fast USDC rail for Telaraña hub-to-hub liquidity.
-CCTP stays the canonical USDC/EURC spoke-entry path. Hyperlane stays the
-permissionless route for non-Circle assets and cross-chain intents. Gateway is
-used here for USDC liquidity movement between hubs, starting with Fuji and Arc
-Testnet.
+Gateway is USDC-only in the current design. CCTP is used only for
+Circle-supported USDC/EURC spoke entry. Hyperlane and approved issuer-specific
+routes handle other stablecoin transport and cross-chain intent messages.
+Gateway is used here for USDC liquidity movement between hubs, starting with
+Fuji and Arc Testnet.
 
 ## Scope
 

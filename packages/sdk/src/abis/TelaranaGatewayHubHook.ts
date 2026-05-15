@@ -1211,6 +1211,17 @@ export const TelaranaGatewayHubHookAbi = [
   },
   {
     "type": "error",
+    "name": "SameGatewayDomain",
+    "inputs": [
+      {
+        "name": "domain",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "UnauthorizedRouteCaller",
     "inputs": [
       {
@@ -1224,6 +1235,11 @@ export const TelaranaGatewayHubHookAbi = [
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "UnexpectedHookData",
+    "inputs": []
   },
   {
     "type": "error",

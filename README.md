@@ -7,10 +7,12 @@ Telaraña is an onchain FX liquidity web for Avalanche stablecoin markets.
 ## Product framing
 
 Users can enter from supported chains with USDC or EURC where Circle supports
-it, route into Avalanche FX markets, and borrow, lend, or prepare spot FX
-requests against supported stablecoin pairs. Hyperlane powers cross-chain
-intents and non-Circle asset routes; CCTP stays Circle-only for canonical USDC
-and EURC movement; the hub risk engine decides what assets are valid collateral.
+the route, move USDC between Telaraña hubs through Circle Gateway, route into
+Avalanche FX markets, and borrow, lend, or prepare spot FX requests against
+supported stablecoin pairs. Gateway is USDC-only in the current design. CCTP is
+used only for Circle-supported USDC/EURC movement; Hyperlane and approved
+issuer-specific routes handle other stablecoin transport and intent messages.
+The hub risk engine decides what assets are valid collateral.
 
 ## What it is
 
