@@ -1,14 +1,16 @@
-# Forex Telaraña Protocol
+# Telaraña Protocol
 
-A decentralized cross-currency money market and FX engine with cross-chain spokes (CCTP V2 + Hyperlane) and an opt-in Ghost Mode rail powered by Bufi Wallet KYC/KYB passes and privacy hooks.
+Telaraña is an onchain FX liquidity web for Avalanche stablecoin markets.
 
-> *Telaraña — "spider's web" — for the hub-and-spoke topology that pulls FX liquidity from any chain into a single Arc-native lending and swap market.*
+> *Telaraña — "spider's web" — for the hub-and-spoke topology that pulls FX liquidity from supported chains into Avalanche stablecoin markets.*
 
 ## Product framing
 
-Forex Telaraña is a cross-chain FX credit hub. Users can enter from any supported chain with USDC or EURC where Circle supports it, route into Avalanche hub FX markets, and borrow or lend against currency-pair collateral. Hyperlane powers cross-chain intents and non-Circle asset routes; CCTP stays Circle-only for canonical USDC and EURC movement; the hub risk engine decides what assets are valid collateral.
-
-Stablecoin Summer is a cross-chain FX credit campaign: users enter from supported chains with USDC, route into hub-based currency markets, earn real stablecoin yield and rewards, and eventually access Forex perps backed by Morpho liquidity and Uniswap v4 execution.
+Users can enter from supported chains with USDC or EURC where Circle supports
+it, route into Avalanche FX markets, and borrow, lend, or prepare spot FX
+requests against supported stablecoin pairs. Hyperlane powers cross-chain
+intents and non-Circle asset routes; CCTP stays Circle-only for canonical USDC
+and EURC movement; the hub risk engine decides what assets are valid collateral.
 
 ## What it is
 
@@ -16,7 +18,10 @@ Stablecoin Summer is a cross-chain FX credit campaign: users enter from supporte
 - **Cross-chain spokes** via Circle's CCTP V2 — bring USDC, and EURC where Circle supports it, from CCTP-supported chains and open positions on the Hub. CCTP is never used for non-Circle stablecoins.
 - **Permissionless, decentralized oracle** — Pyth primary + RedStone secondary. 24/7. No forex-hours circuit breakers. USDC and EURC are ERC-20s onchain.
 - **Ghost Mode** (Phase 1) — Bufi Wallet KYC/KYB pass-gated privacy hooks and routers for slower private deposit, withdrawal, swap, and cross-chain entry flows. No third-party privacy wallet dependency and no Circle Wallet dependency.
-- **Uniswap v4 FX swap hook** (Phase 2) — oracle-anchored PMM with JIT-borrow from the lending pool.
+- **Future Uniswap v4 spot FX execution** — request/config/event surfaces are
+  prepared, while full hook execution stays out of this branch.
+- **Future RFQ Pasillo** — quote-request corridor docs, SDK types, and interface
+  stubs are prepared for later whitelisted requesters.
 
 ## Repo layout
 
@@ -32,7 +37,7 @@ See [`contracts/README.md`](contracts/README.md) for build, test, and deploy.
 - **Phase 0 contracts** — complete, 31/31 tests passing, fork-verified against the real Morpho Blue singleton (`0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb`) on Ethereum mainnet.
 - **Phase 0.5** — RedStone consumer payload wiring (next).
 - **Phase 1** — Ghost Mode with Bufi Wallet pass verification, privacy hooks, and commitment/nullifier withdrawal routing.
-- **Phase 2** — Uniswap v4 swap hook.
+- **Phase 2** — future Uniswap v4 spot FX execution.
 
 ## Tenderly Virtual TestNet
 

@@ -1,4 +1,4 @@
-# Frontend Integration Prompt — fx-Telarana Avalanche Hub
+# Frontend Integration Prompt — Telaraña Avalanche FX
 
 Use this prompt with the front-end developer or agent that will integrate the
 protocol into the app. Source repo:
@@ -11,17 +11,19 @@ protocol into the app. Source repo:
 
 ## Prompt
 
-You are integrating the fx-Telarana onchain FX credit protocol into our app.
+You are integrating Telaraña into our app.
 Use Bufi Wallet for Ghost Mode and viem for reads/writes. Public mode can still
 support Dynamic or another EVM connector if the app wants broader wallet access.
-The product lets a user connect a wallet, deposit USDC or supported stablecoins,
-lend/borrow through Morpho-backed isolated markets, and swap through fx-Telarana
-Uniswap v4 hooks when hook addresses are available.
+Telaraña is an onchain FX liquidity web for Avalanche stablecoin markets. The
+product lets a user connect a wallet, deposit USDC or supported stablecoins,
+lend/borrow through Morpho-backed isolated markets, and prepare future spot FX
+requests for whitelisted Telaraña routes.
 
 Build a testing UI first, not marketing pages. The first screen should be an
 operator/testing console with chain selector, wallet state, Bufi Wallet pass
 state, balances, market cards, approval state, lend/borrow/repay/withdraw forms,
-cross-chain spoke entry, Ghost Mode route state, and swap/quote panels.
+cross-chain spoke entry, Ghost Mode route state, and spot FX request/quote
+panels.
 
 ## Current Testing Hub
 
@@ -137,6 +139,28 @@ Use the typed ABIs exported from `@bu/fx-engine`:
 - `HyperlaneWarpRouteAbi`
 - `HyperlaneInterchainAccountRouterAbi`
 - `IBufiKycPassAbi`
+
+Future spot FX preparation exports:
+
+- `SpotFxRequest`
+- `SpotFxExecutionStatus`
+- `TelaranaRequesterKind`
+- `SpotFxTokenPairConfig`
+- `SpotFxRouteConfig`
+- `SpotFxPoolConfig`
+- `SpotFxHookConfig`
+- `TelaranaWhitelistedRequester`
+- `TELARANA_AVALANCHE_SPOT_TOKEN_PAIRS`
+- `TELARANA_FUJI_SPOT_TOKEN_PAIRS`
+- `TELARANA_SPOT_ROUTE_CONFIGS`
+- `TELARANA_SPOT_POOL_CONFIGS`
+- `TELARANA_SPOT_HOOK_CONFIGS`
+- `TELARANA_SPOT_FX_EVENT_NAMES`
+- `TELARANA_SPOT_FX_INDEXER_SCHEMA`
+- `RfqQuoteRequest`
+- `RfqQuote`
+- `RFQ_PASILLO_EVENT_NAMES`
+- `RFQ_PASILLO_INDEXER_SCHEMA`
 
 Ghost Mode is not a third-party privacy wallet and not Circle Wallet. It is a
 Bufi Wallet KYC/KYB-pass route that will use privacy hooks/routers. For now,
@@ -266,6 +290,45 @@ Swaps:
   `FxSwapHook.deposit(amount0, amount1)` and `FxSwapHook.redeem(shares)`.
 - Swap execution uses Uniswap v4 PoolManager/Universal Router with pool key:
   `currency0`, `currency1`, `fee = 3000`, `tickSpacing = 60`, `hooks = FxSwapHook`.
+
+Future spot FX request intake:
+
+- Do not build or assume live execution for the future spot route layer yet.
+- Use `SpotFxRequest` for frontend state and request previews.
+- Use `TELARANA_SPOT_ROUTE_CONFIGS` and `TELARANA_SPOT_POOL_CONFIGS` to render
+  planned route and pool readiness.
+- Treat `whitelistedCallers` as the future caller allowlist for native request
+  intake.
+- First live requester should be `internal`; external whitelisted frontends can
+  be added later after a deployed router manifest exists.
+- `metadataRef` should be a short content-addressed or backend reference, not
+  free-form user text onchain.
+
+Future RFQ Pasillo:
+
+- RFQ Pasillo is a future quote corridor for Telaraña.
+- Use `RfqQuoteRequest` and `RfqQuote` types for UI mocks and indexer planning.
+- Do not expose quote request or quote fill buttons until an RFQ Pasillo
+  contract address, route config, and requester allowlist are present in the
+  deployment manifest.
+- Event names to index later: `RfqQuoteRequested`, `RfqQuoteAccepted`, and
+  `RfqQuoteFilled`.
+
+Indexer event names to prepare:
+
+- `SpotFxRequestCreated`
+- `SpotFxRequestAccepted`
+- `SpotFxRequestExecuted`
+- `SpotFxRequestCancelled`
+- `RfqQuoteRequested`
+- `RfqQuoteAccepted`
+- `RfqQuoteFilled`
+- `WhitelistedRequesterUpdated`
+- `RouteConfigured`
+- `PoolConfigured`
+
+Current hook deployment gating:
+
 - Avalanche basket hook addresses are produced by
   `DeployTenderlyAvalancheBasket.s.sol` into
   `deployments/tenderly-avalanche-fuji-basket.json` once Tenderly write quota

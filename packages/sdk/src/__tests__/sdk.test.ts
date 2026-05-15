@@ -16,6 +16,15 @@ import {
   HyperlaneInterchainAccountRouterAbi,
   HyperlaneWarpRouteAbi,
   IBufiKycPassAbi,
+  RFQ_PASILLO_EVENT_NAMES,
+  RFQ_PASILLO_INDEXER_SCHEMA,
+  TELARANA_AVALANCHE_SPOT_TOKEN_PAIRS,
+  TELARANA_FUJI_SPOT_TOKEN_PAIRS,
+  TELARANA_SPOT_FX_EVENT_NAMES,
+  TELARANA_SPOT_FX_INDEXER_SCHEMA,
+  TELARANA_SPOT_HOOK_CONFIGS,
+  TELARANA_SPOT_POOL_CONFIGS,
+  TELARANA_SPOT_ROUTE_CONFIGS,
   getAddresses,
   hyperlaneAddressToBytes32,
   resolveRouteMode,
@@ -156,6 +165,68 @@ describe("address registry", () => {
     );
     expect(a.usdc).toBe("0x5425890298aed601595a70AB815c96711a31Bc65");
     expect(a.eurc).toBe("0x5E44db7996c682E92a960b65AC713a54AD815c6B");
+  });
+});
+
+describe("Telaraña future spot FX config", () => {
+  test("exports indexer-ready event names", () => {
+    expect(TELARANA_SPOT_FX_EVENT_NAMES).toEqual([
+      "SpotFxRequestCreated",
+      "SpotFxRequestAccepted",
+      "SpotFxRequestExecuted",
+      "SpotFxRequestCancelled",
+      "RfqQuoteRequested",
+      "RfqQuoteAccepted",
+      "RfqQuoteFilled",
+      "WhitelistedRequesterUpdated",
+      "RouteConfigured",
+      "PoolConfigured",
+    ]);
+    expect(RFQ_PASILLO_EVENT_NAMES).toEqual([
+      "RfqQuoteRequested",
+      "RfqQuoteAccepted",
+      "RfqQuoteFilled",
+    ]);
+  });
+
+  test("exports Avalanche and Fuji spot token pair prep", () => {
+    expect(TELARANA_AVALANCHE_SPOT_TOKEN_PAIRS.map((pair) => pair.quoteSymbol)).toEqual([
+      "JPYC",
+      "MXNB",
+      "AUDF",
+      "KRW1",
+      "ZCHF",
+    ]);
+    expect(TELARANA_AVALANCHE_SPOT_TOKEN_PAIRS.every((pair) => pair.enabled === false)).toBe(true);
+    expect(TELARANA_FUJI_SPOT_TOKEN_PAIRS[0]).toMatchObject({
+      pairId: "avalanche-fuji-usdc-eurc",
+      chainId: ChainId.AvalancheFuji,
+      enabled: true,
+    });
+  });
+
+  test("keeps v4 spot execution as placeholder config only", () => {
+    expect(TELARANA_SPOT_HOOK_CONFIGS.every((hook) => hook.kind === "placeholder")).toBe(true);
+    expect(TELARANA_SPOT_POOL_CONFIGS[0]).toMatchObject({
+      status: "planned",
+      hookConfigId: "fuji-v4-spot-placeholder",
+    });
+    expect(TELARANA_SPOT_ROUTE_CONFIGS[0]).toMatchObject({
+      routeId: "fuji-usdc-eurc-spot-demo",
+      kind: "internal-test",
+      status: "configured",
+    });
+    expect(TELARANA_SPOT_ROUTE_CONFIGS[0].whitelistedCallers).toEqual([]);
+  });
+
+  test("exports event schemas for spot FX and RFQ Pasillo", () => {
+    expect(TELARANA_SPOT_FX_INDEXER_SCHEMA.map((event) => event.name)).toContain("RouteConfigured");
+    expect(TELARANA_SPOT_FX_INDEXER_SCHEMA.map((event) => event.name)).toContain("PoolConfigured");
+    expect(RFQ_PASILLO_INDEXER_SCHEMA.map((event) => event.name)).toEqual([
+      "RfqQuoteRequested",
+      "RfqQuoteAccepted",
+      "RfqQuoteFilled",
+    ]);
   });
 });
 
