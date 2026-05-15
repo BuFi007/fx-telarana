@@ -21,6 +21,7 @@ import {
   RFQ_PASILLO_EVENT_NAMES,
   RFQ_PASILLO_INDEXER_SCHEMA,
   GATEWAY_EIP712_TYPES,
+  GATEWAY_HUB_ACTION_IDS,
   GATEWAY_HUB_EVENT_NAMES,
   GATEWAY_HUB_INDEXER_SCHEMA,
   TELARANA_GATEWAY_HUB_ROUTES,
@@ -32,6 +33,7 @@ import {
   TELARANA_SPOT_HOOK_CONFIGS,
   TELARANA_SPOT_POOL_CONFIGS,
   TELARANA_SPOT_ROUTE_CONFIGS,
+  TelaranaGatewayHubHookAbi,
   buildGatewayBurnIntent,
   encodeGatewayMintCalldata,
   evmAddressToGatewayBytes32,
@@ -264,6 +266,8 @@ describe("Circle Gateway hub liquidity prep", () => {
       gatewayWallet: "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
       gatewayMinter: "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
     });
+    expect(GATEWAY_HUB_ACTION_IDS["mint-to-hub"]).toBe(0);
+    expect(GATEWAY_HUB_ACTION_IDS["mint-and-request-spot-fx"]).toBe(1);
   });
 
   test("locks Circle Gateway EIP-712 type order", () => {
@@ -638,6 +642,14 @@ describe("ABI exports", () => {
     expect(FxHyperlaneHubReceiverAbi.some((x) => x.type === "function" && x.name === "executeRoutedIntent")).toBe(
       true,
     );
+  });
+
+  test("Gateway hub hook ABI exposes mint and settlement surfaces", () => {
+    const fnNames = TelaranaGatewayHubHookAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(fnNames).toContain("setGatewayRoute");
+    expect(fnNames).toContain("receiveGatewayMint");
+    expect(fnNames).toContain("markGatewayAtomicFxSwapSettled");
+    expect(fnNames).toContain("gatewayReceipt");
   });
 
   test("Bufi pass ABI exposes the Ghost Mode verifier surface", () => {

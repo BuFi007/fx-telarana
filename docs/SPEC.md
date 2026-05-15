@@ -181,12 +181,13 @@ The SDK prepares:
 - Circle EIP-712 BurnIntent types.
 - Fuji ↔ Arc route config.
 - Gateway hub indexer event names.
-- `ITelaranaGatewayHubHook` for a future receive-and-route wrapper.
+- `TelaranaGatewayHubHook` receive-and-route wrapper.
 
-Future Gateway hook implementations must validate route id, source domain,
-destination domain, source USDC, destination USDC, caller authorization,
-received USDC balance delta, destination hub action, and downstream spot FX
-route liveness before using minted funds.
+Gateway hook implementations must validate route id, destination Gateway
+Minter, destination USDC, caller authorization, received USDC balance delta,
+destination hub action, and request replay before using minted funds. The first
+implementation stays trusted-executor gated until attestation/hookData context
+verification is added.
 
 ### 4.6 Hyperlane Asset Spokes
 

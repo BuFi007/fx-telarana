@@ -8,8 +8,8 @@ Testnet.
 
 ## Scope
 
-Current branch prepares config, typed data, ABI helpers, and interface stubs.
-It does not deploy a Gateway hook or execute production swaps.
+Current branch prepares config, typed data, ABI helpers, and the first
+`TelaranaGatewayHubHook`. It does not execute production swaps.
 
 Near-term testnet topology:
 
@@ -33,8 +33,7 @@ Circle Gateway testnet contracts:
 3. Have the current source signer EOA sign the Gateway EIP-712 payload.
 4. Submit the signed burn intent to Circle Gateway API.
 5. Receive attestation payload and API signature.
-6. On the destination hub chain, call Gateway Minter or a future
-   Telaraña Gateway hook that wraps `gatewayMint(...)`.
+6. On the destination hub chain, call `TelaranaGatewayHubHook.receiveGatewayMint(...)`.
 7. Use the minted USDC for the destination hub action: mint-to-hub first,
    then later mint-and-request-spot-FX when the spot route is deployed.
 
@@ -51,12 +50,15 @@ Use these SDK exports from `@bu/fx-engine`:
 
 - `CircleGatewayWalletAbi`
 - `CircleGatewayMinterAbi`
+- `TelaranaGatewayHubHookAbi`
 - `GATEWAY_EIP712_DOMAIN`
 - `GATEWAY_EIP712_TYPES`
 - `TELARANA_GATEWAY_TESTNET_CHAINS`
 - `TELARANA_GATEWAY_HUB_ROUTES`
+- `GATEWAY_HUB_ACTION_IDS`
 - `GATEWAY_HUB_EVENT_NAMES`
 - `GATEWAY_HUB_INDEXER_SCHEMA`
+- `GatewayHubMintContext`
 - `buildGatewayBurnIntent`
 - `gatewayBurnIntentToJson`
 - `encodeGatewayMintCalldata`
@@ -67,18 +69,22 @@ exact Circle field order.
 
 ## Contract Preparation
 
-Solidity interfaces are prepared at:
+Solidity surfaces are prepared at:
 
 - `contracts/src/interfaces/ICircleGateway.sol`
 - `contracts/src/interfaces/ITelaranaGatewayHubHook.sol`
+- `contracts/src/hub/TelaranaGatewayHubHook.sol`
 
-The future implementation should validate:
+The hook currently validates:
 
 - route id is enabled,
-- source and destination Gateway domains match the configured route,
-- source and destination USDC match the configured route,
+- destination Gateway Minter matches the configured route,
+- destination USDC matches the configured route,
 - caller is whitelisted for the route,
 - destination hub action is enabled,
 - received USDC balance delta matches the expected amount,
-- downstream spot FX route is live before any atomic FX action.
+- request id has not been used before.
 
+The next implementation step is to decode or verify Gateway `hookData` /
+attestation context before opening this beyond the trusted executor path.
+Until then, `receiveGatewayMint(...)` is intentionally `EXECUTOR_ROLE` gated.

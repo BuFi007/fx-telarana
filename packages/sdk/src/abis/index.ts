@@ -5,6 +5,7 @@ export { FxReceiptAbi } from "./FxReceipt.js";
 export { FxLiquidatorAbi } from "./FxLiquidator.js";
 export { FxHubMessageReceiverAbi } from "./FxHubMessageReceiver.js";
 export { FxHyperlaneHubReceiverAbi } from "./FxHyperlaneHubReceiver.js";
+export { TelaranaGatewayHubHookAbi } from "./TelaranaGatewayHubHook.js";
 export { FxSpokeAbi } from "./FxSpoke.js";
 export { FxSpokeIntentRouterAbi } from "./FxSpokeIntentRouter.js";
 export { FxSwapHookAbi } from "./FxSwapHook.js";

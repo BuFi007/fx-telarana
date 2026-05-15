@@ -21,6 +21,7 @@ const CONTRACTS = [
   ["FxLiquidator", "FxLiquidator"],
   ["FxHubMessageReceiver", "FxHubMessageReceiver"],
   ["FxHyperlaneHubReceiver", "FxHyperlaneHubReceiver"],
+  ["TelaranaGatewayHubHook", "TelaranaGatewayHubHook"],
   ["FxSpoke", "FxSpoke"],
   ["FxSpokeIntentRouter", "FxSpokeIntentRouter"],
   ["FxSwapHook", "FxSwapHook"],

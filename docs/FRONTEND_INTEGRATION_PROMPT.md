@@ -130,8 +130,9 @@ Frontend flow for a Gateway hub transfer:
    `GATEWAY_EIP712_TYPES`.
 5. POST the signed intent to Circle Gateway API.
 6. On the destination hub chain, call `gatewayMint(...)` through
-   `CircleGatewayMinterAbi`, or route through the future Telaraña Gateway hook
-   once deployed.
+   `CircleGatewayMinterAbi` for raw testing, or route through
+   `TelaranaGatewayHubHook.receiveGatewayMint(...)` once the hook is deployed
+   on that hub.
 7. After USDC arrives on the destination hub, show the pending destination
    action: mint-to-hub first, later mint-and-request-spot-FX when the spot route
    is deployed.
@@ -197,6 +198,7 @@ Use the typed ABIs exported from `@bu/fx-engine`:
 - `IBufiKycPassAbi`
 - `CircleGatewayWalletAbi`
 - `CircleGatewayMinterAbi`
+- `TelaranaGatewayHubHookAbi`
 
 Future spot FX preparation exports:
 
@@ -222,9 +224,11 @@ Future spot FX preparation exports:
 - `GatewayHubTransferStatus`
 - `CircleGatewaySignerMode`
 - `GatewayHubAtomicFxRequest`
+- `GatewayHubMintContext`
 - `GatewayHubRouteConfig`
 - `TELARANA_GATEWAY_TESTNET_CHAINS`
 - `TELARANA_GATEWAY_HUB_ROUTES`
+- `GATEWAY_HUB_ACTION_IDS`
 - `GATEWAY_EIP712_DOMAIN`
 - `GATEWAY_EIP712_TYPES`
 - `GATEWAY_HUB_EVENT_NAMES`

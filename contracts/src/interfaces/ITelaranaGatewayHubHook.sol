@@ -21,6 +21,12 @@ interface ITelaranaGatewayHubHook {
         MINT_AND_REQUEST_SPOT_FX
     }
 
+    enum GatewayRequestState {
+        UNKNOWN,
+        MINTED,
+        SETTLED
+    }
+
     struct GatewayHubRoute {
         uint32 sourceDomain;
         uint32 destinationDomain;
@@ -42,11 +48,26 @@ interface ITelaranaGatewayHubHook {
         address sourceDepositor;
         address sourceSigner;
         address recipient;
+        address tokenOut;
         uint256 amount;
         uint256 minAmountOut;
         bytes32 spotRouteId;
         bytes32 metadataRef;
         bytes hookData;
+    }
+
+    struct GatewayReceipt {
+        bytes32 routeId;
+        GatewayRequestState state;
+        GatewayHubAction action;
+        address sourceDepositor;
+        address sourceSigner;
+        address recipient;
+        address tokenOut;
+        uint256 amount;
+        uint256 minAmountOut;
+        bytes32 spotRouteId;
+        bytes32 metadataRef;
     }
 
     event GatewayHubRouteConfigured(
@@ -118,10 +139,19 @@ interface ITelaranaGatewayHubHook {
 
     function gatewayRoute(bytes32 routeId) external view returns (GatewayHubRoute memory route);
 
+    function gatewayRequestState(bytes32 requestId) external view returns (GatewayRequestState state);
+
+    function gatewayReceipt(bytes32 requestId) external view returns (GatewayReceipt memory receipt);
+
+    function setGatewayRoute(bytes32 routeId, GatewayHubRoute calldata route) external;
+
+    function setGatewaySignerMode(bytes32 routeId, GatewaySignerMode signerMode, bool allowed) external;
+
     function receiveGatewayMint(
         bytes calldata attestationPayload,
         bytes calldata signature,
         GatewayMintContext calldata context
     ) external returns (uint256 amountReceived);
-}
 
+    function markGatewayAtomicFxSwapSettled(bytes32 requestId, uint256 amountOut) external;
+}

@@ -118,6 +118,21 @@ export type GatewayHubAtomicFxRequest = {
   metadataRef?: string;
 };
 
+export type GatewayHubMintContext = {
+  routeId: Hex;
+  requestId: Hex;
+  action: GatewayHubAction;
+  sourceDepositor: Address;
+  sourceSigner: Address;
+  recipient: Address;
+  tokenOut?: Address;
+  amount: bigint;
+  minAmountOut?: bigint;
+  spotRouteId?: Hex;
+  metadataRef?: Hex;
+  hookData?: Hex;
+};
+
 export type GatewayIndexerEventName =
   | "GatewayHubRouteConfigured"
   | "GatewayHubTransferRequested"
@@ -153,6 +168,16 @@ export const CIRCLE_GATEWAY_MAINNET_MINTER =
   "0x2222222d7164433c4C09B0b0D809a9b52C04C205" as const satisfies Address;
 
 export const GATEWAY_DEFAULT_MAX_FEE = 2_010000n;
+
+export const GATEWAY_HUB_ACTION_IDS = {
+  "mint-to-hub": 0,
+  "mint-and-request-spot-fx": 1,
+} as const satisfies Record<GatewayHubAction, number>;
+
+export const GATEWAY_SIGNER_MODE_IDS = {
+  eoa: 0,
+  "erc1271-contract-future": 1,
+} as const satisfies Record<CircleGatewaySignerMode, number>;
 
 export const GATEWAY_EIP712_DOMAIN = {
   name: "GatewayWallet",
