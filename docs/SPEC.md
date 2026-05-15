@@ -10,6 +10,7 @@
 - D2 Compliance model: **Bufi Wallet KYC/KYB pass**. No third-party privacy wallet dependency.
 - D3 Oracle: **Pyth primary + RedStone secondary**, both pull-mode.
 - D4 Privacy detail: **Ghost Mode routes through privacy hooks and routers**. No Circle Wallet dependency; Circle remains issuer and CCTP infrastructure only.
+- D5 Hub liquidity rail: **Circle Gateway is the fast USDC hub-to-hub rail** between Avalanche/Fuji and Arc hubs. Current signing mode is EOA; ERC-1271 contract signing is future-gated.
 
 ---
 
@@ -17,10 +18,10 @@
 
 Forex Telarana is a cross-chain FX credit hub. Users can enter from supported
 chains with USDC or EURC where Circle supports it, route into Avalanche hub FX
-markets, and borrow or lend against currency-pair collateral. Hyperlane powers
-cross-chain intents and non-Circle asset routes; CCTP stays Circle-only for
-canonical USDC and EURC movement; the hub risk engine decides what assets are
-valid collateral.
+markets, and borrow or lend against currency-pair collateral. Circle Gateway
+powers fast USDC movement between hubs, Hyperlane powers cross-chain intents
+and non-Circle asset routes, CCTP stays Circle-only for canonical USDC and EURC
+spoke entry, and the hub risk engine decides what assets are valid collateral.
 
 The product should feel like an onchain FX credit primitive:
 
@@ -74,6 +75,7 @@ Ghost Mode uses **Bufi Wallet**, not Circle Wallet.
 Circle remains important for:
 - USDC and EURC issuance.
 - CCTP V2 burn/mint for USDC and EURC.
+- Circle Gateway USDC liquidity movement between hubs.
 - Circle Smart Contract Platform monitoring where useful.
 
 Circle is not the Ghost Mode wallet provider, pass issuer, or account factory.
@@ -161,7 +163,32 @@ RedStone directly.
 wallet. Ghost Mode passes the Bufi Ghost router/action account chosen by the
 privacy flow. Never derive `beneficiary` from `msg.sender`.
 
-### 4.5 Hyperlane Asset Spokes
+### 4.5 Circle Gateway Hub Liquidity
+
+Circle Gateway is the fast USDC route between Telarana hubs. It is not the
+general spoke path and it is not a route for AUDF, JPYC, MXNB, KRW1, ZCHF, or
+other non-Circle stablecoins.
+
+Near-term Gateway scope:
+- Avalanche Fuji hub ↔ Arc Testnet hub.
+- Testnet speaks to testnet at the hub level.
+- Source signer is an EOA.
+- Future ERC-1271 contract signing is modeled but disabled until Circle support
+  is live and the contract signer is allowlisted.
+
+The SDK prepares:
+- Gateway Wallet/Minter ABIs.
+- Circle EIP-712 BurnIntent types.
+- Fuji ↔ Arc route config.
+- Gateway hub indexer event names.
+- `ITelaranaGatewayHubHook` for a future receive-and-route wrapper.
+
+Future Gateway hook implementations must validate route id, source domain,
+destination domain, source USDC, destination USDC, caller authorization,
+received USDC balance delta, destination hub action, and downstream spot FX
+route liveness before using minted funds.
+
+### 4.6 Hyperlane Asset Spokes
 
 Hyperlane is the non-Circle asset lane. It handles:
 - non-Circle asset routing,

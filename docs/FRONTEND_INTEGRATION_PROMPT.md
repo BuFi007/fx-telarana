@@ -8,6 +8,7 @@ protocol into the app. Source repo:
 - SDK package in repo: `packages/sdk`
 - Source of truth for deployed addresses: `deployments/*.json`
 - Non-USDC asset spoke architecture: `docs/HYPERLANE_ASSET_SPOKES.md`
+- Circle Gateway hub-liquidity prep: `docs/future/CIRCLE_GATEWAY_HUB_LIQUIDITY.md`
 
 ## Prompt
 
@@ -91,6 +92,61 @@ published EURC and the matching spoke/manifest entry exists.
 Use the deployment manifests above over `packages/sdk/src/addresses/index.ts`
 for migrated spoke addresses until the SDK registry is refreshed.
 
+## Circle Gateway Hub-To-Hub Liquidity
+
+Gateway is the fast USDC rail between Telaraña hubs. Use it for hub-level
+USDC movement between Avalanche/Fuji and Arc Testnet. Do not model this as a
+CCTP spoke call: both sides are hubs in this flow.
+
+Gateway scope:
+
+- CCTP remains Circle-only for USDC and EURC spoke entry.
+- Gateway is currently USDC-only in the Telaraña config.
+- Hyperlane remains the non-Circle asset and cross-chain intent path.
+- Current Gateway signing mode is EOA.
+- ERC-1271 contract signing is a future mode; keep it disabled until Circle's
+  published support and allowlisting are live.
+
+Gateway testnet config:
+
+| Item | Value |
+|---|---|
+| Gateway Wallet | `0x0077777d7EBA4688BDeF3E311b846F25870A19B9` |
+| Gateway Minter | `0x0022222ABE238Cc2C7Bb1f21003F0a260052475B` |
+| API | `https://gateway-api-testnet.circle.com/v1` |
+| Fuji Gateway domain | `1` |
+| Arc Testnet Gateway domain | `26` |
+| Fuji USDC | `0x5425890298aed601595a70AB815c96711a31Bc65` |
+| Arc Testnet USDC | `0x3600000000000000000000000000000000000000` |
+
+Frontend flow for a Gateway hub transfer:
+
+1. Select route from `TELARANA_GATEWAY_HUB_ROUTES`, for example
+   `gateway-fuji-to-arc-usdc`.
+2. Ensure the operator/source signer has deposited USDC into Gateway Wallet on
+   the source hub chain, or call `deposit(...)` through `CircleGatewayWalletAbi`.
+3. Build the burn intent with `buildGatewayBurnIntent(...)`.
+4. Sign the EIP-712 payload using `GATEWAY_EIP712_DOMAIN` and
+   `GATEWAY_EIP712_TYPES`.
+5. POST the signed intent to Circle Gateway API.
+6. On the destination hub chain, call `gatewayMint(...)` through
+   `CircleGatewayMinterAbi`, or route through the future Telaraña Gateway hook
+   once deployed.
+7. After USDC arrives on the destination hub, show the pending destination
+   action: mint-to-hub first, later mint-and-request-spot-FX when the spot route
+   is deployed.
+
+Indexer/event names prepared for Gateway:
+
+- `GatewayHubRouteConfigured`
+- `GatewayHubTransferRequested`
+- `GatewayHubBurnIntentSigned`
+- `GatewayHubMintAttested`
+- `GatewayHubLiquidityReceived`
+- `GatewayAtomicFxSwapRequested`
+- `GatewayAtomicFxSwapSettled`
+- `GatewaySignerModeUpdated`
+
 ## Mainnet Target Assets On Avalanche
 
 These are the production basket assets for Avalanche C-Chain. Do not display
@@ -139,6 +195,8 @@ Use the typed ABIs exported from `@bu/fx-engine`:
 - `HyperlaneWarpRouteAbi`
 - `HyperlaneInterchainAccountRouterAbi`
 - `IBufiKycPassAbi`
+- `CircleGatewayWalletAbi`
+- `CircleGatewayMinterAbi`
 
 Future spot FX preparation exports:
 
@@ -161,6 +219,20 @@ Future spot FX preparation exports:
 - `RfqQuote`
 - `RFQ_PASILLO_EVENT_NAMES`
 - `RFQ_PASILLO_INDEXER_SCHEMA`
+- `GatewayHubTransferStatus`
+- `CircleGatewaySignerMode`
+- `GatewayHubAtomicFxRequest`
+- `GatewayHubRouteConfig`
+- `TELARANA_GATEWAY_TESTNET_CHAINS`
+- `TELARANA_GATEWAY_HUB_ROUTES`
+- `GATEWAY_EIP712_DOMAIN`
+- `GATEWAY_EIP712_TYPES`
+- `GATEWAY_HUB_EVENT_NAMES`
+- `GATEWAY_HUB_INDEXER_SCHEMA`
+- `buildGatewayBurnIntent`
+- `gatewayBurnIntentToJson`
+- `encodeGatewayMintCalldata`
+- `evmAddressToGatewayBytes32`
 
 Ghost Mode is not a third-party privacy wallet and not Circle Wallet. It is a
 Bufi Wallet KYC/KYB-pass route that will use privacy hooks/routers. For now,

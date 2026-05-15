@@ -16,6 +16,7 @@ and EURC movement; the hub risk engine decides what assets are valid collateral.
 
 - **FX money market** built over **Morpho Blue** isolated markets (USDC↔EURC at MVP, Avalanche basket next).
 - **Cross-chain spokes** via Circle's CCTP V2 — bring USDC, and EURC where Circle supports it, from CCTP-supported chains and open positions on the Hub. CCTP is never used for non-Circle stablecoins.
+- **Circle Gateway hub liquidity preparation** — Gateway-aware SDK config, ABIs, and interface stubs for fast USDC movement between Avalanche/Fuji and Arc hubs. Current signing mode is EOA; ERC-1271 contract signing is modeled as a future mode and remains disabled until Circle support is live.
 - **Permissionless, decentralized oracle** — Pyth primary + RedStone secondary. 24/7. No forex-hours circuit breakers. USDC and EURC are ERC-20s onchain.
 - **Ghost Mode** (Phase 1) — Bufi Wallet KYC/KYB pass-gated privacy hooks and routers for slower private deposit, withdrawal, swap, and cross-chain entry flows. No third-party privacy wallet dependency and no Circle Wallet dependency.
 - **Future Uniswap v4 spot FX execution** — request/config/event surfaces are

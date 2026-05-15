@@ -4,6 +4,8 @@ import { encodeFunctionData } from "viem";
 
 import {
   ChainId,
+  CircleGatewayMinterAbi,
+  CircleGatewayWalletAbi,
   EligibilityReason,
   FxRouteMode,
   FxHyperlaneAction,
@@ -18,6 +20,11 @@ import {
   IBufiKycPassAbi,
   RFQ_PASILLO_EVENT_NAMES,
   RFQ_PASILLO_INDEXER_SCHEMA,
+  GATEWAY_EIP712_TYPES,
+  GATEWAY_HUB_EVENT_NAMES,
+  GATEWAY_HUB_INDEXER_SCHEMA,
+  TELARANA_GATEWAY_HUB_ROUTES,
+  TELARANA_GATEWAY_TESTNET_CHAINS,
   TELARANA_AVALANCHE_SPOT_TOKEN_PAIRS,
   TELARANA_FUJI_SPOT_TOKEN_PAIRS,
   TELARANA_SPOT_FX_EVENT_NAMES,
@@ -25,6 +32,10 @@ import {
   TELARANA_SPOT_HOOK_CONFIGS,
   TELARANA_SPOT_POOL_CONFIGS,
   TELARANA_SPOT_ROUTE_CONFIGS,
+  buildGatewayBurnIntent,
+  encodeGatewayMintCalldata,
+  evmAddressToGatewayBytes32,
+  gatewayBurnIntentToJson,
   getAddresses,
   hyperlaneAddressToBytes32,
   resolveRouteMode,
@@ -227,6 +238,115 @@ describe("Telaraña future spot FX config", () => {
       "RfqQuoteAccepted",
       "RfqQuoteFilled",
     ]);
+  });
+});
+
+describe("Circle Gateway hub liquidity prep", () => {
+  test("exports Fuji and Arc testnet Gateway chain config", () => {
+    expect(TELARANA_GATEWAY_TESTNET_CHAINS).toHaveLength(2);
+
+    const fuji = TELARANA_GATEWAY_TESTNET_CHAINS.find(
+      (chain) => chain.chainId === ChainId.AvalancheFuji,
+    );
+    const arc = TELARANA_GATEWAY_TESTNET_CHAINS.find(
+      (chain) => chain.chainId === ChainId.ArcTestnet,
+    );
+
+    expect(fuji).toMatchObject({
+      domain: 1,
+      usdc: "0x5425890298aed601595a70AB815c96711a31Bc65",
+      gatewayWallet: "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+      gatewayMinter: "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
+    });
+    expect(arc).toMatchObject({
+      domain: 26,
+      usdc: "0x3600000000000000000000000000000000000000",
+      gatewayWallet: "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+      gatewayMinter: "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
+    });
+  });
+
+  test("locks Circle Gateway EIP-712 type order", () => {
+    expect(GATEWAY_EIP712_TYPES.TransferSpec.map((field) => field.name)).toEqual([
+      "version",
+      "sourceDomain",
+      "destinationDomain",
+      "sourceContract",
+      "destinationContract",
+      "sourceToken",
+      "destinationToken",
+      "sourceDepositor",
+      "destinationRecipient",
+      "sourceSigner",
+      "destinationCaller",
+      "value",
+      "salt",
+      "hookData",
+    ]);
+    expect(GATEWAY_EIP712_TYPES.BurnIntent.map((field) => field.name)).toEqual([
+      "maxBlockHeight",
+      "maxFee",
+      "spec",
+    ]);
+  });
+
+  test("builds a Fuji to Arc Gateway burn intent", () => {
+    const route = TELARANA_GATEWAY_HUB_ROUTES.find(
+      (candidate) => candidate.routeId === "gateway-fuji-to-arc-usdc",
+    );
+    if (!route) throw new Error("missing gateway-fuji-to-arc-usdc");
+
+    const salt =
+      "0x1111111111111111111111111111111111111111111111111111111111111111" as const;
+    const intent = buildGatewayBurnIntent({
+      route,
+      amount: 25_000000n,
+      sourceDepositor: ALICE,
+      sourceSigner: ALICE,
+      destinationRecipient: ROUTE,
+      destinationCaller: ZERO_ADDRESS,
+      maxBlockHeight: 123456789n,
+      salt,
+    });
+
+    expect(intent.maxFee).toBe(2_010000n);
+    expect(intent.spec.sourceDomain).toBe(1);
+    expect(intent.spec.destinationDomain).toBe(26);
+    expect(intent.spec.sourceContract).toBe(
+      "0x0000000000000000000000000077777d7eba4688bdef3e311b846f25870a19b9",
+    );
+    expect(intent.spec.destinationContract).toBe(
+      "0x0000000000000000000000000022222abe238cc2c7bb1f21003f0a260052475b",
+    );
+    expect(intent.spec.sourceToken).toBe(
+      "0x0000000000000000000000005425890298aed601595a70ab815c96711a31bc65",
+    );
+    expect(intent.spec.destinationToken).toBe(
+      "0x0000000000000000000000003600000000000000000000000000000000000000",
+    );
+    expect(intent.spec.sourceDepositor).toBe(evmAddressToGatewayBytes32(ALICE));
+    expect(intent.spec.sourceSigner).toBe(evmAddressToGatewayBytes32(ALICE));
+    expect(intent.spec.destinationRecipient).toBe(evmAddressToGatewayBytes32(ROUTE));
+    expect(intent.spec.destinationCaller).toBe(evmAddressToGatewayBytes32(ZERO_ADDRESS));
+    expect(gatewayBurnIntentToJson(intent).spec.value).toBe("25000000");
+  });
+
+  test("exports Gateway mint calldata and indexer events", () => {
+    const walletFunctions = CircleGatewayWalletAbi.map((item) => item.name);
+    const expected = encodeFunctionData({
+      abi: CircleGatewayMinterAbi,
+      functionName: "gatewayMint",
+      args: ["0x1234", "0xabcd"],
+    });
+
+    expect(walletFunctions).toContain("deposit");
+    expect(walletFunctions).toContain("availableBalance");
+    expect(encodeGatewayMintCalldata("0x1234", "0xabcd")).toBe(expected);
+    expect(GATEWAY_HUB_EVENT_NAMES).toContain("GatewayHubLiquidityReceived");
+    expect(GATEWAY_HUB_EVENT_NAMES).toContain("GatewayAtomicFxSwapSettled");
+    expect(GATEWAY_HUB_INDEXER_SCHEMA.map((event) => event.name)).toContain(
+      "GatewayHubRouteConfigured",
+    );
   });
 });
 
