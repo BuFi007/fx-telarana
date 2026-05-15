@@ -39,10 +39,18 @@ The LaTeX whitepaper source lives at
 
 ## Status
 
-- **Phase 0 contracts** — complete, 31/31 tests passing, fork-verified against the real Morpho Blue singleton (`0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb`) on Ethereum mainnet.
-- **Phase 0.5** — RedStone consumer payload wiring (next).
-- **Phase 1** — Ghost Mode with Bufi Wallet pass verification, spoke-level privacy entry, proof-gated withdrawal scaffold, minimal KYC hook scaffolding, and commitment/nullifier routing.
-- **Phase 2** — future Uniswap v4 spot FX execution.
+- **Current handoff scope** — complete for smart-contract and SDK handoff:
+  guardrails pass, 171 Solidity unit/invariant tests pass, 185 fork-inclusive
+  tests pass, 35 SDK tests pass, and SDK build passes.
+- **Phase 0 contracts** — complete and fork-verified against the real Morpho
+  Blue singleton (`0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb`) on Ethereum
+  mainnet.
+- **Phase 1** — Ghost Mode with Bufi Wallet pass verification, USDC/EURC
+  spoke-level privacy entry, commitment/nullifier registry, proof-gated
+  withdrawal scaffold, and minimal KYC hook scaffolding.
+- **Phase 2** — Uniswap v4 spot FX preparation, PMM quoting, Morpho
+  rehypothecation, JIT withdrawal, Gateway request settlement guards, and
+  future request/event surfaces are prepared.
 
 ## Tenderly Virtual TestNet
 
@@ -64,6 +72,9 @@ Useful admin RPC methods (Tenderly-specific extensions):
 - `evm_increaseTime` / `evm_mine` — time travel for grace-period tests
 
 The current live deployment on this vnet is in [`deployments/tenderly-base-sepolia.json`](deployments/tenderly-base-sepolia.json).
+
+For a Claude testing handoff, use
+[`docs/TENDERLY_CLAUDE_HANDOFF_PROMPT.md`](docs/TENDERLY_CLAUDE_HANDOFF_PROMPT.md).
 
 ## Deploying to Arc Testnet (when Morpho lands there)
 

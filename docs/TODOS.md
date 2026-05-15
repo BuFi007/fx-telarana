@@ -53,10 +53,10 @@
 - [ ] Client-side aggregate view across public and Ghost route accounts.
 
 ## Phase 2 deliverables (v4 hook)
-- [ ] `FxSwapHook.sol` with PMM curve params.
-- [ ] Rehypothecation: hook LP funds into Morpho M1/M2.
-- [ ] JIT borrow path tested under multiple inventory states.
-- [ ] Gas budget verified <500K per swap on Arc.
+- [x] `FxSwapHook.sol` with PMM curve params.
+- [x] Rehypothecation: hook LP funds into Morpho M1/M2.
+- [x] JIT withdrawal path tested under multiple inventory states.
+- [ ] Gas budget verified <500K per swap on Arc/Tenderly deployment.
 
 ## Phase 3 deliverables (Arc mainnet GA + native privacy)
 - [ ] Wire Arc native opt-in confidentiality precompile when published, if it composes safely with Ghost hooks.

@@ -101,6 +101,7 @@ contract FxGhostModeTest is Test {
     address internal untrustedSwapRouter = address(0xBAD);
 
     bytes32 internal constant ROUTE_ID = keccak256("ghost-cctp-usdc");
+    bytes32 internal constant EURC_ROUTE_ID = keccak256("ghost-cctp-eurc");
     bytes32 internal constant KYB_ROUTE_ID = keccak256("ghost-cctp-usdc-kyb");
     bytes32 internal constant COMMITMENT = keccak256("commitment-1");
     bytes32 internal constant ROOT = keccak256("root-1");
@@ -123,6 +124,7 @@ contract FxGhostModeTest is Test {
         registry.setNullifierConsumer(admin, true);
 
         router.setGhostRoute(ROUTE_ID, address(usdc), 1, true, keccak256("ghost-usdc-route"));
+        router.setGhostRoute(EURC_ROUTE_ID, address(eurc), 1, true, keccak256("ghost-eurc-route"));
         router.setGhostRoute(KYB_ROUTE_ID, address(usdc), 2, true, keccak256("ghost-usdc-kyb-route"));
 
         withdrawalVerifier = new MockGhostWithdrawalVerifier();
@@ -189,6 +191,25 @@ contract FxGhostModeTest is Test {
         router.enterHubGhost(KYB_ROUTE_ID, keccak256("kyb-commitment"), 1_000_000, beneficiary, "");
 
         assertEq(messenger.callCount(), 1);
+    }
+
+    function test_ghostSpokeEnter_allowsEurcCircleRoute() public {
+        pass.setPass(alice, MockBufiKycPass.Status.Valid, 1);
+
+        bytes32 commitment = keccak256("eurc-commitment");
+        vm.prank(alice);
+        router.enterHubGhost(EURC_ROUTE_ID, commitment, 1_000_000, beneficiary, hex"feed");
+
+        (uint256 amount,,, address burnToken,,,,, bool withHook) = messenger.last();
+        assertEq(amount, 1_000_000);
+        assertEq(burnToken, address(eurc));
+        assertTrue(withHook);
+        assertEq(eurc.balanceOf(address(messenger)), 1_000_000);
+
+        FxGhostCommitmentRegistry.CommitmentRecord memory record = registry.commitment(commitment);
+        assertEq(record.routeId, EURC_ROUTE_ID);
+        assertEq(record.token, address(eurc));
+        assertEq(record.beneficiary, beneficiary);
     }
 
     function test_ghostSpokeEnter_revertsWhenPassMissingExpiredOrRevoked() public {
@@ -460,6 +481,14 @@ contract FxGhostModeTest is Test {
         vm.prank(poolManager);
         vm.expectRevert(abi.encodeWithSelector(FxGhostKycHook.InvalidPass.selector, alice, 1, 2));
         hook.beforeSwap(trustedSwapRouter, _poolKey(), _swapParams(), _hookData(alice));
+    }
+
+    function test_hookRejectsMalformedHookData() public {
+        pass.setPass(alice, MockBufiKycPass.Status.Valid, 1);
+
+        vm.prank(poolManager);
+        vm.expectRevert(FxGhostKycHook.InvalidHookData.selector);
+        hook.beforeSwap(trustedSwapRouter, _poolKey(), _swapParams(), hex"01");
     }
 
     function _hookData(address account) internal pure returns (bytes memory) {

@@ -45,6 +45,7 @@ contract TelaranaGatewayHubHook is ITelaranaGatewayHubHook, AccessControl, Pausa
     error RequestNotMinted(bytes32 requestId);
     error InvalidMintAmount(uint256 expected, uint256 actual);
     error InvalidSpotRequest();
+    error InsufficientGatewayAmountOut(uint256 minAmountOut, uint256 amountOut);
     error SameGatewayDomain(uint32 domain);
     error UnexpectedHookData();
 
@@ -174,6 +175,9 @@ contract TelaranaGatewayHubHook is ITelaranaGatewayHubHook, AccessControl, Pausa
         GatewayReceipt storage receipt = _gatewayReceipts[requestId];
         if (receipt.state != GatewayRequestState.MINTED) revert RequestNotMinted(requestId);
         if (receipt.action != GatewayHubAction.MINT_AND_REQUEST_SPOT_FX) revert InvalidSpotRequest();
+        if (amountOut < receipt.minAmountOut) {
+            revert InsufficientGatewayAmountOut(receipt.minAmountOut, amountOut);
+        }
 
         receipt.state = GatewayRequestState.SETTLED;
 

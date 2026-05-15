@@ -228,6 +228,28 @@ contract TelaranaGatewayHubHookTest is Test {
         hook.markGatewayAtomicFxSwapSettled(requestId, 1_050e18);
     }
 
+    function test_markGatewayAtomicFxSwapSettled_revertsBelowMinAmountOut() public {
+        bytes32 requestId = keccak256("spot-underfill");
+        minter.setMint(address(hook), 250e6);
+
+        ITelaranaGatewayHubHook.GatewayMintContext memory context = _context(requestId, 250e6);
+        context.action = ITelaranaGatewayHubHook.GatewayHubAction.MINT_AND_REQUEST_SPOT_FX;
+        context.tokenOut = address(jpyc);
+        context.minAmountOut = 1_000e18;
+        context.spotRouteId = SPOT_ROUTE_ID;
+
+        vm.prank(executor);
+        hook.receiveGatewayMint("attestation", "signature", context);
+
+        vm.prank(executor);
+        vm.expectRevert(
+            abi.encodeWithSelector(TelaranaGatewayHubHook.InsufficientGatewayAmountOut.selector, 1_000e18, 999e18)
+        );
+        hook.markGatewayAtomicFxSwapSettled(requestId, 999e18);
+
+        assertEq(uint8(hook.gatewayRequestState(requestId)), uint8(ITelaranaGatewayHubHook.GatewayRequestState.MINTED));
+    }
+
     function test_setGatewaySignerMode_canDisableRouteMode() public {
         hook.setGatewaySignerMode(ROUTE_ID, ITelaranaGatewayHubHook.GatewaySignerMode.EOA, false);
         minter.setMint(address(hook), 100e6);

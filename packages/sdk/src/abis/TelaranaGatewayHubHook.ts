@@ -1109,6 +1109,22 @@ export const TelaranaGatewayHubHookAbi = [
   },
   {
     "type": "error",
+    "name": "InsufficientGatewayAmountOut",
+    "inputs": [
+      {
+        "name": "minAmountOut",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amountOut",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "InvalidMintAmount",
     "inputs": [
       {

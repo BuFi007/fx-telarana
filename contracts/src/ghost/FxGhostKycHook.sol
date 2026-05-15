@@ -27,6 +27,8 @@ import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 /// does not consume nullifiers directly. Commitment/nullifier accounting stays
 /// in Ghost routers/registries until production verifier semantics are audited.
 contract FxGhostKycHook is IHooks {
+    uint256 private constant GHOST_HOOK_DATA_LENGTH = 96;
+
     struct GhostHookData {
         address account;
         bytes32 commitment;
@@ -201,7 +203,7 @@ contract FxGhostKycHook is IHooks {
         returns (GhostHookData memory context)
     {
         if (!trustedRouter[router]) revert UntrustedRouter(router);
-        if (hookData.length == 0) revert InvalidHookData();
+        if (hookData.length != GHOST_HOOK_DATA_LENGTH) revert InvalidHookData();
 
         context = abi.decode(hookData, (GhostHookData));
         if (context.account == address(0)) revert ZeroAddress();

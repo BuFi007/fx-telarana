@@ -37,15 +37,18 @@ not missing smart-contract implementation for this branch.
 | G6 Ghost Mode could regress into unsafe public-pool KYC or `tx.origin` checks. | Added `FxGhostKycHook` with PoolManager-only callbacks, trusted router identity, hook-data account checks, and guardrail scan for `tx.origin`. |
 | G7 Ghost withdrawal replay surface needed explicit ownership. | Added `FxGhostWithdrawalRouter`, `IFxGhostWithdrawalVerifier`, root expiry checks, pass-level checks, nullifier consumption, and duplicate/invalid proof tests. |
 | G8 Review guardrails were prose-only. | Added `scripts/check-contract-guardrails.mjs` and `bun run contracts:guardrails`; TODO guardrails now have executable coverage. |
+| G9 Gateway spot settlement could mark an underfilled request as settled. | `markGatewayAtomicFxSwapSettled` now rejects `amountOut < minAmountOut` and keeps the request minted for retry. |
+| G10 Ghost hook malformed payloads reverted through raw ABI decode. | `FxGhostKycHook` now validates the exact static hook-data length and reverts with `InvalidHookData()`. |
 
 ## Verification Runs
 
 | Command | Result |
 |---|---|
-| `forge test --match-contract TelaranaGatewayHubHookTest -vvv` | 17 passed, 0 failed. |
+| `forge test --match-contract TelaranaGatewayHubHookTest -vvv` | 18 passed, 0 failed. |
+| `forge test --match-contract FxGhostModeTest -vvv` | 23 passed, 0 failed. |
 | `bun run contracts:guardrails` | Passed. |
-| `bun run contracts:test` | 168 passed, 0 failed, 1 skipped optional Tenderly manifest. |
-| `bun run contracts:test:fork` | 182 passed, 0 failed, 1 skipped optional Tenderly manifest. |
+| `bun run contracts:test` | 171 passed, 0 failed, 1 skipped optional Tenderly manifest. |
+| `bun run contracts:test:fork` | 185 passed, 0 failed, 1 skipped optional Tenderly manifest. |
 | `bun run sdk:test` | 35 passed, 0 failed. |
 | `bun run sdk:build` | Passed. |
 | `bun run sdk:abis:sync` | Regenerated SDK ABIs, including Gateway and Ghost Mode surfaces. |
