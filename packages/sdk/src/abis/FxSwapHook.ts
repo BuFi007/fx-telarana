@@ -1177,6 +1177,35 @@ export const FxSwapHookAbi = [
   },
   {
     "type": "function",
+    "name": "quoteExactInput",
+    "inputs": [
+      {
+        "name": "sellToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "sellAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "buyAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "oraclePriceE18",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "rebalance",
     "inputs": [],
     "outputs": [],
@@ -1601,6 +1630,17 @@ export const FxSwapHookAbi = [
         "name": "available",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidSellToken",
+    "inputs": [
+      {
+        "name": "sellToken",
+        "type": "address",
+        "internalType": "address"
       }
     ]
   },

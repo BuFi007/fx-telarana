@@ -127,6 +127,7 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     error InsufficientShares(uint256 requested, uint256 available);
     error ZeroAmount();
     error TokensNotSorted();
+    error InvalidSellToken(address sellToken);
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -485,6 +486,26 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         uint256 reserveOut  = _totalAssets(outputToken);
         (uint256 midE18, )  = ORACLE.getMid(inputToken, outputToken);
         return _quote(amountIn, reserveIn, reserveOut, midE18, spreadBps, kBps);
+    }
+
+    /// @notice Token-addressed exact-input quote — spec §6.1 integrator surface.
+    /// @dev    Wrapper around `quote(amountIn, zeroForOne)` that derives the direction
+    ///         flag from `sellToken`. Reverts if `sellToken` is not one of this hook's
+    ///         locked pair tokens.
+    /// @return buyAmount       Output amount of the other pair token (post-spread).
+    /// @return oraclePriceE18  The mid price used in the quote (1e18-scaled, sell/buy).
+    function quoteExactInput(address sellToken, uint256 sellAmount)
+        external
+        view
+        returns (uint256 buyAmount, uint256 oraclePriceE18)
+    {
+        if (sellToken != TOKEN0 && sellToken != TOKEN1) revert InvalidSellToken(sellToken);
+        bool zeroForOne = (sellToken == TOKEN0);
+        address buyToken = zeroForOne ? TOKEN1 : TOKEN0;
+        uint256 reserveIn  = _totalAssets(sellToken);
+        uint256 reserveOut = _totalAssets(buyToken);
+        (oraclePriceE18, ) = ORACLE.getMid(sellToken, buyToken);
+        buyAmount = _quote(sellAmount, reserveIn, reserveOut, oraclePriceE18, spreadBps, kBps);
     }
 
     /*//////////////////////////////////////////////////////////////

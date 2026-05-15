@@ -2,6 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IMorpho, MarketParams as MorphoMarketParams, Id} from "morpho-blue/interfaces/IMorpho.sol";
@@ -39,12 +40,12 @@ contract MainnetForkTest is Test {
     FxOracle internal fxOracle;
     MockPyth internal pyth;
     FxMarketRegistry internal registry;
-    MorphoOracleAdapter internal adapterM1;  // loan=EURC, collat=USDC
-    MorphoOracleAdapter internal adapterM2;  // loan=USDC, collat=EURC
+    MorphoOracleAdapter internal adapterM1; // loan=EURC, collat=USDC
+    MorphoOracleAdapter internal adapterM2; // loan=USDC, collat=EURC
     FxReceipt internal fxUSDC;
     FxReceipt internal fxEURC;
     FxLiquidator internal liquidator;
-    FxSwapHook   internal hook;
+    FxSwapHook internal hook;
     address internal hookPoolManager = address(0x9999); // mock — fork tests don't exercise the v4 swap path
 
     address internal owner = address(0xA11CE);
@@ -95,22 +96,14 @@ contract MainnetForkTest is Test {
 
         // M1: loan=EURC, collateral=USDC
         IFxMarketRegistry.MarketParams memory m1 = IFxMarketRegistry.MarketParams({
-            loanToken: EURC,
-            collateralToken: USDC,
-            oracle: address(adapterM1),
-            irm: ADAPTIVE_IRM,
-            lltv: LLTV
+            loanToken: EURC, collateralToken: USDC, oracle: address(adapterM1), irm: ADAPTIVE_IRM, lltv: LLTV
         });
         vm.prank(owner);
         registry.createAndRegisterMarket(m1);
 
         // M2: loan=USDC, collateral=EURC
         IFxMarketRegistry.MarketParams memory m2 = IFxMarketRegistry.MarketParams({
-            loanToken: USDC,
-            collateralToken: EURC,
-            oracle: address(adapterM2),
-            irm: ADAPTIVE_IRM,
-            lltv: LLTV
+            loanToken: USDC, collateralToken: EURC, oracle: address(adapterM2), irm: ADAPTIVE_IRM, lltv: LLTV
         });
         vm.prank(owner);
         registry.createAndRegisterMarket(m2);
@@ -120,31 +113,27 @@ contract MainnetForkTest is Test {
             "fxUSDC supply receipt",
             "fxUSDC",
             MORPHO,
-            MorphoMarketParams({loanToken: USDC, collateralToken: EURC, oracle: address(adapterM2), irm: ADAPTIVE_IRM, lltv: LLTV})
+            MorphoMarketParams({
+                loanToken: USDC, collateralToken: EURC, oracle: address(adapterM2), irm: ADAPTIVE_IRM, lltv: LLTV
+            })
         );
         fxEURC = new FxReceipt(
             IERC20(EURC),
             "fxEURC supply receipt",
             "fxEURC",
             MORPHO,
-            MorphoMarketParams({loanToken: EURC, collateralToken: USDC, oracle: address(adapterM1), irm: ADAPTIVE_IRM, lltv: LLTV})
+            MorphoMarketParams({
+                loanToken: EURC, collateralToken: USDC, oracle: address(adapterM1), irm: ADAPTIVE_IRM, lltv: LLTV
+            })
         );
 
-        liquidator = new FxLiquidator(MORPHO, address(registry), address(fxOracle));
+        liquidator = new FxLiquidator(MORPHO, address(registry), address(fxOracle), owner);
 
         // FxSwapHook — locked to (USDC, EURC) and the real Morpho instance.
         // PoolManager is a mock since these fork tests exercise only the LP +
         // rehypothecation paths, not the v4 swap callbacks.
         (address t0, address t1) = USDC < EURC ? (USDC, EURC) : (EURC, USDC);
-        hook = new FxSwapHook(
-            hookPoolManager,
-            address(fxOracle),
-            address(registry),
-            owner,
-            t0,
-            t1,
-            MORPHO
-        );
+        hook = new FxSwapHook(hookPoolManager, address(fxOracle), address(registry), owner, t0, t1, MORPHO);
         // Default 20% hot, 80% Morpho
 
         // Fund test users via Foundry's `deal` cheatcode
@@ -300,15 +289,14 @@ contract MainnetForkTest is Test {
         vm.startPrank(lender);
         IERC20(t0).approve(address(hook), type(uint256).max);
         IERC20(t1).approve(address(hook), type(uint256).max);
-        hook.deposit(100_000e6, 100_000e6);   // first deposit at 20% hot
+        hook.deposit(100_000e6, 100_000e6); // first deposit at 20% hot
         uint256 morpho0AfterFirst = hook.morphoShares(t0);
 
-        hook.deposit(50_000e6, 50_000e6);     // second deposit — should rebalance push
+        hook.deposit(50_000e6, 50_000e6); // second deposit — should rebalance push
         uint256 morpho0AfterSecond = hook.morphoShares(t0);
         vm.stopPrank();
 
-        assertGt(morpho0AfterSecond, morpho0AfterFirst,
-            "second deposit must push excess hot into morpho");
+        assertGt(morpho0AfterSecond, morpho0AfterFirst, "second deposit must push excess hot into morpho");
     }
 
     function test_fork_marketIds_deterministic() public whenFork {
@@ -321,5 +309,126 @@ contract MainnetForkTest is Test {
         IFxMarketRegistry.MarketParams memory p = registry.paramsOf(EURC, USDC);
         assertEq(p.loanToken, EURC);
         assertEq(p.collateralToken, USDC);
+    }
+
+    function test_fork_setPoolLive_isolatesPair() public whenFork {
+        bytes32 m1id = registry.marketIdOf(EURC, USDC);
+
+        vm.prank(owner);
+        registry.setPoolLive(EURC, USDC, false);
+        assertFalse(registry.isPoolLive(EURC, USDC));
+        assertTrue(registry.isPoolLive(USDC, EURC));
+
+        vm.startPrank(lender);
+        IERC20(EURC).approve(address(registry), type(uint256).max);
+        vm.expectRevert(abi.encodeWithSelector(IFxMarketRegistry.PoolNotLive.selector, m1id));
+        registry.supply(EURC, USDC, 100_000e6, lender);
+
+        IERC20(USDC).approve(address(registry), type(uint256).max);
+        uint256 shares = registry.supply(USDC, EURC, 100_000e6, lender);
+        vm.stopPrank();
+
+        assertGt(shares, 0, "unpaused paired market should still accept supply");
+    }
+
+    function test_fork_setPoolLive_revertsWithoutOpsRole() public whenFork {
+        address random = address(0xB0B);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, random, registry.OPERATIONS_ROLE()
+            )
+        );
+        vm.prank(random);
+        registry.setPoolLive(EURC, USDC, false);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                PR-3 integrator-surface shims (listPools, etc.)
+    //////////////////////////////////////////////////////////////*/
+
+    function test_fork_listPools_enumeratesBoth() public whenFork {
+        IFxMarketRegistry.MarketParams[] memory pools = registry.listPools();
+        assertEq(pools.length, 2, "two markets registered (M1 + M2)");
+        // Registration order in setUp: M1 (loan=EURC), then M2 (loan=USDC).
+        assertEq(pools[0].loanToken, EURC);
+        assertEq(pools[1].loanToken, USDC);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                R1 INFLATION-ATTACK DEFENSE (audit v1.2.2)
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Sanity: a direct USDC transfer to the wrapper must NOT shift share
+    /// price. `FxReceipt.totalAssets()` reads `MORPHO.expectedSupplyAssets`, not
+    /// `asset.balanceOf(this)` — adversarial pass empirically disproved the
+    /// classical direct-donation variant. Pin the no-op so a future regression
+    /// surfaces loud. (`docs/SPEC_PHASE_3_MULTI_STABLECOIN.md` §9.1.)
+    function test_fork_r1_directDonationIsInert() public whenFork {
+        address attacker = address(0x4774CE);
+        deal(USDC, attacker, 10_000_000e6);
+
+        vm.startPrank(attacker);
+        IERC20(USDC).approve(address(fxUSDC), type(uint256).max);
+        uint256 attackerShares = fxUSDC.deposit(1, attacker);
+        vm.stopPrank();
+
+        uint256 ppdBefore = fxUSDC.previewDeposit(1e6);
+
+        // Direct donation — should be a no-op for share pricing.
+        vm.prank(attacker);
+        IERC20(USDC).transfer(address(fxUSDC), 1_000_000e6);
+
+        uint256 ppdAfter = fxUSDC.previewDeposit(1e6);
+
+        assertEq(ppdAfter, ppdBefore, "direct USDC transfer must not alter share price");
+        assertEq(attackerShares, 1e6, "1-wei deposit with offset=6 mints 10^6 shares");
+    }
+
+    /// @notice The real attack vector: Morpho-side donation. Anyone can call
+    /// `MORPHO.supply(params, x, 0, wrapper, "")` to mint shares to the wrapper's
+    /// Morpho position, which IS counted by `expectedSupplyAssets`. With
+    /// `_decimalsOffset()=6`, the attacker's required donation to round the
+    /// victim to zero is multiplied by 1e6, making the steal negative-EV.
+    /// Asserts the victim recovers ≥99% of deposit after redeem.
+    function test_fork_r1_morphoSideDonationDefended() public whenFork {
+        address attacker = address(0x4774CE);
+        address victim = address(0x71C71E);
+        deal(USDC, attacker, 10_000_000e6);
+        deal(USDC, victim, 1_000_000e6);
+
+        // ActorA = attacker: deposit 1 wei.
+        vm.startPrank(attacker);
+        IERC20(USDC).approve(address(fxUSDC), type(uint256).max);
+        fxUSDC.deposit(1, attacker);
+        vm.stopPrank();
+
+        // Morpho-side donation: 1M USDC supplied on behalf of the wrapper.
+        // This DOES inflate the wrapper's expectedSupplyAssets — unlike a
+        // direct transfer, which would not.
+        MorphoMarketParams memory m2 = MorphoMarketParams({
+            loanToken: USDC, collateralToken: EURC, oracle: address(adapterM2), irm: ADAPTIVE_IRM, lltv: LLTV
+        });
+        vm.startPrank(attacker);
+        IERC20(USDC).approve(MORPHO, type(uint256).max);
+        morpho.supply(m2, 1_000_000e6, 0, address(fxUSDC), "");
+        vm.stopPrank();
+
+        uint256 victimDeposit = 100e6; // 100 USDC
+
+        vm.startPrank(victim);
+        IERC20(USDC).approve(address(fxUSDC), type(uint256).max);
+        uint256 victimShares = fxUSDC.deposit(victimDeposit, victim);
+        uint256 victimRedeemed = fxUSDC.redeem(victimShares, victim, victim);
+        vm.stopPrank();
+
+        // With `_decimalsOffset()=6` the victim recovers approximately the full
+        // deposit despite the donation. Tolerance 1% covers rounding floors.
+        assertGe(
+            victimRedeemed, victimDeposit * 99 / 100, "R1 defense failed: victim lost > 1% to Morpho-side donation"
+        );
+
+        // Attacker share value never exceeds what they put in (1M donation + 1 wei seed).
+        uint256 attackerShareValue = fxUSDC.previewRedeem(fxUSDC.balanceOf(attacker));
+        assertLt(attackerShareValue, 1_000_001e6, "attacker share value must not exceed their own donation+seed");
     }
 }

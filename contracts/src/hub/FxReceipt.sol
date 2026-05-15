@@ -62,9 +62,27 @@ contract FxReceipt is ERC4626 {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Total assets owned by this contract as a Morpho supplier.
-    /// @dev    Reads totalSupplyAssets and supply shares; computes our share.
+    /// @dev Reads Morpho's view of the wrapper's supply position (NOT
+    /// `asset.balanceOf(this)`). Raw USDC transferred directly to this contract
+    /// therefore does not affect share pricing — defeating the classical
+    /// ERC-4626 direct-donation inflation attack. The wrapper can still be
+    /// attacked via a Morpho-side donation (`MORPHO.supply(params, x, 0,
+    /// wrapper, "")` mints shares to this contract's Morpho position); the
+    /// `_decimalsOffset()` override below is the defense against that variant.
+    /// Audit reference: `reports/AUDIT_REPORT.md` v1.2.2 R1.
     function totalAssets() public view override returns (uint256) {
         return MORPHO.expectedSupplyAssets(_marketParams, address(this));
+    }
+
+    /// @dev Virtual-shares boost against ERC-4626 first-depositor inflation.
+    /// OZ default is 0, which leaves the share-rounding window open until the
+    /// pool has scale. Returning 6 forces `_convertToShares` to scale by 1e6,
+    /// raising the attacker's required donation by the same factor and making
+    /// the steal economically negative-EV at any realistic victim deposit.
+    /// Audit reference: `reports/AUDIT_REPORT.md` v1.2.2 R1 — operative attack
+    /// is Morpho-side donation via `MORPHO.supply(params, x, 0, wrapper, "")`.
+    function _decimalsOffset() internal pure override returns (uint8) {
+        return 6;
     }
 
     /*//////////////////////////////////////////////////////////////

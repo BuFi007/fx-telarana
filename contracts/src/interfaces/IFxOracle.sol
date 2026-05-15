@@ -68,6 +68,13 @@ interface IFxOracle {
         bytes[] calldata pythUpdate
     ) external payable returns (uint256 midE18, uint256 publishedAt);
 
+    /// @notice Single-feed read: `token`'s USD price, 1e18-scaled.
+    /// @dev    Spec §6.1 integrator surface — convenience over `getMid(token, USD_anchor)`.
+    ///         Reads the token's Pyth feed alone (no RedStone deviation gate). Use this
+    ///         for off-chain quote calculation; on-chain swap/borrow paths should still
+    ///         use `getMidVerified` to enforce the secondary cross-check.
+    function priceOf(address token) external view returns (uint256 priceE18, uint256 publishedAt);
+
     /*//////////////////////////////////////////////////////////////
                                 ADMIN
     //////////////////////////////////////////////////////////////*/

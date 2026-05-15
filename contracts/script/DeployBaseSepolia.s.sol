@@ -12,6 +12,7 @@ import {FxReceipt} from "../src/hub/FxReceipt.sol";
 import {FxLiquidator} from "../src/hub/FxLiquidator.sol";
 import {FxHubMessageReceiver} from "../src/hub/FxHubMessageReceiver.sol";
 import {MorphoOracleAdapter} from "../src/hub/MorphoOracleAdapter.sol";
+import {FxTimelock} from "../src/governance/FxTimelock.sol";
 import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
 import {MockEURC} from "../src/test-helpers/MockEURC.sol";
 
@@ -77,10 +78,12 @@ contract DeployBaseSepolia is Script {
         }
 
         // 2) FxOracle (Pyth primary + RedStone fallback in getMid; deviation
-        //    gate enforced in getMidVerified only)
-        //    600s staleness window — Pyth on Base Sepolia testnet has wider
-        //    update gaps than mainnet. Tighten on production deploy.
-        FxOracle oracle = new FxOracle(pyth, deployer, 600, 50, 30);
+        //    gate enforced in getMidVerified only).
+        //    Spec §8 production defaults: staleness=300s, deviation=50 bps, confidence=30 bps.
+        FxOracle oracle = new FxOracle(pyth, deployer, 300, 50, 30);
+        require(oracle.maxOracleAge() == 300, "deploy: maxOracleAge != 300");
+        require(oracle.maxDeviationBps() == 50, "deploy: maxDeviationBps != 50");
+        require(oracle.maxConfidenceBps() == 30, "deploy: maxConfidenceBps != 30");
         oracle.setFeed(usdc, PYTH_USDC_USD);
         oracle.setFeed(eurc, PYTH_EURC_USD);
         oracle.setRedstoneFeed(usdc, REDSTONE_USDC);
@@ -114,14 +117,19 @@ contract DeployBaseSepolia is Script {
         FxReceipt fxUSDC = new FxReceipt(IERC20(usdc), "fxUSDC supply receipt", "fxUSDC", morpho, mpM2);
 
         // 7) Liquidator
-        FxLiquidator liquidator = new FxLiquidator(morpho, address(registry), address(oracle));
+        FxLiquidator liquidator = new FxLiquidator(morpho, address(registry), address(oracle), deployer);
 
         // 8) Hub-side CCTP V2 message receiver (lets spokes deposit through CCTP hooks)
         address cctpMt = vm.envOr("BASE_SEPOLIA_CCTP_MT", DEFAULT_CCTP_MESSAGE_TRANSMITTER);
         FxHubMessageReceiver hubReceiver =
             new FxHubMessageReceiver(cctpMt, usdc, address(registry));
 
+        // 9) FxTimelock + atomic admin handoff (spec §10.2).
+        FxTimelock timelock = _deployTimelockAndHandoff(deployer, oracle, registry, liquidator);
+
         vm.stopBroadcast();
+
+        _assertHandoff(address(timelock), deployer, oracle, registry, liquidator);
 
         console2.log("============================================");
         console2.log("fx-Telarana Base Sepolia deployment");
@@ -134,11 +142,53 @@ contract DeployBaseSepolia is Script {
         console2.log("FxReceipt fxUSDC      ", address(fxUSDC));
         console2.log("FxLiquidator          ", address(liquidator));
         console2.log("FxHubMessageReceiver  ", address(hubReceiver));
+        console2.log("FxTimelock            ", address(timelock));
         console2.log("CctpMessageTransmitter", cctpMt);
         console2.log("EURC token            ", eurc);
         console2.log("Market M1 id (EURC/USDC):");
         console2.logBytes32(m1Id);
         console2.log("Market M2 id (USDC/EURC):");
         console2.logBytes32(m2Id);
+    }
+
+    /// @dev Deploys an FxTimelock (24h min-delay, deployer = proposer + executor,
+    ///      self-administered) and atomically hands DEFAULT_ADMIN_ROLE on each
+    ///      admin contract to it. OPERATIONS_ROLE stays on deployer for hot
+    ///      pause; multisig migration is op-level (out of scope here).
+    function _deployTimelockAndHandoff(
+        address deployer,
+        FxOracle oracle,
+        FxMarketRegistry registry,
+        FxLiquidator liquidator
+    ) internal returns (FxTimelock timelock) {
+        address[] memory proposers = new address[](1);
+        proposers[0] = deployer;
+        address[] memory executors = new address[](1);
+        executors[0] = deployer;
+        timelock = new FxTimelock(24 hours, proposers, executors, address(0));
+
+        oracle.grantRole(oracle.DEFAULT_ADMIN_ROLE(), address(timelock));
+        oracle.renounceRole(oracle.DEFAULT_ADMIN_ROLE(), deployer);
+
+        registry.grantRole(registry.DEFAULT_ADMIN_ROLE(), address(timelock));
+        registry.renounceRole(registry.DEFAULT_ADMIN_ROLE(), deployer);
+
+        liquidator.grantRole(liquidator.DEFAULT_ADMIN_ROLE(), address(timelock));
+        liquidator.renounceRole(liquidator.DEFAULT_ADMIN_ROLE(), deployer);
+    }
+
+    function _assertHandoff(
+        address timelock,
+        address deployer,
+        FxOracle oracle,
+        FxMarketRegistry registry,
+        FxLiquidator liquidator
+    ) internal view {
+        require(oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), timelock),         "handoff: oracle admin != timelock");
+        require(!oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), deployer),        "handoff: deployer still oracle admin");
+        require(registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), timelock),     "handoff: registry admin != timelock");
+        require(!registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), deployer),    "handoff: deployer still registry admin");
+        require(liquidator.hasRole(liquidator.DEFAULT_ADMIN_ROLE(), timelock), "handoff: liq admin != timelock");
+        require(!liquidator.hasRole(liquidator.DEFAULT_ADMIN_ROLE(), deployer),"handoff: deployer still liq admin");
     }
 }

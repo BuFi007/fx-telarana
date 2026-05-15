@@ -4,6 +4,8 @@ pragma solidity ^0.8.26;
 import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
 import {PythStructs} from "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
 
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+
 import {PrimaryProdDataServiceConsumerBase} from
     "@redstone-finance/evm-connector/data-services/PrimaryProdDataServiceConsumerBase.sol";
 
@@ -23,15 +25,16 @@ import {IFxOracle} from "../interfaces/IFxOracle.sol";
 /// │  getMidVerified()   — Pyth + RedStone-from-msg.data deviation gate      │
 /// │  getMidWithUpdate() — payable: updatePriceFeeds(Pyth) + getMidVerified  │
 /// └─────────────────────────────────────────────────────────────────────────┘
-contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
+contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase, AccessControl {
     /*//////////////////////////////////////////////////////////////
                                 STATE
     //////////////////////////////////////////////////////////////*/
 
     IPyth public immutable PYTH;
 
-    address public owner;
-
+    /// @notice Reads (price views) never gate on Pausable — they must always
+    ///         succeed even during an incident. Mutators gate on
+    ///         `DEFAULT_ADMIN_ROLE` only (timelock-gated per spec §10.3).
     uint256 public maxOracleAge;
     uint256 public maxDeviationBps;
     uint256 public maxConfidenceBps;
@@ -46,7 +49,6 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
                                 ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error NotOwner();
     error InvalidConfig();
     error ZeroAddress();
     error InsufficientPythFee(uint256 fee, uint256 sent);
@@ -58,38 +60,32 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
     event FeedSet(address indexed token, bytes32 pythFeedId);
     event RedstoneFeedSet(address indexed token, bytes32 redstoneFeedId);
     event ConfigUpdated(uint256 maxOracleAge, uint256 maxDeviationBps, uint256 maxConfidenceBps);
-    event OwnerTransferred(address indexed from, address indexed to);
-
-    /*//////////////////////////////////////////////////////////////
-                                MODIFIERS
-    //////////////////////////////////////////////////////////////*/
-
-    modifier onlyOwner() {
-        if (msg.sender != owner) revert NotOwner();
-        _;
-    }
 
     /*//////////////////////////////////////////////////////////////
                                 CTOR
     //////////////////////////////////////////////////////////////*/
 
+    /// @param initialAdmin Address that initially holds `DEFAULT_ADMIN_ROLE`.
+    ///                     Deploy scripts grant this to the deployer for
+    ///                     bootstrap setup, then atomically transfer to the
+    ///                     `FxTimelock` and renounce the deployer's role.
     constructor(
         address pyth_,
-        address owner_,
+        address initialAdmin,
         uint256 maxOracleAge_,
         uint256 maxDeviationBps_,
         uint256 maxConfidenceBps_
     ) {
-        if (pyth_ == address(0) || owner_ == address(0)) revert ZeroAddress();
+        if (pyth_ == address(0) || initialAdmin == address(0)) revert ZeroAddress();
         if (maxOracleAge_ == 0 || maxDeviationBps_ == 0 || maxConfidenceBps_ == 0) revert InvalidConfig();
 
         PYTH = IPyth(pyth_);
-        owner = owner_;
         maxOracleAge = maxOracleAge_;
         maxDeviationBps = maxDeviationBps_;
         maxConfidenceBps = maxConfidenceBps_;
 
-        emit OwnerTransferred(address(0), owner_);
+        _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
+
         emit ConfigUpdated(maxOracleAge_, maxDeviationBps_, maxConfidenceBps_);
     }
 
@@ -97,30 +93,27 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
                                 ADMIN
     //////////////////////////////////////////////////////////////*/
 
-    function setFeed(address token, bytes32 pythFeedId) external onlyOwner {
+    function setFeed(address token, bytes32 pythFeedId) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (token == address(0) || pythFeedId == bytes32(0)) revert InvalidConfig();
         pythFeedOf[token] = pythFeedId;
         emit FeedSet(token, pythFeedId);
     }
 
-    function setRedstoneFeed(address token, bytes32 redstoneFeedId) external onlyOwner {
+    function setRedstoneFeed(address token, bytes32 redstoneFeedId) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (token == address(0) || redstoneFeedId == bytes32(0)) revert InvalidConfig();
         redstoneFeedOf[token] = redstoneFeedId;
         emit RedstoneFeedSet(token, redstoneFeedId);
     }
 
-    function setConfig(uint256 maxAge, uint256 maxDevBps, uint256 maxConfBps) external onlyOwner {
+    function setConfig(uint256 maxAge, uint256 maxDevBps, uint256 maxConfBps)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         if (maxAge == 0 || maxDevBps == 0 || maxConfBps == 0) revert InvalidConfig();
         maxOracleAge = maxAge;
         maxDeviationBps = maxDevBps;
         maxConfidenceBps = maxConfBps;
         emit ConfigUpdated(maxAge, maxDevBps, maxConfBps);
-    }
-
-    function transferOwner(address newOwner) external onlyOwner {
-        if (newOwner == address(0)) revert ZeroAddress();
-        emit OwnerTransferred(owner, newOwner);
-        owner = newOwner;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -133,6 +126,19 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
         returns (uint256 maxAge, uint256 maxDevBps, uint256 maxConfBps)
     {
         return (maxOracleAge, maxDeviationBps, maxConfidenceBps);
+    }
+
+    /// @notice Single-feed read: `token`'s USD price, 1e18-scaled.
+    /// @dev    Spec §6.1 integrator surface. Reads the token's Pyth feed alone
+    ///         (no RedStone cross-check). For on-chain price gates that need
+    ///         deviation safety, use `getMidVerified(base, quote)` instead.
+    function priceOf(address token) external view returns (uint256 priceE18, uint256 publishedAt) {
+        bytes32 feedId = pythFeedOf[token];
+        if (feedId == bytes32(0)) revert OracleFeedUnknown(token, address(0));
+        PythStructs.Price memory p = PYTH.getPriceNoOlderThan(feedId, maxOracleAge);
+        _assertPythConfidence(p);
+        priceE18 = _toE18(p);
+        publishedAt = p.publishTime;
     }
 
     /// @notice Robust mid read with Pyth → RedStone fallback.

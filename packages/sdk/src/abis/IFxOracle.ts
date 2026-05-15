@@ -150,6 +150,30 @@ export const IFxOracleAbi = [
     "stateMutability": "payable"
   },
   {
+    "type": "function",
+    "name": "priceOf",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "priceE18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "publishedAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
     "type": "error",
     "name": "OracleDeviation",
     "inputs": [
