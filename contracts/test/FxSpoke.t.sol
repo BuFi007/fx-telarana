@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
@@ -12,6 +12,7 @@ contract FxSpokeTest is Test {
     MockTokenMessenger internal messenger;
     MockMessageTransmitter internal mt;
     MockERC20 internal usdc;
+    MockERC20 internal eurc;
 
     address internal hubReceiver = address(0xABC);
     address internal alice = address(0xA11CE);
@@ -21,13 +22,17 @@ contract FxSpokeTest is Test {
 
     function setUp() public {
         usdc = new MockERC20("USDC", "USDC", 6);
+        eurc = new MockERC20("EURC", "EURC", 6);
         mt = new MockMessageTransmitter(usdc, 0);
         messenger = new MockTokenMessenger(address(mt));
         spoke = new FxSpoke(address(messenger), address(usdc), hubReceiver, ARC_DOMAIN);
 
         usdc.mint(alice, 10_000_000);
+        eurc.mint(alice, 10_000_000);
         vm.prank(alice);
         usdc.approve(address(spoke), type(uint256).max);
+        vm.prank(alice);
+        eurc.approve(address(spoke), type(uint256).max);
     }
 
     function test_enterHub_callsTokenMessengerWithHookData() public {
@@ -69,6 +74,42 @@ contract FxSpokeTest is Test {
         vm.stopPrank();
     }
 
+    function test_ownerCanEnableEurcAndEnterHub() public {
+        spoke.setCircleTokenAllowed(address(eurc), true);
+
+        bytes memory hubCalldata = hex"cafe";
+        vm.prank(alice);
+        spoke.enterHub(address(eurc), 2_000_000, beneficiary, hubCalldata);
+
+        (uint256 amount,,, address burnToken,,,, bytes memory hookData, bool withHook) = messenger.last();
+
+        assertEq(amount, 2_000_000);
+        assertEq(burnToken, address(eurc));
+        assertTrue(withHook);
+        assertEq(keccak256(hookData), keccak256(abi.encode(beneficiary, hubCalldata)));
+    }
+
+    function test_nonOwnerCannotEnableCircleToken() public {
+        vm.prank(alice);
+        vm.expectRevert(FxSpoke.NotOwner.selector);
+        spoke.setCircleTokenAllowed(address(eurc), true);
+    }
+
+    function test_ownerCanTransferCircleAllowlistOwnership() public {
+        spoke.transferOwner(beneficiary);
+        assertEq(spoke.owner(), beneficiary);
+
+        vm.prank(beneficiary);
+        spoke.setCircleTokenAllowed(address(eurc), true);
+        assertTrue(spoke.circleTokenAllowed(address(eurc)));
+    }
+
+    function test_nonOwnerCannotTransferCircleAllowlistOwnership() public {
+        vm.prank(alice);
+        vm.expectRevert(FxSpoke.NotOwner.selector);
+        spoke.transferOwner(beneficiary);
+    }
+
     function test_enterHub_revertsOnZeroBeneficiary() public {
         vm.prank(alice);
         vm.expectRevert();
@@ -82,7 +123,7 @@ contract FxSpokeTest is Test {
         vm.prank(alice);
         spoke.enterHubWithFee(address(usdc), 500_000, beneficiary, hubCalldata, 2_000, finalThreshold);
 
-        (,,,,, uint256 maxFee, uint32 finality, , bool withHook) = messenger.last();
+        (,,,,, uint256 maxFee, uint32 finality,, bool withHook) = messenger.last();
         assertEq(maxFee, 2_000);
         assertEq(finality, finalThreshold);
         assertTrue(withHook);

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {Script, console2} from "forge-std/Script.sol";
@@ -10,6 +10,8 @@ import {FxReceipt} from "../src/hub/FxReceipt.sol";
 import {FxLiquidator} from "../src/hub/FxLiquidator.sol";
 import {FxHubMessageReceiver} from "../src/hub/FxHubMessageReceiver.sol";
 import {MorphoOracleAdapter} from "../src/hub/MorphoOracleAdapter.sol";
+import {FxTimelock} from "../src/governance/FxTimelock.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
 
 import {MarketParams as MorphoMarketParams} from "morpho-blue/interfaces/IMorpho.sol";
@@ -46,8 +48,11 @@ contract DeployFxHub is Script {
 
         vm.startBroadcast(pk);
 
-        // 1) FxOracle (Pyth primary + RedStone secondary slot; 60s staleness; 50bps deviation; 30bps confidence)
-        FxOracle oracle = new FxOracle(pyth, deployer, 60, 50, 30);
+        // 1) FxOracle — spec §8 production defaults: staleness=300s, deviation=50 bps, confidence=30 bps.
+        FxOracle oracle = new FxOracle(pyth, deployer, 300, 50, 30);
+        require(oracle.maxOracleAge() == 300, "deploy: maxOracleAge != 300");
+        require(oracle.maxDeviationBps() == 50, "deploy: maxDeviationBps != 50");
+        require(oracle.maxConfidenceBps() == 30, "deploy: maxConfidenceBps != 30");
         oracle.setFeed(usdc, pythUsdcUsd);
         oracle.setFeed(eurc, pythEurcUsd);
 
@@ -79,12 +84,22 @@ contract DeployFxHub is Script {
         FxReceipt fxUSDC = new FxReceipt(IERC20(usdc), "fxUSDC supply receipt", "fxUSDC", morpho, mpM2);
 
         // 6) FxLiquidator
-        FxLiquidator liquidator = new FxLiquidator(morpho, address(registry), address(oracle));
+        FxLiquidator liquidator = new FxLiquidator(morpho, address(registry), address(oracle), deployer);
 
         // 7) FxHubMessageReceiver (CCTP V2 inbound)
         FxHubMessageReceiver receiver = new FxHubMessageReceiver(messageTransmitter, usdc, address(registry));
 
+        // 8) FxTimelock + atomic admin handoff. Spec §10.2: DEFAULT_ADMIN_ROLE on
+        //    each admin contract MUST be the timelock post-deploy.
+        FxTimelock timelock = _deployTimelockAndHandoff(deployer, oracle, registry, liquidator);
+
         vm.stopBroadcast();
+
+        // 9) Post-condition asserts — the broadcast already finished, but if any
+        //    of these fail the deploy is logically invalid. Treat as a fail-stop.
+        _assertHandoff(address(timelock), deployer, oracle, registry, liquidator);
+
+        console2.log("FxTimelock            ", address(timelock));
 
         console2.log("FxOracle              ", address(oracle));
         console2.log("MorphoOracleAdapter M1", address(adapterM1));
@@ -96,5 +111,49 @@ contract DeployFxHub is Script {
         console2.log("FxHubMessageReceiver  ", address(receiver));
         console2.logBytes32(m1Id);
         console2.logBytes32(m2Id);
+    }
+
+    /// @dev Deploys an FxTimelock (24h min-delay, deployer = proposer + executor,
+    ///      self-administered) and atomically hands DEFAULT_ADMIN_ROLE on each of
+    ///      oracle/registry/liquidator to it, renouncing the deployer's role.
+    ///      OPERATIONS_ROLE stays with the deployer (multisig migration is op-level).
+    function _deployTimelockAndHandoff(
+        address deployer,
+        FxOracle oracle,
+        FxMarketRegistry registry,
+        FxLiquidator liquidator
+    ) internal returns (FxTimelock timelock) {
+        address[] memory proposers = new address[](1);
+        proposers[0] = deployer;
+        address[] memory executors = new address[](1);
+        executors[0] = deployer;
+        timelock = new FxTimelock(24 hours, proposers, executors, address(0));
+
+        // FxOracle: timelock = admin, deployer renounces.
+        oracle.grantRole(oracle.DEFAULT_ADMIN_ROLE(), address(timelock));
+        oracle.renounceRole(oracle.DEFAULT_ADMIN_ROLE(), deployer);
+
+        // FxMarketRegistry: timelock = admin, deployer keeps OPERATIONS_ROLE for hot pause.
+        registry.grantRole(registry.DEFAULT_ADMIN_ROLE(), address(timelock));
+        registry.renounceRole(registry.DEFAULT_ADMIN_ROLE(), deployer);
+
+        // FxLiquidator: same shape.
+        liquidator.grantRole(liquidator.DEFAULT_ADMIN_ROLE(), address(timelock));
+        liquidator.renounceRole(liquidator.DEFAULT_ADMIN_ROLE(), deployer);
+    }
+
+    function _assertHandoff(
+        address timelock,
+        address deployer,
+        FxOracle oracle,
+        FxMarketRegistry registry,
+        FxLiquidator liquidator
+    ) internal view {
+        require(oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), timelock),         "handoff: oracle admin != timelock");
+        require(!oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), deployer),        "handoff: deployer still oracle admin");
+        require(registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), timelock),     "handoff: registry admin != timelock");
+        require(!registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), deployer),    "handoff: deployer still registry admin");
+        require(liquidator.hasRole(liquidator.DEFAULT_ADMIN_ROLE(), timelock), "handoff: liq admin != timelock");
+        require(!liquidator.hasRole(liquidator.DEFAULT_ADMIN_ROLE(), deployer),"handoff: deployer still liq admin");
     }
 }

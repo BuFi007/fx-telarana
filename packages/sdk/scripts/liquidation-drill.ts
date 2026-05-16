@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// SPDX-License-Identifier: AGPL-3.0-only
 // Liquidation drill on live Base Sepolia.
 //
 // 1. Deploy TestableOracleAdapter (admin-settable IOracle.price()).

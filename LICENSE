@@ -1,0 +1,31 @@
+fx-Telarana Repository License Policy
+
+This repository is mixed-license by path and artifact type.
+
+Apache-2.0 applies to:
+- smart contracts under contracts/src/ and contracts/script/
+- Uniswap v4 hooks and hook-adjacent protocol code
+- public Solidity protocol libraries and interfaces
+- the public @bu/fx-engine SDK source, ABI modules, address registry, and helpers
+
+AGPL-3.0-only applies to:
+- backend services
+- Hono APIs and API route implementations
+- indexers, monitors, and offchain event processors
+- agent, automation, simulator, deployment, Tenderly, Circle registration, and workflow services
+
+MIT applies to:
+- examples
+- templates
+- frontend demo components
+- throwaway integration samples that are not production protocol code
+
+When a file has an SPDX header, that header is authoritative for that file.
+When a package has its own package.json license field, that package manifest is
+authoritative for its published artifact. Vendored third-party code keeps its
+upstream license, SPDX headers, copyright notices, and NOTICE requirements.
+
+Full license texts:
+- Apache-2.0: LICENSES/Apache-2.0.txt
+- AGPL-3.0-only: LICENSES/AGPL-3.0-only.txt
+- MIT: LICENSES/MIT.txt

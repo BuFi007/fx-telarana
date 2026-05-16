@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// SPDX-License-Identifier: AGPL-3.0-only
 // Register fx-Telarana contracts into Circle Smart Contract Platform.
 //
 // Usage:
@@ -82,8 +83,25 @@ const ARTIFACT_FILE_OF: Record<string, string> = {
 };
 
 // Events we care about: contract-slug → array of event signatures (no spaces).
+const ACCESS_CONTROL_EVENTS = [
+  "RoleGranted(bytes32,address,address)",
+  "RoleRevoked(bytes32,address,address)",
+  "RoleAdminChanged(bytes32,bytes32,bytes32)",
+];
+
+const PAUSABLE_EVENTS = ["Paused(address)", "Unpaused(address)"];
+
 const EVENTS_OF: Record<string, string[]> = {
-  FxMarketRegistry: ["MarketRegistered(bytes32,address,address,address,uint256)"],
+  FxMarketRegistry: [
+    "MarketRegistered(bytes32,address,address,address,uint256)",
+    "PoolLiveSet(bytes32,bool)",
+    ...ACCESS_CONTROL_EVENTS,
+    ...PAUSABLE_EVENTS,
+  ],
+  FxLiquidator: [
+    ...ACCESS_CONTROL_EVENTS,
+    ...PAUSABLE_EVENTS,
+  ],
   FxHubMessageReceiver: [
     "DepositExecuted(bytes32,address,uint256)",
     "DepositStranded(bytes32,address,uint256,bytes)",
@@ -95,9 +113,10 @@ const EVENTS_OF: Record<string, string[]> = {
   ],
   FxOracle: [
     "FeedSet(address,bytes32)",
+    "PythFeedConfigSet(address,bytes32,bool)",
     "RedstoneFeedSet(address,bytes32)",
     "ConfigUpdated(uint256,uint256,uint256)",
-    "OwnerTransferred(address,address)",
+    ...ACCESS_CONTROL_EVENTS,
   ],
 };
 

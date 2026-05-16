@@ -82,3 +82,10 @@ bun run abis:sync
 ```bash
 bun test
 ```
+
+## License
+
+The published `@bu/fx-engine` SDK source, ABI modules, addresses, and helpers
+are Apache-2.0. Operational scripts under `packages/sdk/scripts/` are
+AGPL-3.0-only workflow/service code. See the repository [LICENSE](../../LICENSE)
+policy for the full matrix.

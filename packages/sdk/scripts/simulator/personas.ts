@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Persona definitions for the Tenderly simulator test suite.
  *

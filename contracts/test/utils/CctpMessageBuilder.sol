@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 /// @notice Helper to assemble bytes matching the CCTP V2 outer-message + BurnMessage layout

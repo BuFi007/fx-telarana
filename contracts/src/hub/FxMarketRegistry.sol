@@ -1,8 +1,11 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {IMorpho, MarketParams as MorphoMarketParams, Id} from "morpho-blue/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "morpho-blue/libraries/MarketParamsLib.sol";
@@ -28,9 +31,17 @@ import {IFxMarketRegistry} from "../interfaces/IFxMarketRegistry.sol";
 /// │       ├─► IMorpho.supply / borrow / repay / ...                 │
 /// │       └─► return shares / assets                                │
 /// └─────────────────────────────────────────────────────────────────┘
-contract FxMarketRegistry is IFxMarketRegistry {
+contract FxMarketRegistry is IFxMarketRegistry, AccessControl, Pausable {
     using SafeERC20 for IERC20;
     using MarketParamsLib for MorphoMarketParams;
+
+    /*//////////////////////////////////////////////////////////////
+                                ROLES
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Operations role — hot actions (pause/unpause) bypass the
+    ///         timelock. Spec §10.4: pause must react in <24h.
+    bytes32 public constant OPERATIONS_ROLE = keccak256("OPERATIONS_ROLE");
 
     /*//////////////////////////////////////////////////////////////
                                 STATE
@@ -38,34 +49,45 @@ contract FxMarketRegistry is IFxMarketRegistry {
 
     IMorpho public immutable MORPHO;
 
-    address public owner;
-
     /// @notice (loanToken, collateralToken) → marketId.
     mapping(address => mapping(address => bytes32)) private _marketIdOf;
 
     /// @notice marketId → MarketParams (cached so we don't re-derive each call).
     mapping(bytes32 => MarketParams) private _paramsOf;
 
+    /// @notice marketId → entry-side live flag. Withdraw/repay remain available.
+    mapping(bytes32 => bool) private _isLive;
+
+    /// @notice Enumerable list of every registered market id. Order is registration order.
+    ///         Spec §6.1 integrator surface — fed to `listPools()` for indexers/monitors.
+    bytes32[] private _allMarketIds;
+
+    /// @notice account → delegate → may borrow through this registry.
+    /// @dev    This is intentionally borrow-only. Withdraw/collateral withdraw
+    ///         remain self-gated because delegation there can directly drain assets.
+    mapping(address account => mapping(address delegate => bool allowed)) public borrowDelegateOf;
+
     /*//////////////////////////////////////////////////////////////
                                 ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error NotOwner();
     error ZeroAddress();
 
     /*//////////////////////////////////////////////////////////////
                                 CTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(address morpho_, address owner_) {
-        if (morpho_ == address(0) || owner_ == address(0)) revert ZeroAddress();
+    /// @param initialAdmin Address that initially holds `DEFAULT_ADMIN_ROLE`
+    ///                     AND `OPERATIONS_ROLE`. Deploy scripts grant this
+    ///                     to the deployer for bootstrap, then atomically
+    ///                     transfer DEFAULT_ADMIN_ROLE to FxTimelock and
+    ///                     keep OPERATIONS_ROLE on the deployer/multisig.
+    constructor(address morpho_, address initialAdmin) {
+        if (morpho_ == address(0) || initialAdmin == address(0)) revert ZeroAddress();
         MORPHO = IMorpho(morpho_);
-        owner = owner_;
-    }
 
-    modifier onlyOwner() {
-        if (msg.sender != owner) revert NotOwner();
-        _;
+        _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
+        _grantRole(OPERATIONS_ROLE, initialAdmin);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -73,9 +95,8 @@ contract FxMarketRegistry is IFxMarketRegistry {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Register an existing Morpho market under (loanToken, collateralToken).
-    /// @dev    The market MUST already exist on Morpho Blue. Use `createAndRegister`
-    ///         if you also want to create it.
-    function registerMarket(MarketParams calldata p) external onlyOwner returns (bytes32 marketId) {
+    /// @dev    Spec §10.3: addAsset is timelock-gated.
+    function registerMarket(MarketParams calldata p) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes32 marketId) {
         if (p.loanToken == address(0) || p.collateralToken == address(0)) revert InvalidParams();
         if (p.oracle == address(0) || p.irm == address(0)) revert InvalidParams();
         if (_marketIdOf[p.loanToken][p.collateralToken] != bytes32(0)) {
@@ -87,12 +108,19 @@ contract FxMarketRegistry is IFxMarketRegistry {
 
         _marketIdOf[p.loanToken][p.collateralToken] = marketId;
         _paramsOf[marketId] = p;
+        _isLive[marketId] = true;
+        _allMarketIds.push(marketId);
 
         emit MarketRegistered(marketId, p.loanToken, p.collateralToken, p.irm, p.lltv);
     }
 
     /// @notice Create a Morpho market and register it in one shot.
-    function createAndRegisterMarket(MarketParams calldata p) external onlyOwner returns (bytes32 marketId) {
+    /// @dev    Spec §10.3: addAsset is timelock-gated.
+    function createAndRegisterMarket(MarketParams calldata p)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        returns (bytes32 marketId)
+    {
         MorphoMarketParams memory mp = _toMorpho(p);
         MORPHO.createMarket(mp);
         marketId = Id.unwrap(mp.id());
@@ -102,13 +130,41 @@ contract FxMarketRegistry is IFxMarketRegistry {
         }
         _marketIdOf[p.loanToken][p.collateralToken] = marketId;
         _paramsOf[marketId] = p;
+        _isLive[marketId] = true;
+        _allMarketIds.push(marketId);
 
         emit MarketRegistered(marketId, p.loanToken, p.collateralToken, p.irm, p.lltv);
     }
 
-    function transferOwner(address newOwner) external onlyOwner {
-        if (newOwner == address(0)) revert ZeroAddress();
-        owner = newOwner;
+    /*//////////////////////////////////////////////////////////////
+                                PAUSE
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Hot-path emergency stop. Spec §10.4: OPERATIONS_ROLE bypass.
+    ///         Entry-side actions (supply/supplyCollateral/borrow) revert
+    ///         while paused. Exit-side (withdraw/repay) always works.
+    function pause() external onlyRole(OPERATIONS_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(OPERATIONS_ROLE) {
+        _unpause();
+    }
+
+    /// @notice Hot per-pair incident-response toggle. Exit-side actions remain open.
+    function setPoolLive(address loanToken, address collateralToken, bool isLive) external onlyRole(OPERATIONS_ROLE) {
+        bytes32 marketId = marketIdOf(loanToken, collateralToken);
+        _isLive[marketId] = isLive;
+        emit PoolLiveSet(marketId, isLive);
+    }
+
+    /// @notice Allow or revoke a delegate to borrow on `msg.sender`'s behalf.
+    /// @dev    Cross-chain intent receivers need this because Morpho authorization
+    ///         is account-scoped while this registry also gates caller identity.
+    function setBorrowDelegate(address delegate, bool allowed) external {
+        if (delegate == address(0)) revert ZeroAddress();
+        borrowDelegateOf[msg.sender][delegate] = allowed;
+        emit BorrowDelegateSet(msg.sender, delegate, allowed);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -120,25 +176,37 @@ contract FxMarketRegistry is IFxMarketRegistry {
         if (id == bytes32(0)) revert UnknownMarket(loanToken, collateralToken);
     }
 
-    function paramsOf(address loanToken, address collateralToken)
-        public
-        view
-        returns (MarketParams memory)
-    {
+    function paramsOf(address loanToken, address collateralToken) public view returns (MarketParams memory) {
         return _paramsOf[marketIdOf(loanToken, collateralToken)];
+    }
+
+    /// @notice Enumerate every registered pool's MarketParams in registration order.
+    /// @dev    Spec §6.1 integrator surface. O(N) and unbounded; for indexers, not
+    ///         hot-path callers. N is the basket size (≤10 in Phase 3 sequencing).
+    function listPools() external view returns (MarketParams[] memory pools) {
+        uint256 n = _allMarketIds.length;
+        pools = new MarketParams[](n);
+        for (uint256 i = 0; i < n; ++i) {
+            pools[i] = _paramsOf[_allMarketIds[i]];
+        }
+    }
+
+    function isPoolLive(address loanToken, address collateralToken) external view returns (bool) {
+        return _isLive[marketIdOf(loanToken, collateralToken)];
     }
 
     /*//////////////////////////////////////////////////////////////
                                 ACTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function supply(
-        address loanToken,
-        address collateralToken,
-        uint256 assets,
-        address onBehalf
-    ) external returns (uint256 sharesMinted) {
-        MorphoMarketParams memory mp = _morphoParams(loanToken, collateralToken);
+    function supply(address loanToken, address collateralToken, uint256 assets, address onBehalf)
+        external
+        whenNotPaused
+        returns (uint256 sharesMinted)
+    {
+        bytes32 marketId = marketIdOf(loanToken, collateralToken);
+        _assertPairLive(marketId);
+        MorphoMarketParams memory mp = _toMorpho(_paramsOf[marketId]);
 
         IERC20(loanToken).safeTransferFrom(msg.sender, address(this), assets);
         _ensureApproval(IERC20(loanToken), address(MORPHO), assets);
@@ -146,13 +214,10 @@ contract FxMarketRegistry is IFxMarketRegistry {
         (, sharesMinted) = MORPHO.supply(mp, assets, 0, onBehalf, "");
     }
 
-    function withdraw(
-        address loanToken,
-        address collateralToken,
-        uint256 shares,
-        address onBehalf,
-        address receiver
-    ) external returns (uint256 assetsOut) {
+    function withdraw(address loanToken, address collateralToken, uint256 shares, address onBehalf, address receiver)
+        external
+        returns (uint256 assetsOut)
+    {
         // Morpho's setAuthorization(registry) is registry-wide. The registry
         // therefore MUST gate every withdraw at the caller level — otherwise
         // an attacker can drain any user who authorized the registry by
@@ -160,16 +225,16 @@ contract FxMarketRegistry is IFxMarketRegistry {
         // `NotAuthorizedForOnBehalf` doc on IFxMarketRegistry.
         if (onBehalf != msg.sender) revert NotAuthorizedForOnBehalf(onBehalf, msg.sender);
         MorphoMarketParams memory mp = _morphoParams(loanToken, collateralToken);
-        (assetsOut, ) = MORPHO.withdraw(mp, 0, shares, onBehalf, receiver);
+        (assetsOut,) = MORPHO.withdraw(mp, 0, shares, onBehalf, receiver);
     }
 
-    function supplyCollateral(
-        address loanToken,
-        address collateralToken,
-        uint256 collateral,
-        address onBehalf
-    ) external {
-        MorphoMarketParams memory mp = _morphoParams(loanToken, collateralToken);
+    function supplyCollateral(address loanToken, address collateralToken, uint256 collateral, address onBehalf)
+        external
+        whenNotPaused
+    {
+        bytes32 marketId = marketIdOf(loanToken, collateralToken);
+        _assertPairLive(marketId);
+        MorphoMarketParams memory mp = _toMorpho(_paramsOf[marketId]);
 
         IERC20(collateralToken).safeTransferFrom(msg.sender, address(this), collateral);
         _ensureApproval(IERC20(collateralToken), address(MORPHO), collateral);
@@ -189,24 +254,42 @@ contract FxMarketRegistry is IFxMarketRegistry {
         MORPHO.withdrawCollateral(mp, collateral, onBehalf, receiver);
     }
 
-    function borrow(
+    function borrow(address loanToken, address collateralToken, uint256 assets, address onBehalf, address receiver)
+        external
+        whenNotPaused
+        returns (uint256 borrowedShares)
+    {
+        if (onBehalf != msg.sender) revert NotAuthorizedForOnBehalf(onBehalf, msg.sender);
+        borrowedShares = _borrow(loanToken, collateralToken, assets, onBehalf, receiver);
+    }
+
+    function borrowDelegated(
         address loanToken,
         address collateralToken,
         uint256 assets,
         address onBehalf,
         address receiver
-    ) external returns (uint256 borrowedShares) {
-        if (onBehalf != msg.sender) revert NotAuthorizedForOnBehalf(onBehalf, msg.sender);
-        MorphoMarketParams memory mp = _morphoParams(loanToken, collateralToken);
+    ) external whenNotPaused returns (uint256 borrowedShares) {
+        if (!borrowDelegateOf[onBehalf][msg.sender]) {
+            revert NotAuthorizedForOnBehalf(onBehalf, msg.sender);
+        }
+        borrowedShares = _borrow(loanToken, collateralToken, assets, onBehalf, receiver);
+    }
+
+    function _borrow(address loanToken, address collateralToken, uint256 assets, address onBehalf, address receiver)
+        internal
+        returns (uint256 borrowedShares)
+    {
+        bytes32 marketId = marketIdOf(loanToken, collateralToken);
+        _assertPairLive(marketId);
+        MorphoMarketParams memory mp = _toMorpho(_paramsOf[marketId]);
         (, borrowedShares) = MORPHO.borrow(mp, assets, 0, onBehalf, receiver);
     }
 
-    function repay(
-        address loanToken,
-        address collateralToken,
-        uint256 assets,
-        address onBehalf
-    ) external returns (uint256 sharesBurned) {
+    function repay(address loanToken, address collateralToken, uint256 assets, address onBehalf)
+        external
+        returns (uint256 sharesBurned)
+    {
         MorphoMarketParams memory mp = _morphoParams(loanToken, collateralToken);
 
         IERC20(loanToken).safeTransferFrom(msg.sender, address(this), assets);
@@ -228,13 +311,13 @@ contract FxMarketRegistry is IFxMarketRegistry {
         return _toMorpho(p);
     }
 
+    function _assertPairLive(bytes32 marketId) internal view {
+        if (!_isLive[marketId]) revert PoolNotLive(marketId);
+    }
+
     function _toMorpho(MarketParams memory p) internal pure returns (MorphoMarketParams memory) {
         return MorphoMarketParams({
-            loanToken: p.loanToken,
-            collateralToken: p.collateralToken,
-            oracle: p.oracle,
-            irm: p.irm,
-            lltv: p.lltv
+            loanToken: p.loanToken, collateralToken: p.collateralToken, oracle: p.oracle, irm: p.irm, lltv: p.lltv
         });
     }
 

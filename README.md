@@ -1,16 +1,30 @@
-# fx-Telaraña — Forex Telaraña Protocol
+# Telaraña Protocol
 
-A decentralized cross-currency money market and FX engine on **Arc** with cross-chain spokes (CCTP V2) and an opt-in confidential rail (Hinkal, Phase 1).
+Telaraña is a cross-chain onchain forex credit hub.
 
-> *Telaraña — "spider's web" — for the hub-and-spoke topology that pulls FX liquidity from any chain into a single Arc-native lending and swap market.*
+> *Telaraña — "spider's web" — for the hub-and-spoke topology that pulls FX liquidity from supported chains into canonical hub markets.*
+
+## Product framing
+
+Users can enter from supported chains with USDC or EURC where Circle supports
+the route, move USDC between Telaraña hubs through Circle Gateway, route into
+hub FX markets, and borrow, lend, or prepare spot FX requests against supported
+stablecoin pairs. Gateway is USDC-only in the current design. CCTP is used only
+for Circle-supported USDC/EURC movement; Hyperlane and approved issuer-specific
+routes handle other stablecoin transport and intent messages. The hub risk
+engine decides what assets are valid collateral.
 
 ## What it is
 
-- **FX money market** on Arc built over **Morpho Blue** isolated markets (USDC↔EURC at MVP).
-- **Cross-chain spokes** via Circle's CCTP V2 — bring USDC from Ethereum / Base / any CCTP-supported chain and open positions on the Arc Hub.
+- **FX money market** built over **Morpho Blue** isolated markets (USDC↔EURC at MVP, initial hub basket next; Avalanche currently has the strongest listed-basket coverage).
+- **Cross-chain spokes** via Circle's CCTP V2 — bring USDC, and EURC where Circle supports it, from CCTP-supported chains and open positions on the Hub. CCTP is never used for non-Circle stablecoins.
+- **Circle Gateway hub liquidity** — Gateway-aware SDK config, ABIs, and `TelaranaGatewayHubHook` for fast USDC movement between Avalanche/Fuji and Arc hubs. Current signing mode is EOA; ERC-1271 contract signing is modeled as a future mode and remains disabled until Circle support is live.
 - **Permissionless, decentralized oracle** — Pyth primary + RedStone secondary. 24/7. No forex-hours circuit breakers. USDC and EURC are ERC-20s onchain.
-- **Confidential mode** (Phase 1) — Hinkal-wrapped flows for KYC'd Bufi users; same contracts, different call boundary.
-- **Uniswap v4 FX swap hook** (Phase 2) — oracle-anchored PMM with JIT-borrow from the lending pool.
+- **Ghost Mode** (Phase 1) — Bufi Wallet / RO-KYC pass-gated spoke entry, commitment/nullifier registry, and minimal v4 KYC hook scaffolding for slower private routes. No third-party privacy wallet dependency and no Circle Wallet dependency.
+- **Future Uniswap v4 spot FX execution** — request/config/event surfaces are
+  prepared, while full hook execution stays out of this branch.
+- **Future RFQ Pasillo** — quote-request corridor docs, SDK types, and interface
+  stubs are prepared for later whitelisted requesters.
 
 ## Repo layout
 
@@ -20,13 +34,15 @@ docs/        SPEC.md (engineering spec v0.2), TODOS.md
 ```
 
 See [`contracts/README.md`](contracts/README.md) for build, test, and deploy.
+The LaTeX whitepaper source lives at
+[`docs/whitepaper/telarana_whitepaper.tex`](docs/whitepaper/telarana_whitepaper.tex).
 
 ## Status
 
 - **Phase 0 contracts** — complete, 31/31 tests passing, fork-verified against the real Morpho Blue singleton (`0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb`) on Ethereum mainnet.
 - **Phase 0.5** — RedStone consumer payload wiring (next).
-- **Phase 1** — Hinkal confidential mode (after Hinkal partner conversation).
-- **Phase 2** — Uniswap v4 swap hook.
+- **Phase 1** — Ghost Mode with Bufi Wallet pass verification, spoke-level privacy entry, minimal KYC hook scaffolding, and commitment/nullifier routing.
+- **Phase 2** — future Uniswap v4 spot FX execution.
 
 ## Tenderly Virtual TestNet
 
@@ -69,6 +85,29 @@ WEBHOOK_URL=https://your.webhook.endpoint \
 
 Idempotent (re-runs find existing imports by address). Event monitors land on the provided `WEBHOOK_URL` for `DepositStranded`, `DepositSwept`, `DepositExecuted`, `MarketRegistered`, `Entered`, `Exited`, `FeedSet`, `RedstoneFeedSet`.
 
+## Attribution
+
+The hook roadmap and the current truncated-observation / volatility-spread
+implementation are inspired by public Uniswap v4 hook examples, including the
+truncated oracle, volatility oracle, and TWAMM work by Austin Adams (`aadams`)
+and the Uniswap builders. The Ghost Mode direction also learns from the
+`blackbera/privacy-hook-univ4` privacy-hook concept and public KYC hook examples,
+while avoiding unsafe patterns like `tx.origin` authorization.
+
+Thank you to those builders for publishing useful reference work. If we vendor
+or derive from third-party sources later, keep their SPDX headers, copyright
+notices, and NOTICE requirements with the imported files.
+
 ## License
 
-MIT — see contracts SPDX headers.
+This repository is mixed-license by path and artifact type:
+
+- Apache-2.0: smart contracts, Uniswap v4 hooks, public Solidity protocol
+  libraries, and the public `@bu/fx-engine` SDK.
+- AGPL-3.0-only: backend services, Hono APIs, indexers, monitors, simulators,
+  deployment/registration workflows, and agent/workflow services.
+- MIT: examples, templates, frontend demo components, and throwaway integration
+  samples.
+
+See [LICENSE](LICENSE) for the repo policy and `LICENSES/` for full license
+texts. Per-file SPDX headers are authoritative where present.

@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Drop 1 of the simulator test suite — single happy-path deposit per spoke.
  *

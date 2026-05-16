@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Drop 6 matrix additions:
  *   G — CCTP reverse leg end-to-end. setCode-overrides the deterministic

@@ -1,11 +1,14 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
 import {PythStructs} from "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
 
-import {PrimaryProdDataServiceConsumerBase} from
-    "@redstone-finance/evm-connector/data-services/PrimaryProdDataServiceConsumerBase.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+
+import {
+    PrimaryProdDataServiceConsumerBase
+} from "@redstone-finance/evm-connector/data-services/PrimaryProdDataServiceConsumerBase.sol";
 
 import {IFxOracle} from "../interfaces/IFxOracle.sol";
 
@@ -23,21 +26,27 @@ import {IFxOracle} from "../interfaces/IFxOracle.sol";
 /// │  getMidVerified()   — Pyth + RedStone-from-msg.data deviation gate      │
 /// │  getMidWithUpdate() — payable: updatePriceFeeds(Pyth) + getMidVerified  │
 /// └─────────────────────────────────────────────────────────────────────────┘
-contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
+contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase, AccessControl {
     /*//////////////////////////////////////////////////////////////
                                 STATE
     //////////////////////////////////////////////////////////////*/
 
     IPyth public immutable PYTH;
 
-    address public owner;
-
+    /// @notice Reads (price views) never gate on Pausable — they must always
+    ///         succeed even during an incident. Mutators gate on
+    ///         `DEFAULT_ADMIN_ROLE` only (timelock-gated per spec §10.3).
     uint256 public maxOracleAge;
     uint256 public maxDeviationBps;
     uint256 public maxConfidenceBps;
 
-    /// @notice token → Pyth feed id (token/USD).
+    /// @notice token → Pyth feed id. Usually token/USD; set
+    ///         `pythFeedInvertedOf[token]` when Pyth publishes USD/token.
     mapping(address token => bytes32 pythFeedId) public pythFeedOf;
+
+    /// @notice token → true when the configured Pyth feed must be inverted
+    ///         before it is treated as token/USD.
+    mapping(address token => bool inverted) public pythFeedInvertedOf;
 
     /// @notice token → RedStone data feed id (e.g. `bytes32("USDC")`).
     mapping(address token => bytes32 redstoneFeedId) public redstoneFeedOf;
@@ -46,7 +55,6 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
                                 ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error NotOwner();
     error InvalidConfig();
     error ZeroAddress();
     error InsufficientPythFee(uint256 fee, uint256 sent);
@@ -56,40 +64,35 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
     //////////////////////////////////////////////////////////////*/
 
     event FeedSet(address indexed token, bytes32 pythFeedId);
+    event PythFeedConfigSet(address indexed token, bytes32 pythFeedId, bool inverted);
     event RedstoneFeedSet(address indexed token, bytes32 redstoneFeedId);
     event ConfigUpdated(uint256 maxOracleAge, uint256 maxDeviationBps, uint256 maxConfidenceBps);
-    event OwnerTransferred(address indexed from, address indexed to);
-
-    /*//////////////////////////////////////////////////////////////
-                                MODIFIERS
-    //////////////////////////////////////////////////////////////*/
-
-    modifier onlyOwner() {
-        if (msg.sender != owner) revert NotOwner();
-        _;
-    }
 
     /*//////////////////////////////////////////////////////////////
                                 CTOR
     //////////////////////////////////////////////////////////////*/
 
+    /// @param initialAdmin Address that initially holds `DEFAULT_ADMIN_ROLE`.
+    ///                     Deploy scripts grant this to the deployer for
+    ///                     bootstrap setup, then atomically transfer to the
+    ///                     `FxTimelock` and renounce the deployer's role.
     constructor(
         address pyth_,
-        address owner_,
+        address initialAdmin,
         uint256 maxOracleAge_,
         uint256 maxDeviationBps_,
         uint256 maxConfidenceBps_
     ) {
-        if (pyth_ == address(0) || owner_ == address(0)) revert ZeroAddress();
+        if (pyth_ == address(0) || initialAdmin == address(0)) revert ZeroAddress();
         if (maxOracleAge_ == 0 || maxDeviationBps_ == 0 || maxConfidenceBps_ == 0) revert InvalidConfig();
 
         PYTH = IPyth(pyth_);
-        owner = owner_;
         maxOracleAge = maxOracleAge_;
         maxDeviationBps = maxDeviationBps_;
         maxConfidenceBps = maxConfidenceBps_;
 
-        emit OwnerTransferred(address(0), owner_);
+        _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
+
         emit ConfigUpdated(maxOracleAge_, maxDeviationBps_, maxConfidenceBps_);
     }
 
@@ -97,19 +100,29 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
                                 ADMIN
     //////////////////////////////////////////////////////////////*/
 
-    function setFeed(address token, bytes32 pythFeedId) external onlyOwner {
-        if (token == address(0) || pythFeedId == bytes32(0)) revert InvalidConfig();
-        pythFeedOf[token] = pythFeedId;
-        emit FeedSet(token, pythFeedId);
+    function setFeed(address token, bytes32 pythFeedId) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setPythFeed(token, pythFeedId, false);
     }
 
-    function setRedstoneFeed(address token, bytes32 redstoneFeedId) external onlyOwner {
+    function setPythFeedConfig(address token, bytes32 pythFeedId, bool inverted) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setPythFeed(token, pythFeedId, inverted);
+    }
+
+    function _setPythFeed(address token, bytes32 pythFeedId, bool inverted) internal {
+        if (token == address(0) || pythFeedId == bytes32(0)) revert InvalidConfig();
+        pythFeedOf[token] = pythFeedId;
+        pythFeedInvertedOf[token] = inverted;
+        emit FeedSet(token, pythFeedId);
+        emit PythFeedConfigSet(token, pythFeedId, inverted);
+    }
+
+    function setRedstoneFeed(address token, bytes32 redstoneFeedId) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (token == address(0) || redstoneFeedId == bytes32(0)) revert InvalidConfig();
         redstoneFeedOf[token] = redstoneFeedId;
         emit RedstoneFeedSet(token, redstoneFeedId);
     }
 
-    function setConfig(uint256 maxAge, uint256 maxDevBps, uint256 maxConfBps) external onlyOwner {
+    function setConfig(uint256 maxAge, uint256 maxDevBps, uint256 maxConfBps) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (maxAge == 0 || maxDevBps == 0 || maxConfBps == 0) revert InvalidConfig();
         maxOracleAge = maxAge;
         maxDeviationBps = maxDevBps;
@@ -117,22 +130,25 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
         emit ConfigUpdated(maxAge, maxDevBps, maxConfBps);
     }
 
-    function transferOwner(address newOwner) external onlyOwner {
-        if (newOwner == address(0)) revert ZeroAddress();
-        emit OwnerTransferred(owner, newOwner);
-        owner = newOwner;
-    }
-
     /*//////////////////////////////////////////////////////////////
                                 READS
     //////////////////////////////////////////////////////////////*/
 
-    function config()
-        external
-        view
-        returns (uint256 maxAge, uint256 maxDevBps, uint256 maxConfBps)
-    {
+    function config() external view returns (uint256 maxAge, uint256 maxDevBps, uint256 maxConfBps) {
         return (maxOracleAge, maxDeviationBps, maxConfidenceBps);
+    }
+
+    /// @notice Single-feed read: `token`'s USD price, 1e18-scaled.
+    /// @dev    Spec §6.1 integrator surface. Reads the token's Pyth feed alone
+    ///         (no RedStone cross-check). For on-chain price gates that need
+    ///         deviation safety, use `getMidVerified(base, quote)` instead.
+    function priceOf(address token) external view returns (uint256 priceE18, uint256 publishedAt) {
+        bytes32 feedId = pythFeedOf[token];
+        if (feedId == bytes32(0)) revert OracleFeedUnknown(token, address(0));
+        PythStructs.Price memory p = PYTH.getPriceNoOlderThan(feedId, maxOracleAge);
+        _assertPythConfidence(p);
+        priceE18 = _pythPriceToE18(p, pythFeedInvertedOf[token]);
+        publishedAt = p.publishTime;
     }
 
     /// @notice Robust mid read with Pyth → RedStone fallback.
@@ -145,11 +161,7 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
     ///
     ///         For STRICTLY-BOTH-AGREE semantics (liquidation safety), use
     ///         `getMidVerified` which enforces deviation between the two.
-    function getMid(address base, address quote)
-        public
-        view
-        returns (uint256 midE18, uint256 publishedAt)
-    {
+    function getMid(address base, address quote) public view returns (uint256 midE18, uint256 publishedAt) {
         // Try Pyth path. View-function try/catch requires an external self-call.
         try this.getMidFromPyth(base, quote) returns (uint256 m, uint256 t) {
             return (m, t);
@@ -163,19 +175,11 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
     /// @dev    Marked external so `getMid` can call it via try/catch. Internally
     ///         delegates to `_getMidFromPyth` so other internal callers keep
     ///         their gas profile.
-    function getMidFromPyth(address base, address quote)
-        external
-        view
-        returns (uint256 midE18, uint256 publishedAt)
-    {
+    function getMidFromPyth(address base, address quote) external view returns (uint256 midE18, uint256 publishedAt) {
         return _getMidFromPyth(base, quote);
     }
 
-    function _getMidFromPyth(address base, address quote)
-        internal
-        view
-        returns (uint256 midE18, uint256 publishedAt)
-    {
+    function _getMidFromPyth(address base, address quote) internal view returns (uint256 midE18, uint256 publishedAt) {
         bytes32 baseFeed = pythFeedOf[base];
         bytes32 quoteFeed = pythFeedOf[quote];
         if (baseFeed == bytes32(0) || quoteFeed == bytes32(0)) {
@@ -188,7 +192,7 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
         _assertPythConfidence(pBase);
         _assertPythConfidence(pQuote);
 
-        midE18 = _pythPairToE18(pBase, pQuote);
+        midE18 = _pythPairToE18(pBase, pythFeedInvertedOf[base], pQuote, pythFeedInvertedOf[quote]);
         publishedAt = pBase.publishTime < pQuote.publishTime ? pBase.publishTime : pQuote.publishTime;
     }
 
@@ -210,17 +214,13 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
         if (values[1] == 0) revert OracleFeedUnknown(base, quote);
         midE18 = (values[0] * 1e18) / values[1];
         publishedAt = block.timestamp; // RedStone payload validity gated by
-                                       // validateTimestamp; we treat the read
-                                       // as "now" for downstream staleness checks.
+        // validateTimestamp; we treat the read
+        // as "now" for downstream staleness checks.
     }
 
     /// @notice Strict mid: BOTH Pyth and RedStone must succeed AND agree within
     ///         deviation bound. For liquidation safety.
-    function getMidVerified(address base, address quote)
-        public
-        view
-        returns (uint256 midE18, uint256 publishedAt)
-    {
+    function getMidVerified(address base, address quote) public view returns (uint256 midE18, uint256 publishedAt) {
         (midE18, publishedAt) = _getMidFromPyth(base, quote);
 
         bytes32 baseRed = redstoneFeedOf[base];
@@ -243,11 +243,11 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
     /// @dev    Strict path — requires RedStone signers configured for both tokens.
     ///         On chains without RedStone (e.g. Base Sepolia), use
     ///         `getMidWithUpdatePyth` instead.
-    function getMidWithUpdate(
-        address base,
-        address quote,
-        bytes[] calldata pythUpdate
-    ) external payable returns (uint256 midE18, uint256 publishedAt) {
+    function getMidWithUpdate(address base, address quote, bytes[] calldata pythUpdate)
+        external
+        payable
+        returns (uint256 midE18, uint256 publishedAt)
+    {
         _updatePyth(pythUpdate);
         (midE18, publishedAt) = getMidVerified(base, quote);
     }
@@ -256,11 +256,11 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
     ///         gate, so callers MUST treat the result as freshness-only and rely
     ///         on Pyth confidence bands for safety.
     /// @dev    Intended for chains that don't have RedStone signers deployed yet.
-    function getMidWithUpdatePyth(
-        address base,
-        address quote,
-        bytes[] calldata pythUpdate
-    ) external payable returns (uint256 midE18, uint256 publishedAt) {
+    function getMidWithUpdatePyth(address base, address quote, bytes[] calldata pythUpdate)
+        external
+        payable
+        returns (uint256 midE18, uint256 publishedAt)
+    {
         _updatePyth(pythUpdate);
         return _getMidFromPyth(base, quote);
     }
@@ -273,7 +273,7 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
 
         uint256 excess = msg.value - fee;
         if (excess > 0) {
-            (bool ok, ) = msg.sender.call{value: excess}("");
+            (bool ok,) = msg.sender.call{value: excess}("");
             require(ok, "refund failed");
         }
     }
@@ -286,12 +286,7 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
     /// @dev    Production path reads signed payloads from msg.data via the
     ///         RedStone consumer base. Test subclasses can override this to
     ///         return mocked values without constructing real signed payloads.
-    function _redstoneFetch(bytes32[] memory feedIds)
-        internal
-        view
-        virtual
-        returns (uint256[] memory)
-    {
+    function _redstoneFetch(bytes32[] memory feedIds) internal view virtual returns (uint256[] memory) {
         return getOracleNumericValuesFromTxMsg(feedIds);
     }
 
@@ -321,15 +316,23 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase {
         }
     }
 
-    function _pythPairToE18(PythStructs.Price memory pBase, PythStructs.Price memory pQuote)
-        internal
-        pure
-        returns (uint256 midE18)
-    {
-        uint256 baseE18 = _toE18(pBase);
-        uint256 quoteE18 = _toE18(pQuote);
+    function _pythPairToE18(
+        PythStructs.Price memory pBase,
+        bool baseInverted,
+        PythStructs.Price memory pQuote,
+        bool quoteInverted
+    ) internal pure returns (uint256 midE18) {
+        uint256 baseE18 = _pythPriceToE18(pBase, baseInverted);
+        uint256 quoteE18 = _pythPriceToE18(pQuote, quoteInverted);
         if (quoteE18 == 0) return 0;
         midE18 = (baseE18 * 1e18) / quoteE18;
+    }
+
+    function _pythPriceToE18(PythStructs.Price memory p, bool inverted) internal pure returns (uint256) {
+        uint256 priceE18 = _toE18(p);
+        if (!inverted) return priceE18;
+        if (priceE18 == 0) revert OracleLowConfidence(type(uint256).max, type(uint256).max);
+        return 1e36 / priceE18;
     }
 
     function _toE18(PythStructs.Price memory p) internal pure returns (uint256) {

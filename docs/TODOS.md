@@ -3,7 +3,7 @@
 ## Blocking before Phase 0 starts
 - [ ] **Verify Morpho Blue on Arc testnet.** Check Morpho Labs deployment registry. If absent, decide on self-deploy (Morpho Blue is permissionless + immutable).
 - [ ] **Verify Uniswap v4 PoolManager on Arc.** Phase 2 +2 weeks if self-deploy is needed.
-- [ ] **Pasillo↔Hinkal partner conversation.** Bufi-KYC → Hinkal AccessToken issuance API. Phase 1 blocker.
+- [x] **Bufi Wallet KYC/KYB pass verifier interface.** Minimal `IBufiKycPass` interface and revocation semantics defined for Ghost Mode. Concrete RO-KYC verifier remains offchain/Pasillo-owned.
 - [ ] **Verify Pyth + RedStone feed availability on Arc** for EUR/USD, USDC/USD, EURC/USD. List feed ids in `@bu/fx-engine/addresses/`.
 
 ## Implementation guardrails (track these explicitly)
@@ -12,7 +12,7 @@
 - [ ] `sweepStrandedDeposit(messageNonce, beneficiary)` ships with `FxSpoke`.
 - [ ] `EligibilityReason` enum lives in `@bu/fx-engine`, not duplicated.
 - [ ] Every contract file has an ASCII data-flow diagram in the file header comment.
-- [ ] Fresh-SCA-per-deposit via Circle MSCA factory in confidential path.
+- [x] Ghost Mode privacy path uses Bufi Wallet pass + commitment/nullifier routing. No third-party privacy wallet or Circle Wallet dependency.
 
 ## Phase 0 deliverables (public-only ship)
 
@@ -38,14 +38,18 @@
 - [ ] Frontend money-market + swap pages (public mode only)
 - [ ] End-to-end testnet drill: Base USDC → Arc Morpho supply, withdraw, borrow EURC, repay, liquidation
 
-## Phase 1 deliverables (confidential mode)
-- [ ] Hinkal partner deal signed.
-- [ ] 5 wrappers in `@bu/private-transfer-core` (shieldedSupplyCollateral, shieldedBorrow, shieldedRepay, shieldedFxSwap, shieldedCrossChainEnter).
-- [ ] Circle MSCA factory integration on Arc — fresh SCA per deposit.
-- [ ] `/fx/eligibility/:wallet` + `EligibilityReason` enum.
-- [ ] `/fx/hinkal/accesstoken` provisioning route.
-- [ ] Frontend auto-routes confidential when AccessToken detected (no toggle).
-- [ ] Multi-SCA aggregate view client-side.
+## Phase 1 deliverables (Ghost Mode)
+- [x] Bufi Wallet KYC/KYB pass verifier interface.
+- [x] `FxGhostCommitmentRegistry` with root metadata, root expiry, and nullifier replay protection.
+- [x] `FxGhostSpokeRouter` wrapper for pass-gated `crossChainEnter` over Circle-only USDC/EURC `FxSpoke`.
+- [ ] `FxGhostRouter` wrappers for supplyCollateral, borrow, repay, fxSwap, and withdraw.
+- [ ] `FxGhostWithdrawalRouter` proof/nullifier withdrawal path.
+- [x] `FxGhostKycHook` v1 scaffold for Ghost pools; no `tx.origin`, PoolManager-only callbacks, trusted router + pass verification only.
+- [ ] `FxGhostSwapHook` proof-aware design for production Ghost pools.
+- [ ] `/fx/eligibility/:wallet` + `EligibilityReason` enum using Bufi Wallet pass state.
+- [ ] `/fx/ghost/prepare` and `/fx/ghost/proof` routes.
+- [ ] Frontend shows Ghost Mode only when Bufi Wallet pass and route support are live.
+- [ ] Client-side aggregate view across public and Ghost route accounts.
 
 ## Phase 2 deliverables (v4 hook)
 - [ ] `FxSwapHook.sol` with PMM curve params.
@@ -54,7 +58,7 @@
 - [ ] Gas budget verified <500K per swap on Arc.
 
 ## Phase 3 deliverables (Arc mainnet GA + native privacy)
-- [ ] Wire Arc native opt-in confidentiality precompile when published.
+- [ ] Wire Arc native opt-in confidentiality precompile when published, if it composes safely with Ghost hooks.
 - [ ] Audit (external).
 - [ ] Mainnet deploy + monitoring.
 
@@ -65,7 +69,7 @@
 - [ ] Phase 1+ spoke chain set order (Arb / Op / Polygon / Avalanche / Solana).
 
 ## v2 ambitions (not committed)
-- [ ] Custom Hinkal circuits for shielded health-factor proofs (collapses fresh-SCA-per-deposit pattern).
+- [ ] Custom Ghost circuits for shielded health-factor proofs.
 - [ ] Wormhole NTT for non-Circle assets.
 - [ ] Bufi invoice factoring credit-delegation layer.
 - [ ] Partner stables (BRLA, MXNB, JPYC).

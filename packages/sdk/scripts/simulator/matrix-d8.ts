@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Drop 8 — Universal Router V4_SWAP simulation against the live FxSwapHook.
  *

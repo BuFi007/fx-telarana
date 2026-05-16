@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Drop 9 — primed-state helpers for the simulator matrix.
  *

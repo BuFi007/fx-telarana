@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Drop 9 — primed Virtual TestNet routing for the simulator matrix.
  *

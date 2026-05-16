@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Tenderly verify-contract pipeline for the fx-Telaraña Hub on Base Sepolia.
 #
