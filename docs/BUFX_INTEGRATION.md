@@ -141,14 +141,29 @@ USDC across hubs, never users (or BUFX) directly.
 ```solidity
 // On FxHubMessageReceiver (gated by owner OR relayCallers whitelist):
 function relayToRemoteHub(uint256 amount) external;
-function relayMintFromRemote(bytes calldata attestation, bytes calldata signature)
-    external returns (uint256 minted);
+function relayMintFromRemote(
+    bytes calldata attestation,
+    bytes calldata signature
+) external returns (uint256 minted);
 
 // Admin (owner-only):
 function setRelayCaller(address relayer, bool allowed) external;
 function setGatewayHook(address newHook) external;
 function transferOwnership(address newOwner) external;
+function sweepHubBalance(address token, address to, uint256 amount) external;
 ```
+
+> **Codex adversarial-review v3 hardening.** `relayMintFromRemote` performs
+> a balance-delta check after the hook mints, then atomically routes the
+> minted USDC to `msg.sender` (the calling relayer). Round 2 of the review
+> rejected an arbitrary `recipient` arg because it made Gateway attestations
+> bearer claims for any whitelisted relayer. **BUFX must therefore call
+> `relayMintFromRemote` from the same contract/account it wants to receive
+> the minted USDC** — typically the BUFX execution contract itself, which
+> then routes to user sub-accounts internally. Trust model: any address
+> whitelisted via `setRelayCaller` is trusted with full claim authority
+> over in-flight Gateway attestations; whitelist exactly one production
+> relayer per hub.
 
 **To onboard BUFX:**
 
@@ -161,9 +176,10 @@ function transferOwnership(address newOwner) external;
      `LockedForRemote` event, signs the BurnIntent for `destDomain`, POSTs to
      Circle's operator.
    - Once the attestation lands (`~349ms` typical), BUFX's contract on the
-     destination chain calls `hub.relayMintFromRemote(payload, signature)`. The
-     hook receives the USDC and forwards it to the destination hub. Funds are
-     now available for BUFX's local FX execution.
+     destination chain calls `hub.relayMintFromRemote(payload, signature)`.
+     The hook receives the USDC and forwards it to the hub, which immediately
+     routes the verified delta to `msg.sender` (the BUFX contract itself).
+     Funds are now available for BUFX's local FX execution.
 
 **Verified end-to-end live on 2026-05-15** — see [`reports/gateway-fuji-to-arc-bypass.md`](../reports/gateway-fuji-to-arc-bypass.md) for tx hashes + latencies for both bypass and hook-routed flows.
 

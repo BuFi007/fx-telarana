@@ -29,10 +29,17 @@ contract DeployFxSpoke is Script {
     address constant BASE_SEPOLIA_HUB_RECEIVER = 0x17AFd89bD6888C393b8c5d7E7c0BAeE8259581A5;
     uint32  constant BASE_SEPOLIA_HUB_DOMAIN   = 6; // Base Sepolia CCTP V2 domain
 
-    // Live Fuji hub (deployed 2026-05-14). This is the default when deploying
-    // a Fuji spoke so testnet entry paths stay entirely on Avalanche infrastructure.
-    address constant FUJI_HUB_RECEIVER = 0x365DE300dDa61C81a33bcE3606A5d524eD964362;
+    // Live Fuji hub (Stage 6 redeploy, 2026-05-15). Replaces V1 receiver
+    // 0x365DE300… which is now deprecated — see deployments/avalanche-fuji.json's
+    // `deprecated:` block. This is the default when deploying a Fuji-routed
+    // spoke so testnet entry paths land on the patched Stage 6 receiver.
+    address constant FUJI_HUB_RECEIVER = 0x7eAdfD0c08dd6544f763285bBD31be14179d594B;
     uint32  constant FUJI_HUB_DOMAIN   = 1; // Avalanche Fuji CCTP V2 domain
+
+    // Live Arc hub (Stage 6 deploy, 2026-05-15). Default for spokes routing
+    // to the Arc trading-execution hub. See deployments/arc-testnet.json.
+    address constant ARC_HUB_RECEIVER  = 0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C;
+    uint32  constant ARC_HUB_DOMAIN    = 26; // Arc Testnet CCTP V2 domain
 
     function run() external {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");

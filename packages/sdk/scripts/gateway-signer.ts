@@ -37,13 +37,67 @@ import {
   http,
   parseAbi,
   pad,
-  maxUint256,
   type Address,
   type Hex,
   type Log,
   type PublicClient,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+
+// ── INTENT EXPIRY POLICY (Codex adversarial-review v3 finding #3) ─────────
+//
+// BurnIntent.maxBlockHeight is the on-chain expiry. The prior signer used
+// `maxUint256` — effectively no expiry, meaning a stolen signature stays
+// drainable forever. We tighten to a per-chain block window roughly equal
+// to one hour of wall-clock time. Override via GATEWAY_SIGNER_BLOCK_WINDOW
+// is allowed but capped — round-2 finding #3 noted that an unbounded
+// override recreates the original risk via a single env-var typo.
+const DEFAULT_BLOCK_WINDOWS_PER_SOURCE_DOMAIN: Record<number, bigint> = {
+  // Avalanche Fuji ~2s blocks → ~1800 blocks/hour
+  1: 1800n,
+  // Arc Testnet ~1s blocks → ~3600 blocks/hour
+  26: 3600n,
+};
+
+// Hard cap on any operator override. ~2h of Arc-rate blocks = 7200. Anything
+// larger is treated as misconfiguration and refused.
+const MAX_BLOCK_WINDOW = 7200n;
+
+function blockWindowForDomain(sourceDomain: number): bigint {
+  const override = process.env.GATEWAY_SIGNER_BLOCK_WINDOW;
+  if (override !== undefined && override !== "") {
+    let parsed: bigint;
+    try {
+      parsed = BigInt(override);
+    } catch {
+      throw new Error(
+        `GATEWAY_SIGNER_BLOCK_WINDOW="${override}" is not a valid integer. ` +
+          `Set to a positive integer ≤ ${MAX_BLOCK_WINDOW} or unset for default.`,
+      );
+    }
+    if (parsed <= 0n) {
+      throw new Error(
+        `GATEWAY_SIGNER_BLOCK_WINDOW must be > 0 (got ${parsed}). ` +
+          `Zero/negative windows would sign already-expired intents.`,
+      );
+    }
+    if (parsed > MAX_BLOCK_WINDOW) {
+      throw new Error(
+        `GATEWAY_SIGNER_BLOCK_WINDOW=${parsed} exceeds hard cap ${MAX_BLOCK_WINDOW}. ` +
+          `Long-lived BurnIntent expiries recreate the pre-v3 maxUint risk; ` +
+          `tighten the override or raise MAX_BLOCK_WINDOW in source after audit.`,
+      );
+    }
+    return parsed;
+  }
+  const def = DEFAULT_BLOCK_WINDOWS_PER_SOURCE_DOMAIN[sourceDomain];
+  if (def === undefined) {
+    throw new Error(
+      `No default block window for sourceDomain=${sourceDomain}; set GATEWAY_SIGNER_BLOCK_WINDOW explicitly`,
+    );
+  }
+  return def;
+}
 
 import {
   buildGatewayBurnIntent,
@@ -190,6 +244,10 @@ async function buildAndSignIntent(input: {
   /// deployer-on-dest. Used for live-testnet smoke runs that don't yet route
   /// through FxGatewayHook (because hook is hub-only and Stage 6 plumbing
   /// isn't deployed yet). Skip for production paths.
+  ///
+  /// Codex adversarial-review v3 finding #3: gated behind explicit
+  /// GATEWAY_SIGNER_ALLOW_BYPASS=1 env var so it can't be enabled by
+  /// accident from a production tool path.
   bypassHook?: boolean;
   /// Override the destination contract for the BurnIntent. Used to target
   /// `TelaranaGatewayHubHook` (spot-FX path) instead of `FxGatewayHook`
@@ -200,12 +258,29 @@ async function buildAndSignIntent(input: {
   const route = TELARANA_GATEWAY_HUB_ROUTES.find((r) => r.routeId === input.routeId);
   if (!route) throw new Error(`Unknown route: ${input.routeId}`);
 
+  if (input.bypassHook && process.env.GATEWAY_SIGNER_ALLOW_BYPASS !== "1") {
+    throw new Error(
+      "bypassHook=true requires GATEWAY_SIGNER_ALLOW_BYPASS=1. Bypass mode signs intents " +
+        "with destinationCaller=0 and recipient=EOA — i.e. the hook's destinationCaller " +
+        "lock does not protect the EOA's Gateway balance. Use only for one-off testnet " +
+        "smoke runs. Production paths must route through the hook.",
+    );
+  }
+  if (input.bypassHook) {
+    console.warn(
+      "[gateway-signer] BYPASS MODE ENABLED — signed intent will NOT be hook-locked. " +
+        "Authority's full Gateway balance is exposed to this signature until expiry.",
+    );
+  }
+
   // The destination hook on the OTHER chain is who we lock the mint to.
   const destCtx = ctxForChain(route.destinationHubChainId as number);
 
   const account = privateKeyToAccount(input.signerPk);
   const salt = ("0x" + randomBytes(32).toString("hex")) as Hex;
 
+  // Resolve destination based on (in order): destinationOverride →
+  // bypassHook → default hook lock.
   let destinationRecipient: Address;
   let destinationCaller: Address;
   if (input.destinationOverride) {
@@ -219,6 +294,16 @@ async function buildAndSignIntent(input: {
     destinationCaller = destCtx.hook;
   }
 
+  // Compute a tight maxBlockHeight against the SOURCE chain's current head
+  // (codex adversarial-review v3 finding #3: maxUint256 → per-domain window).
+  const sourceClient = ctxForChain(route.sourceHubChainId as number).client;
+  const head = await sourceClient.getBlockNumber();
+  const window = blockWindowForDomain(route.sourceDomain);
+  const maxBlockHeight = head + window;
+  console.log(
+    `[gateway-signer] maxBlockHeight=${maxBlockHeight} (head=${head} + window=${window} blocks)`,
+  );
+
   const intent = buildGatewayBurnIntent({
     route,
     amount: input.amountAtomic,
@@ -226,7 +311,7 @@ async function buildAndSignIntent(input: {
     sourceSigner: account.address,
     destinationRecipient,
     destinationCaller,
-    maxBlockHeight: maxUint256,
+    maxBlockHeight,
     salt,
     hookData: "0x",
   });

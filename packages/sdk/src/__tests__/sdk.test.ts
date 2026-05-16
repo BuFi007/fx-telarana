@@ -171,10 +171,15 @@ describe("address registry", () => {
     });
   });
 
-  test("Avalanche Fuji points at the Fuji hub and self-loop spoke", () => {
+  test("Avalanche Fuji points at the Stage 6 hub stack and self-loop spoke", () => {
+    // Stage 6 redeploy: V1 (0xAa875a68…/0x365DE300…) is deprecated.
+    // Round-3 codex finding patched these — addresses now mirror
+    // deployments/avalanche-fuji.json.
     const a = getAddresses(ChainId.AvalancheFuji);
-    expect(a.fxSpoke).toBe("0xAa875a68b0155da4bD6A528ee9e1137017D18b41");
-    expect(a.fxHubMessageReceiver).toBe("0x365DE300dDa61C81a33bcE3606A5d524eD964362");
+    expect(a.fxSpoke).toBe("0xb7fc291c27f6a7a659d4d229e5d8a55e58f26ab1");
+    expect(a.fxSpokeAlt).toBe("0xe22ef07a0996df9ae6252cc9bf491fbe13fd6575");
+    expect(a.fxHubMessageReceiver).toBe("0x7eAdfD0c08dd6544f763285bBD31be14179d594B");
+    expect(a.fxGatewayHook).toBe("0x7dA191bfB85D9F14069228cf618519BFb41f371E");
     expect(a.cctpDomain).toBe(1);
     expect(a.hyperlane?.domain).toBe(43113);
     expect(a.hyperlane?.mailbox).toBe("0x5b6CFf85442B851A8e6eaBd2A4E4507B5135B3B0");
@@ -183,6 +188,25 @@ describe("address registry", () => {
     );
     expect(a.usdc).toBe("0x5425890298aed601595a70AB815c96711a31Bc65");
     expect(a.eurc).toBe("0x5E44db7996c682E92a960b65AC713a54AD815c6B");
+  });
+
+  test("Arc testnet points at the Stage 6 hub stack and spider-web spokes", () => {
+    // Stage 6 redeploy: V1 spoke (0x47c76D…) is deprecated. Mirrors
+    // deployments/arc-testnet.json. Codex v3 round 3 finding patched these.
+    const a = getAddresses(ChainId.ArcTestnet);
+    expect(a.fxHubMessageReceiver).toBe("0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C");
+    expect(a.fxGatewayHook).toBe("0x2931C50745334d6DFf9eC4E3106fE05b49717DF1");
+    expect(a.fxMarketRegistry).toBe("0x813232259c9b922e7571F15220617C80581f1464");
+    expect(a.fxOracle).toBe("0x77b3A3B420dB98B01085b8C46a753Ed9879e2865");
+    expect(a.fxReceiptUSDC).toBe("0xdd22365Bba7330BE537c9BC26da9b1b4Db9aC431");
+    expect(a.fxReceiptEURC).toBe("0xF829f57Db8530fa93FCD6e13b00193cbe8cE1493");
+    expect(a.fxLiquidator).toBe("0xa50f7D4D4a1A0D3CF418515973545b80E037B379");
+    expect(a.morphoBlue).toBe("0x3c9b95C6E7B23f094f066733E7797C8680760830");
+    // Arc-resident spoke routing TO Fuji is the primary user entry from Arc.
+    expect(a.fxSpoke).toBe("0x13c8463589d460db6f21235eedfd678c22a1ea25");
+    // Arc-resident spoke routing TO local Arc hub (self-loop).
+    expect(a.fxSpokeAlt).toBe("0x5d10d2c3b9951054845534b2f60a68ebc0898cd3");
+    expect(a.cctpDomain).toBe(26);
   });
 });
 

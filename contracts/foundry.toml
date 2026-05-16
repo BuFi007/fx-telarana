@@ -15,9 +15,17 @@ auto_detect_solc = true
 # imports — which is what we use.
 evm_version = "cancun"
 optimizer = true
-optimizer_runs = 1_000_000
+# Lowered from 1_000_000 to fit FxSwapHook under EIP-170 (24,576 bytes
+# deployed bytecode). High `runs` optimizes for runtime gas at the
+# expense of code size; 200 biases toward deploy cost. With via_ir,
+# this lops several KB off FxSwapHook without changing any logic.
+optimizer_runs = 200
 via_ir = true
 bytecode_hash = "none"
+# Raised from the foundry default 1e9 — the avalanche-basket matrix test
+# deploys 5 FxSwapHook instances + Morpho markets in a single tx, which
+# tips past the cap once DODO PMM math inlines into the hook bytecode.
+gas_limit = 9_223_372_036_854_775_807
 fs_permissions = [
   { access = "read-write", path = "./deployments" },
   { access = "read-write", path = "../deployments" },
@@ -34,6 +42,7 @@ remappings = [
   "@uniswap/v4-core/=lib/v4-core/",
   "@uniswap/v4-periphery/=lib/v4-periphery/",
   "cctp-v2/=lib/evm-cctp-contracts/src/v2/",
+  "dodo-pmm/=lib/dodo-pmm-08/",
 ]
 
 [profile.default.fuzz]

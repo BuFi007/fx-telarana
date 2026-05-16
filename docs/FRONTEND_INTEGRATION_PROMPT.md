@@ -33,16 +33,17 @@ Primary test hub is Avalanche Fuji.
 Native gas token: AVAX. There is no ERC-20 AVAX contract involved in protocol
 calls; users only need AVAX for gas on Avalanche/Fuji.
 
-Avalanche Fuji hub:
+Avalanche Fuji hub (Stage 6 — current canonical, deployed 2026-05-15):
 
 | Item | Address |
 |---|---|
 | Chain id | `43113` |
 | Deployer | `0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69` |
 | FxOracle | `0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b` |
-| FxMarketRegistry | `0x7ba745b979e027992ecfa51207666e3f5b46cf0a` |
+| FxMarketRegistry | `0x7ba745b979e027992ECFa51207666e3F5B46cF0a` |
 | FxLiquidator | `0x2900599ff0e6dd057493d62fac856e5a8f93c6eb` |
-| FxHubMessageReceiver | `0x365DE300dDa61C81a33bcE3606A5d524eD964362` |
+| FxHubMessageReceiver | `0x7eAdfD0c08dd6544f763285bBD31be14179d594B` |
+| FxGatewayHook | `0x7dA191bfB85D9F14069228cf618519BFb41f371E` |
 | MorphoBlue | `0xeF64621D41093144D9ED8aB8327eE381ECdB79E6` |
 | IrmMock | `0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA` |
 | Pyth | `0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509` |
@@ -54,6 +55,11 @@ Avalanche Fuji hub:
 | Legacy MockEURC | `0x50c4ba39caa7f56152d0df4914e1f6b907194992` |
 | FxReceiptEURC | `0xefd7cf5ad5a2db9a3c23e2807f2279de92c730d2` |
 | FxReceiptUSDC | `0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e` |
+
+> **DEPRECATED:** the V1 Fuji hub receiver `0x365DE300dDa61C81a33bcE3606A5d524eD964362`
+> and self-loop spoke `0xAa875a68b0155da4bD6A528ee9e1137017D18b41` are retired post
+> Stage 6. Do not route new deposits to them. Source of truth:
+> `deployments/avalanche-fuji.json` + `deployments/hub-config-fuji.json`.
 
 Fuji market ids:
 
@@ -71,26 +77,36 @@ Same-chain hub UX should call `FxMarketRegistry` directly. Do not route a Fuji
 hub user through the Fuji `FxSpoke` unless explicitly testing CCTP self-loop
 behavior.
 
-## Current Spokes To Avalanche Fuji Hub
+## Current Spokes To Avalanche Fuji Hub (Stage 6 — current)
 
-The currently listed deployed spokes burn USDC via CCTP V2 and target the Fuji hub receiver
-`0x365de300dda61c81a33bce3606a5d524ed964362` with hub CCTP domain `1`.
-EURC uses the same Circle-only CCTP lane only on chains where Circle has
-published EURC and the matching spoke/manifest entry exists.
+The currently listed deployed spokes burn USDC via CCTP V2 and target the Stage 6
+Fuji hub receiver `0x7eAdfD0c08dd6544f763285bBD31be14179d594B` with hub CCTP
+domain `1`. EURC uses the same Circle-only CCTP lane only on chains where Circle
+has published EURC and the matching spoke/manifest entry exists.
 
-| Spoke chain | Chain id | FxSpoke | Spoke USDC | Spoke CCTP domain |
+| Spoke chain | Chain id | FxSpoke (→ Fuji) | Spoke USDC | Spoke CCTP domain |
 |---|---:|---|---|---:|
-| Avalanche Fuji self-loop | `43113` | `0xAa875a68b0155da4bD6A528ee9e1137017D18b41` | `0x5425890298aed601595a70AB815c96711a31Bc65` | `1` |
+| Avalanche Fuji self-loop | `43113` | `0xb7fc291c27f6a7a659d4d229e5d8a55e58f26ab1` | `0x5425890298aed601595a70AB815c96711a31Bc65` | `1` |
 | Ethereum Sepolia | `11155111` | `0xdabf610c279d900b40ca4df62f1e86cc2d0a4fd4` | `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` | `0` |
 | Arbitrum Sepolia | `421614` | `0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e` | `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d` | `3` |
 | OP Sepolia | `11155420` | `0xef64621d41093144d9ed8ab8327ee381ecdb79e6` | `0x5fd84259d66Cd46123540766Be93DFE6D43130D7` | `2` |
 | Polygon Amoy | `80002` | `0x50c4ba39caa7f56152d0df4914e1f6b907194992` | `0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582` | `7` |
 | Unichain Sepolia | `1301` | `0x50c4ba39caa7f56152d0df4914e1f6b907194992` | `0x31d0220469e10c4E71834a79b1f276d740d3768F` | `10` |
 | World Chain Sepolia | `4801` | `0xef64621d41093144d9ed8ab8327ee381ecdb79e6` | `0x66145f38cBAC35Ca6F1Dfb4914dF98F1614aeA88` | `14` |
-| Arc Testnet | `5042002` | `0x729fe51fa88eae24cbcff7a192c5a91e937ceb68` | `0x3600000000000000000000000000000000000000` | `26` |
+| Arc Testnet (→ Fuji) | `5042002` | `0x13c8463589d460db6f21235eedfd678c22a1ea25` | `0x3600000000000000000000000000000000000000` | `26` |
 
-Use the deployment manifests above over `packages/sdk/src/addresses/index.ts`
-for migrated spoke addresses until the SDK registry is refreshed.
+> **DEPRECATED:** the V1 Fuji self-loop spoke
+> `0xAa875a68b0155da4bD6A528ee9e1137017D18b41` and the V1 Arc→Fuji spoke
+> `0x729fe51fa88eae24cbcff7a192c5a91e937ceb68` are retired post Stage 6.
+
+Each non-hub chain also has a *second* spoke that routes to the **Arc** hub
+(`messageReceiver = 0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C`, domain `26`).
+See the `routes:` block in each `deployments/<chain>.json` manifest for the
+exact Arc-routed spoke address — the spider-web topology means every chain
+exposes both a Fuji and an Arc entry path.
+
+`packages/sdk/src/addresses/index.ts` is the canonical SDK source for the
+Fuji and Arc hub stacks (synced 2026-05-15 with Stage 6 manifests).
 
 ## Circle Gateway Hub-To-Hub Liquidity
 

@@ -7,3 +7,4 @@ morpho-blue/=lib/morpho-blue/src/
 @uniswap/v4-core/=lib/v4-core/
 @uniswap/v4-periphery/=lib/v4-periphery/
 cctp-v2/=lib/evm-cctp-contracts/src/v2/
+dodo-pmm/=lib/dodo-pmm-08/

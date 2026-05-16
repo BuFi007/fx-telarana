@@ -289,4 +289,62 @@ contract FxHubMessageReceiverTest is Test {
         vm.expectRevert();
         receiver.sweepStrandedDeposit(nonce);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                STRANDED LIABILITY GATE (Codex v3 round-2 #2)
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Owner cannot drain hub USDC that's already accounted to a
+    /// stranded deposit. `strandedUsdcLiability` is the floor.
+    function test_sweepHubBalance_revertsAgainstStrandedLiability() public {
+        target.setRevert(true);
+        bytes memory hubCalldata = hex"00";
+        bytes32 nonce = keccak256("n_liability");
+        bytes memory hookData = abi.encode(alice, hubCalldata);
+        bytes memory msgBytes = CctpMessageBuilder.build(nonce, address(receiver), 1_000_000, 0, hookData);
+
+        receiver.executeDeposit(msgBytes, "", alice, hubCalldata);
+
+        // Liability rose to the stranded amount.
+        assertEq(receiver.strandedUsdcLiability(), 1_000_000, "liability tracked");
+        assertEq(usdc.balanceOf(address(receiver)), 1_000_000, "hub holds the USDC");
+
+        // Even trying to sweep 1 wei reverts: all USDC is owed to alice.
+        vm.expectRevert(
+            abi.encodeWithSelector(FxHubMessageReceiver.SweepExceedsAvailable.selector, uint256(1), uint256(0))
+        );
+        receiver.sweepHubBalance(address(usdc), address(this), 1);
+    }
+
+    /// @notice After alice's sweep, the liability drops and the owner can
+    /// reclaim genuinely off-path balances.
+    function test_sweepHubBalance_succeedsAfterStrandedSwept() public {
+        target.setRevert(true);
+        bytes memory hubCalldata = hex"00";
+        bytes32 nonce = keccak256("n_after_sweep");
+        bytes memory hookData = abi.encode(alice, hubCalldata);
+        bytes memory msgBytes = CctpMessageBuilder.build(nonce, address(receiver), 1_000_000, 0, hookData);
+
+        receiver.executeDeposit(msgBytes, "", alice, hubCalldata);
+
+        // Side-load a donation (1 USDC).
+        usdc.mint(address(receiver), 1_000_000);
+        // Liability is still only the stranded deposit, but balance is bigger.
+        assertEq(receiver.strandedUsdcLiability(), 1_000_000);
+        assertEq(usdc.balanceOf(address(receiver)), 2_000_000);
+
+        // Donation is sweepable now (available = balance - liability = 1_000_000).
+        receiver.sweepHubBalance(address(usdc), address(this), 1_000_000);
+
+        // Sweeping a wei more reverts.
+        vm.expectRevert(
+            abi.encodeWithSelector(FxHubMessageReceiver.SweepExceedsAvailable.selector, uint256(1), uint256(0))
+        );
+        receiver.sweepHubBalance(address(usdc), address(this), 1);
+
+        // Once alice claims, liability releases.
+        skip(receiver.STRANDED_DEPOSIT_GRACE() + 1);
+        receiver.sweepStrandedDeposit(nonce);
+        assertEq(receiver.strandedUsdcLiability(), 0);
+    }
 }

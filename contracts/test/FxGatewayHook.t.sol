@@ -211,28 +211,33 @@ contract FxGatewayHookTest is Test {
 
     // ── WITHDRAWAL FLOW ─────────────────────────────────────────
 
-    function test_initiateGatewayWithdrawal_movesBalanceToWithdrawing() public {
-        // Need the AUTHORITY to be the hook itself for the withdrawal flow to drain to us.
-        // (In production, depositFor credits the EOA authority — withdrawal is signed by them
-        // and routed back. For the unit test we approximate by depositing-for the hook.)
-        // Re-deploy hook with authority == hook address to exercise the in-contract flow.
+    function test_initiateGatewayWithdrawal_revertsWhenAuthorityIsEOA() public {
+        // Codex adversarial-review v3 finding #2: while authority is an EOA,
+        // hook-driven withdrawal cannot recover the EOA's Gateway balance
+        // (msg.sender to GatewayWallet would be the hook with 0 balance). The
+        // function now reverts loudly instead of silently no-op-ing.
+        vm.expectRevert(abi.encodeWithSelector(FxGatewayHook.AuthorityNotHook.selector, AUTHORITY));
+        vm.prank(HUB);
+        hook.initiateGatewayWithdrawal(1e6);
+    }
+
+    function test_initiateGatewayWithdrawal_worksWhenAuthorityIsHook() public {
+        // Post-EIP-1271 rotation: authority = hook itself. Withdrawal flow becomes available.
         FxGatewayHook selfHook = new FxGatewayHook(
-            address(usdc), address(wallet), address(minter), HUB, LOCAL_DOMAIN, address(this)
+            address(usdc), address(wallet), address(minter), HUB, LOCAL_DOMAIN, AUTHORITY
         );
-        // dummy: skip — we'll instead test the function gates and event surface
+        // Rotate authority → selfHook
+        vm.prank(HUB);
+        selfHook.setAuthority(address(selfHook));
+
+        // Now selfHook can deposit-for-itself and withdraw-from-itself.
         vm.prank(HUB);
         usdc.approve(address(selfHook), 1e6);
         vm.prank(HUB);
         selfHook.lockForRemote(1e6);
 
-        // Authority for selfHook is address(this), so initiateWithdrawal called by selfHook
-        // will burn against address(this)'s balance — but the hook IS the depositor, so the
-        // wallet's `msg.sender` in initiateWithdrawal is the hook. The mock checks the hook's
-        // balance — which is 0 (depositFor credited address(this), not the hook). So this
-        // path reverts in the mock with "insufficient".
-        // Acceptable for now: the function gates work, and on real Gateway the hook IS the
-        // depositor when authority = hook (post-1271).
-        vm.expectRevert("insufficient");
+        vm.expectEmit(false, false, false, true);
+        emit FxGatewayHook.GatewayWithdrawalInitiated(1e6);
         vm.prank(HUB);
         selfHook.initiateGatewayWithdrawal(1e6);
     }
@@ -252,6 +257,12 @@ contract FxGatewayHookTest is Test {
     function test_completeGatewayWithdrawal_revertsIfNotHub() public {
         vm.expectRevert(abi.encodeWithSelector(FxGatewayHook.NotHub.selector, ATTACKER));
         vm.prank(ATTACKER);
+        hook.completeGatewayWithdrawal();
+    }
+
+    function test_completeGatewayWithdrawal_revertsWhenAuthorityIsEOA() public {
+        vm.expectRevert(abi.encodeWithSelector(FxGatewayHook.AuthorityNotHook.selector, AUTHORITY));
+        vm.prank(HUB);
         hook.completeGatewayWithdrawal();
     }
 }

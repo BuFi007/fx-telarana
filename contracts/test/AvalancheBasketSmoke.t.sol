@@ -110,13 +110,12 @@ contract AvalancheBasketSmokeTest is Test {
         PoolKey memory key = _poolKey(address(asset), address(hook));
         poolManager.initialize(key, Q96);
 
-        usdc.mint(lp, 10_000e6);
-        asset.mint(lp, c.seedAsset);
-        vm.startPrank(lp);
+        // First deposit is owner-gated (codex-r12). Owner = this test contract.
+        usdc.mint(owner, 10_000e6);
+        asset.mint(owner, c.seedAsset);
         usdc.approve(address(hook), type(uint256).max);
         asset.approve(address(hook), type(uint256).max);
         _depositSorted(hook, address(usdc), 10_000e6, address(asset), c.seedAsset);
-        vm.stopPrank();
 
         assertGt(hook.morphoShares(address(usdc)), 0, "USDC was not rehypothecated");
         assertGt(hook.morphoShares(address(asset)), 0, "asset was not rehypothecated");

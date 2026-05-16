@@ -29,6 +29,12 @@ export interface FxAddresses {
   fxReceiptEURC: Address;
   fxHubMessageReceiver?: Address;
   fxSpoke?: Address;
+  /// Per-chain secondary spoke that routes to the *other* hub (e.g. on
+  /// Fuji, this is the Fuji-resident spoke whose HUB_RECEIVER points at the
+  /// Arc hub). Spider-web topology: every chain has both a Fuji-routed and
+  /// an Arc-routed spoke. Populated post-Stage-6.
+  fxSpokeAlt?: Address;
+  fxGatewayHook?: Address;
   fxSwapHook?: Address;
 
   /// External dependencies
@@ -201,9 +207,9 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.UnichainSepolia]: {
-    // FxSpoke — deployed 2026-05-14, targets Base Sepolia hub receiver
-    //   0x758c17BfA85D1b26A81423B524397b8b2D271818 (domain 6).
-    fxSpoke: "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
+    // Stage 6 spokes (2026-05-15). Synced from deployments/unichain-sepolia.json.
+    fxSpoke: "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b",
+    fxSpokeAlt: "0x7882d3f0e210128a4dce51e1af1ec801e21e1e5a",
     // CCTP V2 testnet deterministic addresses (domain 10)
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
@@ -214,15 +220,25 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.AvalancheFuji]: {
-    // Fuji hub + self-loop spoke. FxSpoke redeployed 2026-05-15 to target
-    // the Fuji hub receiver below, not the older Base Sepolia hub.
+    // Fuji = PRIMARY HUB (Stage 6 live). The hub stack below was redeployed
+    // 2026-05-15 with the relay surface (relayToRemoteHub, relayMintFromRemote,
+    // setRelayCaller, sweepHubBalance) plus Codex-adversarial-review-v3-r2
+    // hardening (msg.sender-bound recipient, strandedUsdcLiability gate).
+    // V1 contracts (0x365DE300…, 0xAa875a68…) are deprecated and tracked in
+    // deployments/avalanche-fuji.json's `deprecated:` block; do NOT route new
+    // deposits to them. Source of truth: deployments/avalanche-fuji.json +
+    // deployments/hub-config-fuji.json.
     fxOracle: "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b",
-    fxMarketRegistry: "0x7ba745b979e027992ecfa51207666e3f5b46cf0a",
+    fxMarketRegistry: "0x7ba745b979e027992ECFa51207666e3F5B46cF0a",
     fxLiquidator: "0x2900599ff0e6dd057493d62fac856e5a8f93c6eb",
     fxReceiptEURC: "0xefd7cf5ad5a2db9a3c23e2807f2279de92c730d2",
     fxReceiptUSDC: "0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e",
-    fxHubMessageReceiver: "0x365DE300dDa61C81a33bcE3606A5d524eD964362",
-    fxSpoke: "0xAa875a68b0155da4bD6A528ee9e1137017D18b41",
+    fxHubMessageReceiver: "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
+    fxGatewayHook: "0x7dA191bfB85D9F14069228cf618519BFb41f371E",
+    // Fuji-resident spoke that routes to the LOCAL Fuji hub (self-loop CCTP V2).
+    fxSpoke: "0xb7fc291c27f6a7a659d4d229e5d8a55e58f26ab1",
+    // Fuji-resident spoke that routes to the ARC hub (cross-hub spider-web edge).
+    fxSpokeAlt: "0xe22ef07a0996df9ae6252cc9bf491fbe13fd6575",
     morphoBlue: "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
     adaptiveCurveIrm: "0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA",
     pyth: "0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509",
@@ -237,11 +253,25 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.ArcTestnet]: {
-    // FxSpoke — deployed 2026-05-14. Phase 1: swap Base Sepolia hub for an
-    // Arc-hosted hub so this becomes the canonical loop. Tenderly does NOT
-    // yet index chain 5042002 — no source verification possible until they
-    // add it (manifest at deployments/arc-testnet.json is the source of truth).
-    fxSpoke: "0x47c76D420f6534B4b83592cf706D9830669EEdB8",
+    // Arc = TRADING-EXECUTION HUB (Stage 6 live, 2026-05-15). Receives USDC
+    // liquidity from Fuji via FxGatewayHook for FX/perp execution; never
+    // user-initiated. The hub stack below mirrors Fuji's contract surface
+    // — same relay + sweep + liability hardening from Codex v3 round 2.
+    // V1 spoke (0x47c76D…) is deprecated; do NOT route new deposits to it.
+    // Source of truth: deployments/arc-testnet.json + hub-config-arc.json.
+    // Tenderly does NOT yet index chain 5042002 — on-chain verification only.
+    fxOracle: "0x77b3A3B420dB98B01085b8C46a753Ed9879e2865",
+    fxMarketRegistry: "0x813232259c9b922e7571F15220617C80581f1464",
+    fxLiquidator: "0xa50f7D4D4a1A0D3CF418515973545b80E037B379",
+    fxReceiptEURC: "0xF829f57Db8530fa93FCD6e13b00193cbe8cE1493",
+    fxReceiptUSDC: "0xdd22365Bba7330BE537c9BC26da9b1b4Db9aC431",
+    fxHubMessageReceiver: "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
+    fxGatewayHook: "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1",
+    morphoBlue: "0x3c9b95C6E7B23f094f066733E7797C8680760830",
+    // Arc-resident spoke that routes to the FUJI hub (sends users back).
+    fxSpoke: "0x13c8463589d460db6f21235eedfd678c22a1ea25",
+    // Arc-resident spoke that routes to the LOCAL Arc hub (self-loop CCTP V2).
+    fxSpokeAlt: "0x5d10d2c3b9951054845534b2f60a68ebc0898cd3",
     pyth: "0x2880aB155794e7179c9eE2e38200202908C17B43",
     usdc: "0x3600000000000000000000000000000000000000",
     eurc: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
@@ -434,8 +464,10 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.Sepolia]: {
-    // FxSpoke — deployed 2026-05-14
-    fxSpoke: "0xc3FFF144b37B79264573E6c4c2ac2F960113A114",
+    // Stage 6 spokes (2026-05-15). `fxSpoke` routes to Fuji hub;
+    // `fxSpokeAlt` routes to Arc hub. Synced from deployments/ethereum-sepolia.json.
+    fxSpoke: "0xf6d845da2051183b9519ca1806c39040ba5e71ba",
+    fxSpokeAlt: "0x4e63954685241c4469f02fec3761ff1d4f34ffa9",
     // CCTP V2 domain 0
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
@@ -449,8 +481,9 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.OpSepolia]: {
-    // FxSpoke — deployed 2026-05-14
-    fxSpoke: "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
+    // Stage 6 spokes. Synced from deployments/op-sepolia.json.
+    fxSpoke: "0x0b5d18bbe92f07ec0111ae6d2e102858268d6aca",
+    fxSpokeAlt: "0x579fccdebb1f7e983c4ead27aa300d3b5397e28c",
     // CCTP V2 domain 2
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
@@ -462,8 +495,9 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.ArbitrumSepolia]: {
-    // FxSpoke — deployed 2026-05-14
-    fxSpoke: "0xEFd7CF5ad5a2dB9a3C23e2807f2279DE92C730D2",
+    // Stage 6 spokes. Synced from deployments/arbitrum-sepolia.json.
+    fxSpoke: "0x2900599ff0e6dd057493d62fac856e5a8f93c6eb",
+    fxSpokeAlt: "0x365de300dda61c81a33bce3606a5d524ed964362",
     // CCTP V2 domain 3
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
@@ -475,8 +509,9 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.PolygonAmoy]: {
-    // FxSpoke — deployed 2026-05-14
-    fxSpoke: "0x2552E1027fF27A285635a9593825E3Da8F25808b",
+    // Stage 6 spokes. Synced from deployments/polygon-amoy.json.
+    fxSpoke: "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b",
+    fxSpokeAlt: "0x7882d3f0e210128a4dce51e1af1ec801e21e1e5a",
     // CCTP V2 domain 7
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
@@ -498,8 +533,9 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.WorldChainSepolia]: {
-    // FxSpoke — deployed 2026-05-14
-    fxSpoke: "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
+    // Stage 6 spokes. Synced from deployments/worldchain-sepolia.json.
+    fxSpoke: "0x0b5d18bbe92f07ec0111ae6d2e102858268d6aca",
+    fxSpokeAlt: "0x579fccdebb1f7e983c4ead27aa300d3b5397e28c",
     // CCTP V2 domain 14
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",

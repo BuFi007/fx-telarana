@@ -267,9 +267,12 @@ contract DeployAvalancheBasketHub is Script {
 
     function _deployHook(Core memory core, address assetToken) internal returns (FxSwapHook hook) {
         (address token0, address token1) = _sort(core.usdc, assetToken);
+        // First-deposit is owner-gated (codex-r12 patch). Construct the hook
+        // with the broadcast deployer as owner so the seed flow can run, then
+        // transferOwner to `hookOwner` after seeding (see _seedHookIfConfigured).
         bytes memory creationCode = abi.encodePacked(
             type(FxSwapHook).creationCode,
-            abi.encode(core.poolManager, address(core.oracle), address(core.registry), core.hookOwner, token0, token1, core.morpho)
+            abi.encode(core.poolManager, address(core.oracle), address(core.registry), msg.sender, token0, token1, core.morpho)
         );
         uint160 flags = uint160(
             Hooks.BEFORE_ADD_LIQUIDITY_FLAG
@@ -311,7 +314,11 @@ contract DeployAvalancheBasketHub is Script {
     function _seedHookIfConfigured(Core memory core, AssetConfig memory asset, FxSwapHook hook) internal {
         uint256 usdcAmount = vm.envOr(string.concat("FXT_SEED_USDC_", asset.symbol), uint256(0));
         uint256 assetAmount = vm.envOr(string.concat("FXT_SEED_", asset.symbol), uint256(0));
-        if (usdcAmount == 0 || assetAmount == 0) return;
+        if (usdcAmount == 0 || assetAmount == 0) {
+            // No seed configured — still hand ownership to the intended target.
+            if (core.hookOwner != msg.sender) hook.transferOwner(core.hookOwner);
+            return;
+        }
 
         IERC20(core.usdc).forceApprove(address(hook), usdcAmount);
         IERC20(asset.token).forceApprove(address(hook), assetAmount);
@@ -321,6 +328,9 @@ contract DeployAvalancheBasketHub is Script {
         } else {
             hook.deposit(assetAmount, usdcAmount);
         }
+
+        // Hand ownership to the intended target (multisig/timelock) after seeding.
+        if (core.hookOwner != msg.sender) hook.transferOwner(core.hookOwner);
     }
 
     function _ensureMorphoConfig(IMorpho morpho, address irm, uint256 lltv, address deployer) internal {

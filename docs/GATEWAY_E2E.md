@@ -93,36 +93,48 @@ HUB.relayMintFromRemote(attestation, signature)
     → GatewayMinter.gatewayMint(...)
       → USDC mints to FxGatewayHook
     → hook forwards to HUB
+  → HUB verifies balance-delta == minted, then safeTransfer(msg.sender, minted)
 ```
 
-Stage 6 plumbing needed:
+Stage 6 plumbing — **LIVE on both hubs** (deployed 2026-05-15) with the
+Codex-v3-adversarial-review-hardened shape:
 
 ```solidity
-// FxHubMessageReceiver additions:
+// FxHubMessageReceiver (Stage 6):
 
-address public gatewayBridge;          // = FxGatewayHook on this chain
-mapping(address => bool) public bufxCallers;
+address public owner;
+address public gatewayHook;
+mapping(address => bool) public relayCallers;
 
-function setGatewayBridge(address bridge) external onlyOwner {
-    gatewayBridge = bridge;
-}
-function setBufxCaller(address bufx, bool allowed) external onlyOwner {
-    bufxCallers[bufx] = allowed;
-}
+function setGatewayHook(address newHook) external onlyOwner;
+function setRelayCaller(address relayer, bool allowed) external onlyOwner;
 
-function relayToRemoteHub(uint256 amount) external {
-    if (!bufxCallers[msg.sender] && msg.sender != owner()) revert NotAuthorized();
-    USDC.safeTransferFrom(msg.sender, gatewayBridge, amount);
-    IFxGatewayHook(gatewayBridge).lockForRemote(amount);
+function relayToRemoteHub(uint256 amount) external onlyAuthorizedRelayer {
+    USDC.safeTransferFrom(msg.sender, address(this), amount);
+    USDC.forceApprove(gatewayHook, amount);
+    IFxGatewayHook(gatewayHook).lockForRemote(amount);
+    USDC.forceApprove(gatewayHook, 0);
 }
 
-function relayMintFromRemote(bytes calldata attestation, bytes calldata signature) external {
-    if (!bufxCallers[msg.sender] && msg.sender != owner()) revert NotAuthorized();
-    IFxGatewayHook(gatewayBridge).mintFromRemote(attestation, signature);
+function relayMintFromRemote(
+    bytes calldata attestation,
+    bytes calldata signature
+) external onlyAuthorizedRelayer returns (uint256 minted) {
+    uint256 balBefore = USDC.balanceOf(address(this));
+    minted = IFxGatewayHook(gatewayHook).mintFromRemote(attestation, signature);
+    uint256 received = USDC.balanceOf(address(this)) - balBefore;
+    if (received < minted) revert MintShortfall(minted, received);
+    // Recipient is bound to msg.sender — the authorized relayer.
+    // Codex adversarial-review v3 round 2 finding #1: arbitrary
+    // recipient turned attestations into bearer claims for any
+    // whitelisted relayer. Binding to msg.sender narrows the trust
+    // surface to the relayCallers whitelist itself.
+    USDC.safeTransfer(msg.sender, minted);
 }
+
+// Owner emergency escape valve for off-path balances.
+function sweepHubBalance(address token, address to, uint256 amount) external onlyOwner;
 ```
-
-~50 LOC + 1 test. Easy lift. Triggers a hub redeploy on both Fuji + Arc and a spoke re-migration (since `FxHubMessageReceiver` address changes again).
 
 ## Watch mode (daemon)
 
