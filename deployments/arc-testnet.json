@@ -5,35 +5,36 @@
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
   "deployedAt": "2026-05-15",
   "contracts": {
-    "FxSpoke":               "0x13c8463589d460db6f21235eedfd678c22a1ea25",
-    "FxHubMessageReceiver":  "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
-    "FxGatewayHook":         "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1",
-    "FxMarketRegistry":      "0x813232259c9b922e7571F15220617C80581f1464",
-    "FxOracle":              "0x77b3A3B420dB98B01085b8C46a753Ed9879e2865",
+    "FxSpoke": "0x13c8463589d460db6f21235eedfd678c22a1ea25",
+    "FxHubMessageReceiver": "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
+    "FxGatewayHook": "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1",
+    "FxMarketRegistry": "0x813232259c9b922e7571F15220617C80581f1464",
+    "FxOracle": "0x77b3A3B420dB98B01085b8C46a753Ed9879e2865",
     "MorphoOracleAdapterM1": "0xED58C176E9a37Cda2854AC0Ade409cfb3687cA7d",
     "MorphoOracleAdapterM2": "0x955AAEE698aaA03d5bc32F16434cef78b8Ee1fc7",
-    "FxReceiptEURC":         "0xF829f57Db8530fa93FCD6e13b00193cbe8cE1493",
-    "FxReceiptUSDC":         "0xdd22365Bba7330BE537c9BC26da9b1b4Db9aC431",
-    "FxLiquidator":          "0xa50f7D4D4a1A0D3CF418515973545b80E037B379",
-    "MorphoBlue":            "0x3c9b95C6E7B23f094f066733E7797C8680760830",
-    "IrmMock":               "0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1"
+    "FxReceiptEURC": "0xF829f57Db8530fa93FCD6e13b00193cbe8cE1493",
+    "FxReceiptUSDC": "0xdd22365Bba7330BE537c9BC26da9b1b4Db9aC431",
+    "FxLiquidator": "0xa50f7D4D4a1A0D3CF418515973545b80E037B379",
+    "MorphoBlue": "0x3c9b95C6E7B23f094f066733E7797C8680760830",
+    "IrmMock": "0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1",
+    "FxSpokeToArc": "0x5d10d2c3b9951054845534b2f60a68ebc0898cd3"
   },
   "deprecated": {
     "V1FxHubMessageReceiver": "0x07db64fb19C6c4a1eBB1B7bfdaFd4676b43Cf276",
-    "V1FxGatewayHook":        "0x004cfa0305c365b1d9b2365f85acf216c96b0e13",
-    "V1FxSpoke":              "0x729fe51fa88eae24cbcff7a192c5a91e937ceb68",
-    "reason": "V1 hub+hook+spoke shipped 2026-05-15 with no relay surface (only HUB could call hook). Stage 6 (this session) adds relayToRemoteHub + relayMintFromRemote + owner + relayCallers; required hub redeploy → hook redeploy (HUB immutable) → spoke re-migration."
+    "V1FxGatewayHook": "0x004cfa0305c365b1d9b2365f85acf216c96b0e13",
+    "V1FxSpoke": "0x729fe51fa88eae24cbcff7a192c5a91e937ceb68",
+    "reason": "V1 hub+hook+spoke shipped 2026-05-15 with no relay surface (only HUB could call hook). Stage 6 (this session) adds relayToRemoteHub + relayMintFromRemote + owner + relayCallers; required hub redeploy \u2192 hook redeploy (HUB immutable) \u2192 spoke re-migration."
   },
   "external": {
-    "CctpTokenMessengerV2":     "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    "CctpTokenMessengerV2": "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     "CctpMessageTransmitterV2": "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
-    "CctpDomain":               "26",
-    "USDC":                     "0x3600000000000000000000000000000000000000",
-    "EURC":                     "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
-    "Pyth":                     "0x2880aB155794e7179c9eE2e38200202908C17B43",
-    "GatewayWallet":            "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
-    "GatewayMinter":            "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
-    "GatewayLocalDomain":       26
+    "CctpDomain": "26",
+    "USDC": "0x3600000000000000000000000000000000000000",
+    "EURC": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+    "Pyth": "0x2880aB155794e7179c9eE2e38200202908C17B43",
+    "GatewayWallet": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+    "GatewayMinter": "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
+    "GatewayLocalDomain": 26
   },
   "marketIds": {
     "M1_EURC_USDC": "0xf6fac2b9b801a7ae3deeccfa95a7f1e768b4873a22f0def0d93f7f0172cc2da2",
@@ -46,24 +47,47 @@
     "cctpDomain": 1
   },
   "gateway": {
-    "authority":       "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
-    "authorityType":   "EOA",
-    "owner":           "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
-    "rotationPlan":    "Owner: rotate to TimelockController / multisig. Authority on hook: rotate to FxHubMessageReceiver via EIP-1271 once Circle ships 1271 support (~mid-July 2026).",
-    "relayCallers":    [],
+    "authority": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    "authorityType": "EOA",
+    "owner": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    "rotationPlan": "Owner: rotate to TimelockController / multisig. Authority on hook: rotate to FxHubMessageReceiver via EIP-1271 once Circle ships 1271 support (~mid-July 2026).",
+    "relayCallers": [],
     "relayCallersNote": "Empty until BUFX (perp/spot layer in sibling repo) lands. Whitelist via hub.setRelayCaller(bufxAddress, true)."
   },
   "deploymentTx": {
     "FxHubMessageReceiver": "0x29bf85c517fcd9a3de70fb52a9ad768be89b6923a6fcba04f25d9d30c569acb4",
-    "FxGatewayHook":        "0x9ecfc1300151e5d4d7b99721ffc29582d31a3cdb066421c444b014512af69510",
-    "setGatewayHook":       "0x72fead7a69b6b8f9a273f4e2c535cb82d088feecf31f5cb409e4787981285f33"
+    "FxGatewayHook": "0x9ecfc1300151e5d4d7b99721ffc29582d31a3cdb066421c444b014512af69510",
+    "setGatewayHook": "0x72fead7a69b6b8f9a273f4e2c535cb82d088feecf31f5cb409e4787981285f33",
+    "FxSpokeToArc": "0xf54e379970084b02c88a0533b6f9e2676db7dbef720511f245570965f7c30f1c"
   },
   "stage6E2E": {
-    "relayMintFromRemote":  "0xe430d026e691147f4e96a87aff558332e0a94ff9abe8144fe8059c75439e9aaa",
-    "amount":               "100000",
-    "amountUsd":            "0.10",
+    "relayMintFromRemote": "0xe430d026e691147f4e96a87aff558332e0a94ff9abe8144fe8059c75439e9aaa",
+    "amount": "100000",
+    "amountUsd": "0.10",
     "destinationRecipient": "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1 (Arc hook v2)",
-    "destinationCaller":    "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1 (Arc hook v2 — locks mint to hook only)"
+    "destinationCaller": "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1 (Arc hook v2 \u2014 locks mint to hook only)"
   },
-  "notes": "Arc Testnet has TWO roles: (1) a spoke (FxSpoke 0x13c8... routes USDC deposits via CCTP V2 to the Fuji primary hub, captured in the `hub` block) and (2) a trading-execution hub stack (deployed 2026-05-15 — FxHubMessageReceiver + Morpho + V4 adapters + FxGatewayHook with Stage 6 relay surface). Arc's hub is NEVER a user-deposit destination; it receives USDC liquidity from Fuji via FxGatewayHook (Circle Gateway, hub-callable only) for FX/perp execution. USDC is native 18-dec gas; the 0x3600...0000 address is the 6-dec ERC-20 form CCTP V2 + Gateway use. EURC is the real Circle-deployed token on Arc. Stage 6 relayMintFromRemote verified live 2026-05-15."
+  "notes": "Arc Testnet has TWO roles: (1) a spoke (FxSpoke 0x13c8... routes USDC deposits via CCTP V2 to the Fuji primary hub, captured in the `hub` block) and (2) a trading-execution hub stack (deployed 2026-05-15 \u2014 FxHubMessageReceiver + Morpho + V4 adapters + FxGatewayHook with Stage 6 relay surface). Arc's hub is NEVER a user-deposit destination; it receives USDC liquidity from Fuji via FxGatewayHook (Circle Gateway, hub-callable only) for FX/perp execution. USDC is native 18-dec gas; the 0x3600...0000 address is the 6-dec ERC-20 form CCTP V2 + Gateway use. EURC is the real Circle-deployed token on Arc. Stage 6 relayMintFromRemote verified live 2026-05-15.",
+  "routes": {
+    "fuji": {
+      "fxSpoke": "0x13c8463589d460db6f21235eedfd678c22a1ea25",
+      "hub": {
+        "network": "avalanche-fuji",
+        "chainId": 43113,
+        "messageReceiver": "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
+        "cctpDomain": 1
+      },
+      "purpose": "Borrow / lend / supply liquidity on the Fuji-side Morpho markets. Money-market substrate."
+    },
+    "arc": {
+      "fxSpoke": "0x5d10d2c3b9951054845534b2f60a68ebc0898cd3",
+      "hub": {
+        "network": "arc-testnet",
+        "chainId": 5042002,
+        "messageReceiver": "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
+        "cctpDomain": 26
+      },
+      "purpose": "High-frequency FX trading + perp execution on Arc. Also runs Morpho markets (borrow/lend works here too)."
+    }
+  }
 }
