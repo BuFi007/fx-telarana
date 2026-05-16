@@ -1,8 +1,42 @@
 {
   "network": "arc-testnet",
   "chainId": 5042002,
-  "messageReceiver": "0x0000000000000000000000000000000000000000",
+  "messageReceiver": "0x07db64fb19C6c4a1eBB1B7bfdaFd4676b43Cf276",
   "cctpDomain": 26,
   "rpcUrl": "https://rpc.testnet.arc.network",
-  "note": "Step 2 of the planned hub migration — final target. Fill in messageReceiver once the hub stack is deployed on Arc. Arc uses USDC as native gas (18-dec on-native, 6-dec ERC-20) — deployer must be funded via faucet.circle.com. Tenderly doesn't index chain 5042002 yet, so verification + simulator coverage for the Arc-hosted hub will be on-chain only until Tenderly adds Arc support."
+  "hubStack": {
+    "MorphoBlue":            "0x3c9b95C6E7B23f094f066733E7797C8680760830",
+    "IrmMock":               "0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1",
+    "FxOracle":              "0x77b3A3B420dB98B01085b8C46a753Ed9879e2865",
+    "MorphoOracleAdapterM1": "0xED58C176E9a37Cda2854AC0Ade409cfb3687cA7d",
+    "MorphoOracleAdapterM2": "0x955AAEE698aaA03d5bc32F16434cef78b8Ee1fc7",
+    "FxMarketRegistry":      "0x813232259c9b922e7571F15220617C80581f1464",
+    "FxReceiptEURC":         "0xF829f57Db8530fa93FCD6e13b00193cbe8cE1493",
+    "FxReceiptUSDC":         "0xdd22365Bba7330BE537c9BC26da9b1b4Db9aC431",
+    "FxLiquidator":          "0xa50f7D4D4a1A0D3CF418515973545b80E037B379",
+    "FxHubMessageReceiver":  "0x07db64fb19C6c4a1eBB1B7bfdaFd4676b43Cf276",
+    "FxGatewayHook":         "0x004cfa0305c365b1d9b2365f85acf216c96b0e13"
+  },
+  "marketIds": {
+    "M1_EURC_USDC": "0xf6fac2b9b801a7ae3deeccfa95a7f1e768b4873a22f0def0d93f7f0172cc2da2",
+    "M2_USDC_EURC": "0x9e187a5f252de56b9ffe35f72cdc4137568f9d51698560751cdaff3df60cb5d3"
+  },
+  "external": {
+    "USDC":                     "0x3600000000000000000000000000000000000000",
+    "EURC":                     "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+    "Pyth":                     "0x2880aB155794e7179c9eE2e38200202908C17B43",
+    "CctpMessageTransmitterV2": "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
+    "CctpTokenMessengerV2":     "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    "GatewayWallet":            "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+    "GatewayMinter":            "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
+    "GatewayLocalDomain":       26
+  },
+  "gateway": {
+    "authority": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    "authorityType": "EOA",
+    "rotationPlan": "Rotate to FxHubMessageReceiver via EIP-1271 once Circle ships 1271 support (~mid-July 2026)."
+  },
+  "deployedAt": "2026-05-15",
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "notes": "Arc Testnet is the SECONDARY HUB — trading-execution venue. Receives USDC liquidity from Fuji via FxGatewayHook (Circle Gateway, hub-callable only, never user-initiated). MorphoBlue + IrmMock self-deployed; EURC is real Circle deployment; Pyth is a proxy. Gateway addresses are deterministic CREATE2 — same on every supported testnet. Tenderly doesn't index chain 5042002 yet — on-chain verification only until they add support."
 }
