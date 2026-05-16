@@ -72,6 +72,24 @@ contract FxSwapHookTest is Test {
         token0.approve(address(hook), type(uint256).max);
         token1.approve(address(hook), type(uint256).max);
         vm.stopPrank();
+
+        // Fund owner so they can perform the gated first deposit.
+        // First-deposit is owner-only (Phase 2.7 codex-r12 patch) to prevent
+        // an adversarial bootstrap that poisons B0/Q0 at an off-oracle ratio.
+        token0.mint(owner, 1_000_000_000);
+        token1.mint(owner, 1_000_000_000);
+        vm.startPrank(owner);
+        token0.approve(address(hook), type(uint256).max);
+        token1.approve(address(hook), type(uint256).max);
+        vm.stopPrank();
+    }
+
+    /// @notice Helper: owner bootstraps the pool with the given amounts.
+    ///         Tests that subsequently exercise alice/bob deposits or redeems
+    ///         call this first to seed B0/Q0.
+    function _seedAsOwner(uint256 amount0, uint256 amount1) internal {
+        vm.prank(owner);
+        hook.deposit(amount0, amount1);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -178,19 +196,17 @@ contract FxSwapHookTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_deposit_firstDepositBootstrapsShares() public {
-        vm.prank(alice);
-        uint256 shares = hook.deposit(1_000_000, 1_000_000);
-        // First depositor: shares = (a0 + a1) - MINIMUM_LIQUIDITY
+        // First deposit is owner-only (codex-r12 patch); use the helper.
+        _seedAsOwner(1_000_000, 1_000_000);
+        uint256 shares = hook.sharesOf(owner);
         assertEq(shares, 2_000_000 - hook.MINIMUM_LIQUIDITY());
         assertEq(hook.totalShares(), 2_000_000);
-        assertEq(hook.sharesOf(alice), shares);
         assertEq(token0.balanceOf(address(hook)), 1_000_000);
         assertEq(token1.balanceOf(address(hook)), 1_000_000);
     }
 
     function test_deposit_subsequentDepositProRata() public {
-        vm.prank(alice);
-        hook.deposit(1_000_000, 1_000_000);
+        _seedAsOwner(1_000_000, 1_000_000);
 
         address bob = address(0xBEEF);
         token0.mint(bob, 1_000_000);
@@ -201,30 +217,26 @@ contract FxSwapHookTest is Test {
         uint256 bobShares = hook.deposit(500_000, 500_000);
         vm.stopPrank();
 
-        // bob deposits half of alice's amount → roughly half her shares
         assertGt(bobShares, 0);
-        // Slight precision loss expected; bob's stake ≈ 1/3 of total now
         uint256 total = hook.totalShares();
         assertApproxEqRel(bobShares * 3, total, 0.01e18);
     }
 
     function test_redeem_returnsProRataBalance() public {
+        _seedAsOwner(1_000_000, 1_000_000);
         vm.prank(alice);
-        uint256 shares = hook.deposit(1_000_000, 1_000_000);
+        uint256 aliceShares = hook.deposit(1_000_000, 1_000_000);
 
         vm.prank(alice);
-        (uint256 out0, uint256 out1) = hook.redeem(shares);
+        (uint256 out0, uint256 out1) = hook.redeem(aliceShares);
 
-        // alice gets back roughly what she put in minus MINIMUM_LIQUIDITY
-        assertGt(out0, 0);
-        assertGt(out1, 0);
-        assertApproxEqAbs(out0, 1_000_000 - hook.MINIMUM_LIQUIDITY() / 2, 1);
-        assertApproxEqAbs(out1, 1_000_000 - hook.MINIMUM_LIQUIDITY() / 2, 1);
+        // alice deposited 1M:1M subsequently; her share of post-redeem pool ≈ 1M each.
+        assertApproxEqAbs(out0, 1_000_000, 2);
+        assertApproxEqAbs(out1, 1_000_000, 2);
     }
 
     function test_redeem_revertsOnInsufficientShares() public {
-        vm.prank(alice);
-        hook.deposit(1_000_000, 1_000_000);
+        _seedAsOwner(1_000_000, 1_000_000);
         vm.expectRevert();
         vm.prank(alice);
         hook.redeem(type(uint256).max);
@@ -247,9 +259,7 @@ contract FxSwapHookTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_quote_atEquilibriumReturnsMidMinusSpread() public {
-        // seed with even reserves
-        vm.prank(alice);
-        hook.deposit(1_000_000_000, 1_000_000_000);
+        _seedAsOwner(1_000_000_000, 1_000_000_000);
 
         // Trade is tiny relative to reserves → kImpact ≈ 0
         uint256 amountOut = hook.quote(1000, true);  // 1000 units in
@@ -258,8 +268,7 @@ contract FxSwapHookTest is Test {
     }
 
     function test_quote_largeTradeHasHigherSlippage() public {
-        vm.prank(alice);
-        hook.deposit(1_000_000_000, 1_000_000_000);
+        _seedAsOwner(1_000_000_000, 1_000_000_000);
 
         uint256 smallOut = hook.quote(1_000, true);              // tiny trade
         uint256 bigOut   = hook.quote(500_000_000, true);        // 50% of reserve
@@ -272,8 +281,7 @@ contract FxSwapHookTest is Test {
     }
 
     function test_quote_zeroKMeansNoSizeImpact() public {
-        vm.prank(alice);
-        hook.deposit(1_000_000_000, 1_000_000_000);
+        _seedAsOwner(1_000_000_000, 1_000_000_000);
 
         vm.prank(owner);
         hook.setKBps(0);
@@ -315,8 +323,7 @@ contract FxSwapHookTest is Test {
     }
 
     function test_quoteExactInput_usesTruncatedObservationAndVolatilitySpread() public {
-        vm.prank(alice);
-        hook.deposit(1_000_000_000, 1_000_000_000);
+        _seedAsOwner(1_000_000_000, 1_000_000_000);
         hook.recordOracleObservation();
 
         vm.warp(block.timestamp + 60);
@@ -333,9 +340,9 @@ contract FxSwapHookTest is Test {
         MockERC20 jpyc = new MockERC20("JPYC", "JPYC", 18);
         FxSwapHook h = _newHotOnlyHook(usdc, jpyc, 1_00_000_000, 640_000); // JPYC/USD = 0.0064
 
-        usdc.mint(alice, 10_000e6);
-        jpyc.mint(alice, 1_562_500e18);
-        vm.startPrank(alice);
+        usdc.mint(owner, 10_000e6);
+        jpyc.mint(owner, 1_562_500e18);
+        vm.startPrank(owner);
         usdc.approve(address(h), type(uint256).max);
         jpyc.approve(address(h), type(uint256).max);
         _depositSorted(h, address(usdc), 10_000e6, address(jpyc), 1_562_500e18);
@@ -354,9 +361,9 @@ contract FxSwapHookTest is Test {
         MockERC20 krw1 = new MockERC20("KRW1", "KRW1", 0);
         FxSwapHook h = _newHotOnlyHook(usdc, krw1, 1_00_000_000, 67_120); // KRW1/USD ~= 0.00067120
 
-        usdc.mint(alice, 10_000e6);
-        krw1.mint(alice, 14_898_689);
-        vm.startPrank(alice);
+        usdc.mint(owner, 10_000e6);
+        krw1.mint(owner, 14_898_689);
+        vm.startPrank(owner);
         usdc.approve(address(h), type(uint256).max);
         krw1.approve(address(h), type(uint256).max);
         _depositSorted(h, address(usdc), 10_000e6, address(krw1), 14_898_689);
@@ -375,9 +382,7 @@ contract FxSwapHookTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_deposit_firstDepositSeedsTargetsAtRatio() public {
-        // alice is funded with 1e9 of each — deposit 200/400 to test ratio seed.
-        vm.prank(alice);
-        hook.deposit(200_000_000, 400_000_000);
+        _seedAsOwner(200_000_000, 400_000_000);
 
         // Both tokens are 6-dec → targets are 1e18-normalized
         assertEq(hook.baseTargetE18(), 200_000_000 * 1e12);
@@ -385,8 +390,7 @@ contract FxSwapHookTest is Test {
     }
 
     function test_deposit_subsequentDepositGrowsTargetsProRata() public {
-        vm.prank(alice);
-        hook.deposit(1_000e6, 1_000e6);
+        _seedAsOwner(1_000e6, 1_000e6);
         uint256 b0 = hook.baseTargetE18();
         uint256 q0 = hook.quoteTargetE18();
 
@@ -413,8 +417,7 @@ contract FxSwapHookTest is Test {
         // and bricking one swap direction. Patch: _normalizePmmState snaps
         // targets to absorb the donation. Verify quotes succeed both ways
         // after dust transfers from a random address.
-        vm.prank(alice);
-        hook.deposit(1_000_000_000, 1_000_000_000);
+        _seedAsOwner(1_000_000_000, 1_000_000_000);
 
         // Donate dust on each side from an arbitrary address.
         address donor = address(0xDEAD42);
@@ -443,8 +446,7 @@ contract FxSwapHookTest is Test {
         // auto-absorbed on swap. Capturing yield/donations is keeper-driven
         // via public `sync()`, mirroring MagicLP's `_resetTargetAndR`.
         // Verify sync() updates both targets to current tradable reserves.
-        vm.prank(alice);
-        hook.deposit(1_000_000_000, 1_000_000_000);
+        _seedAsOwner(1_000_000_000, 1_000_000_000);
 
         uint256 b0Before = hook.baseTargetE18();
         uint256 q0Before = hook.quoteTargetE18();
@@ -483,8 +485,7 @@ contract FxSwapHookTest is Test {
     }
 
     function test_sync_revertsForNonOwner() public {
-        vm.prank(alice);
-        hook.deposit(1_000_000_000, 1_000_000_000);
+        _seedAsOwner(1_000_000_000, 1_000_000_000);
         vm.expectRevert();
         vm.prank(alice);
         hook.sync(1e21, 1e21, 100);
@@ -494,8 +495,7 @@ contract FxSwapHookTest is Test {
         // Sandwich-resistance regression: an attacker who moves reserves
         // between owner submission and execution forces actual reserves
         // outside the owner's expected envelope, reverting sync.
-        vm.prank(alice);
-        hook.deposit(1_000_000_000, 1_000_000_000);
+        _seedAsOwner(1_000_000_000, 1_000_000_000);
 
         // Donor "sandwich" pushes balance to 1.05× expected.
         address donor = address(0xDEAD44);
@@ -511,10 +511,11 @@ contract FxSwapHookTest is Test {
     }
 
     function test_deposit_firstDepositRevertsOnOneSided() public {
-        // Codex-2.7 finding #1 regression: a one-sided first deposit would
+        // Codex-2.7 round 1 regression: a one-sided first deposit would
         // have zeroed baseTargetE18 or quoteTargetE18, permanently bricking
-        // the PMM curve since the pro-rata growth math can't escape zero.
-        vm.startPrank(alice);
+        // the PMM curve. Owner-gated path; verify the ZeroAmount check
+        // still fires before any seed math runs.
+        vm.startPrank(owner);
         vm.expectRevert();
         hook.deposit(1_000_000, 0);
         vm.expectRevert();
@@ -522,14 +523,21 @@ contract FxSwapHookTest is Test {
         vm.stopPrank();
     }
 
-    function test_redeem_shrinksTargetsProRata() public {
+    function test_deposit_firstDepositRevertsForNonOwner() public {
+        // Codex-2.7 round 13 regression: first deposit must be owner-only.
+        vm.expectRevert();
         vm.prank(alice);
-        uint256 shares = hook.deposit(1_000e6, 1_000e6);
+        hook.deposit(1_000_000, 1_000_000);
+    }
+
+    function test_redeem_shrinksTargetsProRata() public {
+        _seedAsOwner(1_000e6, 1_000e6);
+        uint256 ownerShares = hook.sharesOf(owner);
         uint256 b0 = hook.baseTargetE18();
         uint256 q0 = hook.quoteTargetE18();
 
-        vm.prank(alice);
-        hook.redeem(shares / 2);
+        vm.prank(owner);
+        hook.redeem(ownerShares / 2);
 
         // Half the stake redeemed → ~half the targets remain.
         assertApproxEqRel(hook.baseTargetE18(), b0 / 2, 0.002e18);
@@ -537,8 +545,7 @@ contract FxSwapHookTest is Test {
     }
 
     function test_quote_K0_isStraightMidMinusSpread() public {
-        vm.prank(alice);
-        hook.deposit(1_000_000_000, 1_000_000_000);
+        _seedAsOwner(1_000_000_000, 1_000_000_000);
         vm.prank(owner);
         hook.setKBps(0);
 
@@ -548,8 +555,7 @@ contract FxSwapHookTest is Test {
     }
 
     function test_quote_K_positive_addsCurveSlippageOnTopOfSpread() public {
-        vm.prank(alice);
-        hook.deposit(1_000_000_000, 1_000_000_000);
+        _seedAsOwner(1_000_000_000, 1_000_000_000);
         vm.prank(owner);
         hook.setKBps(500); // 5% K — quite curved
 

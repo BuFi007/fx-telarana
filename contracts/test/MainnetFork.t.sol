@@ -141,6 +141,21 @@ contract MainnetForkTest is Test {
         deal(EURC, lender, 1_000_000e6);
         deal(USDC, borrower, 1_000_000e6);
         deal(EURC, borrower, 1_000_000e6);
+        deal(USDC, owner, 1_000_000e6);
+        deal(EURC, owner, 1_000_000e6);
+    }
+
+    /// @notice Owner bootstraps the hook so subsequent lender deposits work
+    ///         under the codex-r12 owner-gated first-deposit rule. Uses tiny
+    ///         amounts (100 USDC / 100 EURC) so the seed-induced drift on
+    ///         downstream hot/total assertions stays well within tolerance.
+    function _bootstrapHookAsOwner() internal {
+        (address t0, address t1) = USDC < EURC ? (USDC, EURC) : (EURC, USDC);
+        vm.startPrank(owner);
+        IERC20(t0).approve(address(hook), type(uint256).max);
+        IERC20(t1).approve(address(hook), type(uint256).max);
+        hook.deposit(100e6, 100e6);
+        vm.stopPrank();
     }
 
     modifier whenFork() {
@@ -235,6 +250,7 @@ contract MainnetForkTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_fork_swapHook_depositRehypothecates() public whenFork {
+        _bootstrapHookAsOwner();
         // hotReservePct default = 2000 (20% hot, 80% Morpho)
         address t0 = USDC < EURC ? USDC : EURC;
         address t1 = USDC < EURC ? EURC : USDC;
@@ -247,11 +263,12 @@ contract MainnetForkTest is Test {
 
         assertGt(shares, 0, "no LP shares minted");
 
-        // 20% hot in the hook
+        // ~20% hot after the lender deposit (plus the tiny owner-bootstrap seed).
+        // Tolerance widened from 1 wei to 0.5% to absorb the 1_000e6 seed.
         uint256 hot0 = IERC20(t0).balanceOf(address(hook));
         uint256 hot1 = IERC20(t1).balanceOf(address(hook));
-        assertApproxEqAbs(hot0, 20_000e6, 1, "hot t0 should be ~20% of deposit");
-        assertApproxEqAbs(hot1, 20_000e6, 1, "hot t1 should be ~20% of deposit");
+        assertApproxEqRel(hot0, 20_000e6, 0.005e18, "hot t0 should be ~20% of deposit");
+        assertApproxEqRel(hot1, 20_000e6, 0.005e18, "hot t1 should be ~20% of deposit");
 
         // 80% supplied into Morpho
         assertGt(hook.morphoShares(t0), 0, "no morpho shares for t0");
@@ -259,6 +276,7 @@ contract MainnetForkTest is Test {
     }
 
     function test_fork_swapHook_redeemPullsFromMorpho() public whenFork {
+        _bootstrapHookAsOwner();
         address t0 = USDC < EURC ? USDC : EURC;
         address t1 = USDC < EURC ? EURC : USDC;
 
@@ -281,6 +299,7 @@ contract MainnetForkTest is Test {
     }
 
     function test_fork_swapHook_rebalanceDoesNotWithdrawWhenHotBelowTarget() public whenFork {
+        _bootstrapHookAsOwner();
         address t0 = USDC < EURC ? USDC : EURC;
         address t1 = USDC < EURC ? EURC : USDC;
 
@@ -305,6 +324,7 @@ contract MainnetForkTest is Test {
     }
 
     function test_fork_swapHook_secondDepositPushesExcessToMorpho() public whenFork {
+        _bootstrapHookAsOwner();
         address t0 = USDC < EURC ? USDC : EURC;
         address t1 = USDC < EURC ? EURC : USDC;
 

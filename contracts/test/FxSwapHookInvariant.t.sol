@@ -632,6 +632,16 @@ contract FxSwapHookInvariantTest is Test {
     }
 
     function _seedHook() internal {
+        // Owner bootstraps the pool first (codex-r12 patch: first deposit
+        // is owner-gated to prevent equilibrium poisoning). Owner = this
+        // test contract.
+        usdc.mint(owner, 100e6);
+        jpyc.mint(owner, 15_625e18);
+        usdc.approve(address(hook), type(uint256).max);
+        jpyc.approve(address(hook), type(uint256).max);
+        _depositSorted(hook, address(usdc), 100e6, address(jpyc), 15_625e18);
+
+        // Then lp does the main deposit (subsequent, permissionless).
         usdc.mint(lp, 10_000e6);
         jpyc.mint(lp, 1_562_500e18);
 

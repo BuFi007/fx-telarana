@@ -483,6 +483,11 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         returns (uint256 shares)
     {
         if (amount0 == 0 && amount1 == 0) revert ZeroAmount();
+        // First deposit is owner-gated: anyone else doing it could lock the
+        // PMM equilibrium at an arbitrary ratio, then later honest LPs deposit
+        // at the (off-oracle) implied ratio and donate value to the attacker.
+        // Subsequent deposits are permissionless.
+        if (totalShares == 0 && msg.sender != owner) revert NotOwner();
 
         // Capture pre-deposit LP-tradable assets (= hot + Morpho − protocol
         // fee sleeve). Must mirror `redeem`: the treasury sleeve is claimable
