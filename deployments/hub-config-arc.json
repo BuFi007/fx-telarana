@@ -16,6 +16,7 @@
     "FxLiquidator":          "0xa50f7D4D4a1A0D3CF418515973545b80E037B379",
     "FxHubMessageReceiver":  "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
     "FxGatewayHook":         "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1",
+    "TelaranaGatewayHubHook":"0x74e894aff25c89D707873347CD2554d30e0541fa",
     "DeprecatedV1FxHubMessageReceiver": "0x07db64fb19C6c4a1eBB1B7bfdaFd4676b43Cf276",
     "DeprecatedV1FxGatewayHook":        "0x004cfa0305c365b1d9b2365f85acf216c96b0e13"
   },
