@@ -2,6 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -12,37 +13,48 @@ import {IFxOracle} from "../interfaces/IFxOracle.sol";
 import {ITelaranaGatewayHubHook} from "../interfaces/ITelaranaGatewayHubHook.sol";
 
 /// @title FxSpotExecutor
-/// @notice Phase A v0 spot-FX executor for fx-Telaraña. Plugs into
+/// @notice Phase A v0.1 spot-FX executor for fx-Telaraña. Plugs into
 ///         `TelaranaGatewayHubHook` (TGH) as a `destinationHub` for spot-FX
 ///         routes. After TGH mints USDC against a Circle Gateway attestation
 ///         and forwards it here, an authorized executor calls
-///         `executeSpotFx(context)`, which:
+///         `executeSpotFx(requestId)`, which:
 ///
-///           1. Validates the TGH receipt for the request id.
-///           2. Reads the oracle mid for (USDC, tokenOut).
+///           1. Reads the canonical TGH receipt by `requestId` and rejects
+///              if state != MINTED or action != MINT_AND_REQUEST_SPOT_FX.
+///           2. Reads the oracle mid for (USDC, receipt.tokenOut).
 ///           3. Applies a configurable spread.
-///           4. Asserts `amountOut >= context.minAmountOut`.
+///           4. Asserts `amountOut >= receipt.minAmountOut`.
 ///           5. Asserts this contract holds enough `tokenOut` reserve.
-///           6. Transfers `tokenOut` to `context.recipient`.
+///           6. Transfers `tokenOut` to `receipt.recipient`.
 ///           7. Calls back into TGH to mark the request settled.
 ///
-/// V0 scope:
+/// ## v0.1 changelog vs v0
+///
+/// v0 took a `GatewayMintContext` calldata argument that the keeper provided
+/// and only cross-checked `routeId / amount / tokenOut` against the TGH
+/// receipt. Codex's adversarial pass (2026-05-16, see
+/// `reports/AUDIT_REPORT.md`) raised this to CRITICAL: a compromised keeper
+/// could spoof `recipient` and `minAmountOut` to drain reserves to an
+/// attacker address. v0.1 collapses the surface — the keeper supplies only
+/// the `requestId`; every other value comes from the TGH receipt, which is
+/// the single source of truth.
+///
+/// v0.1 also enforces `IERC20Metadata.decimals(tokenOut) == decimals(USDC)`
+/// at `setTokenEnabled` time. Codex HIGH: the payout math
+/// `amountOut = amountIn * midE18 / 1e18` is decimal-unaware; mixing 6-dec
+/// USDC with an 18-dec tokenOut mispays by 1e12. Decimal-aware math
+/// (per-token decimals + decimal-scaled mulDiv) is deferred to v0.2 / the
+/// Phase A v1 v4-hook wrap; for now the contract refuses to allowlist a
+/// token whose decimals differ from USDC's.
+///
+/// ## V0.1 scope (intentional)
+///
 ///   * Owner-managed liquidity (no LP shares, no Morpho rehyp).
 ///   * Single oracle source via `FxOracle.getMid` (Pyth-only). Owner can
 ///     flip `requireVerifiedOracle = true` once the keeper wraps tx with
 ///     RedStone calldata to engage `getMidVerified`.
 ///   * Configurable spread bps, default 5 bps for stable FX pairs.
-///   * Single-leg only: USDC → enabled tokenOut. Reverse leg + multi-pair
-///     routing comes in Phase B.
-///   * No reserve isolation between tokens — relies on TGH's per-routeId
-///     destinationHub config to confine which (USDC, tokenOut) flows reach
-///     this executor.
-///
-/// Trust assumptions:
-///   * TGH already validated the Circle attestation + minted exact amount.
-///   * `context.recipient` is honest (BUFX submitter set it from the trader
-///     request; submitter is authorized on BUFX side).
-///   * `FxOracle` mid is the right anchor (Pyth + optional RedStone gate).
+///   * Single-leg only: USDC → enabled tokenOut, decimals must match USDC.
 ///
 /// ## Pricing formula reference
 ///
@@ -50,9 +62,8 @@ import {ITelaranaGatewayHubHook} from "../interfaces/ITelaranaGatewayHubHook.sol
 ///
 ///   `amountOut = amountIn * mid * (1 - spread)`
 ///
-/// implemented as two `mulDiv` calls against OZ
-/// `Math.mulDiv` (overflow-safe 512-bit intermediate). Same arithmetic shape
-/// used by:
+/// implemented as two `mulDiv` calls against OZ `Math.mulDiv` (overflow-safe
+/// 512-bit intermediate). Same arithmetic shape used by:
 ///   * Synthetix v2 `Exchanger.exchange` (synth source amount * exchangeRate
 ///     * (UNIT - exchangeFee) / UNIT — see SIP-198 / Exchanger.sol).
 ///   * GMX v1 swap path with `priceImpactDelta = 0`
@@ -61,6 +72,25 @@ import {ITelaranaGatewayHubHook} from "../interfaces/ITelaranaGatewayHubHook.sol
 ///
 /// No bonding curve, no integrals, no in-house derivations. Per the
 /// project's "no novel math in production" rule.
+///
+/// ## Future v4-hook wrap (Phase A v1)
+///
+/// This contract is the pre-hook surface. When Uniswap v4 PoolManager
+/// ships on Arc, this surface gets wrapped by an inheriting v4 hook
+/// modeled on OZ's `BaseCustomCurve`
+/// (`references/openzeppelin-uniswap-hooks/src/base/BaseCustomCurve.sol`).
+/// At that point `_getUnspecifiedAmount` will compute the same
+/// oracle-anchored quote this contract computes today, and the hook bits
+/// will gate access. Until then, this executor stays keeper-driven via
+/// `EXECUTOR_ROLE`.
+///
+/// ## Trust assumptions
+///
+///   * TGH already validated the Circle attestation + minted exact amount.
+///   * TGH's recorded receipt is canonical. (Compromised keeper at
+///     TGH.receiveGatewayMint time is upstream of this contract and is a
+///     Telarana-side risk.)
+///   * `FxOracle` mid is the right anchor (Pyth + optional RedStone gate).
 contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using Math for uint256;
@@ -75,6 +105,7 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
     uint256 public constant MAX_SPREAD_BPS = 500;
 
     IERC20 public immutable USDC;
+    uint8 public immutable USDC_DECIMALS;
     IFxOracle public immutable ORACLE;
     ITelaranaGatewayHubHook public immutable TELARANA_HUB_HOOK;
 
@@ -113,17 +144,16 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
 
     error ZeroAddress();
     error ZeroAmount();
-    error UnknownRequest(bytes32 requestId);
     error AlreadyExecuted(bytes32 requestId);
     error TokenNotEnabled(address token);
     error InsufficientReserves(address token, uint256 wanted, uint256 available);
     error SlippageExceeded(uint256 amountOut, uint256 minAmountOut);
     error InvalidAction(uint8 action);
-    error InvalidTokenOut(address tokenOut);
     error InvalidSpread(uint256 bps);
-    error RouteIdMismatch(bytes32 expected, bytes32 actual);
-    error AmountMismatch(uint256 expected, uint256 actual);
     error UsdcAsTokenOut();
+    error ReceiptNotMinted(bytes32 requestId, uint8 actualState);
+    error TokenOutDecimalsMismatch(address token, uint8 expected, uint8 actual);
+    error EmptyReceipt(bytes32 requestId);
 
     constructor(
         address usdc_,
@@ -138,6 +168,7 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
         if (initialDefaultSpreadBps > MAX_SPREAD_BPS) revert InvalidSpread(initialDefaultSpreadBps);
 
         USDC = IERC20(usdc_);
+        USDC_DECIMALS = IERC20Metadata(usdc_).decimals();
         ORACLE = IFxOracle(oracle_);
         TELARANA_HUB_HOOK = ITelaranaGatewayHubHook(tghAddress);
 
@@ -153,12 +184,16 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
                                 EXECUTE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Swap USDC (already delivered by TGH) to context.tokenOut and pay
-    ///         the recipient. Settles the TGH receipt atomically.
+    /// @notice Settle a spot-FX swap from USDC (already delivered by TGH) to
+    ///         the tokenOut named in the TGH receipt and pay the receipt's
+    ///         recipient. Settles the TGH receipt atomically.
     /// @dev    Caller must have EXECUTOR_ROLE. This contract must hold both
-    ///         (a) USDC equal to context.amount (delivered by TGH), and
+    ///         (a) USDC equal to receipt.amount (delivered by TGH), and
     ///         (b) tokenOut reserve >= computed amountOut.
-    function executeSpotFx(ITelaranaGatewayHubHook.GatewayMintContext calldata context)
+    /// @param requestId The TGH receipt id. The keeper does not supply
+    ///        recipient / minAmountOut / amount / tokenOut — all read from
+    ///        the canonical receipt. This is the v0.1 fix for Codex CRITICAL.
+    function executeSpotFx(bytes32 requestId)
         external
         whenNotPaused
         nonReentrant
@@ -167,74 +202,69 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
     {
         // Idempotency: TGH also enforces this via state machine, but reverting
         // here gives a clearer error and a single source of truth for indexers.
-        if (executed[context.requestId]) revert AlreadyExecuted(context.requestId);
+        if (executed[requestId]) revert AlreadyExecuted(requestId);
 
-        if (uint8(context.action) != uint8(ITelaranaGatewayHubHook.GatewayHubAction.MINT_AND_REQUEST_SPOT_FX)) {
-            revert InvalidAction(uint8(context.action));
-        }
-        if (context.recipient == address(0) || context.tokenOut == address(0)) revert ZeroAddress();
-        if (context.tokenOut == address(USDC)) revert UsdcAsTokenOut();
-        if (context.amount == 0) revert ZeroAmount();
-        if (!tokenEnabled[context.tokenOut]) revert TokenNotEnabled(context.tokenOut);
-
-        // Cross-check the TGH receipt — protects against context spoofing.
-        // TGH stores the canonical receipt by requestId and only EXECUTOR_ROLE
-        // can write it via `receiveGatewayMint`; we just read.
+        // Read the canonical receipt from TGH. All swap parameters come from
+        // here — the keeper supplies only `requestId`.
         ITelaranaGatewayHubHook.GatewayReceipt memory receipt =
-            TELARANA_HUB_HOOK.gatewayReceipt(context.requestId);
-        if (receipt.routeId != context.routeId) {
-            revert RouteIdMismatch(receipt.routeId, context.routeId);
+            TELARANA_HUB_HOOK.gatewayReceipt(requestId);
+
+        if (receipt.amount == 0) revert EmptyReceipt(requestId);
+        if (receipt.state != ITelaranaGatewayHubHook.GatewayRequestState.MINTED) {
+            revert ReceiptNotMinted(requestId, uint8(receipt.state));
         }
-        if (receipt.amount != context.amount) {
-            revert AmountMismatch(receipt.amount, context.amount);
+        if (uint8(receipt.action) != uint8(ITelaranaGatewayHubHook.GatewayHubAction.MINT_AND_REQUEST_SPOT_FX)) {
+            revert InvalidAction(uint8(receipt.action));
         }
-        if (receipt.tokenOut != context.tokenOut) {
-            revert InvalidTokenOut(context.tokenOut);
-        }
+        if (receipt.recipient == address(0) || receipt.tokenOut == address(0)) revert ZeroAddress();
+        if (receipt.tokenOut == address(USDC)) revert UsdcAsTokenOut();
+        if (!tokenEnabled[receipt.tokenOut]) revert TokenNotEnabled(receipt.tokenOut);
 
         // Read oracle mid: getMid(USDC, tokenOut) returns (tokenOut per 1 USDC) * 1e18.
-        // amountOut tokenOut = amountIn USDC * mid / 1e18. Decimal-adjusted by oracle.
+        // amountOut tokenOut = amountIn USDC * mid / 1e18.
+        // NOTE: amountIn and amountOut must be in identical-decimal atomic units
+        // (USDC and tokenOut both N decimals). setTokenEnabled enforces this.
         uint256 midE18;
         if (requireVerifiedOracle) {
-            (midE18, ) = ORACLE.getMidVerified(address(USDC), context.tokenOut);
+            (midE18, ) = ORACLE.getMidVerified(address(USDC), receipt.tokenOut);
         } else {
-            (midE18, ) = ORACLE.getMid(address(USDC), context.tokenOut);
+            (midE18, ) = ORACLE.getMid(address(USDC), receipt.tokenOut);
         }
 
-        uint256 spreadBps = tokenSpreadOverrideBps[context.tokenOut];
+        uint256 spreadBps = tokenSpreadOverrideBps[receipt.tokenOut];
         if (spreadBps == 0) spreadBps = defaultSpreadBps;
 
         // Two-step `mulDiv` (OZ Math). See contract NatSpec "Pricing formula
         // reference" — Synthetix v2 Exchanger / GMX v1 swap-no-impact shape.
-        uint256 gross = context.amount.mulDiv(midE18, 1e18);
+        uint256 gross = receipt.amount.mulDiv(midE18, 1e18);
         amountOut = gross.mulDiv(10_000 - spreadBps, 10_000);
 
-        if (amountOut < context.minAmountOut) {
-            revert SlippageExceeded(amountOut, context.minAmountOut);
+        if (amountOut < receipt.minAmountOut) {
+            revert SlippageExceeded(amountOut, receipt.minAmountOut);
         }
 
-        uint256 reserveAvailable = IERC20(context.tokenOut).balanceOf(address(this));
+        uint256 reserveAvailable = IERC20(receipt.tokenOut).balanceOf(address(this));
         if (reserveAvailable < amountOut) {
-            revert InsufficientReserves(context.tokenOut, amountOut, reserveAvailable);
+            revert InsufficientReserves(receipt.tokenOut, amountOut, reserveAvailable);
         }
 
         // Effects before interactions.
-        executed[context.requestId] = true;
+        executed[requestId] = true;
 
-        // Pay the recipient.
-        IERC20(context.tokenOut).safeTransfer(context.recipient, amountOut);
+        // Pay the recipient named in the receipt (canonical).
+        IERC20(receipt.tokenOut).safeTransfer(receipt.recipient, amountOut);
 
         // Tell TGH the spot route is settled. Will revert if TGH receipt is
         // not in MINTED state (e.g., already settled), which gives us extra
         // belt-and-braces against state machine confusion.
-        TELARANA_HUB_HOOK.markGatewayAtomicFxSwapSettled(context.requestId, amountOut);
+        TELARANA_HUB_HOOK.markGatewayAtomicFxSwapSettled(requestId, amountOut);
 
         emit SpotFxExecuted(
-            context.requestId,
-            context.routeId,
-            context.recipient,
-            context.tokenOut,
-            context.amount,
+            requestId,
+            receipt.routeId,
+            receipt.recipient,
+            receipt.tokenOut,
+            receipt.amount,
             amountOut,
             midE18,
             spreadBps
@@ -275,6 +305,15 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
     function setTokenEnabled(address token, bool enabled) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (token == address(0)) revert ZeroAddress();
         if (token == address(USDC)) revert UsdcAsTokenOut();
+        // v0.1 decimals guard. Codex HIGH#2: payout math assumes USDC-compatible
+        // decimals on tokenOut. Until decimal-aware math lands, reject any
+        // tokenOut whose decimals differ from USDC's.
+        if (enabled) {
+            uint8 outDecimals = IERC20Metadata(token).decimals();
+            if (outDecimals != USDC_DECIMALS) {
+                revert TokenOutDecimalsMismatch(token, USDC_DECIMALS, outDecimals);
+            }
+        }
         tokenEnabled[token] = enabled;
         emit TokenAllowlistSet(token, enabled);
     }
