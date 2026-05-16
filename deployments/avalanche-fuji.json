@@ -1,20 +1,42 @@
 {
   "network": "avalanche-fuji",
   "chainId": 43113,
+  "role": "hub-and-spoke",
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
   "deployedAt": "2026-05-15",
   "contracts": {
-    "FxSpoke": "0xAa875a68b0155da4bD6A528ee9e1137017D18b41"
+    "FxSpoke":               "0xcD1621B6118416AB4A43accEFdF44485519135B8",
+    "FxHubMessageReceiver":  "0x365DE300dDa61C81a33bcE3606A5d524eD964362",
+    "FxGatewayHook":         "0xc63634ebc99f9c9616ee126971CCa486f3AFfF6E",
+    "FxMarketRegistry":      "0x7ba745b979e027992ECFa51207666e3F5B46cF0a",
+    "FxOracle":              "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b",
+    "MorphoOracleAdapterM1": "0xda4c3e315fffd0790c9d8a1730c2ba56330cb2ec",
+    "MorphoOracleAdapterM2": "0xf0cdaa9cf9e8d52060dcb41a045e3a6d618a9f65",
+    "FxReceiptEURC":         "0xefd7cf5ad5a2db9a3c23e2807f2279de92c730d2",
+    "FxReceiptUSDC":         "0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e",
+    "FxLiquidator":          "0x2900599ff0e6dd057493d62fac856e5a8f93c6eb",
+    "MorphoBlue":            "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
+    "IrmMock":               "0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA",
+    "MockEURC":              "0x50c4ba39caa7f56152d0df4914e1f6b907194992"
   },
   "deprecated": {
     "BaseSepoliaHubFxSpoke": "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
-    "reason": "Deployed 2026-05-14 with HUB_RECEIVER on Base Sepolia and HUB_DOMAIN=6. Superseded by the Avalanche-Fuji self-loop spoke targeting the Fuji hub receiver."
+    "ParallelFujiSpoke":     "0xAa875a68b0155da4bD6A528ee9e1137017D18b41",
+    "reason": "0x8B70... was the original Fuji spoke pointing at the Base Sepolia hub (HUB_DOMAIN=6) — orphaned after the Base→Fuji hub migration. 0xAa87... was a parallel self-loop Fuji spoke deployed by a sibling session against the Fuji hub receiver; canonical is 0xcD16... (deployed in the dual-hub + Gateway integration session, 2026-05-15)."
   },
   "external": {
     "CctpTokenMessengerV2":     "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     "CctpMessageTransmitterV2": "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
     "CctpDomain":               "1",
-    "USDC":                     "0x5425890298aed601595a70AB815c96711a31Bc65"
+    "USDC":                     "0x5425890298aed601595a70AB815c96711a31Bc65",
+    "Pyth":                     "0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509",
+    "GatewayWallet":            "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+    "GatewayMinter":            "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
+    "GatewayLocalDomain":       1
+  },
+  "marketIds": {
+    "M1_EURC_USDC": "0x7d99088a9fe61331c49a92eb16fa3794b0bc2862b211f5a70f31a64cef25029e",
+    "M2_USDC_EURC": "0x1700104cf29eceb113e01a1bcdc913e5e10d3d37314cee235752aa88bf153197"
   },
   "hub": {
     "network":         "avalanche-fuji",
@@ -23,6 +45,8 @@
     "cctpDomain":      1
   },
   "deploymentTx": {
-    "FxSpoke": "0x278c87f3370cc20f7818ff520ab87efbc9c952db2aefcd1338d07db63ba87725"
-  }
+    "FxSpoke":               "0x278c87f3370cc20f7818ff520ab87efbc9c952db2aefcd1338d07db63ba87725",
+    "FxGatewayHook":          "see contracts/broadcast/DeployFxGatewayHook.s.sol/43113/run-latest.json"
+  },
+  "notes": "Avalanche Fuji is THE PRIMARY HUB for fx-Telaraña — all user deposits route here. Hosts the full hub stack (FxHubMessageReceiver + Morpho + V4 adapters + receipts + liquidator) AND a local FxSpoke for Fuji-side users (FxSpoke 0xcD16... routes to local hub via CCTP V2 self-domain). Cross-hub liquidity to Arc happens at the protocol level through FxGatewayHook 0xc636... — never user-initiated. Arc hub at 0x07db64fb...F276 is a trading-execution destination. All 7 other spokes (eth/op/arb/poly/world/uni/arc) also point at this hub."
 }

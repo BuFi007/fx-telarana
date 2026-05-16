@@ -15,6 +15,8 @@
     "FxReceiptUSDC":         "0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e",
     "FxLiquidator":          "0x2900599ff0e6dd057493d62fac856e5a8f93c6eb",
     "FxHubMessageReceiver":  "0x365de300dda61c81a33bce3606a5d524ed964362",
+    "FxSpoke":               "0xcD1621B6118416AB4A43accEFdF44485519135B8",
+    "FxGatewayHook":         "0xc63634ebc99f9c9616ee126971CCa486f3AFfF6E",
     "MockEURC":              "0x50c4ba39caa7f56152d0df4914e1f6b907194992"
   },
   "marketIds": {
@@ -22,10 +24,18 @@
     "M2_USDC_EURC": "0x1700104cf29eceb113e01a1bcdc913e5e10d3d37314cee235752aa88bf153197"
   },
   "external": {
-    "USDC":                 "0x5425890298aed601595a70AB815c96711a31Bc65",
-    "Pyth":                 "0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509",
+    "USDC":                     "0x5425890298aed601595a70AB815c96711a31Bc65",
+    "Pyth":                     "0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509",
     "CctpMessageTransmitterV2": "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
-    "CctpTokenMessengerV2": "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA"
+    "CctpTokenMessengerV2":     "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    "GatewayWallet":            "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+    "GatewayMinter":            "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
+    "GatewayLocalDomain":       1
   },
-  "notes": "Step 1 of the Base Sepolia → Fuji → Arc hub migration. Morpho Blue + IrmMock self-deployed (no canonical Morpho on Fuji). EURC stub via MockEURC. Run migrate-hub.ts --execute next to redeploy all 7 non-Fuji spokes pointing at this messageReceiver."
+  "gateway": {
+    "authority": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    "authorityType": "EOA",
+    "rotationPlan": "Rotate to FxHubMessageReceiver via EIP-1271 once Circle ships 1271 support (~mid-July 2026)."
+  },
+  "notes": "Avalanche Fuji is the PRIMARY HUB. All user deposits route here via CCTP V2 spokes. FxGatewayHook bridges USDC liquidity Fuji ↔ Arc via Circle Gateway (protocol-level, hub-callable only). Gateway addresses are deterministic CREATE2 — same on every supported testnet."
 }

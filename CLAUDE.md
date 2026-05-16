@@ -8,10 +8,27 @@ Forex Telaraña is a cross-chain FX credit hub. Users can enter from any support
 
 ## Status
 
-- **Live on real Base Sepolia** (chainId 84532, deployer `0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69`). All 8 contracts deployed + both Morpho markets created on the real Morpho Blue singleton + registered with Circle SCP. Addresses: `deployments/base-sepolia.json` and `packages/sdk/src/addresses/index.ts` (`ChainId.BaseSepolia`).
-- **Live on Tenderly vnet**: parallel deployment for fast iteration. Addresses in `deployments/tenderly-base-sepolia.json`. Vnet RPC + dashboard URL in `.env.local` (gitignored).
-- **Production target**: Arc testnet (chainId 5042002). Deploy script at `contracts/script/DeployArcTestnet.s.sol`. Still blocked on Morpho Blue Arc address — or we self-deploy Morpho there next.
+- **Two live hubs, Gateway-bridged:** Fuji is the PRIMARY HUB (all user deposits land here via CCTP V2 spokes). Arc is the TRADING-EXECUTION HUB (receives USDC liquidity from Fuji via `FxGatewayHook` for FX/perp execution; never user-initiated). `FxGatewayHook` is the only contract that moves USDC across hubs.
+- **Live on Avalanche Fuji** (chainId 43113, primary hub) — full hub stack + local FxSpoke + FxGatewayHook deployed 2026-05-14/15. Addresses: `deployments/avalanche-fuji.json` and `deployments/hub-config-fuji.json`.
+- **Live on Arc Testnet** (chainId 5042002, trading hub) — full hub stack + FxGatewayHook deployed 2026-05-15. MorphoBlue + IrmMock self-deployed (no canonical Morpho on Arc). Addresses: `deployments/arc-testnet.json` and `deployments/hub-config-arc.json`.
+- **8 spokes routing to Fuji**: eth-sepolia, op-sepolia, arbitrum-sepolia, polygon-amoy, unichain-sepolia, worldchain-sepolia, arc-testnet, plus the local Fuji-on-Fuji spoke.
+- **Base Sepolia hub retired** (still deployed, but no spokes route to it post-migration). Kept around for FxSwapHook + Uniswap V4 isolated swap testing.
 - **Branch**: `tcxcx/fx-onchain-hub-arc`. Don't rename without explicit instruction.
+
+### Mid-July 2026 — 1271 authority rotation
+
+When Circle ships EIP-1271 support on Gateway burn intents (Corey's mid-July ETA):
+
+1. Implement `isValidSignature(bytes32, bytes)` on `FxHubMessageReceiver` to gate which BurnIntents the protocol authorizes (read intent fields, assert sourceDomain/destDomain match a whitelisted hub pair, assert value ≤ some per-block cap, etc.).
+2. Call `FxGatewayHook.setAuthority(FxHubMessageReceiver)` on both Fuji and Arc to swap the EOA out for the hub contract itself.
+3. Withdraw any remaining USDC balance from Gateway under the OLD EOA authority (initiate → wait operator delay → complete), then re-lock under the new hub-contract authority.
+4. Sunset the off-chain EOA-signed BurnIntent service; intents become contract-signed automatically.
+
+Until this rotation, deployer EOA `0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69` signs all BurnIntents off-chain.
+
+### BUFX integration
+
+`docs/BUFX_INTEGRATION.md` is the source of truth for the spot+perp execution layer (separate repo). Has all addresses, callable interfaces, the cross-hub trade flow, and the Stage 6 plumbing gap (hub-side `relayToRemoteHub` shim BUFX will need).
 
 ## Testing
 
