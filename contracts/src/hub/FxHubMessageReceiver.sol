@@ -72,12 +72,26 @@ contract FxHubMessageReceiver is IFxHubMessageReceiver, ReentrancyGuard {
     error NotAuthorizedRelayer(address caller);
     error ZeroAmount();
     error GatewayHookNotSet();
+    error MintShortfall(uint256 expected, uint256 received);
+    error SweepExceedsAvailable(uint256 requested, uint256 available);
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event GatewayHookChanged(address indexed previousHook, address indexed newHook);
     event RelayCallerSet(address indexed relayer, bool allowed);
     event RelayedToRemoteHub(address indexed relayer, uint256 amount, address indexed hook);
-    event RelayedMintFromRemote(address indexed relayer, uint256 minted, address indexed hook);
+    event RelayedMintFromRemote(
+        address indexed relayer,
+        uint256 minted,
+        address indexed hook
+    );
+    event HubBalanceSwept(address indexed token, address indexed to, uint256 amount);
+
+    /// @notice Aggregate USDC liability owed to stranded-deposit beneficiaries
+    /// pending sweep. Used as a floor when the owner calls `sweepHubBalance`
+    /// against USDC, so emergency sweeps cannot drain funds that already have
+    /// a claimant via the `sweepStrandedDeposit(messageNonce)` path.
+    /// Codex adversarial-review v3 round-2 finding #2.
+    uint256 public strandedUsdcLiability;
 
     /*//////////////////////////////////////////////////////////////
                                 CTOR
@@ -175,18 +189,79 @@ contract FxHubMessageReceiver is IFxHubMessageReceiver, ReentrancyGuard {
         emit RelayedToRemoteHub(msg.sender, amount, gatewayHook);
     }
 
-    /// @notice Mint USDC from a remote Gateway BurnIntent attestation. The
-    /// hook receives the minted USDC and forwards it back to this hub via
-    /// `mintFromRemote`'s post-mint transfer.
-    function relayMintFromRemote(bytes calldata attestationPayload, bytes calldata signature)
-        external
-        onlyAuthorizedRelayer
-        nonReentrant
-        returns (uint256 minted)
-    {
+    /// @notice Mint USDC from a remote Gateway BurnIntent attestation and route
+    /// the proceeds to `msg.sender` atomically. The hook receives the minted
+    /// USDC and forwards it back to this hub via `mintFromRemote`'s post-mint
+    /// transfer; this function then immediately pushes that delta to the
+    /// authorized relayer that triggered the mint.
+    ///
+    /// @dev Codex adversarial-review v3 closed the original "no recipient at
+    /// all" custody hole by introducing a recipient parameter. Round-2 found
+    /// that any whitelisted `relayCaller` could front-run another relay's
+    /// attestation and claim it (Gateway attestations become bearer claims
+    /// once issued). Binding the destination strictly to `msg.sender` removes
+    /// the arbitrary-address surface and reduces the trust surface to the
+    /// `relayCallers` whitelist itself:
+    ///
+    ///   • A single whitelisted relayer (e.g. BUFX) is the recommended
+    ///     production deployment — no co-tenant relayer can claim its mints.
+    ///   • Multi-relayer deployments accept the trust property that ANY
+    ///     whitelisted relayCaller may claim ANY in-flight attestation. This
+    ///     is the same trust class as the owner having multiple keys.
+    ///   • Full cryptographic recipient-binding (BurnIntent hookData parsed
+    ///     on-chain) is the next-iteration fix, requiring Circle's TransferSpec
+    ///     parser. Tracked as `docs/TODOS.md` follow-up.
+    function relayMintFromRemote(
+        bytes calldata attestationPayload,
+        bytes calldata signature
+    ) external onlyAuthorizedRelayer nonReentrant returns (uint256 minted) {
         if (gatewayHook == address(0)) revert GatewayHookNotSet();
+
+        uint256 balBefore = USDC.balanceOf(address(this));
         minted = IFxGatewayHook(gatewayHook).mintFromRemote(attestationPayload, signature);
+
+        // Balance-delta cross-check: the hook reports `minted` and forwards it
+        // here. If those disagree (e.g. hook returns a stale value, or a
+        // re-entrant ERC-20 hook on USDC siphons funds during the transfer),
+        // refuse to route — keep the funds on the hub for owner sweep instead
+        // of silently shorting the recipient.
+        uint256 balAfter = USDC.balanceOf(address(this));
+        uint256 received = balAfter - balBefore;
+        if (received < minted) revert MintShortfall(minted, received);
+
+        USDC.safeTransfer(msg.sender, minted);
         emit RelayedMintFromRemote(msg.sender, minted, gatewayHook);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                EMERGENCY SWEEP
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Owner emergency sweep for tokens parked on the hub outside the
+    /// `_deposits` accounting path (e.g. residual USDC after a Stage-6 relay
+    /// path that hand-rolled an unusual settlement, or any donated tokens).
+    ///
+    /// @dev Codex adversarial-review v3 finding #1 companion. Does NOT touch
+    /// `_deposits`: stranded CCTP deposits continue to flow through
+    /// `sweepStrandedDeposit(messageNonce)` and the 24h grace.
+    ///
+    /// For USDC the sweep is additionally floored by `strandedUsdcLiability` so
+    /// the owner cannot drain funds already owed to a stranded-deposit
+    /// beneficiary mid-grace-window — Codex adversarial-review v3 round-2
+    /// finding #2.
+    function sweepHubBalance(address token, address to, uint256 amount) external onlyOwner {
+        if (token == address(0) || to == address(0)) revert ZeroAddress();
+        if (amount == 0) revert ZeroAmount();
+
+        if (token == address(USDC)) {
+            uint256 bal = USDC.balanceOf(address(this));
+            uint256 liability = strandedUsdcLiability;
+            uint256 available = bal > liability ? bal - liability : 0;
+            if (amount > available) revert SweepExceedsAvailable(amount, available);
+        }
+
+        IERC20(token).safeTransfer(to, amount);
+        emit HubBalanceSwept(token, to, amount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -278,6 +353,9 @@ contract FxHubMessageReceiver is IFxHubMessageReceiver, ReentrancyGuard {
                 strandedAt: uint64(block.timestamp),
                 state: DepositState.Stranded
             });
+            // Track the protocol's outstanding obligation so the owner sweep
+            // cannot drain these funds mid-grace (Codex v3 round-2 #2).
+            strandedUsdcLiability += stranded;
             emit DepositStranded(nonce, beneficiary, stranded, ret);
         }
     }
@@ -298,6 +376,10 @@ contract FxHubMessageReceiver is IFxHubMessageReceiver, ReentrancyGuard {
         }
 
         _deposits[messageNonce].state = DepositState.Swept;
+        // Release the liability before the transfer (CEI ordering).
+        // `d.amount` was added to the counter when the deposit became Stranded;
+        // it must come back out exactly once.
+        strandedUsdcLiability -= d.amount;
 
         USDC.safeTransfer(d.beneficiary, d.amount);
         emit DepositSwept(messageNonce, d.beneficiary, d.amount);

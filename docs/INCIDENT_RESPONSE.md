@@ -154,6 +154,48 @@ After each drill: PR-update this doc with anything that surprised you.
 
 ---
 
+## 7.5 Gateway authority (EOA) emergency withdrawal — pre-1271 runbook
+
+Until Circle ships EIP-1271 support on Gateway BurnIntents (Corey ETA
+mid-July 2026), the deployer EOA `0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69`
+is the Gateway `authority` on both Fuji and Arc. Funds locked under it
+**cannot be recovered by `FxGatewayHook.initiateGatewayWithdrawal /
+completeGatewayWithdrawal`** — those now revert with `AuthorityNotHook`
+because the hook contract is not the depositor on `GatewayWallet`. (Codex
+adversarial-review v3 finding #2.)
+
+**If Gateway is paused / degraded / authority key is compromised**:
+
+1. **Pause downstream first.** `FxRouter.setPaused(true)` on both chains
+   to halt new flows; pause any BUFX whitelist via
+   `FxHubMessageReceiver.setRelayCaller(bufxAddress, false)`.
+2. **Sign EOA withdrawal off-chain.** The current authority EOA calls
+   `GatewayWallet.initiateWithdrawal(USDC, amount)` directly from a
+   hardware-wallet signer (NOT the hot-key on the build server). On Fuji:
+   `cast send $GATEWAY_WALLET 'initiateWithdrawal(address,uint256)' $USDC <amount>
+   --rpc-url $FUJI_RPC --private-key <COLD_KEY>`. Mirror on Arc.
+3. **Wait operator delay.** GatewayWallet enforces a Circle-set unlock
+   block; check via `cast call $GATEWAY_WALLET 'withdrawalBlock(address,address)'
+   $USDC <authority>` and wait until current head exceeds it.
+4. **Complete withdrawal to a cold address.** The EOA calls
+   `GatewayWallet.withdraw(USDC)`; USDC lands in the EOA. Immediately
+   transfer to a multisig / cold wallet — do NOT leave on the same
+   key that is still serving as Gateway authority.
+5. **Rotate authority before re-locking.** Decide whether to redeploy
+   `FxGatewayHook` with a multisig authority, or wait for 1271 and rotate
+   to the hub contract itself. Do not re-call `lockForRemote` until the
+   target authority is on a key strictly safer than the original one.
+6. **Tighten gateway-signer.** Confirm `GATEWAY_SIGNER_ALLOW_BYPASS` is
+   unset on every operator host (Codex v3 finding #3). Rotate
+   `DEPLOYER_PRIVATE_KEY` if there's any chance it was exposed.
+
+Post-1271 (authority = hook): the runbook collapses back to
+`FxHubMessageReceiver.transferOwnership(<new owner>) → newOwner calls
+hook.initiateGatewayWithdrawal → wait → completeGatewayWithdrawal`. The
+hook will accept those calls once `authority == address(hook)`.
+
+---
+
 ## 8. On-call rotation
 
 - TBD — defined per the operating entity's structure.

@@ -87,13 +87,17 @@ const ARC_HUB: HubAddresses = {
 // Map chainId → { fujiRoutedSpoke, arcRoutedSpoke }. Source: deployments/*.json
 // routes block. Kept here for fast client-side resolution.
 
+// Synced to deployments/<chain>.json `routes` blocks as of 2026-05-15 (Stage 6
+// post-migration). Codex adversarial-review v3 round 5 finding: every Fuji
+// entry had drifted to pre-migration spoke addresses. Source-of-truth audit
+// via `jq -r '.routes' deployments/*.json` confirms every value below.
 const SPOKES_BY_CHAIN: Record<ChainIdValue, { fuji?: Address; arc?: Address }> = {
-  [ChainId.Sepolia]:            { fuji: "0xdabf610c279d900b40ca4df62f1e86cc2d0a4fd4", arc: "0x4e63954685241c4469f02fec3761ff1d4f34ffa9" },
-  [ChainId.OpSepolia]:          { fuji: "0xef64621d41093144d9ed8ab8327ee381ecdb79e6", arc: "0x579fccdebb1f7e983c4ead27aa300d3b5397e28c" },
-  [ChainId.ArbitrumSepolia]:    { fuji: "0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e", arc: "0x365de300dda61c81a33bce3606a5d524ed964362" },
-  [ChainId.PolygonAmoy]:        { fuji: "0x50c4ba39caa7f56152d0df4914e1f6b907194992", arc: "0x7882d3f0e210128a4dce51e1af1ec801e21e1e5a" },
-  [ChainId.UnichainSepolia]:    { fuji: "0x50c4ba39caa7f56152d0df4914e1f6b907194992", arc: "0x7882d3f0e210128a4dce51e1af1ec801e21e1e5a" },
-  [ChainId.WorldChainSepolia]:  { fuji: "0xef64621d41093144d9ed8ab8327ee381ecdb79e6", arc: "0x579fccdebb1f7e983c4ead27aa300d3b5397e28c" },
+  [ChainId.Sepolia]:            { fuji: "0xf6d845da2051183b9519ca1806c39040ba5e71ba", arc: "0x4e63954685241c4469f02fec3761ff1d4f34ffa9" },
+  [ChainId.OpSepolia]:          { fuji: "0x0b5d18bbe92f07ec0111ae6d2e102858268d6aca", arc: "0x579fccdebb1f7e983c4ead27aa300d3b5397e28c" },
+  [ChainId.ArbitrumSepolia]:    { fuji: "0x2900599ff0e6dd057493d62fac856e5a8f93c6eb", arc: "0x365de300dda61c81a33bce3606a5d524ed964362" },
+  [ChainId.PolygonAmoy]:        { fuji: "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b", arc: "0x7882d3f0e210128a4dce51e1af1ec801e21e1e5a" },
+  [ChainId.UnichainSepolia]:    { fuji: "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b", arc: "0x7882d3f0e210128a4dce51e1af1ec801e21e1e5a" },
+  [ChainId.WorldChainSepolia]:  { fuji: "0x0b5d18bbe92f07ec0111ae6d2e102858268d6aca", arc: "0x579fccdebb1f7e983c4ead27aa300d3b5397e28c" },
   [ChainId.AvalancheFuji]:      { fuji: "0xb7fc291c27f6a7a659d4d229e5d8a55e58f26ab1", arc: "0xe22ef07a0996df9ae6252cc9bf491fbe13fd6575" },
   [ChainId.ArcTestnet]:         { fuji: "0x13c8463589d460db6f21235eedfd678c22a1ea25", arc: "0x5d10d2c3b9951054845534b2f60a68ebc0898cd3" },
   [ChainId.BaseSepolia]:        {},

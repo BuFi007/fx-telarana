@@ -90,6 +90,7 @@ contract FxGatewayHook is ReentrancyGuard {
     error ZeroAddress();
     error ZeroAmount();
     error NoMintReceived();
+    error AuthorityNotHook(address authority);
 
     /*//////////////////////////////////////////////////////////////
                                 CTOR
@@ -214,18 +215,24 @@ contract FxGatewayHook is ReentrancyGuard {
     /// @notice Initiates a withdrawal of USDC from Gateway back to this hook contract. The
     /// GatewayWallet enforces an operator-set delay before `completeGatewayWithdrawal` works.
     ///
-    /// @dev Only used in two scenarios:
-    ///   1. Authority rotation — pull the old authority's balance back before re-locking
-    ///   2. Emergency exit — pull all bridge funds out if Gateway is paused/degraded
+    /// @dev Only operates when `authority == address(this)` — i.e. post-EIP-1271 rotation
+    /// when this hook itself is the Gateway depositor. Pre-rotation the depositor is an EOA,
+    /// `GatewayWallet.initiateWithdrawal` would key off `msg.sender == hook` (zero balance)
+    /// and silently no-op; the EOA must withdraw out-of-band per the runbook in
+    /// `docs/INCIDENT_RESPONSE.md`. Codex adversarial-review v3 finding #2.
     function initiateGatewayWithdrawal(uint256 amount) external onlyHub {
         if (amount == 0) revert ZeroAmount();
+        if (authority != address(this)) revert AuthorityNotHook(authority);
         IGatewayWallet(GATEWAY_WALLET).initiateWithdrawal(address(USDC), amount);
         emit GatewayWithdrawalInitiated(amount);
     }
 
     /// @notice Completes a previously-initiated withdrawal once the operator delay has passed.
     /// Pulls the USDC into this hook and forwards it to the hub.
+    ///
+    /// @dev Same authority-binding constraint as `initiateGatewayWithdrawal`. See finding #2.
     function completeGatewayWithdrawal() external onlyHub nonReentrant {
+        if (authority != address(this)) revert AuthorityNotHook(authority);
         uint256 balBefore = USDC.balanceOf(address(this));
         IGatewayWallet(GATEWAY_WALLET).withdraw(address(USDC));
         uint256 balAfter = USDC.balanceOf(address(this));
