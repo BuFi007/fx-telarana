@@ -18,9 +18,9 @@ chain land on Fuji's `FxHubMessageReceiver`.
 
 | Contract | Address |
 |---|---|
-| `FxSpoke` (local, Fuji-side entry) | `0xcD1621B6118416AB4A43accEFdF44485519135B8` |
-| `FxHubMessageReceiver` | `0x365DE300dDa61C81a33bcE3606A5d524eD964362` |
-| `FxGatewayHook` | `0xc63634ebc99f9c9616ee126971CCa486f3AFfF6E` |
+| `FxSpoke` (local, Fuji-side entry) | `0xb7fc291c27f6a7a659d4d229e5d8a55e58f26ab1` |
+| **`FxHubMessageReceiver` (Stage 6)** | **`0x7eAdfD0c08dd6544f763285bBD31be14179d594B`** |
+| **`FxGatewayHook` (Stage 6)** | **`0x7dA191bfB85D9F14069228cf618519BFb41f371E`** |
 | `FxMarketRegistry` | `0x7ba745b979e027992ECFa51207666e3F5B46cF0a` |
 | `FxOracle` | `0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b` |
 | `FxLiquidator` | `0x2900599ff0e6dd057493d62fac856e5a8f93c6eb` |
@@ -32,6 +32,8 @@ chain land on Fuji's `FxHubMessageReceiver`.
 | IrmMock | `0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA` |
 | MockEURC | `0x50c4ba39caa7f56152d0df4914e1f6b907194992` |
 | USDC (Circle) | `0x5425890298aed601595a70AB815c96711a31Bc65` |
+| (deprecated V1 hub) | `0x365DE300dDa61C81a33bcE3606A5d524eD964362` |
+| (deprecated V1 hook) | `0xc63634ebc99f9c9616ee126971CCa486f3AFfF6E` |
 
 Market IDs:
 - M1 EURC/USDC: `0x7d99088a9fe61331c49a92eb16fa3794b0bc2862b211f5a70f31a64cef25029e`
@@ -45,9 +47,9 @@ finality, native USDC gas.
 
 | Contract | Address |
 |---|---|
-| `FxSpoke` (routes to Fuji hub) | `0x729fe51fa88eae24cbcff7a192c5a91e937ceb68` |
-| `FxHubMessageReceiver` | `0x07db64fb19C6c4a1eBB1B7bfdaFd4676b43Cf276` |
-| **`FxGatewayHook`** ← Stage 5 blocker resolved | **`0x004cfa0305c365b1d9b2365f85acf216c96b0e13`** |
+| `FxSpoke` (routes to Fuji hub) | `0x13c8463589d460db6f21235eedfd678c22a1ea25` |
+| **`FxHubMessageReceiver` (Stage 6)** | **`0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C`** |
+| **`FxGatewayHook` (Stage 6)** | **`0x2931C50745334d6DFf9eC4E3106fE05b49717DF1`** |
 | `FxMarketRegistry` | `0x813232259c9b922e7571F15220617C80581f1464` |
 | `FxOracle` | `0x77b3A3B420dB98B01085b8C46a753Ed9879e2865` |
 | `FxLiquidator` | `0xa50f7D4D4a1A0D3CF418515973545b80E037B379` |
@@ -59,6 +61,8 @@ finality, native USDC gas.
 | IrmMock | `0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1` |
 | USDC (Arc native 6-dec form) | `0x3600000000000000000000000000000000000000` |
 | EURC (Circle native) | `0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a` |
+| (deprecated V1 hub) | `0x07db64fb19C6c4a1eBB1B7bfdaFd4676b43Cf276` |
+| (deprecated V1 hook) | `0x004cfa0305c365b1d9b2365f85acf216c96b0e13` |
 
 Market IDs:
 - M1 EURC/USDC: `0xf6fac2b9b801a7ae3deeccfa95a7f1e768b4873a22f0def0d93f7f0172cc2da2`
@@ -126,40 +130,48 @@ Morpho market. BUFX can use these as collateral or yield substrate.
 
 ## Write surface — what BUFX CANNOT call directly (and why)
 
-### FxGatewayHook (`lockForRemote`, `mintFromRemote`)
+### FxGatewayHook (`lockForRemote`, `mintFromRemote`) — go through the hub
 
 **Hub-only.** The `onlyHub` modifier rejects everyone except `FxHubMessageReceiver`
 on that chain. This is the deliberate trust boundary: only the protocol moves
-USDC across hubs, never users (or BUFX directly).
+USDC across hubs, never users (or BUFX) directly.
 
-**Integration path for BUFX cross-hub trades:**
-
-Two options to coordinate, both feasible:
-
-**Option A: BUFX delegates the move via the hub.**
-We add a new function on `FxHubMessageReceiver`:
+**Stage 6 plumbing is LIVE.** Hub now exposes:
 
 ```solidity
-function relayToRemoteHub(uint256 amount, uint32 destDomain) external {
-    // gated by BUFX-authorization (BUFX contract whitelisted as caller)
-    USDC.safeTransferFrom(msg.sender, gatewayHook, amount);
-    IFxGatewayHook(gatewayHook).lockForRemote(amount);
-}
+// On FxHubMessageReceiver (gated by owner OR relayCallers whitelist):
+function relayToRemoteHub(uint256 amount) external;
+function relayMintFromRemote(bytes calldata attestation, bytes calldata signature)
+    external returns (uint256 minted);
+
+// Admin (owner-only):
+function setRelayCaller(address relayer, bool allowed) external;
+function setGatewayHook(address newHook) external;
+function transferOwnership(address newOwner) external;
 ```
 
-BUFX gets whitelisted via a `setBufxCaller(address)` admin function. Permission
-scope is narrow — only the relay, not other hub operations.
+**To onboard BUFX:**
 
-**Option B: BUFX gets a parallel `onlyHubOrBufx` modifier on the hook.**
-Cleaner separation but couples BUFX's address into hook state. Requires a
-`setBufxCaller` on the hook.
+1. BUFX deploys their perp/spot contracts on Fuji + Arc.
+2. We call `hub.setRelayCaller(bufxAddress, true)` on each chain.
+3. BUFX's contract:
+   - Pulls user USDC + approves the hub
+   - Calls `hub.relayToRemoteHub(amount)` to lock USDC into Gateway under the
+     hub's authority. The off-chain signer service watches the
+     `LockedForRemote` event, signs the BurnIntent for `destDomain`, POSTs to
+     Circle's operator.
+   - Once the attestation lands (`~349ms` typical), BUFX's contract on the
+     destination chain calls `hub.relayMintFromRemote(payload, signature)`. The
+     hook receives the USDC and forwards it to the destination hub. Funds are
+     now available for BUFX's local FX execution.
 
-**Recommendation:** Option A. The hub already owns the protocol state machine; the
-hook stays a pure Gateway adapter.
+**Verified end-to-end live on 2026-05-15** — see [`reports/gateway-fuji-to-arc-bypass.md`](../reports/gateway-fuji-to-arc-bypass.md) for tx hashes + latencies for both bypass and hook-routed flows.
 
-This integration isn't built yet — call it **Stage 6** (BUFX-hub plumbing). It's
-small (~50 lines + 1 test). BUFX can start scaffolding their side against the
-interface above and ping when ready.
+**Signer service:**
+[`packages/sdk/scripts/gateway-signer.ts`](../packages/sdk/scripts/gateway-signer.ts)
+— Bun CLI. Modes: `info`, `balances`, `deposit`, `sign-and-attest`,
+`gateway-mint`, `watch`. Use `watch` for daemon mode; emits per-event JSONL
+attestation logs to `reports/gateway-attestations.jsonl`.
 
 ---
 

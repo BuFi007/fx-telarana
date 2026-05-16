@@ -87,7 +87,7 @@ contract DeployFxHub is Script {
         FxLiquidator liquidator = new FxLiquidator(morpho, address(registry), address(oracle), deployer);
 
         // 7) FxHubMessageReceiver (CCTP V2 inbound)
-        FxHubMessageReceiver receiver = new FxHubMessageReceiver(messageTransmitter, usdc, address(registry));
+        FxHubMessageReceiver receiver = new FxHubMessageReceiver(messageTransmitter, usdc, address(registry), deployer);
 
         // 8) FxTimelock + atomic admin handoff. Spec §10.2: DEFAULT_ADMIN_ROLE on
         //    each admin contract MUST be the timelock post-deploy.

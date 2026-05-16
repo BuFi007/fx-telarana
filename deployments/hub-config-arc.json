@@ -1,7 +1,7 @@
 {
   "network": "arc-testnet",
   "chainId": 5042002,
-  "messageReceiver": "0x07db64fb19C6c4a1eBB1B7bfdaFd4676b43Cf276",
+  "messageReceiver": "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
   "cctpDomain": 26,
   "rpcUrl": "https://rpc.testnet.arc.network",
   "hubStack": {
@@ -14,8 +14,10 @@
     "FxReceiptEURC":         "0xF829f57Db8530fa93FCD6e13b00193cbe8cE1493",
     "FxReceiptUSDC":         "0xdd22365Bba7330BE537c9BC26da9b1b4Db9aC431",
     "FxLiquidator":          "0xa50f7D4D4a1A0D3CF418515973545b80E037B379",
-    "FxHubMessageReceiver":  "0x07db64fb19C6c4a1eBB1B7bfdaFd4676b43Cf276",
-    "FxGatewayHook":         "0x004cfa0305c365b1d9b2365f85acf216c96b0e13"
+    "FxHubMessageReceiver":  "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
+    "FxGatewayHook":         "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1",
+    "DeprecatedV1FxHubMessageReceiver": "0x07db64fb19C6c4a1eBB1B7bfdaFd4676b43Cf276",
+    "DeprecatedV1FxGatewayHook":        "0x004cfa0305c365b1d9b2365f85acf216c96b0e13"
   },
   "marketIds": {
     "M1_EURC_USDC": "0xf6fac2b9b801a7ae3deeccfa95a7f1e768b4873a22f0def0d93f7f0172cc2da2",

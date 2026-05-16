@@ -118,7 +118,7 @@ contract DeployTenderlyAvalancheBasket is Script {
 
         FxMarketRegistry registry = new FxMarketRegistry(address(morpho), deployer);
         FxLiquidator liquidator = new FxLiquidator(address(morpho), address(registry), address(oracle), deployer);
-        FxHubMessageReceiver receiver = new FxHubMessageReceiver(cctpMt, address(usdc), address(registry));
+        FxHubMessageReceiver receiver = new FxHubMessageReceiver(cctpMt, address(usdc), address(registry), deployer);
 
         Core memory core = Core({
             deployer: deployer,

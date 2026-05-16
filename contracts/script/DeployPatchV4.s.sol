@@ -85,7 +85,7 @@ contract DeployPatchV4 is Script {
         FxLiquidator liquidator = new FxLiquidator(morpho, address(registry), oracle, deployer);
 
         // 4) New FxHubMessageReceiver (CCTP V2 inbound) bound to the patched registry
-        FxHubMessageReceiver receiver = new FxHubMessageReceiver(cctpMt, usdc, address(registry));
+        FxHubMessageReceiver receiver = new FxHubMessageReceiver(cctpMt, usdc, address(registry), deployer);
 
         vm.stopBroadcast();
 

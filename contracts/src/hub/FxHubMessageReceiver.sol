@@ -7,6 +7,7 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import {IFxHubMessageReceiver} from "../interfaces/IFxHubMessageReceiver.sol";
+import {IFxGatewayHook} from "../interfaces/IFxGatewayHook.sol";
 import {IMessageTransmitterV2} from "../interfaces/ICctp.sol";
 import {CctpMessageLib} from "../libraries/CctpMessageLib.sol";
 
@@ -56,17 +57,136 @@ contract FxHubMessageReceiver is IFxHubMessageReceiver, ReentrancyGuard {
 
     mapping(bytes32 messageNonce => StrandedDeposit) private _deposits;
 
+    // ── Stage 6: Gateway-relay surface ───────────────────────────────────
+    // The hub is the only caller the FxGatewayHook accepts (its `onlyHub`
+    // modifier is gated on this contract's immutable address). This block
+    // lets the hub *delegate* that authority to a whitelist of approved
+    // relayers (e.g. BUFX's spot/perp contracts) without giving them
+    // direct hook access. The hub stays the protocol's state-machine
+    // owner; relayers just trigger cross-hub liquidity moves.
+    address public owner;
+    address public gatewayHook;
+    mapping(address relayer => bool allowed) public relayCallers;
+
+    error NotOwner(address caller);
+    error NotAuthorizedRelayer(address caller);
+    error ZeroAmount();
+    error GatewayHookNotSet();
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event GatewayHookChanged(address indexed previousHook, address indexed newHook);
+    event RelayCallerSet(address indexed relayer, bool allowed);
+    event RelayedToRemoteHub(address indexed relayer, uint256 amount, address indexed hook);
+    event RelayedMintFromRemote(address indexed relayer, uint256 minted, address indexed hook);
+
     /*//////////////////////////////////////////////////////////////
                                 CTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(address messageTransmitter, address usdc, address marketRegistry) {
-        if (messageTransmitter == address(0) || usdc == address(0) || marketRegistry == address(0)) {
+    constructor(
+        address messageTransmitter,
+        address usdc,
+        address marketRegistry,
+        address initialOwner
+    ) {
+        if (
+            messageTransmitter == address(0) ||
+            usdc == address(0) ||
+            marketRegistry == address(0) ||
+            initialOwner == address(0)
+        ) {
             revert ZeroAddress();
         }
         MESSAGE_TRANSMITTER = IMessageTransmitterV2(messageTransmitter);
         USDC = IERC20(usdc);
         MARKET_REGISTRY = marketRegistry;
+        owner = initialOwner;
+        emit OwnershipTransferred(address(0), initialOwner);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                STAGE 6 — RELAY
+    //////////////////////////////////////////////////////////////*/
+
+    modifier onlyOwner() {
+        if (msg.sender != owner) revert NotOwner(msg.sender);
+        _;
+    }
+
+    modifier onlyAuthorizedRelayer() {
+        if (msg.sender != owner && !relayCallers[msg.sender]) {
+            revert NotAuthorizedRelayer(msg.sender);
+        }
+        _;
+    }
+
+    /// @notice Transfer hub ownership (used to rotate from deployer EOA to a
+    /// TimelockController / DAO multisig in production).
+    function transferOwnership(address newOwner) external onlyOwner {
+        if (newOwner == address(0)) revert ZeroAddress();
+        address previous = owner;
+        owner = newOwner;
+        emit OwnershipTransferred(previous, newOwner);
+    }
+
+    /// @notice Wire (or rewire) the FxGatewayHook this hub talks to for
+    /// cross-hub USDC moves. Set once after deploy; rotated only on hook
+    /// redeploy (e.g. EIP-1271 authority migration mid-July 2026).
+    function setGatewayHook(address newHook) external onlyOwner {
+        if (newHook == address(0)) revert ZeroAddress();
+        address previous = gatewayHook;
+        gatewayHook = newHook;
+        emit GatewayHookChanged(previous, newHook);
+    }
+
+    /// @notice Add / remove a relayer (e.g. BUFX spot/perp contract) that may
+    /// trigger Gateway moves through this hub. Permission is scoped to
+    /// `relayToRemoteHub` + `relayMintFromRemote` — never gives the relayer
+    /// the rest of the hub surface.
+    function setRelayCaller(address relayer, bool allowed) external onlyOwner {
+        if (relayer == address(0)) revert ZeroAddress();
+        relayCallers[relayer] = allowed;
+        emit RelayCallerSet(relayer, allowed);
+    }
+
+    /// @notice Lock USDC for a cross-hub move. Pulls `amount` USDC from the
+    /// caller (must have approved this hub), forwards it to the local
+    /// FxGatewayHook, and triggers `lockForRemote` so an off-chain authority
+    /// can sign a BurnIntent.
+    ///
+    /// @dev Only callable by `owner` or whitelisted `relayCallers`. This hub
+    /// contract is the `HUB` immutable on the hook, so its call passes the
+    /// hook's `onlyHub` modifier.
+    function relayToRemoteHub(uint256 amount) external onlyAuthorizedRelayer nonReentrant {
+        if (amount == 0) revert ZeroAmount();
+        if (gatewayHook == address(0)) revert GatewayHookNotSet();
+
+        // Pull USDC from the relayer into this hub
+        USDC.safeTransferFrom(msg.sender, address(this), amount);
+
+        // Approve the hook (tight allowance) so its safeTransferFrom in lockForRemote works
+        USDC.forceApprove(gatewayHook, amount);
+
+        IFxGatewayHook(gatewayHook).lockForRemote(amount);
+
+        // Always drop the approval — same defensive pattern as executeDeposit
+        USDC.forceApprove(gatewayHook, 0);
+
+        emit RelayedToRemoteHub(msg.sender, amount, gatewayHook);
+    }
+
+    /// @notice Mint USDC from a remote Gateway BurnIntent attestation. The
+    /// hook receives the minted USDC and forwards it back to this hub via
+    /// `mintFromRemote`'s post-mint transfer.
+    function relayMintFromRemote(bytes calldata attestationPayload, bytes calldata signature)
+        external
+        onlyAuthorizedRelayer
+        nonReentrant
+        returns (uint256 minted)
+    {
+        if (gatewayHook == address(0)) revert GatewayHookNotSet();
+        minted = IFxGatewayHook(gatewayHook).mintFromRemote(attestationPayload, signature);
+        emit RelayedMintFromRemote(msg.sender, minted, gatewayHook);
     }
 
     /*//////////////////////////////////////////////////////////////

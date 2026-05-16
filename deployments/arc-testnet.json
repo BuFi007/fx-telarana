@@ -3,11 +3,11 @@
   "chainId": 5042002,
   "role": "hub-and-spoke",
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
-  "deployedAt": "2026-05-14",
+  "deployedAt": "2026-05-15",
   "contracts": {
-    "FxSpoke":               "0x729fe51fa88eae24cbcff7a192c5a91e937ceb68",
-    "FxHubMessageReceiver":  "0x07db64fb19C6c4a1eBB1B7bfdaFd4676b43Cf276",
-    "FxGatewayHook":         "0x004cfa0305c365b1d9b2365f85acf216c96b0e13",
+    "FxSpoke":               "0x13c8463589d460db6f21235eedfd678c22a1ea25",
+    "FxHubMessageReceiver":  "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
+    "FxGatewayHook":         "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1",
     "FxMarketRegistry":      "0x813232259c9b922e7571F15220617C80581f1464",
     "FxOracle":              "0x77b3A3B420dB98B01085b8C46a753Ed9879e2865",
     "MorphoOracleAdapterM1": "0xED58C176E9a37Cda2854AC0Ade409cfb3687cA7d",
@@ -17,6 +17,12 @@
     "FxLiquidator":          "0xa50f7D4D4a1A0D3CF418515973545b80E037B379",
     "MorphoBlue":            "0x3c9b95C6E7B23f094f066733E7797C8680760830",
     "IrmMock":               "0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1"
+  },
+  "deprecated": {
+    "V1FxHubMessageReceiver": "0x07db64fb19C6c4a1eBB1B7bfdaFd4676b43Cf276",
+    "V1FxGatewayHook":        "0x004cfa0305c365b1d9b2365f85acf216c96b0e13",
+    "V1FxSpoke":              "0x729fe51fa88eae24cbcff7a192c5a91e937ceb68",
+    "reason": "V1 hub+hook+spoke shipped 2026-05-15 with no relay surface (only HUB could call hook). Stage 6 (this session) adds relayToRemoteHub + relayMintFromRemote + owner + relayCallers; required hub redeploy → hook redeploy (HUB immutable) → spoke re-migration."
   },
   "external": {
     "CctpTokenMessengerV2":     "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
@@ -36,13 +42,28 @@
   "hub": {
     "network": "avalanche-fuji",
     "chainId": 43113,
-    "messageReceiver": "0x365de300dda61c81a33bce3606a5d524ed964362",
+    "messageReceiver": "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
     "cctpDomain": 1
   },
   "gateway": {
-    "authority": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
-    "authorityType": "EOA",
-    "rotationPlan": "Rotate to FxHubMessageReceiver via EIP-1271 once Circle ships 1271 support (~mid-July 2026)."
+    "authority":       "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    "authorityType":   "EOA",
+    "owner":           "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    "rotationPlan":    "Owner: rotate to TimelockController / multisig. Authority on hook: rotate to FxHubMessageReceiver via EIP-1271 once Circle ships 1271 support (~mid-July 2026).",
+    "relayCallers":    [],
+    "relayCallersNote": "Empty until BUFX (perp/spot layer in sibling repo) lands. Whitelist via hub.setRelayCaller(bufxAddress, true)."
   },
-  "notes": "Arc Testnet has TWO roles: (1) a spoke (FxSpoke 0x729fe51f...eb68 routes USDC deposits via CCTP V2 to the Fuji primary hub, captured in the `hub` block) and (2) a trading-execution hub stack (deployed 2026-05-15 — FxHubMessageReceiver + Morpho + V4 adapters + FxGatewayHook). Arc's hub is NEVER a user-deposit destination; it receives USDC liquidity from Fuji via FxGatewayHook (Circle Gateway, hub-callable only) for FX/perp execution. USDC is native 18-dec gas; the 0x3600...0000 address is the 6-dec ERC-20 form CCTP V2 + Gateway use. EURC is the real Circle-deployed token on Arc."
+  "deploymentTx": {
+    "FxHubMessageReceiver": "0x29bf85c517fcd9a3de70fb52a9ad768be89b6923a6fcba04f25d9d30c569acb4",
+    "FxGatewayHook":        "0x9ecfc1300151e5d4d7b99721ffc29582d31a3cdb066421c444b014512af69510",
+    "setGatewayHook":       "0x72fead7a69b6b8f9a273f4e2c535cb82d088feecf31f5cb409e4787981285f33"
+  },
+  "stage6E2E": {
+    "relayMintFromRemote":  "0xe430d026e691147f4e96a87aff558332e0a94ff9abe8144fe8059c75439e9aaa",
+    "amount":               "100000",
+    "amountUsd":            "0.10",
+    "destinationRecipient": "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1 (Arc hook v2)",
+    "destinationCaller":    "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1 (Arc hook v2 — locks mint to hook only)"
+  },
+  "notes": "Arc Testnet has TWO roles: (1) a spoke (FxSpoke 0x13c8... routes USDC deposits via CCTP V2 to the Fuji primary hub, captured in the `hub` block) and (2) a trading-execution hub stack (deployed 2026-05-15 — FxHubMessageReceiver + Morpho + V4 adapters + FxGatewayHook with Stage 6 relay surface). Arc's hub is NEVER a user-deposit destination; it receives USDC liquidity from Fuji via FxGatewayHook (Circle Gateway, hub-callable only) for FX/perp execution. USDC is native 18-dec gas; the 0x3600...0000 address is the 6-dec ERC-20 form CCTP V2 + Gateway use. EURC is the real Circle-deployed token on Arc. Stage 6 relayMintFromRemote verified live 2026-05-15."
 }

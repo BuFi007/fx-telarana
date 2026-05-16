@@ -4,19 +4,19 @@
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
   "deployedAt": "2026-05-14",
   "contracts": {
-    "FxSpoke": "0x50c4ba39caa7f56152d0df4914e1f6b907194992"
+    "FxSpoke": "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b"
   },
   "previousFxSpoke": "0x8B7041d8A4bd773a537a01e1F61175da5395714c (pointed at base-sepolia hub)",
   "external": {
-    "CctpTokenMessengerV2":     "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    "CctpTokenMessengerV2": "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     "CctpMessageTransmitterV2": "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
-    "CctpDomain":               "10",
-    "USDC":                     "0x31d0220469e10c4E71834a79b1f276d740d3768F"
+    "CctpDomain": "10",
+    "USDC": "0x31d0220469e10c4E71834a79b1f276d740d3768F"
   },
   "hub": {
-    "network":         "avalanche-fuji",
-    "chainId":         43113,
-    "messageReceiver": "0x365de300dda61c81a33bce3606a5d524ed964362",
-    "cctpDomain":      1
+    "network": "avalanche-fuji",
+    "chainId": 43113,
+    "messageReceiver": "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
+    "cctpDomain": 1
   }
 }

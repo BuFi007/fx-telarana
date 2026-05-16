@@ -62,7 +62,7 @@ contract FxHubMessageReceiverTest is Test {
         mt = new MockMessageTransmitter(usdc, 26);
         target = new MockTarget();
         target.setAsset(usdc);
-        receiver = new FxHubMessageReceiver(address(mt), address(usdc), address(target));
+        receiver = new FxHubMessageReceiver(address(mt), address(usdc), address(target), address(this));
     }
 
     /*//////////////////////////////////////////////////////////////

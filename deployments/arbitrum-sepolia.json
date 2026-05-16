@@ -4,7 +4,7 @@
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
   "deployedAt": "2026-05-14",
   "contracts": {
-    "FxSpoke": "0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e"
+    "FxSpoke": "0x2900599ff0e6dd057493d62fac856e5a8f93c6eb"
   },
   "external": {
     "CctpTokenMessengerV2": "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
@@ -15,7 +15,7 @@
   "hub": {
     "network": "avalanche-fuji",
     "chainId": 43113,
-    "messageReceiver": "0x365de300dda61c81a33bce3606a5d524ed964362",
+    "messageReceiver": "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
     "cctpDomain": 1
   }
 }
