@@ -1,5 +1,9 @@
 node_modules/
 dist/
+.next/
+.turbo/
+*.tsbuildinfo
+packages/ponder/ponder-env.d.ts
 .env
 .context/
 .claude/

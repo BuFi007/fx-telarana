@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "ponder.config.ts", "ponder.schema.ts", "ponder-env.d.ts"]
+}
