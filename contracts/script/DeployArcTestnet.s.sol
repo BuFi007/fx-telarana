@@ -124,7 +124,7 @@ contract DeployArcTestnet is Script {
         FxLiquidator liquidator = new FxLiquidator(morpho, address(registry), address(oracle), deployer);
 
         // 7) Hub-side CCTP V2 message receiver
-        FxHubMessageReceiver receiver = new FxHubMessageReceiver(messageTransmitter, usdc, address(registry));
+        FxHubMessageReceiver receiver = new FxHubMessageReceiver(messageTransmitter, usdc, address(registry), deployer);
 
         // 8) FxTimelock + atomic admin handoff (spec §10.2).
         FxTimelock timelock = _deployTimelockAndHandoff(deployer, oracle, registry, liquidator);

@@ -122,7 +122,7 @@ contract DeployBaseSepolia is Script {
         // 8) Hub-side CCTP V2 message receiver (lets spokes deposit through CCTP hooks)
         address cctpMt = vm.envOr("BASE_SEPOLIA_CCTP_MT", DEFAULT_CCTP_MESSAGE_TRANSMITTER);
         FxHubMessageReceiver hubReceiver =
-            new FxHubMessageReceiver(cctpMt, usdc, address(registry));
+            new FxHubMessageReceiver(cctpMt, usdc, address(registry), deployer);
 
         // 9) FxTimelock + atomic admin handoff (spec §10.2).
         FxTimelock timelock = _deployTimelockAndHandoff(deployer, oracle, registry, liquidator);

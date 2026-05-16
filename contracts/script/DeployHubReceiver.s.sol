@@ -25,7 +25,7 @@ contract DeployHubReceiver is Script {
         console2.log("cctp mt ", cctpMt);
 
         vm.startBroadcast(pk);
-        FxHubMessageReceiver hubReceiver = new FxHubMessageReceiver(cctpMt, usdc, registry);
+        FxHubMessageReceiver hubReceiver = new FxHubMessageReceiver(cctpMt, usdc, registry, vm.addr(pk));
         vm.stopBroadcast();
 
         console2.log("FxHubMessageReceiver", address(hubReceiver));

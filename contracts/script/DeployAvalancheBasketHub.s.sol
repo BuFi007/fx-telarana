@@ -138,7 +138,7 @@ contract DeployAvalancheBasketHub is Script {
 
         FxMarketRegistry registry = new FxMarketRegistry(morpho, deployer);
         FxLiquidator liquidator = new FxLiquidator(morpho, address(registry), address(oracle), deployer);
-        FxHubMessageReceiver receiver = new FxHubMessageReceiver(messageTransmitter, usdc, address(registry));
+        FxHubMessageReceiver receiver = new FxHubMessageReceiver(messageTransmitter, usdc, address(registry), deployer);
 
         Core memory core = Core({
             deployer: deployer,

@@ -5,9 +5,9 @@
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
   "deployedAt": "2026-05-15",
   "contracts": {
-    "FxSpoke":               "0xcD1621B6118416AB4A43accEFdF44485519135B8",
-    "FxHubMessageReceiver":  "0x365DE300dDa61C81a33bcE3606A5d524eD964362",
-    "FxGatewayHook":         "0xc63634ebc99f9c9616ee126971CCa486f3AFfF6E",
+    "FxSpoke":               "0xb7fc291c27f6a7a659d4d229e5d8a55e58f26ab1",
+    "FxHubMessageReceiver":  "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
+    "FxGatewayHook":         "0x7dA191bfB85D9F14069228cf618519BFb41f371E",
     "FxMarketRegistry":      "0x7ba745b979e027992ECFa51207666e3F5B46cF0a",
     "FxOracle":              "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b",
     "MorphoOracleAdapterM1": "0xda4c3e315fffd0790c9d8a1730c2ba56330cb2ec",
@@ -20,9 +20,12 @@
     "MockEURC":              "0x50c4ba39caa7f56152d0df4914e1f6b907194992"
   },
   "deprecated": {
-    "BaseSepoliaHubFxSpoke": "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
-    "ParallelFujiSpoke":     "0xAa875a68b0155da4bD6A528ee9e1137017D18b41",
-    "reason": "0x8B70... was the original Fuji spoke pointing at the Base Sepolia hub (HUB_DOMAIN=6) — orphaned after the Base→Fuji hub migration. 0xAa87... was a parallel self-loop Fuji spoke deployed by a sibling session against the Fuji hub receiver; canonical is 0xcD16... (deployed in the dual-hub + Gateway integration session, 2026-05-15)."
+    "V1FxHubMessageReceiver":    "0x365DE300dDa61C81a33bcE3606A5d524eD964362",
+    "V1FxGatewayHook":           "0xc63634ebc99f9c9616ee126971CCa486f3AFfF6E",
+    "V1FxSpoke":                 "0xcD1621B6118416AB4A43accEFdF44485519135B8",
+    "PreMigrationFxSpoke":       "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
+    "ParallelFujiSpokeV1":       "0xAa875a68b0155da4bD6A528ee9e1137017D18b41",
+    "reason": "V1 hub+hook+spoke shipped 2026-05-15 with no relay surface (only HUB could call hook). Stage 6 (this session) adds relayToRemoteHub + relayMintFromRemote + owner + relayCallers to the hub; required hub redeploy → hook redeploy (HUB immutable) → spoke re-migration. V1 contracts remain on-chain but are orphaned. PreMigration spoke pointed at the retired Base Sepolia hub. ParallelFujiSpokeV1 was deployed by a sibling session."
   },
   "external": {
     "CctpTokenMessengerV2":     "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
@@ -41,12 +44,29 @@
   "hub": {
     "network":         "avalanche-fuji",
     "chainId":         43113,
-    "messageReceiver": "0x365DE300dDa61C81a33bcE3606A5d524eD964362",
+    "messageReceiver": "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
     "cctpDomain":      1
   },
-  "deploymentTx": {
-    "FxSpoke":               "0x278c87f3370cc20f7818ff520ab87efbc9c952db2aefcd1338d07db63ba87725",
-    "FxGatewayHook":          "see contracts/broadcast/DeployFxGatewayHook.s.sol/43113/run-latest.json"
+  "gateway": {
+    "authority":       "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    "authorityType":   "EOA",
+    "owner":           "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    "rotationPlan":    "Owner: rotate to TimelockController / multisig. Authority on hook: rotate to FxHubMessageReceiver via EIP-1271 once Circle ships 1271 support (~mid-July 2026).",
+    "relayCallers":    [],
+    "relayCallersNote": "Empty until BUFX (perp/spot layer in sibling repo) lands. Whitelist via hub.setRelayCaller(bufxAddress, true)."
   },
-  "notes": "Avalanche Fuji is THE PRIMARY HUB for fx-Telaraña — all user deposits route here. Hosts the full hub stack (FxHubMessageReceiver + Morpho + V4 adapters + receipts + liquidator) AND a local FxSpoke for Fuji-side users (FxSpoke 0xcD16... routes to local hub via CCTP V2 self-domain). Cross-hub liquidity to Arc happens at the protocol level through FxGatewayHook 0xc636... — never user-initiated. Arc hub at 0x07db64fb...F276 is a trading-execution destination. All 7 other spokes (eth/op/arb/poly/world/uni/arc) also point at this hub."
+  "deploymentTx": {
+    "FxHubMessageReceiver":   "0xf17479191b0b67948a36c345c98638951b7649390306f56fc2838691e350c40f",
+    "FxGatewayHook":          "0xd125e1b01a8b21fb1258e0dff64b5d704fd7b93ddf873e8b688d91d3e2a32766",
+    "setGatewayHook":         "0x86f229cbe7a4034b9ae27e3397eb8d06ecabceb82fb4bee98b184c582670c937",
+    "FxSpoke":                "see contracts/broadcast/DeployFxSpoke.s.sol/43113/run-latest.json"
+  },
+  "stage6E2E": {
+    "approveHub":             "0x9e9637089a9f4996ee1d062b37db93120f38d033d1a5dbd9d7212734073c5e63",
+    "relayToRemoteHub":       "0x35b646a26bd6e93842f8ec9cf356b977c92196d8cb904b6226cfd04abfe8e040",
+    "amount":                 "100000",
+    "amountUsd":              "0.10",
+    "circleAttestationMs":    349
+  },
+  "notes": "Avalanche Fuji is THE PRIMARY HUB for fx-Telaraña — all user deposits route here. Hosts the full hub stack (FxHubMessageReceiver + Morpho + V4 adapters + receipts + liquidator) AND a local FxSpoke for Fuji-side users (FxSpoke 0xb7fc... routes to local hub via CCTP V2 self-domain). Cross-hub liquidity to Arc happens at the protocol level through FxGatewayHook 0x7dA1... — never user-initiated. Arc hub at 0x44B50E93...F63C is a trading-execution destination. All 7 other spokes (eth/op/arb/poly/world/uni/arc) also point at this hub. Stage 6 plumbing (relayToRemoteHub + relayMintFromRemote) verified end-to-end on 2026-05-15."
 }

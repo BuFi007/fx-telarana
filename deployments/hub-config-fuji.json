@@ -1,7 +1,7 @@
 {
   "network": "avalanche-fuji",
   "chainId": 43113,
-  "messageReceiver": "0x365de300dda61c81a33bce3606a5d524ed964362",
+  "messageReceiver": "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
   "cctpDomain": 1,
   "rpcUrl": "https://api.avax-test.network/ext/bc/C/rpc",
   "hubStack": {
@@ -14,9 +14,11 @@
     "FxReceiptEURC":         "0xefd7cf5ad5a2db9a3c23e2807f2279de92c730d2",
     "FxReceiptUSDC":         "0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e",
     "FxLiquidator":          "0x2900599ff0e6dd057493d62fac856e5a8f93c6eb",
-    "FxHubMessageReceiver":  "0x365de300dda61c81a33bce3606a5d524ed964362",
-    "FxSpoke":               "0xcD1621B6118416AB4A43accEFdF44485519135B8",
-    "FxGatewayHook":         "0xc63634ebc99f9c9616ee126971CCa486f3AFfF6E",
+    "FxHubMessageReceiver":  "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
+    "FxGatewayHook":         "0x7dA191bfB85D9F14069228cf618519BFb41f371E",
+    "DeprecatedV1FxHubMessageReceiver": "0x365DE300dDa61C81a33bcE3606A5d524eD964362",
+    "DeprecatedV1FxGatewayHook":        "0xc63634ebc99f9c9616ee126971CCa486f3AFfF6E",
+    "DeprecatedV1FxSpoke":              "0xcD1621B6118416AB4A43accEFdF44485519135B8",
     "MockEURC":              "0x50c4ba39caa7f56152d0df4914e1f6b907194992"
   },
   "marketIds": {

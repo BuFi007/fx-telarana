@@ -1,9 +1,9 @@
 {
-  "startedAt": "2026-05-14T18:39:59.003Z",
+  "startedAt": "2026-05-16T00:51:57.452Z",
   "newHub": {
     "network": "avalanche-fuji",
     "chainId": 43113,
-    "messageReceiver": "0x365de300dda61c81a33bce3606a5d524ed964362",
+    "messageReceiver": "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
     "cctpDomain": 1,
     "rpcUrl": "https://api.avax-test.network/ext/bc/C/rpc",
     "hubStack": {
@@ -16,7 +16,11 @@
       "FxReceiptEURC": "0xefd7cf5ad5a2db9a3c23e2807f2279de92c730d2",
       "FxReceiptUSDC": "0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e",
       "FxLiquidator": "0x2900599ff0e6dd057493d62fac856e5a8f93c6eb",
-      "FxHubMessageReceiver": "0x365de300dda61c81a33bce3606a5d524ed964362",
+      "FxHubMessageReceiver": "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
+      "FxGatewayHook": "0x7dA191bfB85D9F14069228cf618519BFb41f371E",
+      "DeprecatedV1FxHubMessageReceiver": "0x365DE300dDa61C81a33bcE3606A5d524eD964362",
+      "DeprecatedV1FxGatewayHook": "0xc63634ebc99f9c9616ee126971CCa486f3AFfF6E",
+      "DeprecatedV1FxSpoke": "0xcD1621B6118416AB4A43accEFdF44485519135B8",
       "MockEURC": "0x50c4ba39caa7f56152d0df4914e1f6b907194992"
     },
     "marketIds": {
@@ -27,16 +31,24 @@
       "USDC": "0x5425890298aed601595a70AB815c96711a31Bc65",
       "Pyth": "0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509",
       "CctpMessageTransmitterV2": "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
-      "CctpTokenMessengerV2": "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA"
+      "CctpTokenMessengerV2": "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+      "GatewayWallet": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+      "GatewayMinter": "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
+      "GatewayLocalDomain": 1
     },
-    "notes": "Step 1 of the Base Sepolia → Fuji → Arc hub migration. Morpho Blue + IrmMock self-deployed (no canonical Morpho on Fuji). EURC stub via MockEURC. Run migrate-hub.ts --execute next to redeploy all 7 non-Fuji spokes pointing at this messageReceiver."
+    "gateway": {
+      "authority": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+      "authorityType": "EOA",
+      "rotationPlan": "Rotate to FxHubMessageReceiver via EIP-1271 once Circle ships 1271 support (~mid-July 2026)."
+    },
+    "notes": "Avalanche Fuji is the PRIMARY HUB. All user deposits route here via CCTP V2 spokes. FxGatewayHook bridges USDC liquidity Fuji ↔ Arc via Circle Gateway (protocol-level, hub-callable only). Gateway addresses are deterministic CREATE2 — same on every supported testnet."
   },
   "previousHubConfig": {
-    "network": "base-sepolia",
-    "chainId": 84532,
-    "messageReceiver": "0x758c17BfA85D1b26A81423B524397b8b2D271818",
-    "cctpDomain": 6,
-    "rpcUrl": ""
+    "network": "avalanche-fuji",
+    "chainId": 43113,
+    "messageReceiver": "0x365de300dda61c81a33bce3606a5d524ed964362",
+    "cctpDomain": 1,
+    "rpcUrl": "https://api.avax-test.network/ext/bc/C/rpc"
   },
   "spokes": {
     "1301": {
@@ -44,112 +56,112 @@
       "chainId": 1301,
       "manifestPath": "/Users/criptopoeta/conductor/workspaces/fx-onchain/brasilia/deployments/unichain-sepolia.json",
       "rpc": "https://sepolia.unichain.org",
-      "oldFxSpoke": "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
+      "oldFxSpoke": "0x50c4ba39caa7f56152d0df4914e1f6b907194992",
       "oldHub": {
-        "network": "base-sepolia",
-        "chainId": 84532,
-        "messageReceiver": "0x758c17BfA85D1b26A81423B524397b8b2D271818",
-        "cctpDomain": 6
+        "network": "avalanche-fuji",
+        "chainId": 43113,
+        "messageReceiver": "0x365de300dda61c81a33bce3606a5d524ed964362",
+        "cctpDomain": 1
       },
       "status": "succeeded",
       "attempts": 1,
-      "newFxSpoke": "0x50c4ba39caa7f56152d0df4914e1f6b907194992"
+      "newFxSpoke": "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b"
     },
     "4801": {
       "network": "worldchain-sepolia",
       "chainId": 4801,
       "manifestPath": "/Users/criptopoeta/conductor/workspaces/fx-onchain/brasilia/deployments/worldchain-sepolia.json",
       "rpc": "https://worldchain-sepolia.g.alchemy.com/public",
-      "oldFxSpoke": "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
+      "oldFxSpoke": "0xef64621d41093144d9ed8ab8327ee381ecdb79e6",
       "oldHub": {
-        "network": "base-sepolia",
-        "chainId": 84532,
-        "messageReceiver": "0x758c17BfA85D1b26A81423B524397b8b2D271818",
-        "cctpDomain": 6
+        "network": "avalanche-fuji",
+        "chainId": 43113,
+        "messageReceiver": "0x365de300dda61c81a33bce3606a5d524ed964362",
+        "cctpDomain": 1
       },
       "status": "succeeded",
       "attempts": 1,
-      "newFxSpoke": "0xef64621d41093144d9ed8ab8327ee381ecdb79e6"
+      "newFxSpoke": "0x0b5d18bbe92f07ec0111ae6d2e102858268d6aca"
     },
     "80002": {
       "network": "polygon-amoy",
       "chainId": 80002,
       "manifestPath": "/Users/criptopoeta/conductor/workspaces/fx-onchain/brasilia/deployments/polygon-amoy.json",
       "rpc": "https://rpc-amoy.polygon.technology",
-      "oldFxSpoke": "0x2552E1027fF27A285635a9593825E3Da8F25808b",
+      "oldFxSpoke": "0x50c4ba39caa7f56152d0df4914e1f6b907194992",
       "oldHub": {
-        "network": "base-sepolia",
-        "chainId": 84532,
-        "messageReceiver": "0x758c17BfA85D1b26A81423B524397b8b2D271818",
-        "cctpDomain": 6
+        "network": "avalanche-fuji",
+        "chainId": 43113,
+        "messageReceiver": "0x365de300dda61c81a33bce3606a5d524ed964362",
+        "cctpDomain": 1
       },
       "status": "succeeded",
       "attempts": 1,
-      "newFxSpoke": "0x50c4ba39caa7f56152d0df4914e1f6b907194992"
+      "newFxSpoke": "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b"
     },
     "421614": {
       "network": "arbitrum-sepolia",
       "chainId": 421614,
       "manifestPath": "/Users/criptopoeta/conductor/workspaces/fx-onchain/brasilia/deployments/arbitrum-sepolia.json",
       "rpc": "https://sepolia-rollup.arbitrum.io/rpc",
-      "oldFxSpoke": "0xEFd7CF5ad5a2dB9a3C23e2807f2279DE92C730D2",
+      "oldFxSpoke": "0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e",
       "oldHub": {
-        "network": "base-sepolia",
-        "chainId": 84532,
-        "messageReceiver": "0x758c17BfA85D1b26A81423B524397b8b2D271818",
-        "cctpDomain": 6
+        "network": "avalanche-fuji",
+        "chainId": 43113,
+        "messageReceiver": "0x365de300dda61c81a33bce3606a5d524ed964362",
+        "cctpDomain": 1
       },
       "status": "succeeded",
       "attempts": 1,
-      "newFxSpoke": "0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e"
+      "newFxSpoke": "0x2900599ff0e6dd057493d62fac856e5a8f93c6eb"
     },
     "5042002": {
       "network": "arc-testnet",
       "chainId": 5042002,
       "manifestPath": "/Users/criptopoeta/conductor/workspaces/fx-onchain/brasilia/deployments/arc-testnet.json",
       "rpc": "https://rpc.testnet.arc.network",
-      "oldFxSpoke": "0x47c76D420f6534B4b83592cf706D9830669EEdB8",
+      "oldFxSpoke": "0x729fe51fa88eae24cbcff7a192c5a91e937ceb68",
       "oldHub": {
-        "network": "base-sepolia",
-        "chainId": 84532,
-        "messageReceiver": "0x758c17BfA85D1b26A81423B524397b8b2D271818",
-        "cctpDomain": 6
+        "network": "avalanche-fuji",
+        "chainId": 43113,
+        "messageReceiver": "0x365de300dda61c81a33bce3606a5d524ed964362",
+        "cctpDomain": 1
       },
       "status": "succeeded",
       "attempts": 1,
-      "newFxSpoke": "0x729fe51fa88eae24cbcff7a192c5a91e937ceb68"
+      "newFxSpoke": "0x13c8463589d460db6f21235eedfd678c22a1ea25"
     },
     "11155111": {
       "network": "ethereum-sepolia",
       "chainId": 11155111,
       "manifestPath": "/Users/criptopoeta/conductor/workspaces/fx-onchain/brasilia/deployments/ethereum-sepolia.json",
       "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
-      "oldFxSpoke": "0xc3FFF144b37B79264573E6c4c2ac2F960113A114",
+      "oldFxSpoke": "0xdabf610c279d900b40ca4df62f1e86cc2d0a4fd4",
       "oldHub": {
-        "network": "base-sepolia",
-        "chainId": 84532,
-        "messageReceiver": "0x758c17BfA85D1b26A81423B524397b8b2D271818",
-        "cctpDomain": 6
+        "network": "avalanche-fuji",
+        "chainId": 43113,
+        "messageReceiver": "0x365de300dda61c81a33bce3606a5d524ed964362",
+        "cctpDomain": 1
       },
       "status": "succeeded",
       "attempts": 1,
-      "newFxSpoke": "0xdabf610c279d900b40ca4df62f1e86cc2d0a4fd4"
+      "newFxSpoke": "0xf6d845da2051183b9519ca1806c39040ba5e71ba"
     },
     "11155420": {
       "network": "op-sepolia",
       "chainId": 11155420,
       "manifestPath": "/Users/criptopoeta/conductor/workspaces/fx-onchain/brasilia/deployments/op-sepolia.json",
       "rpc": "https://sepolia.optimism.io",
-      "oldFxSpoke": "0x8B7041d8A4bd773a537a01e1F61175da5395714c",
+      "oldFxSpoke": "0xef64621d41093144d9ed8ab8327ee381ecdb79e6",
       "oldHub": {
-        "network": "base-sepolia",
-        "chainId": 84532,
-        "messageReceiver": "0x758c17BfA85D1b26A81423B524397b8b2D271818",
-        "cctpDomain": 6
+        "network": "avalanche-fuji",
+        "chainId": 43113,
+        "messageReceiver": "0x365de300dda61c81a33bce3606a5d524ed964362",
+        "cctpDomain": 1
       },
       "status": "succeeded",
       "attempts": 1,
-      "newFxSpoke": "0xef64621d41093144d9ed8ab8327ee381ecdb79e6"
+      "newFxSpoke": "0x0b5d18bbe92f07ec0111ae6d2e102858268d6aca"
     }
   }
 }

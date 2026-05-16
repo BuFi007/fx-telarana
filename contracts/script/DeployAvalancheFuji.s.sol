@@ -125,7 +125,7 @@ contract DeployAvalancheFuji is Script {
         FxLiquidator liquidator = new FxLiquidator(morphoAddr, address(registry), address(oracle), deployer);
 
         // 10) FxHubMessageReceiver (Codex-v4 patched — caller auth gate + USDC consumption invariant).
-        FxHubMessageReceiver hubReceiver = new FxHubMessageReceiver(cctpMt, usdc, address(registry));
+        FxHubMessageReceiver hubReceiver = new FxHubMessageReceiver(cctpMt, usdc, address(registry), deployer);
 
         // 11) FxTimelock + atomic admin handoff (spec §10.2).
         FxTimelock timelock = _deployTimelockAndHandoff(deployer, oracle, registry, liquidator);
