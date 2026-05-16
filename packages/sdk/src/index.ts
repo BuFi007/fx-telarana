@@ -7,3 +7,4 @@ export * from "./ghost.js";
 export * from "./helpers/index.js";
 export * from "./rfq-pasillo.js";
 export * from "./spot-fx.js";
+export * from "./telarana-client.js";
