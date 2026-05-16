@@ -18,6 +18,10 @@ optimizer = true
 optimizer_runs = 1_000_000
 via_ir = true
 bytecode_hash = "none"
+# Raised from the foundry default 1e9 — the avalanche-basket matrix test
+# deploys 5 FxSwapHook instances + Morpho markets in a single tx, which
+# tips past the cap once DODO PMM math inlines into the hook bytecode.
+gas_limit = 9_223_372_036_854_775_807
 fs_permissions = [
   { access = "read-write", path = "./deployments" },
   { access = "read-write", path = "../deployments" },
@@ -34,6 +38,7 @@ remappings = [
   "@uniswap/v4-core/=lib/v4-core/",
   "@uniswap/v4-periphery/=lib/v4-periphery/",
   "cctp-v2/=lib/evm-cctp-contracts/src/v2/",
+  "dodo-pmm/=lib/dodo-pmm-08/",
 ]
 
 [profile.default.fuzz]

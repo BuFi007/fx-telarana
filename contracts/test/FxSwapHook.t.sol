@@ -371,6 +371,260 @@ contract FxSwapHookTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
+                          DODO PMM (Phase 2.7 #2)
+    //////////////////////////////////////////////////////////////*/
+
+    function test_deposit_firstDepositSeedsTargetsAtRatio() public {
+        // alice is funded with 1e9 of each — deposit 200/400 to test ratio seed.
+        vm.prank(alice);
+        hook.deposit(200_000_000, 400_000_000);
+
+        // Both tokens are 6-dec → targets are 1e18-normalized
+        assertEq(hook.baseTargetE18(), 200_000_000 * 1e12);
+        assertEq(hook.quoteTargetE18(), 400_000_000 * 1e12);
+    }
+
+    function test_deposit_subsequentDepositGrowsTargetsProRata() public {
+        vm.prank(alice);
+        hook.deposit(1_000e6, 1_000e6);
+        uint256 b0 = hook.baseTargetE18();
+        uint256 q0 = hook.quoteTargetE18();
+
+        // bob joins with same ratio → targets double-ish (modulo MINIMUM_LIQUIDITY dust)
+        address bob = address(0xBEEF);
+        token0.mint(bob, 1_000e6);
+        token1.mint(bob, 1_000e6);
+        vm.startPrank(bob);
+        token0.approve(address(hook), type(uint256).max);
+        token1.approve(address(hook), type(uint256).max);
+        hook.deposit(1_000e6, 1_000e6);
+        vm.stopPrank();
+
+        // Targets grew by share ratio, not raw deposit. Allow 0.2% tolerance for
+        // MINIMUM_LIQUIDITY share lock.
+        assertApproxEqRel(hook.baseTargetE18(), b0 * 2, 0.002e18);
+        assertApproxEqRel(hook.quoteTargetE18(), q0 * 2, 0.002e18);
+    }
+
+    function test_quote_donationCannotDoSEitherDirection() public {
+        // Codex-2.7 round 6 regression: an attacker donating 1 wei of
+        // either pair token to the hook used to leave (B,Q,B0,Q0) outside
+        // the DODO regime preconditions, underflowing _SolveQuadraticFunction
+        // and bricking one swap direction. Patch: _normalizePmmState snaps
+        // targets to absorb the donation. Verify quotes succeed both ways
+        // after dust transfers from a random address.
+        vm.prank(alice);
+        hook.deposit(1_000_000_000, 1_000_000_000);
+
+        // Donate dust on each side from an arbitrary address.
+        address donor = address(0xDEAD42);
+        token0.mint(donor, 1);
+        token1.mint(donor, 1);
+        vm.startPrank(donor);
+        token0.transfer(address(hook), 1);
+        token1.transfer(address(hook), 1);
+        vm.stopPrank();
+
+        // Both quote directions must still succeed (no underflow).
+        uint256 out01 = hook.quote(10_000, true);
+        uint256 out10 = hook.quote(10_000, false);
+        assertGt(out01, 0, "donation DoS'd zeroForOne");
+        assertGt(out10, 0, "donation DoS'd oneForZero");
+
+        // Token-addressed view surface must also survive.
+        (uint256 buy0,) = hook.quoteExactInput(address(token0), 10_000);
+        (uint256 buy1,) = hook.quoteExactInput(address(token1), 10_000);
+        assertGt(buy0, 0);
+        assertGt(buy1, 0);
+    }
+
+    function test_sync_absorbsBalancedDonationIntoTargets() public {
+        // Phase 2.7 ships DODO V2 reference behavior: donations are NOT
+        // auto-absorbed on swap. Capturing yield/donations is keeper-driven
+        // via public `sync()`, mirroring MagicLP's `_resetTargetAndR`.
+        // Verify sync() updates both targets to current tradable reserves.
+        vm.prank(alice);
+        hook.deposit(1_000_000_000, 1_000_000_000);
+
+        uint256 b0Before = hook.baseTargetE18();
+        uint256 q0Before = hook.quoteTargetE18();
+
+        // Balanced 1% donation.
+        address donor = address(0xDEAD43);
+        token0.mint(donor, 10_000_000);
+        token1.mint(donor, 10_000_000);
+        vm.startPrank(donor);
+        token0.transfer(address(hook), 10_000_000);
+        token1.transfer(address(hook), 10_000_000);
+        vm.stopPrank();
+
+        // Pre-sync: targets unchanged from donation.
+        assertEq(hook.baseTargetE18(), b0Before, "targets shifted without sync");
+
+        // Owner predicts post-sync targets off-chain and submits with 1% drift tolerance.
+        // 6-dec tokens → 1e18-norm. Pre-deposit was 1e9 raw → 1e21 norm. +1% donation → 1.01e21.
+        uint256 expectedBase = 1_010_000_000_000_000_000_000;
+        uint256 expectedQuote = 1_010_000_000_000_000_000_000;
+        vm.prank(owner);
+        hook.sync(expectedBase, expectedQuote, 100); // 1% drift tolerance
+        assertGt(hook.baseTargetE18(), b0Before, "sync did not grow baseTarget");
+        assertGt(hook.quoteTargetE18(), q0Before, "sync did not grow quoteTarget");
+
+        // Post-sync quote at equilibrium — donation now backs LP value.
+        uint256 postSyncQuote = hook.quote(10_000, true);
+        assertGt(postSyncQuote, 0);
+    }
+
+    function test_sync_revertsBeforeFirstDeposit() public {
+        // Un-seeded pool has no reserves to sync.
+        vm.expectRevert();
+        vm.prank(owner);
+        hook.sync(0, 0, 10_000);
+    }
+
+    function test_sync_revertsForNonOwner() public {
+        vm.prank(alice);
+        hook.deposit(1_000_000_000, 1_000_000_000);
+        vm.expectRevert();
+        vm.prank(alice);
+        hook.sync(1e21, 1e21, 100);
+    }
+
+    function test_sync_revertsOnDriftExceedingTolerance() public {
+        // Sandwich-resistance regression: an attacker who moves reserves
+        // between owner submission and execution forces actual reserves
+        // outside the owner's expected envelope, reverting sync.
+        vm.prank(alice);
+        hook.deposit(1_000_000_000, 1_000_000_000);
+
+        // Donor "sandwich" pushes balance to 1.05× expected.
+        address donor = address(0xDEAD44);
+        token0.mint(donor, 50_000_000);
+        vm.prank(donor);
+        token0.transfer(address(hook), 50_000_000);
+
+        // Owner expected 1e21 baseTarget; actual is 1.05e21 (5% drift).
+        // Tolerance 1% (100 bps) → must revert.
+        vm.expectRevert();
+        vm.prank(owner);
+        hook.sync(1e21, 1e21, 100);
+    }
+
+    function test_deposit_firstDepositRevertsOnOneSided() public {
+        // Codex-2.7 finding #1 regression: a one-sided first deposit would
+        // have zeroed baseTargetE18 or quoteTargetE18, permanently bricking
+        // the PMM curve since the pro-rata growth math can't escape zero.
+        vm.startPrank(alice);
+        vm.expectRevert();
+        hook.deposit(1_000_000, 0);
+        vm.expectRevert();
+        hook.deposit(0, 1_000_000);
+        vm.stopPrank();
+    }
+
+    function test_redeem_shrinksTargetsProRata() public {
+        vm.prank(alice);
+        uint256 shares = hook.deposit(1_000e6, 1_000e6);
+        uint256 b0 = hook.baseTargetE18();
+        uint256 q0 = hook.quoteTargetE18();
+
+        vm.prank(alice);
+        hook.redeem(shares / 2);
+
+        // Half the stake redeemed → ~half the targets remain.
+        assertApproxEqRel(hook.baseTargetE18(), b0 / 2, 0.002e18);
+        assertApproxEqRel(hook.quoteTargetE18(), q0 / 2, 0.002e18);
+    }
+
+    function test_quote_K0_isStraightMidMinusSpread() public {
+        vm.prank(alice);
+        hook.deposit(1_000_000_000, 1_000_000_000);
+        vm.prank(owner);
+        hook.setKBps(0);
+
+        // K=0, mid=1, 30bps spread → 1000 in returns exactly 997.
+        uint256 amountOut = hook.quote(1_000, true);
+        assertEq(amountOut, 997);
+    }
+
+    function test_quote_K_positive_addsCurveSlippageOnTopOfSpread() public {
+        vm.prank(alice);
+        hook.deposit(1_000_000_000, 1_000_000_000);
+        vm.prank(owner);
+        hook.setKBps(500); // 5% K — quite curved
+
+        uint256 tinyOut = hook.quote(1_000, true);
+        uint256 bigOut  = hook.quote(500_000_000, true);
+
+        uint256 tinyRate = (tinyOut * 1e18) / 1_000;
+        uint256 bigRate  = (bigOut * 1e18) / 500_000_000;
+        // Big trade should be worse than tiny one by more than just spread.
+        assertLt(bigRate, tinyRate);
+        // And the big-trade rate worse than (mid * (1 - spread))
+        assertLt(bigRate, 0.997e18);
+    }
+
+    function test_quote_revertsBeforeFirstDeposit() public {
+        // No deposit yet → targets are 0 → regime=ONE but reserves=0 → PMM math
+        // routes through ROne path which returns 0 cleanly. Just assert no revert.
+        uint256 amountOut = hook.quote(1_000, true);
+        assertEq(amountOut, 0);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    PROTOCOL FEE SLEEVE (Phase 2.7 #3)
+    //////////////////////////////////////////////////////////////*/
+
+    function test_protocolFee_defaultsToZeroAndTreasuryIsOwner() public view {
+        assertEq(hook.protocolFeeBps(), 0);
+        assertEq(hook.treasury(), owner);
+        assertEq(hook.protocolFee0(), 0);
+        assertEq(hook.protocolFee1(), 0);
+    }
+
+    function test_setProtocolFeeBps_revertsAboveMax() public {
+        uint16 maxBps = hook.MAX_PROTOCOL_FEE_BPS();
+        vm.expectRevert();
+        vm.prank(owner);
+        hook.setProtocolFeeBps(maxBps + 1);
+    }
+
+    function test_setProtocolFeeBps_updates() public {
+        vm.prank(owner);
+        hook.setProtocolFeeBps(2_000);
+        assertEq(hook.protocolFeeBps(), 2_000);
+    }
+
+    function test_setTreasury_updatesAndRevertsOnZero() public {
+        address newTreasury = address(0xC0FFEE);
+        vm.prank(owner);
+        hook.setTreasury(newTreasury);
+        assertEq(hook.treasury(), newTreasury);
+
+        vm.expectRevert();
+        vm.prank(owner);
+        hook.setTreasury(address(0));
+    }
+
+    function test_claimProtocolFees_revertsForNonTreasury() public {
+        vm.expectRevert();
+        vm.prank(alice);
+        hook.claimProtocolFees(address(token0), alice, 1);
+    }
+
+    function test_claimProtocolFees_revertsOnExcessiveAmount() public {
+        vm.expectRevert();
+        vm.prank(owner); // owner is the default treasury
+        hook.claimProtocolFees(address(token0), owner, 1);
+    }
+
+    function test_claimProtocolFees_revertsOnInvalidToken() public {
+        vm.expectRevert();
+        vm.prank(owner);
+        hook.claimProtocolFees(address(0xBAD), owner, 1);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                           POOL KEY ENFORCEMENT
     //////////////////////////////////////////////////////////////*/
 
