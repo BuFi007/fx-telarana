@@ -6,6 +6,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IFxOracle} from "../interfaces/IFxOracle.sol";
 import {ITelaranaGatewayHubHook} from "../interfaces/ITelaranaGatewayHubHook.sol";
@@ -42,8 +43,27 @@ import {ITelaranaGatewayHubHook} from "../interfaces/ITelaranaGatewayHubHook.sol
 ///   * `context.recipient` is honest (BUFX submitter set it from the trader
 ///     request; submitter is authorized on BUFX side).
 ///   * `FxOracle` mid is the right anchor (Pyth + optional RedStone gate).
+///
+/// ## Pricing formula reference
+///
+/// The pricing math is the standard oracle-anchored synth-exchange shape:
+///
+///   `amountOut = amountIn * mid * (1 - spread)`
+///
+/// implemented as two `mulDiv` calls against OZ
+/// `Math.mulDiv` (overflow-safe 512-bit intermediate). Same arithmetic shape
+/// used by:
+///   * Synthetix v2 `Exchanger.exchange` (synth source amount * exchangeRate
+///     * (UNIT - exchangeFee) / UNIT — see SIP-198 / Exchanger.sol).
+///   * GMX v1 swap path with `priceImpactDelta = 0`
+///     (gmx-contracts/Vault.sol::swap — without price impact, swaps reduce
+///     to `usdOut = usdIn * (1 - swapFeeBps/BASIS_POINTS_DIVISOR)`).
+///
+/// No bonding curve, no integrals, no in-house derivations. Per the
+/// project's "no novel math in production" rule.
 contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
+    using Math for uint256;
 
     /// @dev Operations role: manage liquidity reserves, pause/unpause.
     bytes32 public constant OPERATIONS_ROLE = keccak256("OPERATIONS_ROLE");
@@ -184,10 +204,10 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
         uint256 spreadBps = tokenSpreadOverrideBps[context.tokenOut];
         if (spreadBps == 0) spreadBps = defaultSpreadBps;
 
-        // Mid-anchored quote, less spread.
-        // Multiplication order: mid first, then spread, to avoid early truncation.
-        uint256 gross = context.amount * midE18 / 1e18;
-        amountOut = gross * (10_000 - spreadBps) / 10_000;
+        // Two-step `mulDiv` (OZ Math). See contract NatSpec "Pricing formula
+        // reference" — Synthetix v2 Exchanger / GMX v1 swap-no-impact shape.
+        uint256 gross = context.amount.mulDiv(midE18, 1e18);
+        amountOut = gross.mulDiv(10_000 - spreadBps, 10_000);
 
         if (amountOut < context.minAmountOut) {
             revert SlippageExceeded(amountOut, context.minAmountOut);
