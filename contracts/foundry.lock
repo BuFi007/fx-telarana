@@ -26,10 +26,16 @@
       "rev": "11d6bcfc2e56885535a9a8e3c8417847cb20be14"
     }
   },
+  "lib/redstone-oracles-monorepo": {
+    "rev": "eac1bc1e53c4690f9fe9cc93f2e5be596d570dc3"
+  },
   "lib/v4-core": {
     "tag": {
       "name": "v4.0.0",
       "rev": "e50237c43811bd9b526eff40f26772152a42daba"
     }
+  },
+  "lib/v4-periphery": {
+    "rev": "9dafaaecc1e2e1e824eda9d941085f96517d827b"
   }
 }

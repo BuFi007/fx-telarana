@@ -191,6 +191,11 @@ async function buildAndSignIntent(input: {
   /// through FxGatewayHook (because hook is hub-only and Stage 6 plumbing
   /// isn't deployed yet). Skip for production paths.
   bypassHook?: boolean;
+  /// Override the destination contract for the BurnIntent. Used to target
+  /// `TelaranaGatewayHubHook` (spot-FX path) instead of `FxGatewayHook`
+  /// (mint-to-hub path). Sets both destinationCaller and destinationRecipient.
+  /// Takes precedence over `bypassHook`.
+  destinationOverride?: Address;
 }): Promise<SignedIntentBundle> {
   const route = TELARANA_GATEWAY_HUB_ROUTES.find((r) => r.routeId === input.routeId);
   if (!route) throw new Error(`Unknown route: ${input.routeId}`);
@@ -201,13 +206,26 @@ async function buildAndSignIntent(input: {
   const account = privateKeyToAccount(input.signerPk);
   const salt = ("0x" + randomBytes(32).toString("hex")) as Hex;
 
+  let destinationRecipient: Address;
+  let destinationCaller: Address;
+  if (input.destinationOverride) {
+    destinationRecipient = input.destinationOverride;
+    destinationCaller = input.destinationOverride;
+  } else if (input.bypassHook) {
+    destinationRecipient = account.address;
+    destinationCaller = "0x0000000000000000000000000000000000000000" as Address;
+  } else {
+    destinationRecipient = destCtx.hook;
+    destinationCaller = destCtx.hook;
+  }
+
   const intent = buildGatewayBurnIntent({
     route,
     amount: input.amountAtomic,
     sourceDepositor: account.address,
     sourceSigner: account.address,
-    destinationRecipient: input.bypassHook ? account.address : destCtx.hook,
-    destinationCaller: input.bypassHook ? "0x0000000000000000000000000000000000000000" : destCtx.hook,
+    destinationRecipient,
+    destinationCaller,
     maxBlockHeight: maxUint256,
     salt,
     hookData: "0x",
@@ -312,17 +330,28 @@ async function cmdBalances(account?: string) {
   }
 }
 
-async function cmdSignAndAttest(routeId: string, amountAtomicStr: string, bypass: boolean) {
+async function cmdSignAndAttest(
+  routeId: string,
+  amountAtomicStr: string,
+  bypass: boolean,
+  destinationOverride?: Address,
+) {
   const pk = (process.env.DEPLOYER_PRIVATE_KEY ?? "") as Hex;
   if (!pk) throw new Error("DEPLOYER_PRIVATE_KEY not set");
   const amountAtomic = BigInt(amountAtomicStr);
 
-  console.log(`Building burn intent for route ${routeId}, amount ${amountAtomicStr} (atomic)${bypass ? " [BYPASS hook]" : ""}`);
+  const label = destinationOverride
+    ? ` [target=${destinationOverride}]`
+    : bypass
+      ? " [BYPASS hook]"
+      : "";
+  console.log(`Building burn intent for route ${routeId}, amount ${amountAtomicStr} (atomic)${label}`);
   const bundle = await buildAndSignIntent({
     routeId: routeId as never,
     amountAtomic,
     signerPk: pk,
     bypassHook: bypass,
+    destinationOverride,
   });
   console.log(`Signed by ${privateKeyToAccount(pk).address}`);
   console.log(`Signature: ${bundle.signature.slice(0, 20)}…${bundle.signature.slice(-10)}`);
@@ -534,11 +563,22 @@ async function main() {
     case "sign-and-attest": {
       const [routeId, amountAtomic] = args;
       const bypass = args.includes("--bypass");
+      const destArg = args.find((a) => a.startsWith("--destination="));
+      const destinationOverride = destArg
+        ? (destArg.slice("--destination=".length) as Address)
+        : undefined;
       if (!routeId || !amountAtomic) {
-        console.error("usage: sign-and-attest <gateway-fuji-to-arc-usdc|gateway-arc-to-fuji-usdc> <amount-atomic> [--bypass]");
+        console.error(
+          "usage: sign-and-attest <gateway-fuji-to-arc-usdc|gateway-arc-to-fuji-usdc>" +
+            " <amount-atomic> [--bypass] [--destination=0x<address>]",
+        );
         process.exit(1);
       }
-      return cmdSignAndAttest(routeId, amountAtomic, bypass);
+      if (destinationOverride && !/^0x[0-9a-fA-F]{40}$/.test(destinationOverride)) {
+        console.error("--destination must be a 20-byte 0x-prefixed address");
+        process.exit(1);
+      }
+      return cmdSignAndAttest(routeId, amountAtomic, bypass, destinationOverride);
     }
     case "gateway-mint": {
       const [chain, attestation, signature] = args;
