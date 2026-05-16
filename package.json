@@ -10,6 +10,7 @@
     "sdk:test": "cd packages/sdk && bun test",
     "sdk:abis:sync": "cd packages/sdk && bun run abis:sync",
     "contracts:test": "cd contracts && forge build --force test/MorphoArtifacts.t.sol && forge test --no-match-contract MainnetForkTest",
+    "contracts:size:guard": "cd contracts && forge build && for f in out/FxSwapHook.sol/FxSwapHook.*.json out/FxHubMessageReceiver.sol/FxHubMessageReceiver.*.json out/FxMarketRegistry.sol/FxMarketRegistry.*.json out/FxLiquidator.sol/FxLiquidator.*.json out/FxGatewayHook.sol/FxGatewayHook.*.json out/FxOracle.sol/FxOracle.*.json out/FxRouter.sol/FxRouter.*.json; do [ -f \"$f\" ] || continue; size=$(jq -r '.deployedBytecode.object | length / 2' \"$f\"); name=$(basename \"$f\"); if [ \"$size\" -gt 24576 ]; then echo \"FAIL $name = $size > 24576 (EIP-170)\"; exit 1; else echo \"ok   $name = $size\"; fi; done",
     "contracts:test:fork": "cd contracts && forge build --force test/MorphoArtifacts.t.sol && ETH_RPC_URL=https://ethereum-rpc.publicnode.com forge test",
     "contracts:smoke:basket": "cd contracts && forge build --force test/MorphoArtifacts.t.sol && forge test --match-contract AvalancheBasketSmokeTest",
     "sdk:circle:register": "cd packages/sdk && bun scripts/register-contracts.ts",

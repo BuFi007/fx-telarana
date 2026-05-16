@@ -15,7 +15,11 @@ auto_detect_solc = true
 # imports — which is what we use.
 evm_version = "cancun"
 optimizer = true
-optimizer_runs = 1_000_000
+# Lowered from 1_000_000 to fit FxSwapHook under EIP-170 (24,576 bytes
+# deployed bytecode). High `runs` optimizes for runtime gas at the
+# expense of code size; 200 biases toward deploy cost. With via_ir,
+# this lops several KB off FxSwapHook without changing any logic.
+optimizer_runs = 200
 via_ir = true
 bytecode_hash = "none"
 # Raised from the foundry default 1e9 — the avalanche-basket matrix test
