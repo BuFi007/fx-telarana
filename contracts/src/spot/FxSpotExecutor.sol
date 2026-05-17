@@ -208,8 +208,7 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
 
         // Read the canonical receipt from TGH. All swap parameters come from
         // here — the keeper supplies only `requestId`.
-        ITelaranaGatewayHubHook.GatewayReceipt memory receipt =
-            TELARANA_HUB_HOOK.gatewayReceipt(requestId);
+        ITelaranaGatewayHubHook.GatewayReceipt memory receipt = TELARANA_HUB_HOOK.gatewayReceipt(requestId);
 
         if (receipt.amount == 0) revert EmptyReceipt(requestId);
         if (receipt.state != ITelaranaGatewayHubHook.GatewayRequestState.MINTED) {
@@ -228,16 +227,16 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
         // (USDC and tokenOut both N decimals). setTokenEnabled enforces this.
         uint256 midE18;
         if (requireVerifiedOracle) {
-            (midE18, ) = ORACLE.getMidVerified(address(USDC), receipt.tokenOut);
+            (midE18,) = ORACLE.getMidVerified(address(USDC), receipt.tokenOut);
         } else {
-            (midE18, ) = ORACLE.getMid(address(USDC), receipt.tokenOut);
+            (midE18,) = ORACLE.getMid(address(USDC), receipt.tokenOut);
         }
 
         uint256 spreadBps = tokenSpreadOverrideBps[receipt.tokenOut];
         if (spreadBps == 0) spreadBps = defaultSpreadBps;
 
         // Two-step `mulDiv` (OZ Math). See contract NatSpec "Pricing formula
-        // reference" — Synthetix v2 Exchanger / GMX v1 swap-no-impact shape.
+        // reference" for vendored GMX/Synthetix reference paths.
         uint256 gross = receipt.amount.mulDiv(midE18, 1e18);
         amountOut = gross.mulDiv(10_000 - spreadBps, 10_000);
 
