@@ -1,45 +1,65 @@
 {
   "network": "arc-testnet",
   "chainId": 5042002,
-  "messageReceiver": "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
+  "messageReceiver": "0xED8D2F831A8b7EbF7eb86a52323D23e2277F26b6",
   "cctpDomain": 26,
   "rpcUrl": "https://rpc.testnet.arc.network",
   "hubStack": {
-    "MorphoBlue":            "0x3c9b95C6E7B23f094f066733E7797C8680760830",
-    "IrmMock":               "0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1",
-    "FxOracle":              "0x77b3A3B420dB98B01085b8C46a753Ed9879e2865",
-    "MorphoOracleAdapterM1": "0xED58C176E9a37Cda2854AC0Ade409cfb3687cA7d",
-    "MorphoOracleAdapterM2": "0x955AAEE698aaA03d5bc32F16434cef78b8Ee1fc7",
-    "FxMarketRegistry":      "0x813232259c9b922e7571F15220617C80581f1464",
-    "FxReceiptEURC":         "0xF829f57Db8530fa93FCD6e13b00193cbe8cE1493",
-    "FxReceiptUSDC":         "0xdd22365Bba7330BE537c9BC26da9b1b4Db9aC431",
-    "FxLiquidator":          "0xa50f7D4D4a1A0D3CF418515973545b80E037B379",
-    "FxHubMessageReceiver":  "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
-    "FxGatewayHook":         "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1",
-    "TelaranaGatewayHubHook":"0x74e894aff25c89D707873347CD2554d30e0541fa",
+    "MorphoBlue": "0x3c9b95C6E7B23f094f066733E7797C8680760830",
+    "IrmMock": "0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1",
+    "FxOracle": "0x217860736E626781f9AaA91731b307619f90f65B",
+    "MorphoOracleAdapterM1": "0xabb30831B99592A1667fbe5483F7c50fc4722DC8",
+    "MorphoOracleAdapterM2": "0xc55fe5977972D829eea394A6019f3f4145D207d3",
+    "FxMarketRegistry": "0x1126aA03E678f2bc87A936AA63Df972c7c338b8b",
+    "FxReceiptEURC": "0x7926D3b1D1360632e81F811FE9a39866Fe16074F",
+    "FxReceiptUSDC": "0x9559A55Ea94aF58002a857f73B15c8EF4E850Fd8",
+    "FxLiquidator": "0x4dB43e41420ACC39ee88dBc1cB868567968C0F12",
+    "FxHubMessageReceiver": "0xED8D2F831A8b7EbF7eb86a52323D23e2277F26b6",
+    "FxGatewayHook": "0x6a134214303136Ea8aa1cfA054Baf3ca74eCdad9",
+    "TelaranaGatewayHubHook": "0x74e894aff25c89D707873347CD2554d30e0541fa",
     "DeprecatedV1FxHubMessageReceiver": "0x07db64fb19C6c4a1eBB1B7bfdaFd4676b43Cf276",
-    "DeprecatedV1FxGatewayHook":        "0x004cfa0305c365b1d9b2365f85acf216c96b0e13"
+    "DeprecatedV1FxGatewayHook": "0x004cfa0305c365b1d9b2365f85acf216c96b0e13",
+    "FxTimelock": "0x4E761B78c3657d54CcE3Aa8c6AE7eAF38f73C0C1"
   },
   "marketIds": {
-    "M1_EURC_USDC": "0xf6fac2b9b801a7ae3deeccfa95a7f1e768b4873a22f0def0d93f7f0172cc2da2",
-    "M2_USDC_EURC": "0x9e187a5f252de56b9ffe35f72cdc4137568f9d51698560751cdaff3df60cb5d3"
+    "M1_EURC_USDC": "0x8c98b07503c850a4e3c8b0f214c6c36efae7b029e2a7a00489ff16716921d980",
+    "M2_USDC_EURC": "0x76f3a09ff7ce186a9184838eb6f9c13c8e89b1d87b2b2f438cc2844502c07f49"
   },
   "external": {
-    "USDC":                     "0x3600000000000000000000000000000000000000",
-    "EURC":                     "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
-    "Pyth":                     "0x2880aB155794e7179c9eE2e38200202908C17B43",
+    "USDC": "0x3600000000000000000000000000000000000000",
+    "EURC": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+    "Pyth": "0x2880aB155794e7179c9eE2e38200202908C17B43",
     "CctpMessageTransmitterV2": "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
-    "CctpTokenMessengerV2":     "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
-    "GatewayWallet":            "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
-    "GatewayMinter":            "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
-    "GatewayLocalDomain":       26
+    "CctpTokenMessengerV2": "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    "GatewayWallet": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+    "GatewayMinter": "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
+    "GatewayLocalDomain": 26
   },
   "gateway": {
     "authority": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
     "authorityType": "EOA",
     "rotationPlan": "Rotate to FxHubMessageReceiver via EIP-1271 once Circle ships 1271 support (~mid-July 2026)."
   },
-  "deployedAt": "2026-05-15",
+  "deployedAt": "2026-05-17",
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
-  "notes": "Arc Testnet is the SECONDARY HUB — trading-execution venue. Receives USDC liquidity from Fuji via FxGatewayHook (Circle Gateway, hub-callable only, never user-initiated). MorphoBlue + IrmMock self-deployed; EURC is real Circle deployment; Pyth is a proxy. Gateway addresses are deterministic CREATE2 — same on every supported testnet. Tenderly doesn't index chain 5042002 yet — on-chain verification only until they add support."
+  "notes": "Arc Testnet is the trading-execution hub. The hub stack was refreshed on 2026-05-17 with the current AccessControl/Pausable/listPools registry surface and a receiver-bound FxGatewayHook. Arc-routed spokes should use the current FxHubMessageReceiver.",
+  "contracts": {
+    "FxSpokeToArc": "0xb7bda9e3a09c91be6e616b58e1d855850ff46aed",
+    "FxHubMessageReceiver": "0xED8D2F831A8b7EbF7eb86a52323D23e2277F26b6",
+    "FxGatewayHook": "0x6a134214303136Ea8aa1cfA054Baf3ca74eCdad9",
+    "FxMarketRegistry": "0x1126aA03E678f2bc87A936AA63Df972c7c338b8b",
+    "FxOracle": "0x217860736E626781f9AaA91731b307619f90f65B",
+    "MorphoOracleAdapterM1": "0xabb30831B99592A1667fbe5483F7c50fc4722DC8",
+    "MorphoOracleAdapterM2": "0xc55fe5977972D829eea394A6019f3f4145D207d3",
+    "FxReceiptEURC": "0x7926D3b1D1360632e81F811FE9a39866Fe16074F",
+    "FxReceiptUSDC": "0x9559A55Ea94aF58002a857f73B15c8EF4E850Fd8",
+    "FxLiquidator": "0x4dB43e41420ACC39ee88dBc1cB868567968C0F12",
+    "FxTimelock": "0x4E761B78c3657d54CcE3Aa8c6AE7eAF38f73C0C1"
+  },
+  "deploymentTx": {
+    "FxOracle": "0x9856e62b1d0573150a25ffce76082cb76463a0fde94a2b11f7cc4e181052a488",
+    "FxMarketRegistry": "0x54cc21b5fb9465c7f3ec01d14d75f0961ee6c86f7726c50b8829e615af877965",
+    "FxHubMessageReceiver": "0xf86b60b28822181ef1812f9d0c694e140c2f3917981f4a14106e983912424c8f",
+    "FxGatewayHook": "0xb39a0fa3586fae408b8cbcd7eab308f82fd85b575c0242869dbfa273229ae60c"
+  }
 }

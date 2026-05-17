@@ -4,8 +4,8 @@
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
   "deployedAt": "2026-05-14",
   "contracts": {
-    "FxSpoke": "0x0b5d18bbe92f07ec0111ae6d2e102858268d6aca",
-    "FxSpokeToArc": "0x579fccdebb1f7e983c4ead27aa300d3b5397e28c"
+    "FxSpoke": "0x2552e1027ff27a285635a9593825e3da8f25808b",
+    "FxSpokeToArc": "0x50c4ba39caa7f56152d0df4914e1f6b907194992"
   },
   "external": {
     "CctpTokenMessengerV2": "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
@@ -16,26 +16,26 @@
   "hub": {
     "network": "avalanche-fuji",
     "chainId": 43113,
-    "messageReceiver": "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
+    "messageReceiver": "0xbBc9AE9dbd3F6D3dB672F0CA2419d0f4C8513062",
     "cctpDomain": 1
   },
   "routes": {
     "fuji": {
-      "fxSpoke": "0x0b5d18bbe92f07ec0111ae6d2e102858268d6aca",
+      "fxSpoke": "0x2552e1027ff27a285635a9593825e3da8f25808b",
       "hub": {
         "network": "avalanche-fuji",
         "chainId": 43113,
-        "messageReceiver": "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
+        "messageReceiver": "0xbBc9AE9dbd3F6D3dB672F0CA2419d0f4C8513062",
         "cctpDomain": 1
       },
       "purpose": "Borrow / lend / supply liquidity on the Fuji-side Morpho markets. Money-market substrate."
     },
     "arc": {
-      "fxSpoke": "0x579fccdebb1f7e983c4ead27aa300d3b5397e28c",
+      "fxSpoke": "0x50c4ba39caa7f56152d0df4914e1f6b907194992",
       "hub": {
         "network": "arc-testnet",
         "chainId": 5042002,
-        "messageReceiver": "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
+        "messageReceiver": "0xED8D2F831A8b7EbF7eb86a52323D23e2277F26b6",
         "cctpDomain": 26
       },
       "purpose": "High-frequency FX trading + perp execution on Arc. Also runs Morpho markets (borrow/lend works here too)."

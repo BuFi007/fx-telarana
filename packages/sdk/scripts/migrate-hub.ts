@@ -57,7 +57,9 @@ import { execSync } from "node:child_process";
 import { createPublicClient, http, type Address, type Hex } from "viem";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
-const STATE_PATH = resolve(REPO_ROOT, "deployments/.hub-migration-state.json");
+const STATE_PATH = process.env.HUB_MIGRATION_STATE_PATH
+  ? resolve(REPO_ROOT, process.env.HUB_MIGRATION_STATE_PATH)
+  : resolve(REPO_ROOT, "deployments/.hub-migration-state.json");
 
 type HubConfig = {
   network: string;

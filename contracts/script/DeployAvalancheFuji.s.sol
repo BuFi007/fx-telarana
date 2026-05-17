@@ -14,6 +14,7 @@ import {FxMarketRegistry} from "../src/hub/FxMarketRegistry.sol";
 import {FxReceipt} from "../src/hub/FxReceipt.sol";
 import {FxLiquidator} from "../src/hub/FxLiquidator.sol";
 import {FxHubMessageReceiver} from "../src/hub/FxHubMessageReceiver.sol";
+import {FxGatewayHook} from "../src/hub/FxGatewayHook.sol";
 import {MorphoOracleAdapter} from "../src/hub/MorphoOracleAdapter.sol";
 import {FxTimelock} from "../src/governance/FxTimelock.sol";
 import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
@@ -42,12 +43,18 @@ import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
 ///   FUJI_USDC               default 0x5425890298aed601595a70AB815c96711a31Bc65
 ///   FUJI_EURC               default 0x5E44db7996c682E92a960b65AC713a54AD815c6B
 ///   FUJI_CCTP_MT            default 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275
+///   FUJI_GATEWAY_WALLET     default 0x0077777d7EBA4688BDeF3E311b846F25870A19B9
+///   FUJI_GATEWAY_MINTER     default 0x0022222ABE238Cc2C7Bb1f21003F0a260052475B
+///   FUJI_GATEWAY_DOMAIN     default 1
+///   FUJI_GATEWAY_AUTHORITY  default deployer EOA, pending EIP-1271 support
 ///   FX_HUB_LLTV             default 860000000000000000 (0.86e18)
 contract DeployAvalancheFuji is Script {
     address constant DEFAULT_PYTH = 0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509;
     address constant DEFAULT_USDC = 0x5425890298aed601595a70AB815c96711a31Bc65;
     address constant DEFAULT_EURC = 0x5E44db7996c682E92a960b65AC713a54AD815c6B;
     address constant DEFAULT_CCTP_MT = 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275;
+    address constant DEFAULT_GATEWAY_WALLET = 0x0077777d7EBA4688BDeF3E311b846F25870A19B9;
+    address constant DEFAULT_GATEWAY_MINTER = 0x0022222ABE238Cc2C7Bb1f21003F0a260052475B;
 
     bytes32 constant PYTH_USDC_USD = 0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a;
     bytes32 constant PYTH_EURC_USD = 0x76fa85158bf14ede77087fe3ae472f66213f6ea2f5b411cb2de472794990fa5c;
@@ -71,6 +78,10 @@ contract DeployAvalancheFuji is Script {
         address usdc = vm.envOr("FUJI_USDC", DEFAULT_USDC);
         address eurc = vm.envOr("FUJI_EURC", DEFAULT_EURC);
         address cctpMt = vm.envOr("FUJI_CCTP_MT", DEFAULT_CCTP_MT);
+        address gatewayWallet = vm.envOr("FUJI_GATEWAY_WALLET", DEFAULT_GATEWAY_WALLET);
+        address gatewayMinter = vm.envOr("FUJI_GATEWAY_MINTER", DEFAULT_GATEWAY_MINTER);
+        uint32 gatewayDomain = uint32(vm.envOr("FUJI_GATEWAY_DOMAIN", uint256(1)));
+        address gatewayAuthority = vm.envOr("FUJI_GATEWAY_AUTHORITY", deployer);
         uint256 lltv = vm.envOr("FX_HUB_LLTV", uint256(860000000000000000));
 
         console2.log("deployer", deployer);
@@ -80,6 +91,10 @@ contract DeployAvalancheFuji is Script {
         console2.log("usdc    ", usdc);
         console2.log("eurc    ", eurc);
         console2.log("cctp mt ", cctpMt);
+        console2.log("gw wal  ", gatewayWallet);
+        console2.log("gw min  ", gatewayMinter);
+        console2.log("gw dom  ", uint256(gatewayDomain));
+        console2.log("gw auth ", gatewayAuthority);
 
         vm.startBroadcast(pk);
 
@@ -127,12 +142,22 @@ contract DeployAvalancheFuji is Script {
         // 10) FxHubMessageReceiver (Codex-v4 patched — caller auth gate + USDC consumption invariant).
         FxHubMessageReceiver hubReceiver = new FxHubMessageReceiver(cctpMt, usdc, address(registry), deployer);
 
-        // 11) FxTimelock + atomic admin handoff (spec §10.2).
+        // 11) Gateway hook. The hook's HUB is immutable, so a receiver
+        // redeploy always requires a paired hook redeploy and receiver wiring.
+        FxGatewayHook gatewayHook = new FxGatewayHook(
+            usdc, gatewayWallet, gatewayMinter, address(hubReceiver), gatewayDomain, gatewayAuthority
+        );
+        hubReceiver.setGatewayHook(address(gatewayHook));
+
+        // 12) FxTimelock + atomic admin handoff (spec §10.2).
         FxTimelock timelock = _deployTimelockAndHandoff(deployer, oracle, registry, liquidator);
 
         vm.stopBroadcast();
 
         _assertHandoff(address(timelock), deployer, oracle, registry, liquidator);
+        require(hubReceiver.gatewayHook() == address(gatewayHook), "deploy: receiver gateway hook mismatch");
+        require(gatewayHook.HUB() == address(hubReceiver), "deploy: gateway hook hub mismatch");
+        require(gatewayHook.authority() == gatewayAuthority, "deploy: gateway hook authority mismatch");
 
         console2.log("============================================");
         console2.log("fx-Telarana Fuji HUB deployment");
@@ -147,6 +172,7 @@ contract DeployAvalancheFuji is Script {
         console2.log("FxReceipt fxUSDC      ", address(fxUSDC));
         console2.log("FxLiquidator          ", address(liquidator));
         console2.log("FxHubMessageReceiver  ", address(hubReceiver));
+        console2.log("FxGatewayHook         ", address(gatewayHook));
         console2.log("FxTimelock            ", address(timelock));
         console2.log("EURC token            ", eurc);
         console2.log("CCTP MessageTransmitter", cctpMt);

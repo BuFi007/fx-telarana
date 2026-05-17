@@ -42,25 +42,25 @@ import {
 } from "./gateway.js";
 
 // ── HUB CANONICAL ADDRESSES ────────────────────────────────────────────────
-// Stage 6 (post-relay surface). Kept in this file so the client doesn't
-// have to read deployment JSON at runtime — these are the deployed truths.
+// Current hub addresses. Kept in this file so the client doesn't have to read
+// deployment JSON at runtime — these are the deployed truths.
 
 const FUJI_HUB: HubAddresses = {
   name: "fuji",
   chainId: ChainId.AvalancheFuji,
   cctpDomain: 1,
   gatewayDomain: 1,
-  receiver: "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
-  hook: "0x7dA191bfB85D9F14069228cf618519BFb41f371E",
-  marketRegistry: "0x7ba745b979e027992ECFa51207666e3F5B46cF0a",
-  oracle: "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b",
-  liquidator: "0x2900599ff0e6dd057493d62fac856e5a8f93c6eb",
-  fxReceiptUSDC: "0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e",
-  fxReceiptEURC: "0xefd7cf5ad5a2db9a3c23e2807f2279de92c730d2",
+  receiver: "0xbBc9AE9dbd3F6D3dB672F0CA2419d0f4C8513062",
+  hook: "0x1527f0230e07B202812A0F0E437995323A1a98cB",
+  marketRegistry: "0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9",
+  oracle: "0x4178F9D64F64eD05C25B0D6284f64522436A2a1F",
+  liquidator: "0x113A539625D208b5EcC59f300Be14b9b3508E559",
+  fxReceiptUSDC: "0x629144FDC1d0A6f9F2B12d9747557Cc508728739",
+  fxReceiptEURC: "0x971b6ED14521f354eD13d64506Bf47D84E70F4fc",
   morphoBlue: "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
   marketIds: {
-    M1_EURC_USDC: "0x7d99088a9fe61331c49a92eb16fa3794b0bc2862b211f5a70f31a64cef25029e",
-    M2_USDC_EURC: "0x1700104cf29eceb113e01a1bcdc913e5e10d3d37314cee235752aa88bf153197",
+    M1_EURC_USDC: "0x164ab95c126ae7f5227bc5026e66642ea05b41f3ab50d086704bc7f1dd6470a1",
+    M2_USDC_EURC: "0x77bae5f5fb07741f0873c163edfa5573e7136cb690bb1deff35aa3e664a37a75",
   },
 };
 
@@ -69,17 +69,17 @@ const ARC_HUB: HubAddresses = {
   chainId: ChainId.ArcTestnet,
   cctpDomain: 26,
   gatewayDomain: 26,
-  receiver: "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
-  hook: "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1",
-  marketRegistry: "0x813232259c9b922e7571F15220617C80581f1464",
-  oracle: "0x77b3A3B420dB98B01085b8C46a753Ed9879e2865",
-  liquidator: "0xa50f7D4D4a1A0D3CF418515973545b80E037B379",
-  fxReceiptUSDC: "0xdd22365Bba7330BE537c9BC26da9b1b4Db9aC431",
-  fxReceiptEURC: "0xF829f57Db8530fa93FCD6e13b00193cbe8cE1493",
+  receiver: "0xED8D2F831A8b7EbF7eb86a52323D23e2277F26b6",
+  hook: "0x6a134214303136Ea8aa1cfA054Baf3ca74eCdad9",
+  marketRegistry: "0x1126aA03E678f2bc87A936AA63Df972c7c338b8b",
+  oracle: "0x217860736E626781f9AaA91731b307619f90f65B",
+  liquidator: "0x4dB43e41420ACC39ee88dBc1cB868567968C0F12",
+  fxReceiptUSDC: "0x9559A55Ea94aF58002a857f73B15c8EF4E850Fd8",
+  fxReceiptEURC: "0x7926D3b1D1360632e81F811FE9a39866Fe16074F",
   morphoBlue: "0x3c9b95C6E7B23f094f066733E7797C8680760830",
   marketIds: {
-    M1_EURC_USDC: "0xf6fac2b9b801a7ae3deeccfa95a7f1e768b4873a22f0def0d93f7f0172cc2da2",
-    M2_USDC_EURC: "0x9e187a5f252de56b9ffe35f72cdc4137568f9d51698560751cdaff3df60cb5d3",
+    M1_EURC_USDC: "0x8c98b07503c850a4e3c8b0f214c6c36efae7b029e2a7a00489ff16716921d980",
+    M2_USDC_EURC: "0x76f3a09ff7ce186a9184838eb6f9c13c8e89b1d87b2b2f438cc2844502c07f49",
   },
 };
 
@@ -87,19 +87,17 @@ const ARC_HUB: HubAddresses = {
 // Map chainId → { fujiRoutedSpoke, arcRoutedSpoke }. Source: deployments/*.json
 // routes block. Kept here for fast client-side resolution.
 
-// Synced to deployments/<chain>.json `routes` blocks as of 2026-05-15 (Stage 6
-// post-migration). Codex adversarial-review v3 round 5 finding: every Fuji
-// entry had drifted to pre-migration spoke addresses. Source-of-truth audit
-// via `jq -r '.routes' deployments/*.json` confirms every value below.
+// Synced to deployments/<chain>.json `routes` blocks after the 2026-05-17
+// canonical-Fuji-EURC receiver migration.
 const SPOKES_BY_CHAIN: Record<ChainIdValue, { fuji?: Address; arc?: Address }> = {
-  [ChainId.Sepolia]:            { fuji: "0xf6d845da2051183b9519ca1806c39040ba5e71ba", arc: "0x4e63954685241c4469f02fec3761ff1d4f34ffa9" },
-  [ChainId.OpSepolia]:          { fuji: "0x0b5d18bbe92f07ec0111ae6d2e102858268d6aca", arc: "0x579fccdebb1f7e983c4ead27aa300d3b5397e28c" },
-  [ChainId.ArbitrumSepolia]:    { fuji: "0x2900599ff0e6dd057493d62fac856e5a8f93c6eb", arc: "0x365de300dda61c81a33bce3606a5d524ed964362" },
-  [ChainId.PolygonAmoy]:        { fuji: "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b", arc: "0x7882d3f0e210128a4dce51e1af1ec801e21e1e5a" },
-  [ChainId.UnichainSepolia]:    { fuji: "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b", arc: "0x7882d3f0e210128a4dce51e1af1ec801e21e1e5a" },
-  [ChainId.WorldChainSepolia]:  { fuji: "0x0b5d18bbe92f07ec0111ae6d2e102858268d6aca", arc: "0x579fccdebb1f7e983c4ead27aa300d3b5397e28c" },
-  [ChainId.AvalancheFuji]:      { fuji: "0xb7fc291c27f6a7a659d4d229e5d8a55e58f26ab1", arc: "0xe22ef07a0996df9ae6252cc9bf491fbe13fd6575" },
-  [ChainId.ArcTestnet]:         { fuji: "0x13c8463589d460db6f21235eedfd678c22a1ea25", arc: "0x5d10d2c3b9951054845534b2f60a68ebc0898cd3" },
+  [ChainId.Sepolia]:            { fuji: "0xf4556f31cace9a80aa584059c81638a5cd344dde", arc: "0xabc638aad2c4cacfbab54b38101025789c261c05" },
+  [ChainId.OpSepolia]:          { fuji: "0x2552e1027ff27a285635a9593825e3da8f25808b", arc: "0x50c4ba39caa7f56152d0df4914e1f6b907194992" },
+  [ChainId.ArbitrumSepolia]:    { fuji: "0xaa875a68b0155da4bd6a528ee9e1137017d18b41", arc: "0x3f5d9b44aa1d59d26b20862d91533d60B32d9aFa" },
+  [ChainId.PolygonAmoy]:        { fuji: "0x58c1a04bc4e25db2f8474c9df41907cffc894a4b", arc: "0x068cd7d70d37acfb58413422c584fc295c08db12" },
+  [ChainId.UnichainSepolia]:    { fuji: "0x58c1a04bc4e25db2f8474c9df41907cffc894a4b", arc: "0x068cd7d70d37acfb58413422c584fc295c08db12" },
+  [ChainId.WorldChainSepolia]:  { fuji: "0x2552e1027ff27a285635a9593825e3da8f25808b", arc: "0x50c4ba39caa7f56152d0df4914e1f6b907194992" },
+  [ChainId.AvalancheFuji]:      { fuji: "0x6EC2197aC1c35Fbe64533101a3DFf081BD45Ed99", arc: "0x77b3A3B420dB98B01085b8C46a753Ed9879e2865" },
+  [ChainId.ArcTestnet]:         { fuji: "0xf93834070e4e4e7ff0e161feca2aeba65c2c6a38", arc: "0xb7bda9e3a09c91be6e616b58e1d855850ff46aed" },
   [ChainId.BaseSepolia]:        {},
   [ChainId.LineaSepolia]:       {},
   [ChainId.EthereumMainnet]:    {},

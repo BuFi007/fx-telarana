@@ -7,8 +7,8 @@
 
 set -uo pipefail
 
-ARC_HUB_RECEIVER="0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C"
-ARC_HUB_DOMAIN="26"
+ARC_HUB_RECEIVER="${ARC_HUB_RECEIVER:-0xED8D2F831A8b7EbF7eb86a52323D23e2277F26b6}"
+ARC_HUB_DOMAIN="${ARC_HUB_DOMAIN:-26}"
 
 CHAINS=(
   "ethereum-sepolia|https://ethereum-sepolia-rpc.publicnode.com|11155111"

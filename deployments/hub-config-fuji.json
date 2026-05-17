@@ -1,44 +1,67 @@
 {
   "network": "avalanche-fuji",
   "chainId": 43113,
-  "messageReceiver": "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
+  "messageReceiver": "0xbBc9AE9dbd3F6D3dB672F0CA2419d0f4C8513062",
   "cctpDomain": 1,
   "rpcUrl": "https://api.avax-test.network/ext/bc/C/rpc",
   "hubStack": {
-    "MorphoBlue":            "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
-    "IrmMock":               "0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA",
-    "FxOracle":              "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b",
-    "MorphoOracleAdapterM1": "0xda4c3e315fffd0790c9d8a1730c2ba56330cb2ec",
-    "MorphoOracleAdapterM2": "0xf0cdaa9cf9e8d52060dcb41a045e3a6d618a9f65",
-    "FxMarketRegistry":      "0x7ba745b979e027992ecfa51207666e3f5b46cf0a",
-    "FxReceiptEURC":         "0xefd7cf5ad5a2db9a3c23e2807f2279de92c730d2",
-    "FxReceiptUSDC":         "0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e",
-    "FxLiquidator":          "0x2900599ff0e6dd057493d62fac856e5a8f93c6eb",
-    "FxHubMessageReceiver":  "0x7eAdfD0c08dd6544f763285bBD31be14179d594B",
-    "FxGatewayHook":         "0x7dA191bfB85D9F14069228cf618519BFb41f371E",
-    "TelaranaGatewayHubHook":"0x6e1643cdA9B593349913F933dD7B960B8B52D1d0",
+    "MorphoBlue": "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
+    "IrmMock": "0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA",
+    "FxOracle": "0x4178F9D64F64eD05C25B0D6284f64522436A2a1F",
+    "MorphoOracleAdapterM1": "0x32b7aF2464c654B77B8E0Fe2516FB8b1029CA419",
+    "MorphoOracleAdapterM2": "0x094F5603789bdf150ddc9974cca8DC0174b4B0c0",
+    "FxMarketRegistry": "0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9",
+    "FxReceiptEURC": "0x971b6ED14521f354eD13d64506Bf47D84E70F4fc",
+    "FxReceiptUSDC": "0x629144FDC1d0A6f9F2B12d9747557Cc508728739",
+    "FxLiquidator": "0x113A539625D208b5EcC59f300Be14b9b3508E559",
+    "FxHubMessageReceiver": "0xbBc9AE9dbd3F6D3dB672F0CA2419d0f4C8513062",
+    "FxGatewayHook": "0x1527f0230e07B202812A0F0E437995323A1a98cB",
+    "TelaranaGatewayHubHook": "0x6e1643cdA9B593349913F933dD7B960B8B52D1d0",
     "DeprecatedV1FxHubMessageReceiver": "0x365DE300dDa61C81a33bcE3606A5d524eD964362",
-    "DeprecatedV1FxGatewayHook":        "0xc63634ebc99f9c9616ee126971CCa486f3AFfF6E",
-    "DeprecatedV1FxSpoke":              "0xcD1621B6118416AB4A43accEFdF44485519135B8",
-    "MockEURC":              "0x50c4ba39caa7f56152d0df4914e1f6b907194992"
+    "DeprecatedV1FxGatewayHook": "0xc63634ebc99f9c9616ee126971CCa486f3AFfF6E",
+    "DeprecatedV1FxSpoke": "0xcD1621B6118416AB4A43accEFdF44485519135B8",
+    "FxTimelock": "0x01139A1aB806b55116a05d561A74eF65b898ACd5",
+    "DeprecatedMockEURC": "0x50c4ba39caa7f56152d0df4914e1f6b907194992"
   },
   "marketIds": {
-    "M1_EURC_USDC": "0x7d99088a9fe61331c49a92eb16fa3794b0bc2862b211f5a70f31a64cef25029e",
-    "M2_USDC_EURC": "0x1700104cf29eceb113e01a1bcdc913e5e10d3d37314cee235752aa88bf153197"
+    "M1_EURC_USDC": "0x164ab95c126ae7f5227bc5026e66642ea05b41f3ab50d086704bc7f1dd6470a1",
+    "M2_USDC_EURC": "0x77bae5f5fb07741f0873c163edfa5573e7136cb690bb1deff35aa3e664a37a75"
   },
   "external": {
-    "USDC":                     "0x5425890298aed601595a70AB815c96711a31Bc65",
-    "Pyth":                     "0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509",
+    "USDC": "0x5425890298aed601595a70AB815c96711a31Bc65",
+    "Pyth": "0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509",
     "CctpMessageTransmitterV2": "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
-    "CctpTokenMessengerV2":     "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
-    "GatewayWallet":            "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
-    "GatewayMinter":            "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
-    "GatewayLocalDomain":       1
+    "CctpTokenMessengerV2": "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
+    "GatewayWallet": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+    "GatewayMinter": "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
+    "GatewayLocalDomain": 1,
+    "EURC": "0x5E44db7996c682E92a960b65AC713a54AD815c6B"
   },
   "gateway": {
     "authority": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
     "authorityType": "EOA",
     "rotationPlan": "Rotate to FxHubMessageReceiver via EIP-1271 once Circle ships 1271 support (~mid-July 2026)."
   },
-  "notes": "Avalanche Fuji is the PRIMARY HUB. All user deposits route here via CCTP V2 spokes. FxGatewayHook bridges USDC liquidity Fuji ↔ Arc via Circle Gateway (protocol-level, hub-callable only). Gateway addresses are deterministic CREATE2 — same on every supported testnet."
+  "notes": "Avalanche Fuji is THE PRIMARY HUB for fx-Telarana. Canonical Fuji EURC is live for the two Morpho lending markets; the earlier MockEURC market stack is deprecated. All user deposits should route to the current FxHubMessageReceiver via freshly deployed spokes. Cross-hub liquidity to Arc uses the receiver-bound FxGatewayHook.",
+  "contracts": {
+    "FxSpoke": "0x6EC2197aC1c35Fbe64533101a3DFf081BD45Ed99",
+    "FxHubMessageReceiver": "0xbBc9AE9dbd3F6D3dB672F0CA2419d0f4C8513062",
+    "FxGatewayHook": "0x1527f0230e07B202812A0F0E437995323A1a98cB",
+    "FxMarketRegistry": "0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9",
+    "FxOracle": "0x4178F9D64F64eD05C25B0D6284f64522436A2a1F",
+    "MorphoOracleAdapterM1": "0x32b7aF2464c654B77B8E0Fe2516FB8b1029CA419",
+    "MorphoOracleAdapterM2": "0x094F5603789bdf150ddc9974cca8DC0174b4B0c0",
+    "FxReceiptEURC": "0x971b6ED14521f354eD13d64506Bf47D84E70F4fc",
+    "FxReceiptUSDC": "0x629144FDC1d0A6f9F2B12d9747557Cc508728739",
+    "FxLiquidator": "0x113A539625D208b5EcC59f300Be14b9b3508E559",
+    "FxTimelock": "0x01139A1aB806b55116a05d561A74eF65b898ACd5"
+  },
+  "deploymentTx": {
+    "CanonicalFujiEURCHub": "0x2e6c2653a30ca8140b2f912af5314d50a6fe3c8c12a31d4fdfa3c2652958581d",
+    "FxOracle": "0x5e32d72862d8356278ef7da06f5ef9cdb1a82eef48c8eb3c8cdf852c6a018df2",
+    "FxMarketRegistry": "0x49b4dee982dfb5d23415496ec5d0aa20ba857e74150ea9044c8b2123dda2c111",
+    "FxHubMessageReceiver": "0x2e6c2653a30ca8140b2f912af5314d50a6fe3c8c12a31d4fdfa3c2652958581d",
+    "FxGatewayHook": "0x67afe0296758271d1f559b7d4c9aecb72d0f36ba8e844cc7f6799432f5686a85",
+    "FxSpoke": "0xefa822eef234cfbac53fd8b029a9a38a022adbf94eae05bb36e0a16c8405d8c6"
+  }
 }

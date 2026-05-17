@@ -11,6 +11,7 @@ import {FxMarketRegistry} from "../src/hub/FxMarketRegistry.sol";
 import {FxReceipt} from "../src/hub/FxReceipt.sol";
 import {FxLiquidator} from "../src/hub/FxLiquidator.sol";
 import {FxHubMessageReceiver} from "../src/hub/FxHubMessageReceiver.sol";
+import {FxGatewayHook} from "../src/hub/FxGatewayHook.sol";
 import {MorphoOracleAdapter} from "../src/hub/MorphoOracleAdapter.sol";
 import {FxTimelock} from "../src/governance/FxTimelock.sol";
 import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
@@ -40,11 +41,13 @@ import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
 ///   USDC, EURC, Pyth, CCTP V2 TokenMessenger, CCTP V2 MessageTransmitter
 contract DeployArcTestnet is Script {
     // ── Verified Arc testnet defaults (chainId 5042002, CCTP domain 26) ────
-    address constant DEFAULT_USDC                = 0x3600000000000000000000000000000000000000;
-    address constant DEFAULT_EURC                = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
-    address constant DEFAULT_PYTH                = 0x2880aB155794e7179c9eE2e38200202908C17B43;
-    address constant DEFAULT_CCTP_TOKEN_MESSENGER     = 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA;
+    address constant DEFAULT_USDC = 0x3600000000000000000000000000000000000000;
+    address constant DEFAULT_EURC = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
+    address constant DEFAULT_PYTH = 0x2880aB155794e7179c9eE2e38200202908C17B43;
+    address constant DEFAULT_CCTP_TOKEN_MESSENGER = 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA;
     address constant DEFAULT_CCTP_MESSAGE_TRANSMITTER = 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275;
+    address constant DEFAULT_GATEWAY_WALLET = 0x0077777d7EBA4688BDeF3E311b846F25870A19B9;
+    address constant DEFAULT_GATEWAY_MINTER = 0x0022222ABE238Cc2C7Bb1f21003F0a260052475B;
 
     bytes32 constant PYTH_USDC_USD = 0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a;
     bytes32 constant PYTH_EURC_USD = 0x76fa85158bf14ede77087fe3ae472f66213f6ea2f5b411cb2de472794990fa5c;
@@ -59,13 +62,17 @@ contract DeployArcTestnet is Script {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(pk);
 
-        address usdc                = vm.envOr("ARC_USDC", DEFAULT_USDC);
-        address eurc                = vm.envOr("ARC_EURC", DEFAULT_EURC);
-        address pyth                = vm.envOr("ARC_PYTH", DEFAULT_PYTH);
-        address messageTransmitter  = vm.envOr("ARC_CCTP_MESSAGE_TRANSMITTER", DEFAULT_CCTP_MESSAGE_TRANSMITTER);
-        address morpho              = vm.envAddress("ARC_MORPHO_BLUE");
-        address irm                 = vm.envAddress("ARC_MORPHO_ADAPTIVE_IRM");
-        uint256 lltv                = vm.envOr("FX_HUB_LLTV", uint256(860000000000000000));
+        address usdc = vm.envOr("ARC_USDC", DEFAULT_USDC);
+        address eurc = vm.envOr("ARC_EURC", DEFAULT_EURC);
+        address pyth = vm.envOr("ARC_PYTH", DEFAULT_PYTH);
+        address messageTransmitter = vm.envOr("ARC_CCTP_MESSAGE_TRANSMITTER", DEFAULT_CCTP_MESSAGE_TRANSMITTER);
+        address gatewayWallet = vm.envOr("ARC_GATEWAY_WALLET", DEFAULT_GATEWAY_WALLET);
+        address gatewayMinter = vm.envOr("ARC_GATEWAY_MINTER", DEFAULT_GATEWAY_MINTER);
+        uint32 gatewayDomain = uint32(vm.envOr("ARC_GATEWAY_DOMAIN", uint256(26)));
+        address gatewayAuthority = vm.envOr("ARC_GATEWAY_AUTHORITY", deployer);
+        address morpho = vm.envAddress("ARC_MORPHO_BLUE");
+        address irm = vm.envAddress("ARC_MORPHO_ADAPTIVE_IRM");
+        uint256 lltv = vm.envOr("FX_HUB_LLTV", uint256(860000000000000000));
 
         if (morpho == address(0)) revert MissingArcMorphoAddress();
         if (irm == address(0)) revert MissingArcIrmAddress();
@@ -78,6 +85,10 @@ contract DeployArcTestnet is Script {
         console2.log("usdc    ", usdc);
         console2.log("eurc    ", eurc);
         console2.log("CCTP MT ", messageTransmitter);
+        console2.log("gw wal  ", gatewayWallet);
+        console2.log("gw min  ", gatewayMinter);
+        console2.log("gw dom  ", uint256(gatewayDomain));
+        console2.log("gw auth ", gatewayAuthority);
 
         vm.startBroadcast(pk);
 
@@ -126,12 +137,21 @@ contract DeployArcTestnet is Script {
         // 7) Hub-side CCTP V2 message receiver
         FxHubMessageReceiver receiver = new FxHubMessageReceiver(messageTransmitter, usdc, address(registry), deployer);
 
-        // 8) FxTimelock + atomic admin handoff (spec §10.2).
+        // 8) Gateway hook. The hook's HUB is immutable, so a receiver
+        // redeploy always requires a paired hook redeploy and receiver wiring.
+        FxGatewayHook gatewayHook =
+            new FxGatewayHook(usdc, gatewayWallet, gatewayMinter, address(receiver), gatewayDomain, gatewayAuthority);
+        receiver.setGatewayHook(address(gatewayHook));
+
+        // 9) FxTimelock + atomic admin handoff (spec §10.2).
         FxTimelock timelock = _deployTimelockAndHandoff(deployer, oracle, registry, liquidator);
 
         vm.stopBroadcast();
 
         _assertHandoff(address(timelock), deployer, oracle, registry, liquidator);
+        require(receiver.gatewayHook() == address(gatewayHook), "deploy: receiver gateway hook mismatch");
+        require(gatewayHook.HUB() == address(receiver), "deploy: gateway hook hub mismatch");
+        require(gatewayHook.authority() == gatewayAuthority, "deploy: gateway hook authority mismatch");
 
         console2.log("================ deployed ================");
         console2.log("FxOracle              ", address(oracle));
@@ -142,6 +162,7 @@ contract DeployArcTestnet is Script {
         console2.log("FxReceipt fxUSDC      ", address(fxUSDC));
         console2.log("FxLiquidator          ", address(liquidator));
         console2.log("FxHubMessageReceiver  ", address(receiver));
+        console2.log("FxGatewayHook         ", address(gatewayHook));
         console2.log("FxTimelock            ", address(timelock));
         console2.log("Market M1 id (EURC/USDC):");
         console2.logBytes32(m1Id);
@@ -185,11 +206,11 @@ contract DeployArcTestnet is Script {
         FxMarketRegistry registry,
         FxLiquidator liquidator
     ) internal view {
-        require(oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), timelock),         "handoff: oracle admin != timelock");
-        require(!oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), deployer),        "handoff: deployer still oracle admin");
-        require(registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), timelock),     "handoff: registry admin != timelock");
-        require(!registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), deployer),    "handoff: deployer still registry admin");
+        require(oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), timelock), "handoff: oracle admin != timelock");
+        require(!oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), deployer), "handoff: deployer still oracle admin");
+        require(registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), timelock), "handoff: registry admin != timelock");
+        require(!registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), deployer), "handoff: deployer still registry admin");
         require(liquidator.hasRole(liquidator.DEFAULT_ADMIN_ROLE(), timelock), "handoff: liq admin != timelock");
-        require(!liquidator.hasRole(liquidator.DEFAULT_ADMIN_ROLE(), deployer),"handoff: deployer still liq admin");
+        require(!liquidator.hasRole(liquidator.DEFAULT_ADMIN_ROLE(), deployer), "handoff: deployer still liq admin");
     }
 }
