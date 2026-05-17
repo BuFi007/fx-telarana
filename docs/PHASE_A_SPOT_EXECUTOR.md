@@ -1,6 +1,6 @@
 # Phase A — Spot FX Executor
 
-Phase A v0 of the on-chain perp protocol roadmap. Closes the Stage 12 spot-FX
+Phase A v0.2 of the on-chain perp protocol roadmap. Closes the Stage 12 spot-FX
 gap so `MINT_AND_REQUEST_SPOT_FX` requests actually deliver tokenOut to the
 trader instead of stopping at the `GatewayAtomicFxSwapRequested` event.
 
@@ -21,17 +21,21 @@ trader (Fuji)
 
   keeper
   └─ calls TGH.receiveGatewayMint on Arc
+       ├─ optional v0.2 receipt-parity check:
+       │    signed source-depositor intent or Hyperlane-proven context hash
        └─ TGH mints USDC against attestation
        └─ TGH forwards USDC to route.destinationHub = FxSpotExecutor
        └─ TGH emits GatewayAtomicFxSwapRequested
 
   keeper
-  └─ calls FxSpotExecutor.executeSpotFx(context) on Arc           <-- NEW Phase A
+  └─ calls FxSpotExecutor.executeSpotFx(requestId) on Arc         <-- Phase A
        ├─ validates TGH receipt for requestId
        ├─ reads FxOracle.getMid(USDC, tokenOut)
+       ├─ scales USDC atomic units through 18-dec oracle precision
+       ├─ scales payout to receipt.tokenOut decimals
        ├─ applies configured spread
        ├─ asserts amountOut >= minAmountOut
-       ├─ transfers tokenOut to context.recipient
+       ├─ transfers tokenOut to receipt.recipient
        └─ calls TGH.markGatewayAtomicFxSwapSettled
 ```
 
@@ -45,9 +49,9 @@ Roles:
 - `EXECUTOR_ROLE` — call `executeSpotFx`.
 
 Key methods:
-- `executeSpotFx(GatewayMintContext)` — the one keeper-callable entry.
+- `executeSpotFx(bytes32 requestId)` — the one keeper-callable entry.
 - `addLiquidity(token, amount)` / `withdrawLiquidity(token, amount, to)` — owner-only seed pool.
-- `setTokenEnabled(token, bool)` — allowlist tokens that can be tokenOut.
+- `setTokenEnabled(token, bool)` — allowlist tokenOut and store its decimals.
 - `setDefaultSpreadBps(bps)` / `setTokenSpreadBps(token, bps)` — capped at 500 bps (5%).
 - `setRequireVerifiedOracle(bool)` — opt-in to RedStone + Pyth deviation gate.
 
@@ -66,7 +70,8 @@ forge script script/DeployFxSpotExecutor.s.sol:DeployFxSpotExecutor \
 
 ## Post-deploy wiring (do NOT skip)
 
-1. **Enable tokenOut on the executor** (e.g. EURC):
+1. **Enable tokenOut on the executor** (e.g. EURC). This stores
+   `IERC20Metadata.decimals(tokenOut)` for decimal-aware payout scaling:
    ```
    FxSpotExecutor.setTokenEnabled(EURC, true)
    ```
@@ -121,6 +126,39 @@ forge script script/DeployFxSpotExecutor.s.sol:DeployFxSpotExecutor \
 The keeper smoke script's `--action=bufx-request --request-variant=spot-fx`
 should pass this new routeId.
 
+## Receipt-parity proof modes
+
+`TelaranaGatewayHubHook` v0.2 can bind the keeper-supplied
+`GatewayMintContext` fields to the BUFX-side request before minting. Configure
+per route:
+
+```
+TGH.setGatewayContextProofMode(routeId, mode)
+```
+
+Modes:
+- `NONE` — legacy/default mode. `context.hookData` must be empty.
+- `SIGNED_INTENT` — `context.hookData` must be
+  `abi.encode(GatewayContextProof({version: 1, sourceDepositorSignature: sig}))`.
+  The signature is an OZ EIP-712 `TelaranaGatewayHubHook` v2 typed-data
+  signature by `context.sourceDepositor` over routeId, requestId, action,
+  sourceDepositor, sourceSigner, recipient, tokenOut, amount, minAmountOut,
+  spotRouteId, and metadataRef.
+- `HYPERLANE` — `context.hookData` must be empty and a configured Hyperlane
+  mailbox/trusted sender must have delivered the same context struct hash:
+  ```
+  TGH.setGatewayContextMailbox(mailbox)
+  TGH.setGatewayContextTrustedSender(origin, sender, true)
+  mailbox.handle(origin, sender, abi.encode(uint8(1), requestId, routeId, contextHash))
+  ```
+- `SIGNED_INTENT_OR_HYPERLANE` — accepts either path. This is the intended
+  migration mode while the signed-intent SDK path is available before the
+  BUFX source proof sender is deployed.
+
+The signed digest and Hyperlane context hash intentionally exclude
+`hookData`; the proof field is the container for the signature, not a mutable
+receipt field.
+
 ## v0 limits + future phases
 
 - **Single-leg only**: USDC → enabled tokenOut. Reverse (tokenIn → USDC)
@@ -129,6 +167,14 @@ should pass this new routeId.
   replaces this with a MetaMorpho vault-backed pool so idle USDC earns
   Morpho lending yield and tokenOut reserves can be borrowed against
   cross-pair collateral.
+- **Decimal-aware payout math**: v0.2 supports non-6-dec tokenOut assets by
+  scaling USDC atomic units to 18-dec oracle precision and then to tokenOut
+  decimals, following the vendored Synthetix v3 `Price.scale/scaleTo`
+  pattern. Token decimals are capped by `MAX_TOKEN_DECIMALS`.
+- **Receipt parity**: TGH v0.2 supports signed-intent and Hyperlane context
+  proof modes so `sourceDepositor`, `sourceSigner`, `spotRouteId`, and
+  `metadataRef` are bound before the receipt is stored. Default `NONE` mode is
+  retained only for legacy routes until operators explicitly flip each route.
 - **No price impact curve**: constant mid-anchored spread for v0. Stable
   pairs (USDC↔EURC) can sustain this; volatile pairs (when added) need
   a PMM curve modeled on `FxSwapHook.sol`'s rehypothecating-PMM design.

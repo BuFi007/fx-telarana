@@ -1,4 +1,7 @@
 {
+  "lib/bunni-v2": {
+    "rev": "2b303b8c1b9f8afbb169d62ba52da93d6d2171fe"
+  },
   "lib/evm-cctp-contracts": {
     "rev": "4061786a5726bc05f99fcdb53b0985599f0dbaf7"
   },
@@ -7,6 +10,9 @@
       "name": "v1.16.1",
       "rev": "620536fa5277db4e3fd46772d5cbc1ea0696fb43"
     }
+  },
+  "lib/gmx-synthetics": {
+    "rev": "028c79a7264fd458e2fc27c809750d919831c74b"
   },
   "lib/morpho-blue": {
     "tag": {
@@ -20,6 +26,12 @@
       "rev": "5fd1781b1454fd1ef8e722282f86f9293cacf256"
     }
   },
+  "lib/openzeppelin-uniswap-hooks": {
+    "rev": "26dc8e53f812a1ca390d470342adb6cd8c3286ad"
+  },
+  "lib/perennial-v2": {
+    "rev": "99780561f7dc50257b79845cba649ca8f5add6ff"
+  },
   "lib/pyth-sdk-solidity": {
     "tag": {
       "name": "v2.2.0",
@@ -28,6 +40,9 @@
   },
   "lib/redstone-oracles-monorepo": {
     "rev": "eac1bc1e53c4690f9fe9cc93f2e5be596d570dc3"
+  },
+  "lib/synthetix-v3": {
+    "rev": "23585f73c76d625b2a43aaf94dc440a8a1e7a8fa"
   },
   "lib/v4-core": {
     "tag": {

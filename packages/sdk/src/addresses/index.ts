@@ -36,6 +36,7 @@ export interface FxAddresses {
   fxSpokeAlt?: Address;
   fxGatewayHook?: Address;
   fxSwapHook?: Address;
+  fxPerps?: FxPerpsAddresses;
 
   /// External dependencies
   morphoBlue: Address;
@@ -56,6 +57,16 @@ export interface FxAddresses {
   pythFeedUSDC: `0x${string}`;
   pythFeedEURC: `0x${string}`;
   pythFeedEURUSD: `0x${string}`;
+}
+
+export interface FxPerpsAddresses {
+  clearinghouse: Address;
+  marginAccount: Address;
+  fundingEngine: Address;
+  healthChecker: Address;
+  liquidationEngine: Address;
+  orderSettlement: Address;
+  keeperAdmin: Address;
 }
 
 export interface StablecoinBasketToken {
@@ -250,9 +261,10 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.ArcTestnet]: {
-    // Arc = TRADING-EXECUTION HUB. Refreshed 2026-05-17 with the basket
-    // money-market stack, current registry surface, receiver-bound Gateway
-    // hook, and 12 EURC/mock stablecoin Morpho markets.
+    // Arc = basket money-market + trading-execution hub. Refreshed 2026-05-17
+    // with the basket money-market stack, current registry surface,
+    // receiver-bound Gateway hook, and 12 EURC/mock stablecoin Morpho markets.
+    // Perp stack addresses are from the Phase B-E Arc deployment on main.
     fxOracle: "0x625e2870a94F67F575Ed82678C2c619994721D29",
     fxMarketRegistry: "0xdB59d712a3cD19DccD98F5a245302a94d43f9A8c",
     fxLiquidator: "0x3DD99ace9ab896C613b47749e6Daae84ceF0433B",
@@ -260,6 +272,15 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     fxReceiptUSDC: "0x3b94E6A9Dc100CC390B56D1f0BB6a0B706ad3aAA",
     fxHubMessageReceiver: "0x4FBe4cc4ab09648d65195f5B9490D20D12D49a2c",
     fxGatewayHook: "0x412f0CE9cb7697458dF3804d56de259c3e38371B",
+    fxPerps: {
+      clearinghouse: "0x6A265045D9A3291D2881d77DDC62e2781A2418c5",
+      marginAccount: "0x35c7cD02cFa0c2889547482B71c1a5114d8439C6",
+      fundingEngine: "0x88B70872759E1aA24858746779Cb15ca9F2cdcf3",
+      healthChecker: "0x272305e821D810eC5741761F98DbDC273efD47E6",
+      liquidationEngine: "0xD384560E5f8CE969BF4C1BDfAFACc5304AFbe8f2",
+      orderSettlement: "0x0F62FCdA2de63d905Cb167301C00251A9bB6dAa1",
+      keeperAdmin: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    },
     morphoBlue: "0x3c9b95C6E7B23f094f066733E7797C8680760830",
     adaptiveCurveIrm: "0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1",
     // Arc-resident spoke that routes to the FUJI hub (sends users back).

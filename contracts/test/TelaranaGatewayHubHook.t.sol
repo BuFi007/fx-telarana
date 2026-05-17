@@ -43,15 +43,19 @@ contract TelaranaGatewayHubHookTest is Test {
     address internal destinationHub = address(0xA11CE);
     address internal sourceUsdc = address(0xF1F1);
     address internal sourceGatewayWallet = address(0x7777);
-    address internal sourceDepositor = address(0xD3F0517);
+    uint256 internal sourceDepositorKey = 0xA11CE;
+    address internal sourceDepositor;
     address internal sourceSigner = address(0x519E7);
     address internal recipient = address(0xB0B);
+    address internal mailbox = address(0xB0A7);
+    bytes32 internal trustedBufxSender = bytes32(uint256(uint160(address(0xBEE))));
 
     bytes32 internal constant ROUTE_ID = keccak256("gateway-fuji-to-arc-usdc");
     bytes32 internal constant REQUEST_ID = keccak256("request-1");
     bytes32 internal constant SPOT_ROUTE_ID = keccak256("arc-usdc-jpyc-spot");
 
     function setUp() public {
+        sourceDepositor = vm.addr(sourceDepositorKey);
         usdc = new MockERC20("USD Coin", "USDC", 6);
         jpyc = new MockERC20("JPYC", "JPYC", 18);
         minter = new MockCircleGatewayMinter(address(usdc));
@@ -199,6 +203,111 @@ contract TelaranaGatewayHubHookTest is Test {
         assertEq(uint8(hook.gatewayRequestState(requestId)), uint8(ITelaranaGatewayHubHook.GatewayRequestState.SETTLED));
     }
 
+    function test_receiveGatewayMint_acceptsSignedIntentProof() public {
+        bytes32 requestId = keccak256("signed-spot-request");
+        minter.setMint(address(hook), 250e6);
+        hook.setGatewayContextProofMode(ROUTE_ID, ITelaranaGatewayHubHook.GatewayContextProofMode.SIGNED_INTENT);
+
+        ITelaranaGatewayHubHook.GatewayMintContext memory context = _spotContext(requestId, 250e6);
+        context.hookData = _signedProof(context, sourceDepositorKey);
+
+        vm.prank(executor);
+        uint256 amountReceived = hook.receiveGatewayMint("attestation", "signature", context);
+
+        assertEq(amountReceived, 250e6);
+        ITelaranaGatewayHubHook.GatewayReceipt memory receipt = hook.gatewayReceipt(requestId);
+        assertEq(receipt.sourceDepositor, sourceDepositor);
+        assertEq(receipt.sourceSigner, sourceSigner);
+        assertEq(receipt.spotRouteId, SPOT_ROUTE_ID);
+        assertEq(receipt.metadataRef, context.metadataRef);
+    }
+
+    function test_receiveGatewayMint_revertsWhenSignedIntentProofDoesNotMatchReceiptFields() public {
+        bytes32 requestId = keccak256("signed-spot-request-mismatch");
+        minter.setMint(address(hook), 250e6);
+        hook.setGatewayContextProofMode(ROUTE_ID, ITelaranaGatewayHubHook.GatewayContextProofMode.SIGNED_INTENT);
+
+        ITelaranaGatewayHubHook.GatewayMintContext memory context = _spotContext(requestId, 250e6);
+        context.hookData = _signedProof(context, sourceDepositorKey);
+        context.sourceSigner = address(0xBAD519E7);
+        context.spotRouteId = keccak256("keeper-mutated-spot-route");
+        context.metadataRef = keccak256("keeper-mutated-metadata");
+
+        vm.prank(executor);
+        vm.expectRevert(abi.encodeWithSelector(TelaranaGatewayHubHook.GatewayContextProofMissing.selector, requestId));
+        hook.receiveGatewayMint("attestation", "signature", context);
+    }
+
+    function test_receiveGatewayMint_acceptsHyperlaneContextHashProof() public {
+        bytes32 requestId = keccak256("hyperlane-spot-request");
+        minter.setMint(address(hook), 250e6);
+        hook.setGatewayContextProofMode(ROUTE_ID, ITelaranaGatewayHubHook.GatewayContextProofMode.HYPERLANE);
+        hook.setGatewayContextMailbox(mailbox);
+        hook.setGatewayContextTrustedSender(1, trustedBufxSender, true);
+
+        ITelaranaGatewayHubHook.GatewayMintContext memory context = _spotContext(requestId, 250e6);
+        bytes32 contextHash = hook.gatewayMintContextStructHash(context);
+
+        vm.prank(mailbox);
+        hook.handle(1, trustedBufxSender, abi.encode(uint8(1), requestId, ROUTE_ID, contextHash));
+
+        vm.prank(executor);
+        uint256 amountReceived = hook.receiveGatewayMint("attestation", "signature", context);
+
+        assertEq(amountReceived, 250e6);
+        assertEq(hook.provenGatewayMintContextHash(requestId), contextHash);
+        ITelaranaGatewayHubHook.GatewayReceipt memory receipt = hook.gatewayReceipt(requestId);
+        assertEq(receipt.spotRouteId, SPOT_ROUTE_ID);
+        assertEq(receipt.metadataRef, context.metadataRef);
+    }
+
+    function test_receiveGatewayMint_revertsWhenHyperlaneContextHashDoesNotMatch() public {
+        bytes32 requestId = keccak256("hyperlane-spot-request-mismatch");
+        minter.setMint(address(hook), 250e6);
+        hook.setGatewayContextProofMode(ROUTE_ID, ITelaranaGatewayHubHook.GatewayContextProofMode.HYPERLANE);
+        hook.setGatewayContextMailbox(mailbox);
+        hook.setGatewayContextTrustedSender(1, trustedBufxSender, true);
+
+        ITelaranaGatewayHubHook.GatewayMintContext memory context = _spotContext(requestId, 250e6);
+        bytes32 provenHash = hook.gatewayMintContextStructHash(context);
+
+        vm.prank(mailbox);
+        hook.handle(1, trustedBufxSender, abi.encode(uint8(1), requestId, ROUTE_ID, provenHash));
+
+        context.sourceSigner = address(0xBAD519E7);
+        context.spotRouteId = keccak256("keeper-mutated-spot-route");
+        context.metadataRef = keccak256("keeper-mutated-metadata");
+        bytes32 expectedHash = hook.gatewayMintContextStructHash(context);
+
+        vm.prank(executor);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TelaranaGatewayHubHook.GatewayContextProofMismatch.selector, requestId, expectedHash, provenHash
+            )
+        );
+        hook.receiveGatewayMint("attestation", "signature", context);
+    }
+
+    function test_receiveGatewayMint_revertsOnHookDataWithHyperlaneProofMode() public {
+        bytes32 requestId = keccak256("hyperlane-spot-request-hook-data");
+        minter.setMint(address(hook), 250e6);
+        hook.setGatewayContextProofMode(ROUTE_ID, ITelaranaGatewayHubHook.GatewayContextProofMode.HYPERLANE);
+        hook.setGatewayContextMailbox(mailbox);
+        hook.setGatewayContextTrustedSender(1, trustedBufxSender, true);
+
+        ITelaranaGatewayHubHook.GatewayMintContext memory context = _spotContext(requestId, 250e6);
+        bytes32 contextHash = hook.gatewayMintContextStructHash(context);
+
+        vm.prank(mailbox);
+        hook.handle(1, trustedBufxSender, abi.encode(uint8(1), requestId, ROUTE_ID, contextHash));
+
+        context.hookData = hex"01";
+
+        vm.prank(executor);
+        vm.expectRevert(TelaranaGatewayHubHook.UnexpectedHookData.selector);
+        hook.receiveGatewayMint("attestation", "signature", context);
+    }
+
     function test_markGatewayAtomicFxSwapSettled_revertsForMintOnlyRequest() public {
         minter.setMint(address(hook), 100e6);
 
@@ -313,5 +422,31 @@ contract TelaranaGatewayHubHookTest is Test {
             metadataRef: keccak256("request-metadata"),
             hookData: ""
         });
+    }
+
+    function _spotContext(bytes32 requestId, uint256 amount)
+        internal
+        view
+        returns (ITelaranaGatewayHubHook.GatewayMintContext memory context)
+    {
+        context = _context(requestId, amount);
+        context.action = ITelaranaGatewayHubHook.GatewayHubAction.MINT_AND_REQUEST_SPOT_FX;
+        context.tokenOut = address(jpyc);
+        context.minAmountOut = 1_000e18;
+        context.spotRouteId = SPOT_ROUTE_ID;
+    }
+
+    function _signedProof(ITelaranaGatewayHubHook.GatewayMintContext memory context, uint256 privateKey)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes32 digest = hook.gatewayMintContextDigest(context);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        return abi.encode(
+            ITelaranaGatewayHubHook.GatewayContextProof({
+                version: 1, sourceDepositorSignature: abi.encodePacked(r, s, v)
+            })
+        );
     }
 }

@@ -117,6 +117,30 @@ Seed state for UI/API testing: each mock asset-loan market has 10,000 units supp
 
 Per-market `FxReceipt` addresses are recorded in [`deployments/arc-testnet-basket.json`](deployments/arc-testnet-basket.json) under `receipt_*`. UI/API position views should still treat Morpho `position(marketId, account)` as the primary source of truth.
 
+#### Arc Phase B-E perps stack
+
+Trading is Arc-only for this stack. These contracts were deployed on Arc Testnet and smoke-tested through market config, funding config, liquidation config, protocol liquidity seed, quote, EIP-712 signed order settlement, funding poke, liquidation scan, flag, and liquidation.
+
+| Contract | Address |
+|---|---|
+| FxPerpClearinghouse | `0x6A265045D9A3291D2881d77DDC62e2781A2418c5` |
+| FxMarginAccount | `0x35c7cD02cFa0c2889547482B71c1a5114d8439C6` |
+| FxFundingEngine | `0x88B70872759E1aA24858746779Cb15ca9F2cdcf3` |
+| FxHealthChecker | `0x272305e821D810eC5741761F98DbDC273efD47E6` |
+| FxLiquidationEngine | `0xD384560E5f8CE969BF4C1BDfAFACc5304AFbe8f2` |
+| FxOrderSettlement | `0x0F62FCdA2de63d905Cb167301C00251A9bB6dAa1` |
+
+Supporting Arc addresses:
+
+| Contract | Address |
+|---|---|
+| USDC | `0x3600000000000000000000000000000000000000` |
+| EURC | `0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a` |
+| FxOracle | `0x77b3A3B420dB98B01085b8C46a753Ed9879e2865` |
+| Keeper / admin | `0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69` |
+
+Perps manifest: [`deployments/perps-5042002.json`](deployments/perps-5042002.json). Config manifest: [`deployments/perps-config-5042002.json`](deployments/perps-config-5042002.json). Trading smoke report: [`reports/SMOKE_ARC_PHASE_B_E_TRADING.md`](reports/SMOKE_ARC_PHASE_B_E_TRADING.md).
+
 ### Spokes — 16 total, dual-routed per chain
 
 Every chain hosts both a Fuji-routed spoke and an Arc-routed spoke. Users pick by intent.

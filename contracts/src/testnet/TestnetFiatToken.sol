@@ -18,9 +18,9 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 ///           * Burns only the caller's own balance via `burn()` /
 ///             `burnFrom()` (allowance-gated) inherited from OZ
 ///             `ERC20Burnable`. **There is no privileged burn-anyone path.**
-///           * Configurable decimals via constructor (testnet stables ship
-///             6-dec to match USDC; FxSpotExecutor enforces equal-decimals
-///             at allowlist time).
+///           * Configurable decimals via constructor. Current testnet stables
+///             ship 6-dec to mirror Circle-style fiat rails; FxSpotExecutor
+///             v0.2 also supports non-6-dec tokenOut assets.
 ///           * Role transfer + revoke through OZ `AccessControl`.
 ///
 /// Used to back the testnet JPYC / MXNB / CHFC spot routes on Arc until
@@ -30,13 +30,12 @@ contract TestnetFiatToken is ERC20, ERC20Burnable, AccessControl {
 
     uint8 private immutable _decimals;
 
-    constructor(
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address initialAdmin
-    ) ERC20(name_, symbol_) {
-        require(initialAdmin != address(0), "TestnetFiatToken: zero admin");
+    error ZeroAdmin();
+
+    constructor(string memory name_, string memory symbol_, uint8 decimals_, address initialAdmin)
+        ERC20(name_, symbol_)
+    {
+        if (initialAdmin == address(0)) revert ZeroAdmin();
         _decimals = decimals_;
         _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
         _grantRole(MINTER_ROLE, initialAdmin);
