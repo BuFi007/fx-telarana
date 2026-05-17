@@ -8,6 +8,7 @@ export * from "./liquidations.js";
 export * from "./market-view.js";
 export * from "./morpho-math.js";
 export * from "./oracle.js";
+export * from "./positions.js";
 export * from "./quote-engine.js";
 export * from "./schemas.js";
 export * from "./tvl.js";

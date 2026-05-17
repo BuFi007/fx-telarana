@@ -90,6 +90,7 @@ export function quoteBorrow(args: {
     market: args.market,
     collateral: args.collateral,
     borrowAmount: args.borrowAmount,
+    borrowAssetsAfter: borrowAfter,
     healthFactorE18: hf,
     liquidatable: hf < WAD,
     maxBorrowAssets: maxBorrowAssets({

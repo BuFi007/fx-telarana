@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import {
   aggregateTvl,
+  addressSchema,
   borrowIntentSchema,
   buildBorrowIntent,
   buildRepayIntent,
@@ -13,9 +14,15 @@ import {
   buildWithdrawCollateralIntent,
   buildWithdrawIntent,
   collateralIntentSchema,
+  ensureMarketState,
+  getAccountPosition,
   getMarketById,
+  getMarketByPair,
+  hubChainIdSchema,
   liquidationCandidatesQuerySchema,
+  listAccountPositions,
   listMarkets,
+  marketIdSchema,
   marketRefSchema,
   quoteBorrow,
   quoteBorrowSchema,
@@ -25,9 +32,11 @@ import {
   quoteSupplySchema,
   quoteWithdraw,
   quoteWithdrawSchema,
+  readMarketOracleQuote,
   repayIntentSchema,
   stringifyBalances,
   supplyIntentSchema,
+  WAD,
   withdrawIntentSchema,
 } from "@fx-telarana/core";
 import { buildInternalDefiLlamaPayload } from "@fx-telarana/defillama";
@@ -43,6 +52,37 @@ const log = createLogger({ prefix: "fx-telarana:api" });
 async function parseJson<TSchema extends z.ZodTypeAny>(schema: TSchema, c: Context): Promise<z.output<TSchema>> {
   const body = await c.req.json().catch(() => ({}));
   return schema.parse(body);
+}
+
+async function buildBorrowQuotePayload(body: z.output<typeof quoteBorrowSchema>) {
+  const market = await getMarketByPair(body);
+  if (!market) return null;
+  const [state, oracle, existingPosition] = await Promise.all([
+    ensureMarketState({ market }),
+    readMarketOracleQuote({ market }),
+    body.account
+      ? getAccountPosition({
+          account: body.account,
+          hubChainId: market.hubChainId,
+          marketId: market.id,
+        })
+      : Promise.resolve(null),
+  ]);
+  const quote = quoteBorrow({
+    market: { ...market, state },
+    collateral: (existingPosition?.collateral ?? 0n) + body.collateral,
+    borrowAmount: body.borrowAmount,
+    ...(existingPosition ? { existingBorrowShares: existingPosition.borrowShares } : {}),
+    totalBorrowAssets: state.totalBorrowAssets,
+    totalBorrowShares: state.totalBorrowShares,
+    collateralPriceE36: oracle.midE18 * WAD,
+  });
+  return {
+    ...quote,
+    collateralInput: body.collateral,
+    existingPosition,
+    oracle,
+  };
 }
 
 export function createRoutes() {
@@ -126,56 +166,83 @@ export function createRoutes() {
       })
   );
 
-  app.get("/fx-telarana/markets/:hubChainId/:marketId/oracle", async (c) =>
-    json(c, {
+  app.get("/fx-telarana/markets/:hubChainId/:marketId/oracle", async (c) => {
+    const ref = marketRefSchema.parse({
       hubChainId: Number(c.req.param("hubChainId")),
       marketId: c.req.param("marketId"),
+    });
+    const market = await getMarketById(ref);
+    if (!market) return c.json({ error: "market_not_found" }, 404);
+    const oracle = await readMarketOracleQuote({ market });
+    return json(c, {
+      ...ref,
+      loanToken: market.loanToken,
+      collateralToken: market.collateralToken,
       oracleSurface: "FxOracle.getMid",
       directProviderHttp: false,
-    })
-  );
+      midE18: oracle.midE18,
+      publishedAt: oracle.publishedAt,
+    });
+  });
 
-  app.get("/fx-telarana/positions/:address", (c) =>
-    json(c, {
-      address: c.req.param("address"),
-      source: "ponder_pending",
-      positions: [],
-    })
-  );
+  app.get("/fx-telarana/positions/:address", async (c) => {
+    const account = addressSchema.parse(c.req.param("address"));
+    const hubChainId = c.req.query("hubChainId")
+      ? hubChainIdSchema.parse(Number(c.req.query("hubChainId")))
+      : undefined;
+    const positions = await listAccountPositions({
+      account,
+      ...(hubChainId ? { hubChainId } : {}),
+    });
+    return json(c, {
+      address: account,
+      source: "onchain_morpho_fx_oracle",
+      positions,
+    });
+  });
 
-  app.get("/fx-telarana/positions/:address/:marketId", (c) =>
-    json(c, {
-      address: c.req.param("address"),
-      marketId: c.req.param("marketId"),
-      source: "ponder_pending",
-      position: null,
-    })
-  );
+  app.get("/fx-telarana/positions/:address/:marketId", async (c) => {
+    const account = addressSchema.parse(c.req.param("address"));
+    const marketId = marketIdSchema.parse(c.req.param("marketId"));
+    const hubChainId = c.req.query("hubChainId")
+      ? hubChainIdSchema.parse(Number(c.req.query("hubChainId")))
+      : undefined;
+    const positions = await listAccountPositions({
+      account,
+      marketId,
+      includeEmpty: true,
+      ...(hubChainId ? { hubChainId } : {}),
+    });
+    const position = positions[0] ?? null;
+    if (!position) return c.json({ error: "position_market_not_found" }, 404);
+    return json(c, {
+      address: account,
+      marketId,
+      source: "onchain_morpho_fx_oracle",
+      position,
+    });
+  });
 
   app.post("/fx-telarana/supply/quote", async (c) => {
     const body = await parseJson(quoteSupplySchema, c);
-    return json(c, quoteSupply({ assets: body.assets, totalSupplyAssets: 0n, totalSupplyShares: 0n }));
+    const market = await getMarketByPair(body);
+    if (!market) return c.json({ error: "market_not_found" }, 404);
+    const state = await ensureMarketState({ market });
+    return json(c, {
+      marketId: market.id,
+      ...quoteSupply({
+        assets: body.assets,
+        totalSupplyAssets: state.totalSupplyAssets,
+        totalSupplyShares: state.totalSupplyShares,
+      }),
+    });
   });
 
   app.post("/fx-telarana/borrow/quote", async (c) => {
     const body = await parseJson(quoteBorrowSchema, c);
-    const market =
-      (await listMarkets()).find(
-        (candidate) =>
-          candidate.hubChainId === body.hubChainId &&
-          candidate.loanToken.toLowerCase() === body.loanToken.toLowerCase() &&
-          candidate.collateralToken.toLowerCase() === body.collateralToken.toLowerCase()
-      ) ?? null;
-    if (!market) return c.json({ error: "market_not_found" }, 404);
-    return json(
-      c,
-      quoteBorrow({
-        market,
-        collateral: body.collateral,
-        borrowAmount: body.borrowAmount,
-        collateralPriceE36: 10n ** 36n,
-      })
-    );
+    const payload = await buildBorrowQuotePayload(body);
+    if (!payload) return c.json({ error: "market_not_found" }, 404);
+    return json(c, payload);
   });
 
   app.post(
@@ -184,8 +251,10 @@ export function createRoutes() {
     async (c) => {
       const body = await parseJson(quoteBorrowSchema.extend({ simulateTenderly: z.boolean().default(true) }), c);
       log.info(JSON.stringify({ route: "borrow-with-sim", simulateTenderly: body.simulateTenderly }));
+      const payload = await buildBorrowQuotePayload(body);
+      if (!payload) return c.json({ error: "market_not_found" }, 404);
       return json(c, {
-        quote: { requested: body.borrowAmount },
+        quote: payload,
         simulation: { status: "pending_provider_wiring" },
       });
     }
@@ -193,12 +262,32 @@ export function createRoutes() {
 
   app.post("/fx-telarana/repay/quote", async (c) => {
     const body = await parseJson(quoteRepaySchema, c);
-    return json(c, quoteRepay({ assets: body.assets, totalBorrowAssets: 0n, totalBorrowShares: 0n }));
+    const market = await getMarketByPair(body);
+    if (!market) return c.json({ error: "market_not_found" }, 404);
+    const state = await ensureMarketState({ market });
+    return json(c, {
+      marketId: market.id,
+      ...quoteRepay({
+        assets: body.assets,
+        totalBorrowAssets: state.totalBorrowAssets,
+        totalBorrowShares: state.totalBorrowShares,
+      }),
+    });
   });
 
   app.post("/fx-telarana/withdraw/quote", async (c) => {
     const body = await parseJson(quoteWithdrawSchema, c);
-    return json(c, quoteWithdraw({ shares: body.shares, totalSupplyAssets: 0n, totalSupplyShares: 0n }));
+    const market = await getMarketByPair(body);
+    if (!market) return c.json({ error: "market_not_found" }, 404);
+    const state = await ensureMarketState({ market });
+    return json(c, {
+      marketId: market.id,
+      ...quoteWithdraw({
+        shares: body.shares,
+        totalSupplyAssets: state.totalSupplyAssets,
+        totalSupplyShares: state.totalSupplyShares,
+      }),
+    });
   });
 
   app.post("/fx-telarana/supply/intents", async (c) => {

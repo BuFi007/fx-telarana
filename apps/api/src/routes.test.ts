@@ -10,19 +10,18 @@ describe("api routes", () => {
     await expect(res.json()).resolves.toMatchObject({ ok: true });
   });
 
-  test("validates supply quote body", async () => {
+  test("rejects malformed supply quote body before live reads", async () => {
     const res = await app.request("/fx-telarana/supply/quote", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         hubChainId: 43113,
-        loanToken: "0x5425890298aed601595a70AB815c96711a31Bc65",
+        loanToken: "not-an-address",
         collateralToken: "0x5E44db7996c682E92a960b65AC713a54AD815c6B",
         assets: "1000000",
       }),
     });
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toMatchObject({ assets: "1000000" });
+    expect(res.status).toBe(400);
   });
 
   test("premium routes require payment", async () => {

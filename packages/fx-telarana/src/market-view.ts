@@ -115,3 +115,20 @@ export async function getMarketById(args: {
     ) ?? null
   );
 }
+
+export async function getMarketByPair(args: {
+  hubChainId: FxHubChainId;
+  loanToken: `0x${string}`;
+  collateralToken: `0x${string}`;
+  clients?: HubClientMap;
+}): Promise<LendingMarket | null> {
+  const markets = await listMarkets(args.clients ? { clients: args.clients } : {});
+  return (
+    markets.find(
+      (market) =>
+        market.hubChainId === args.hubChainId &&
+        market.loanToken.toLowerCase() === args.loanToken.toLowerCase() &&
+        market.collateralToken.toLowerCase() === args.collateralToken.toLowerCase()
+    ) ?? null
+  );
+}

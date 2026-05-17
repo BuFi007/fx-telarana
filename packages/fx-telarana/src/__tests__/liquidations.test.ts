@@ -17,6 +17,8 @@ function position(account: string, hf: bigint): AccountPosition {
     collateral: 1n,
     supplyAssets: 0n,
     borrowAssets: 1n,
+    collateralPriceE36: 1_000_000_000_000_000_000_000_000_000_000_000_000n,
+    oraclePublishedAt: 1n,
     healthFactorE18: hf,
     liquidatable: hf < 1_000_000_000_000_000_000n,
   };

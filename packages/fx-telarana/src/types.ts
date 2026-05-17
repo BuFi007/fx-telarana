@@ -26,6 +26,8 @@ export type AccountPosition = MorphoPositionState & {
   account: Address;
   supplyAssets: bigint;
   borrowAssets: bigint;
+  collateralPriceE36: bigint | null;
+  oraclePublishedAt: bigint | null;
   healthFactorE18: bigint | null;
   liquidatable: boolean;
 };
@@ -39,7 +41,9 @@ export type BorrowQuote = {
   market: LendingMarket;
   collateral: bigint;
   borrowAmount: bigint;
+  borrowAssetsAfter: bigint;
   healthFactorE18: bigint;
   liquidatable: boolean;
   maxBorrowAssets: bigint;
+  oracle?: OracleQuote;
 };

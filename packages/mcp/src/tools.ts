@@ -10,8 +10,13 @@ import {
   buildWithdrawCollateralIntent,
   buildWithdrawIntent,
   collateralIntentSchema,
+  ensureMarketState,
+  getMarketByPair,
+  listAccountPositions,
   listMarkets,
+  marketIdSchema,
   marketPairSchema,
+  readMarketOracleQuote,
   quoteBorrow,
   quoteBorrowSchema,
   quoteSupply,
@@ -22,6 +27,7 @@ import {
   supplyIntentSchema,
   aggregateTvl,
   withdrawIntentSchema,
+  WAD,
 } from "@fx-telarana/core";
 
 import { addressProperty, marketPairJsonSchema, uintStringProperty } from "./json-schema.js";
@@ -30,6 +36,7 @@ import type { ToolDef } from "./types.js";
 const inspectPositionSchema = z.object({
   address: z.string(),
   marketId: z.string(),
+  hubChainId: z.number().optional(),
 });
 
 const limitSchema = z.object({
@@ -57,21 +64,22 @@ export const fxTelaranaTools = [
   },
   {
     name: "inspect_fx_telarana_position",
-    description: "Inspect an indexed position. Read-only; backed by Ponder once index state is live.",
+    description: "Inspect a live Morpho position for a FX Telarana lending market. Read-only.",
     inputSchema: inspectPositionSchema,
     jsonSchema: {
       type: "object",
       additionalProperties: false,
       required: ["address", "marketId"],
-      properties: { address: addressProperty, marketId: { type: "string" } },
+      properties: { address: addressProperty, marketId: { type: "string" }, hubChainId: { type: "number" } },
     },
     async handler(input) {
-      return {
-        address: input.address,
-        marketId: input.marketId,
-        source: "ponder_pending",
-        note: "Position reads are wired through packages/ponder once the indexer has synced.",
-      };
+      const positions = await listAccountPositions({
+        account: input.address as `0x${string}`,
+        marketId: marketIdSchema.parse(input.marketId),
+        includeEmpty: true,
+        ...(input.hubChainId ? { hubChainId: input.hubChainId as 43113 | 5042002 } : {}),
+      });
+      return positions[0] ?? null;
     },
   },
   {
@@ -84,10 +92,13 @@ export const fxTelaranaTools = [
       properties: { ...marketPairJsonSchema.properties, assets: uintStringProperty },
     },
     async handler(input) {
+      const market = await getMarketByPair(input);
+      if (!market) throw new Error("Market not found");
+      const state = await ensureMarketState({ market });
       return quoteSupply({
         assets: input.assets,
-        totalSupplyAssets: 0n,
-        totalSupplyShares: 0n,
+        totalSupplyAssets: state.totalSupplyAssets,
+        totalSupplyShares: state.totalSupplyShares,
       });
     },
   },
@@ -106,19 +117,29 @@ export const fxTelaranaTools = [
       },
     },
     async handler(input) {
-      const markets = await listMarkets();
-      const market = markets.find(
-        (candidate) =>
-          candidate.hubChainId === input.hubChainId &&
-          candidate.loanToken.toLowerCase() === input.loanToken.toLowerCase() &&
-          candidate.collateralToken.toLowerCase() === input.collateralToken.toLowerCase()
-      );
+      const market = await getMarketByPair(input);
       if (!market) throw new Error("Market not found");
+      const [state, oracle, positions] = await Promise.all([
+        ensureMarketState({ market }),
+        readMarketOracleQuote({ market }),
+        input.account
+          ? listAccountPositions({
+              account: input.account,
+              hubChainId: market.hubChainId,
+              marketId: market.id,
+              includeEmpty: true,
+            })
+          : Promise.resolve([]),
+      ]);
+      const existingPosition = positions[0] ?? null;
       return quoteBorrow({
-        market,
-        collateral: input.collateral,
+        market: { ...market, state },
+        collateral: (existingPosition?.collateral ?? 0n) + input.collateral,
         borrowAmount: input.borrowAmount,
-        collateralPriceE36: 10n ** 36n,
+        ...(existingPosition ? { existingBorrowShares: existingPosition.borrowShares } : {}),
+        totalBorrowAssets: state.totalBorrowAssets,
+        totalBorrowShares: state.totalBorrowShares,
+        collateralPriceE36: oracle.midE18 * WAD,
       });
     },
   },
@@ -141,10 +162,15 @@ export const fxTelaranaTools = [
     inputSchema: marketPairSchema,
     jsonSchema: marketPairJsonSchema,
     async handler(input) {
+      const market = await getMarketByPair(input);
+      if (!market) throw new Error("Market not found");
+      const oracle = await readMarketOracleQuote({ market });
       return {
         ...input,
         oracleSurface: "FxOracle.getMid",
         directPythOrRedStoneHttp: false,
+        midE18: oracle.midE18,
+        publishedAt: oracle.publishedAt,
       };
     },
   },
