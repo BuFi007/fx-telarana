@@ -43,6 +43,12 @@ remappings = [
   "@uniswap/v4-periphery/=lib/v4-periphery/",
   "cctp-v2/=lib/evm-cctp-contracts/src/v2/",
   "dodo-pmm/=lib/dodo-pmm-08/",
+  "privacy-pools/=lib/privacy-pools/",
+  "interfaces/=lib/privacy-pools/interfaces/",
+  "@oz/=lib/openzeppelin-contracts/contracts/",
+  "@oz-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+  "poseidon/=lib/poseidon-solidity/",
+  "lean-imt/=lib/lean-imt/",
 ]
 
 [profile.default.fuzz]
