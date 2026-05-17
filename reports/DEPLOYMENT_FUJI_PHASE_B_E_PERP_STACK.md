@@ -25,7 +25,7 @@ Deployer/admin/keeper: `0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69`
 ## Combined Backend Env
 
 ```json
-{"5042002":{"FxPerpClearinghouse":"0x25cDf2ad4Fd446e85273c4D7C77a03F22C742865","FxMarginAccount":"0x1869D0253286dF29ce0AB8d29207772C7fD9dc35","FxFundingEngine":"0x725822e8BC6edbcBa52914149e25f2671290C6D2","FxHealthChecker":"0x9cc0D71e2Af1532e74C2Af8aE7248ACB501039d5","FxLiquidationEngine":"0x01f71c1E74350633bBC9d554ca35DA40412DCFB7","FxOrderSettlement":"0x49ad97Fa2b67252373f4683bD4a4B49AA3AF5565"},"43113":{"FxPerpClearinghouse":"0x22013f712190034D8Ee43F3894461c27709E74AC","FxMarginAccount":"0x21bB1Bb922b04CbCFD1AD7Bd6788F5251917acb2","FxFundingEngine":"0x3a4459dBa18806e700423aAbEA1df1fefc928C6a","FxHealthChecker":"0x7Ff02e5F618a051acad9BbF9b1295E423062BB56","FxLiquidationEngine":"0xED58C176E9a37Cda2854AC0Ade409cfb3687cA7d","FxOrderSettlement":"0x955AAEE698aaA03d5bc32F16434cef78b8Ee1fc7"}}
+{"5042002":{"FxPerpClearinghouse":"0x6A265045D9A3291D2881d77DDC62e2781A2418c5","FxMarginAccount":"0x35c7cD02cFa0c2889547482B71c1a5114d8439C6","FxFundingEngine":"0x88B70872759E1aA24858746779Cb15ca9F2cdcf3","FxHealthChecker":"0x272305e821D810eC5741761F98DbDC273efD47E6","FxLiquidationEngine":"0xD384560E5f8CE969BF4C1BDfAFACc5304AFbe8f2","FxOrderSettlement":"0x0F62FCdA2de63d905Cb167301C00251A9bB6dAa1"},"43113":{"FxPerpClearinghouse":"0x22013f712190034D8Ee43F3894461c27709E74AC","FxMarginAccount":"0x21bB1Bb922b04CbCFD1AD7Bd6788F5251917acb2","FxFundingEngine":"0x3a4459dBa18806e700423aAbEA1df1fefc928C6a","FxHealthChecker":"0x7Ff02e5F618a051acad9BbF9b1295E423062BB56","FxLiquidationEngine":"0xED58C176E9a37Cda2854AC0Ade409cfb3687cA7d","FxOrderSettlement":"0x955AAEE698aaA03d5bc32F16434cef78b8Ee1fc7"}}
 ```
 
 ## Broadcast Transactions
@@ -66,4 +66,3 @@ Post-broadcast `cast` checks confirmed:
 No market, funding, liquidation, or protocol liquidity seed parameters were
 configured in this deployment. Those remain explicit admin transactions before
 any live perps smoke.
-

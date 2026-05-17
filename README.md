@@ -104,12 +104,12 @@ Trading is Arc-only for this stack. These contracts were deployed on Arc Testnet
 
 | Contract | Address |
 |---|---|
-| FxPerpClearinghouse | `0x25cDf2ad4Fd446e85273c4D7C77a03F22C742865` |
-| FxMarginAccount | `0x1869D0253286dF29ce0AB8d29207772C7fD9dc35` |
-| FxFundingEngine | `0x725822e8BC6edbcBa52914149e25f2671290C6D2` |
-| FxHealthChecker | `0x9cc0D71e2Af1532e74C2Af8aE7248ACB501039d5` |
-| FxLiquidationEngine | `0x01f71c1E74350633bBC9d554ca35DA40412DCFB7` |
-| FxOrderSettlement | `0x49ad97Fa2b67252373f4683bD4a4B49AA3AF5565` |
+| FxPerpClearinghouse | `0x6A265045D9A3291D2881d77DDC62e2781A2418c5` |
+| FxMarginAccount | `0x35c7cD02cFa0c2889547482B71c1a5114d8439C6` |
+| FxFundingEngine | `0x88B70872759E1aA24858746779Cb15ca9F2cdcf3` |
+| FxHealthChecker | `0x272305e821D810eC5741761F98DbDC273efD47E6` |
+| FxLiquidationEngine | `0xD384560E5f8CE969BF4C1BDfAFACc5304AFbe8f2` |
+| FxOrderSettlement | `0x0F62FCdA2de63d905Cb167301C00251A9bB6dAa1` |
 
 Supporting Arc addresses:
 

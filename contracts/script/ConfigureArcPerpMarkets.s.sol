@@ -21,10 +21,10 @@ contract ConfigureArcPerpMarkets is Script {
     uint256 internal constant ARC_CHAIN_ID = 5_042_002;
 
     address internal constant DEFAULT_USDC = 0x3600000000000000000000000000000000000000;
-    address internal constant DEFAULT_CLEARINGHOUSE = 0x25cDf2ad4Fd446e85273c4D7C77a03F22C742865;
-    address internal constant DEFAULT_MARGIN = 0x1869D0253286dF29ce0AB8d29207772C7fD9dc35;
-    address internal constant DEFAULT_FUNDING = 0x725822e8BC6edbcBa52914149e25f2671290C6D2;
-    address internal constant DEFAULT_LIQUIDATION = 0x01f71c1E74350633bBC9d554ca35DA40412DCFB7;
+    address internal constant DEFAULT_CLEARINGHOUSE = 0x6A265045D9A3291D2881d77DDC62e2781A2418c5;
+    address internal constant DEFAULT_MARGIN = 0x35c7cD02cFa0c2889547482B71c1a5114d8439C6;
+    address internal constant DEFAULT_FUNDING = 0x88B70872759E1aA24858746779Cb15ca9F2cdcf3;
+    address internal constant DEFAULT_LIQUIDATION = 0xD384560E5f8CE969BF4C1BDfAFACc5304AFbe8f2;
 
     address internal constant EURC = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
     address internal constant TJPYC = 0xB176f6E0c8ecc2be208F72Ad34c54e5F10F1882a;
