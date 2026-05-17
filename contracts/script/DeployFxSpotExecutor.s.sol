@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 import {Script, console2} from "forge-std/Script.sol";
 import {FxSpotExecutor} from "../src/spot/FxSpotExecutor.sol";
 
-/// @notice Per-chain deploy of FxSpotExecutor (Phase A v0).
+/// @notice Per-chain deploy of FxSpotExecutor (Phase A v0.2).
 ///
 /// Required env:
 ///   DEPLOYER_PRIVATE_KEY
@@ -17,7 +17,7 @@ import {FxSpotExecutor} from "../src/spot/FxSpotExecutor.sol";
 ///   DEFAULT_SPREAD_BPS      — defaults to 5 (0.05%)
 ///
 /// Post-deploy wiring (manual, owner-signed):
-///   1. setTokenEnabled(<target_token>, true) — e.g. EURC on Arc
+///   1. setTokenEnabled(<target_token>, true) — stores tokenOut decimals
 ///   2. addLiquidity(<target_token>, <seed_amount>) — owner seeds reserves
 ///   3. grantRole(EXECUTOR_ROLE, <keeper_eoa>) on FxSpotExecutor
 ///   4. grantRole(EXECUTOR_ROLE, <FxSpotExecutor_addr>) on TGH — so
@@ -31,14 +31,14 @@ contract DeployFxSpotExecutor is Script {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(pk);
 
-        address usdc          = vm.envAddress("USDC");
-        address oracle        = vm.envAddress("FX_ORACLE");
-        address tgh           = vm.envAddress("TELARANA_GATEWAY_HUB_HOOK");
-        address initialAdmin  = vm.envOr("INITIAL_ADMIN", deployer);
+        address usdc = vm.envAddress("USDC");
+        address oracle = vm.envAddress("FX_ORACLE");
+        address tgh = vm.envAddress("TELARANA_GATEWAY_HUB_HOOK");
+        address initialAdmin = vm.envOr("INITIAL_ADMIN", deployer);
         uint256 defaultSpread = vm.envOr("DEFAULT_SPREAD_BPS", uint256(5));
 
         console2.log("============================================");
-        console2.log("Deploying FxSpotExecutor (Phase A v0)");
+        console2.log("Deploying FxSpotExecutor (Phase A v0.2)");
         console2.log("============================================");
         console2.log("deployer        ", deployer);
         console2.log("usdc            ", usdc);
@@ -48,9 +48,7 @@ contract DeployFxSpotExecutor is Script {
         console2.log("defaultSpreadBps", defaultSpread);
 
         vm.startBroadcast(pk);
-        FxSpotExecutor executor = new FxSpotExecutor(
-            usdc, oracle, tgh, initialAdmin, defaultSpread
-        );
+        FxSpotExecutor executor = new FxSpotExecutor(usdc, oracle, tgh, initialAdmin, defaultSpread);
         vm.stopBroadcast();
 
         console2.log("============================================");

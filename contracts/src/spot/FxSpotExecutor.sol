@@ -13,7 +13,7 @@ import {IFxOracle} from "../interfaces/IFxOracle.sol";
 import {ITelaranaGatewayHubHook} from "../interfaces/ITelaranaGatewayHubHook.sol";
 
 /// @title FxSpotExecutor
-/// @notice Phase A v0.1 spot-FX executor for fx-Telaraña. Plugs into
+/// @notice Phase A v0.2 spot-FX executor for fx-Telaraña. Plugs into
 ///         `TelaranaGatewayHubHook` (TGH) as a `destinationHub` for spot-FX
 ///         routes. After TGH mints USDC against a Circle Gateway attestation
 ///         and forwards it here, an authorized executor calls
@@ -39,31 +39,34 @@ import {ITelaranaGatewayHubHook} from "../interfaces/ITelaranaGatewayHubHook.sol
 /// the `requestId`; every other value comes from the TGH receipt, which is
 /// the single source of truth.
 ///
-/// v0.1 also enforces `IERC20Metadata.decimals(tokenOut) == decimals(USDC)`
-/// at `setTokenEnabled` time. Codex HIGH: the payout math
-/// `amountOut = amountIn * midE18 / 1e18` is decimal-unaware; mixing 6-dec
-/// USDC with an 18-dec tokenOut mispays by 1e12. Decimal-aware math
-/// (per-token decimals + decimal-scaled mulDiv) is deferred to v0.2 / the
-/// Phase A v1 v4-hook wrap; for now the contract refuses to allowlist a
-/// token whose decimals differ from USDC's.
+/// ## v0.2 changelog vs v0.1
 ///
-/// ## V0.1 scope (intentional)
+/// v0.1 refused to allowlist tokens whose decimals differed from USDC because
+/// its payout math assumed identical atomic-unit decimals. v0.2 stores
+/// `IERC20Metadata.decimals(tokenOut)` at allowlist time and scales the quote
+/// through 18-decimal oracle precision before scaling to tokenOut decimals.
+/// The decimal normalization mirrors Synthetix v3's `Price.scale/scaleTo`
+/// pattern in
+/// `contracts/lib/synthetix-v3/markets/spot-market/contracts/storage/Price.sol`.
+///
+/// ## V0.2 scope (intentional)
 ///
 ///   * Owner-managed liquidity (no LP shares, no Morpho rehyp).
 ///   * Single oracle source via `FxOracle.getMid` (Pyth-only). Owner can
 ///     flip `requireVerifiedOracle = true` once the keeper wraps tx with
 ///     RedStone calldata to engage `getMidVerified`.
 ///   * Configurable spread bps, default 5 bps for stable FX pairs.
-///   * Single-leg only: USDC → enabled tokenOut, decimals must match USDC.
+///   * Single-leg only: USDC → enabled tokenOut, decimal-aware up to
+///     `MAX_TOKEN_DECIMALS`.
 ///
 /// ## Pricing formula reference
 ///
 /// The pricing math is the standard oracle-anchored synth-exchange shape:
 ///
-///   `amountOut = amountIn * mid * (1 - spread)`
+///   `amountOut = scaleTo(scale(amountIn, usdcDecimals) * mid / 1e18, tokenOutDecimals) * (1 - spread)`
 ///
-/// implemented as two `mulDiv` calls against OZ `Math.mulDiv` (overflow-safe
-/// 512-bit intermediate). Same arithmetic shape used by vendored references:
+/// implemented with OZ `Math.mulDiv` for decimal scaling, oracle price, and
+/// spread arithmetic. Same arithmetic shape used by vendored references:
 ///   * `contracts/lib/gmx-synthetics/contracts/swap/SwapUtils.sol`, which
 ///     computes `amountOut = amountIn * tokenInPrice / tokenOutPrice` after
 ///     fees and impact adjustments.
@@ -105,6 +108,10 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
     /// @notice Cap on the configurable spread bps. 500 bps = 5%. Anything
     /// higher should trigger a manual review of the swap economics.
     uint256 public constant MAX_SPREAD_BPS = 500;
+    /// @notice Cap token decimals to keep decimal scaling within practical ERC20 ranges.
+    uint8 public constant MAX_TOKEN_DECIMALS = 36;
+    /// @notice Oracle prices are 18-decimal fixed point.
+    uint8 public constant ORACLE_DECIMALS = 18;
 
     IERC20 public immutable USDC;
     uint8 public immutable USDC_DECIMALS;
@@ -123,6 +130,8 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
 
     /// @notice Token allowlist. We only swap USDC → tokens we've explicitly enabled.
     mapping(address token => bool enabled) public tokenEnabled;
+    /// @notice TokenOut decimals captured at allowlist time.
+    mapping(address token => uint8 decimals) public tokenDecimals;
 
     /// @notice When true, use FxOracle.getMidVerified (Pyth + RedStone deviation
     /// gate). Requires the executor caller to wrap its tx with RedStone SDK calldata.
@@ -142,6 +151,7 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
     event LiquidityWithdrawn(address indexed token, uint256 amount, address indexed to);
     event SpreadConfigured(address indexed token, uint256 bps);
     event TokenAllowlistSet(address indexed token, bool enabled);
+    event TokenDecimalsStored(address indexed token, uint8 decimals);
     event RequireVerifiedOracleSet(bool required);
 
     error ZeroAddress();
@@ -154,7 +164,7 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
     error InvalidSpread(uint256 bps);
     error UsdcAsTokenOut();
     error ReceiptNotMinted(bytes32 requestId, uint8 actualState);
-    error TokenOutDecimalsMismatch(address token, uint8 expected, uint8 actual);
+    error TokenDecimalsTooLarge(address token, uint8 decimals);
     error EmptyReceipt(bytes32 requestId);
 
     constructor(
@@ -171,6 +181,7 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
 
         USDC = IERC20(usdc_);
         USDC_DECIMALS = IERC20Metadata(usdc_).decimals();
+        if (USDC_DECIMALS > MAX_TOKEN_DECIMALS) revert TokenDecimalsTooLarge(usdc_, USDC_DECIMALS);
         ORACLE = IFxOracle(oracle_);
         TELARANA_HUB_HOOK = ITelaranaGatewayHubHook(tghAddress);
 
@@ -221,10 +232,9 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
         if (receipt.tokenOut == address(USDC)) revert UsdcAsTokenOut();
         if (!tokenEnabled[receipt.tokenOut]) revert TokenNotEnabled(receipt.tokenOut);
 
+        uint8 outDecimals = tokenDecimals[receipt.tokenOut];
+
         // Read oracle mid: getMid(USDC, tokenOut) returns (tokenOut per 1 USDC) * 1e18.
-        // amountOut tokenOut = amountIn USDC * mid / 1e18.
-        // NOTE: amountIn and amountOut must be in identical-decimal atomic units
-        // (USDC and tokenOut both N decimals). setTokenEnabled enforces this.
         uint256 midE18;
         if (requireVerifiedOracle) {
             (midE18,) = ORACLE.getMidVerified(address(USDC), receipt.tokenOut);
@@ -237,7 +247,9 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
 
         // Two-step `mulDiv` (OZ Math). See contract NatSpec "Pricing formula
         // reference" for vendored GMX/Synthetix reference paths.
-        uint256 gross = receipt.amount.mulDiv(midE18, 1e18);
+        uint256 amountInE18 = _scaleDecimals(receipt.amount, USDC_DECIMALS, ORACLE_DECIMALS);
+        uint256 grossE18 = amountInE18.mulDiv(midE18, 1e18);
+        uint256 gross = _scaleDecimals(grossE18, ORACLE_DECIMALS, outDecimals);
         amountOut = gross.mulDiv(10_000 - spreadBps, 10_000);
 
         if (amountOut < receipt.minAmountOut) {
@@ -306,14 +318,14 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
     function setTokenEnabled(address token, bool enabled) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (token == address(0)) revert ZeroAddress();
         if (token == address(USDC)) revert UsdcAsTokenOut();
-        // v0.1 decimals guard. Codex HIGH#2: payout math assumes USDC-compatible
-        // decimals on tokenOut. Until decimal-aware math lands, reject any
-        // tokenOut whose decimals differ from USDC's.
+
         if (enabled) {
             uint8 outDecimals = IERC20Metadata(token).decimals();
-            if (outDecimals != USDC_DECIMALS) {
-                revert TokenOutDecimalsMismatch(token, USDC_DECIMALS, outDecimals);
-            }
+            if (outDecimals > MAX_TOKEN_DECIMALS) revert TokenDecimalsTooLarge(token, outDecimals);
+            tokenDecimals[token] = outDecimals;
+            emit TokenDecimalsStored(token, outDecimals);
+        } else {
+            delete tokenDecimals[token];
         }
         tokenEnabled[token] = enabled;
         emit TokenAllowlistSet(token, enabled);
@@ -343,5 +355,16 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
 
     function unpause() external onlyRole(OPERATIONS_ROLE) {
         _unpause();
+    }
+
+    /// @dev Decimal-normalization helper modeled on Synthetix v3
+    ///      `Price.scale/scaleTo`, using OZ `Math.mulDiv` for the multiply
+    ///      and divide branches.
+    function _scaleDecimals(uint256 amount, uint8 fromDecimals, uint8 toDecimals) internal pure returns (uint256) {
+        if (fromDecimals == toDecimals) return amount;
+        if (fromDecimals < toDecimals) {
+            return amount.mulDiv(10 ** uint256(toDecimals - fromDecimals), 1);
+        }
+        return amount.mulDiv(1, 10 ** uint256(fromDecimals - toDecimals));
     }
 }
