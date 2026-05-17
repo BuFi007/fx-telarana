@@ -112,6 +112,8 @@ contract FxPrivacyEntrypoint is Entrypoint {
     error CrossCurrencyDisabled(IERC20 _asset);
     error BuyTokenEqualsAsset();
     error AdapterUnderdelivered(uint256 received, uint256 minBuyAmount);
+    error RecipientUnderdelivered(uint256 received, uint256 minBuyAmount);
+    error ZeroRecipient();
 
     /*//////////////////////////////////////////////////////////////
                                 VIEWS
@@ -187,6 +189,7 @@ contract FxPrivacyEntrypoint is Entrypoint {
 
         CrossCurrencyRelayData memory _data = abi.decode(_withdrawal.data, (CrossCurrencyRelayData));
 
+        if (_data.recipient == address(0)) revert ZeroRecipient();
         if (_data.buyToken == address(_asset)) revert BuyTokenEqualsAsset();
         if (_data.relayFeeBPS > assetConfig[_asset].maxRelayFeeBPS) revert RelayFeeGreaterThanMax();
 
@@ -223,7 +226,16 @@ contract FxPrivacyEntrypoint is Entrypoint {
             revert AdapterUnderdelivered(_measuredOut, _data.minBuyAmount);
         }
 
+        // Codex-r2 MED #1: measure RECIPIENT-side delta on the final
+        // transfer. A fee-on-transfer / deflationary `_buyToken` can tax
+        // the egress and leave the recipient with less than `minBuyAmount`
+        // even after the adapter delivered the gross amount to us.
+        uint256 _recipientBefore = _buyToken.balanceOf(_data.recipient);
         _buyToken.safeTransfer(_data.recipient, _measuredOut);
+        uint256 _recipientDelta = _buyToken.balanceOf(_data.recipient) - _recipientBefore;
+        if (_recipientDelta < _data.minBuyAmount) {
+            revert RecipientUnderdelivered(_recipientDelta, _data.minBuyAmount);
+        }
 
         // Defense-in-depth: the entrypoint must not retain less of the
         // sell asset than before; that would imply the swap adapter pulled
@@ -238,7 +250,7 @@ contract FxPrivacyEntrypoint is Entrypoint {
             _buyToken,
             _withdrawnAmount,
             _feeAmount,
-            _measuredOut
+            _recipientDelta
         );
     }
 }

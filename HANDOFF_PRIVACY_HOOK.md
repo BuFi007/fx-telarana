@@ -87,6 +87,29 @@
       publishes a permissive root via `Entrypoint.updateRoot()`
       (testnet only; Uniswap V3 gas-swap layer stripped per spec)
 
+**Codex r2 deploy / upgrade runbook (must read before any UUPS upgrade):**
+
+The ERC-7201 namespaced-storage move in `FxPrivacyEntrypoint` (codex-r1 MED
+#2) is a **fresh storage layout**. Any proxy that ran a pre-r1 implementation
+holds its swapAdapter + crossCurrencyEnabled values in append-linearized
+slots that the post-r1 impl does NOT read. Concretely:
+
+  1. **Greenfield deploy (slice 4 deploy block onward):** no migration
+     needed. Deploy the post-r1 implementation, call `initialize(owner,
+     postman)`, then run `setSwapAdapter(...)` + `setCrossCurrencyEnabled(
+     asset, true)` once per supported asset. Assert via the `swapAdapter()`
+     and `crossCurrencyEnabled()` view shims before resuming relayer
+     traffic.
+
+  2. **Upgrade from a pre-r1 impl (only relevant if a pre-r1 build was
+     ever proxied to mainnet/testnet):** the upgrade transaction MUST
+     atomically re-call `setSwapAdapter(...)` and re-enable every asset.
+     Until that runs, `relayCrossCurrency` reverts `SwapAdapterNotSet`
+     (safe, but service is paused). No migration helper ships with this
+     repo because no pre-r1 deploy exists; if you have one, write a
+     one-shot `reinitializer` that copies the legacy slots before
+     promoting the new implementation.
+
 **Still TODO in slice 4b** (post-merge follow-up):
 - [ ] Commit `commitment.zkey` (901 KB), `*.vkey`, `*.wasm` artifacts (or
       decide CDN-only); document URL strategy

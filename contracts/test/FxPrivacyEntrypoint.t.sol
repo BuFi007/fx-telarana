@@ -86,6 +86,54 @@ contract MockMarketRegistry is IFxMarketRegistry {
     function repay(address, address, uint256, address) external pure returns (uint256) { return 0; }
 }
 
+/// @notice codex-r2 MED #1 regression vehicle: a fee-on-transfer ERC-20
+///         that taxes 100 bps on every outbound transfer. Used to verify
+///         the recipient-side balance delta check catches deflation that
+///         only manifests on egress.
+contract FeeOnTransferToken {
+    string  public constant name     = "Fee On Transfer";
+    string  public constant symbol   = "FOT";
+    uint8   public constant decimals = 6;
+    uint256 public totalSupply;
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+    /// 10% tax on every transfer. Symmetric (both `transfer` and
+    /// `transferFrom` paths) — that's what real deflationary tokens do.
+    uint256 public constant FEE_BPS = 1_000;
+
+    function mint(address to, uint256 amount) external {
+        totalSupply += amount;
+        balanceOf[to] += amount;
+    }
+
+    function _taxed(uint256 amount) internal pure returns (uint256 net, uint256 fee) {
+        fee = (amount * FEE_BPS) / 10_000;
+        net = amount - fee;
+    }
+
+    function transfer(address to, uint256 amount) external returns (bool) {
+        balanceOf[msg.sender] -= amount;
+        (uint256 net, uint256 fee) = _taxed(amount);
+        balanceOf[to] += net;
+        totalSupply -= fee;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from] -= amount;
+        (uint256 net, uint256 fee) = _taxed(amount);
+        balanceOf[to] += net;
+        totalSupply -= fee;
+        return true;
+    }
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        return true;
+    }
+}
+
 /// @notice codex-r1 HIGH #1 regression vehicle: an adapter that *claims*
 ///         to deliver more than it actually transfers. Measured-delivery
 ///         check on the entrypoint must catch this.
@@ -318,6 +366,64 @@ contract FxPrivacyEntrypointTest is Test {
         vm.expectRevert(abi.encodeWithSelector(
             FxPrivacyEntrypoint.AdapterUnderdelivered.selector, 1, amount
         ));
+        entrypoint.relayCrossCurrency(w, p, poolScope);
+    }
+
+    /// @dev codex-r2 MED #1 regression: a fee-on-transfer `buyToken` that
+    ///      taxes 10% on every transfer. With a margin where the adapter
+    ///      check is satisfied but the recipient-side egress tax pushes
+    ///      below the user's signed minimum, the recipient-side gate must
+    ///      fire — without it, the user silently receives less than signed.
+    ///
+    ///      Calibration:
+    ///        sell = 100e6, FOT tax = 10%
+    ///        adapter delivers 100e6 → entrypoint gets 90e6 (tax 1)
+    ///        minBuyAmount = 85e6 → adapter check (90 >= 85) PASSES
+    ///        entrypoint sends 90e6 → recipient gets 81e6 (tax 2)
+    ///        recipient check (81 < 85) FAILS → RecipientUnderdelivered
+    function test_relayCrossCurrency_catchesFeeOnTransferEgressTax() public {
+        uint256 amount = 100e6;
+        _depositFromUser(amount, 40);
+
+        FeeOnTransferToken fot = new FeeOnTransferToken();
+        fot.mint(address(adapter), 100e6);
+
+        vm.prank(OWNER);
+        entrypoint.setCrossCurrencyEnabled(IERC20(address(fot)), true);
+
+        FxPrivacyEntrypoint.CrossCurrencyRelayData memory data = FxPrivacyEntrypoint.CrossCurrencyRelayData({
+            recipient:    RECIPIENT,
+            feeRecipient: FEE_SINK,
+            relayFeeBPS:  0,
+            buyToken:     address(fot),
+            minBuyAmount: 85e6
+        });
+        (IPrivacyPool.Withdrawal memory w, ProofLib.WithdrawProof memory p) =
+            _craftWithdrawal(data, amount, 0x40);
+
+        vm.expectRevert(abi.encodeWithSelector(
+            FxPrivacyEntrypoint.RecipientUnderdelivered.selector, 81e6, 85e6
+        ));
+        entrypoint.relayCrossCurrency(w, p, poolScope);
+    }
+
+    /// @dev codex-r2 MED #1 regression: zero recipient is now an explicit
+    ///      revert before any swap is attempted.
+    function test_relayCrossCurrency_revertsOnZeroRecipient() public {
+        uint256 amount = 100e6;
+        _depositFromUser(amount, 41);
+
+        FxPrivacyEntrypoint.CrossCurrencyRelayData memory data = FxPrivacyEntrypoint.CrossCurrencyRelayData({
+            recipient:    address(0),
+            feeRecipient: FEE_SINK,
+            relayFeeBPS:  0,
+            buyToken:     address(eurc),
+            minBuyAmount: 1
+        });
+        (IPrivacyPool.Withdrawal memory w, ProofLib.WithdrawProof memory p) =
+            _craftWithdrawal(data, amount, 0x41);
+
+        vm.expectRevert(FxPrivacyEntrypoint.ZeroRecipient.selector);
         entrypoint.relayCrossCurrency(w, p, poolScope);
     }
 
