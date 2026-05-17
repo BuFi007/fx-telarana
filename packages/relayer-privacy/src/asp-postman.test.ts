@@ -6,7 +6,14 @@
 // reproducible from chain history alone.
 
 import { describe, expect, test } from "bun:test";
-import type { Address } from "viem";
+import {
+  type Address,
+  type Hex,
+  decodeEventLog,
+  encodeAbiParameters,
+  keccak256,
+  toEventSelector,
+} from "viem";
 
 import {
   applyDeposits,
@@ -118,5 +125,93 @@ describe("applyDeposits — canonical insertion across pools", () => {
     state.dirty = false;
     applyDeposits(state, [dep(1n, 0, 0, POOL_A, 7n)]); // duplicate only
     expect(state.dirty).toBe(false);
+  });
+});
+
+/// @notice codex-r3 HIGH #1 regression. Reproduce the on-chain
+/// `PoolRegistered(IPrivacyPool _pool, IERC20 _asset, uint256 _scope)`
+/// emission (no indexed fields — three values packed into `data`) and
+/// assert that the postman's ABI decodes the pool address correctly.
+/// Pre-fix ABI marked `_pool` and `_asset` as `indexed: true`, which made
+/// viem look for them in `topics` and silently return `undefined`,
+/// breaking pool discovery.
+describe("PoolRegistered ABI alignment with Solidity emission", () => {
+  // The exact ABI fragment shipped in asp-postman.ts.
+  const POOL_REGISTERED = {
+    type: "event",
+    name: "PoolRegistered",
+    inputs: [
+      { name: "_pool",  type: "address", indexed: false },
+      { name: "_asset", type: "address", indexed: false },
+      { name: "_scope", type: "uint256", indexed: false },
+    ],
+    anonymous: false,
+  } as const;
+
+  test("postman ABI decodes the canonical Solidity log shape", () => {
+    const pool: Address  = "0x1111111111111111111111111111111111111111";
+    const asset: Address = "0x2222222222222222222222222222222222222222";
+    const scope          = 0xc0ffeen;
+
+    // What the Solidity event would emit (all three params in `data`,
+    // selector in `topics[0]`).
+    const data = encodeAbiParameters(
+      [
+        { name: "_pool",  type: "address" },
+        { name: "_asset", type: "address" },
+        { name: "_scope", type: "uint256" },
+      ],
+      [pool, asset, scope],
+    ) as Hex;
+    const topic = toEventSelector("PoolRegistered(address,address,uint256)");
+
+    // Confirm the canonical selector matches viem's keccak.
+    expect(topic).toBe(
+      keccak256(new TextEncoder().encode("PoolRegistered(address,address,uint256)") as unknown as Hex),
+    );
+
+    const decoded = decodeEventLog({
+      abi:    [POOL_REGISTERED],
+      data,
+      topics: [topic],
+    });
+
+    expect(decoded.eventName).toBe("PoolRegistered");
+    expect(decoded.args._pool.toLowerCase()).toBe(pool.toLowerCase());
+    expect(decoded.args._asset.toLowerCase()).toBe(asset.toLowerCase());
+    expect(decoded.args._scope).toBe(scope);
+  });
+
+  test("an incorrectly-indexed ABI fails to decode (regression guard)", () => {
+    // Mirror the pre-r3 BROKEN abi shape — _pool/_asset marked indexed.
+    const BROKEN = {
+      type: "event",
+      name: "PoolRegistered",
+      inputs: [
+        { name: "_pool",  type: "address", indexed: true  },
+        { name: "_asset", type: "address", indexed: true  },
+        { name: "_scope", type: "uint256", indexed: false },
+      ],
+      anonymous: false,
+    } as const;
+
+    const pool: Address  = "0x1111111111111111111111111111111111111111";
+    const asset: Address = "0x2222222222222222222222222222222222222222";
+    const scope          = 1n;
+    const data = encodeAbiParameters(
+      [
+        { name: "_pool",  type: "address" },
+        { name: "_asset", type: "address" },
+        { name: "_scope", type: "uint256" },
+      ],
+      [pool, asset, scope],
+    ) as Hex;
+    const topic = toEventSelector("PoolRegistered(address,address,uint256)");
+
+    // viem rejects with "topics count mismatch" — proves the broken
+    // shape would never have worked.
+    expect(() =>
+      decodeEventLog({ abi: [BROKEN], data, topics: [topic] }),
+    ).toThrow();
   });
 });

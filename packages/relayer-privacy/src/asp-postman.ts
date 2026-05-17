@@ -43,13 +43,20 @@ import { privateKeyToAccount } from "viem/accounts";
 // ABIs (minimal — just the events + writes we need)
 // ---------------------------------------------------------------------------
 
+// IMPORTANT (codex-r3 HIGH #1): the Solidity event has NO indexed fields:
+//   event PoolRegistered(IPrivacyPool _pool, IERC20 _asset, uint256 _scope);
+// All three values land in `data`, none in topics. An ABI that marks any
+// of them as `indexed: true` causes viem to decode against the wrong
+// topic/data layout and `_pool` comes back missing — pool discovery
+// silently fails, no labels are indexed, the postman publishes a useless
+// ASP root, and real withdrawals revert `IncorrectASPRoot`.
 const ENTRYPOINT_ABI = [
   {
     type: "event",
     name: "PoolRegistered",
     inputs: [
-      { name: "_pool",  type: "address", indexed: true  },
-      { name: "_asset", type: "address", indexed: true  },
+      { name: "_pool",  type: "address", indexed: false },
+      { name: "_asset", type: "address", indexed: false },
       { name: "_scope", type: "uint256", indexed: false },
     ],
     anonymous: false,
@@ -307,7 +314,16 @@ async function main(): Promise<void> {
         log("info", "publishing root", {
           root: `0x${root.toString(16)}`, size: state.tree.size, dryRun: cfg.dryRun,
         });
-        if (!cfg.dryRun) {
+        if (cfg.dryRun) {
+          state.dirty = false;
+        } else {
+          // Codex-r3 HIGH #2: only clear `dirty` AFTER a successful
+          // mined receipt. `writeContract` only proves the tx was
+          // submitted to the mempool; reverts, drops, replacements, or
+          // nonce gaps would otherwise leave on-chain `latestRoot()`
+          // stale while the in-memory state believes the root was
+          // published. Subsequent ticks would not retry until another
+          // deposit re-dirtied the tree.
           const txHash = await walletClient.writeContract({
             chain: null,
             account,
@@ -316,9 +332,23 @@ async function main(): Promise<void> {
             functionName: "updateRoot",
             args: [root, cid],
           });
-          log("info", "updateRoot tx sent", { txHash });
+          log("info", "updateRoot tx sent, awaiting receipt", { txHash });
+
+          const receipt = await publicClient.waitForTransactionReceipt({
+            hash: txHash,
+            confirmations: 1,
+          });
+
+          if (receipt.status !== "success") {
+            log("error", "updateRoot reverted — keeping dirty=true for retry", {
+              txHash, status: receipt.status,
+            });
+            // Do NOT clear state.dirty — next tick retries.
+          } else {
+            log("info", "updateRoot confirmed", { txHash, block: String(receipt.blockNumber) });
+            state.dirty = false;
+          }
         }
-        state.dirty = false;
       }
     } catch (err) {
       log("error", "tick failed (will retry)", { err: String(err) });
