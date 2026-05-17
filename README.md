@@ -98,6 +98,30 @@ Full manifest: [`deployments/avalanche-fuji.json`](deployments/avalanche-fuji.js
 
 Full manifest: [`deployments/arc-testnet.json`](deployments/arc-testnet.json) + [`deployments/hub-config-arc.json`](deployments/hub-config-arc.json).
 
+#### Arc Phase B-E perps stack
+
+Trading is Arc-only for this stack. These contracts were deployed on Arc Testnet and smoke-tested through market config, funding config, liquidation config, protocol liquidity seed, quote, EIP-712 signed order settlement, funding poke, liquidation scan, flag, and liquidation.
+
+| Contract | Address |
+|---|---|
+| FxPerpClearinghouse | `0x25cDf2ad4Fd446e85273c4D7C77a03F22C742865` |
+| FxMarginAccount | `0x1869D0253286dF29ce0AB8d29207772C7fD9dc35` |
+| FxFundingEngine | `0x725822e8BC6edbcBa52914149e25f2671290C6D2` |
+| FxHealthChecker | `0x9cc0D71e2Af1532e74C2Af8aE7248ACB501039d5` |
+| FxLiquidationEngine | `0x01f71c1E74350633bBC9d554ca35DA40412DCFB7` |
+| FxOrderSettlement | `0x49ad97Fa2b67252373f4683bD4a4B49AA3AF5565` |
+
+Supporting Arc addresses:
+
+| Contract | Address |
+|---|---|
+| USDC | `0x3600000000000000000000000000000000000000` |
+| EURC | `0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a` |
+| FxOracle | `0x77b3A3B420dB98B01085b8C46a753Ed9879e2865` |
+| Keeper / admin | `0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69` |
+
+Perps manifest: [`deployments/perps-5042002.json`](deployments/perps-5042002.json). Trading smoke report: [`reports/SMOKE_ARC_PHASE_B_E_TRADING.md`](reports/SMOKE_ARC_PHASE_B_E_TRADING.md).
+
 ### Spokes — 16 total, dual-routed per chain
 
 Every chain hosts both a Fuji-routed spoke and an Arc-routed spoke. Users pick by intent.
