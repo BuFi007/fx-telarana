@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { createLogger } from "@bufinance/logger";
-import type { MiddlewareHandler } from "hono";
+import type { Context, MiddlewareHandler } from "hono";
 
 const log = createLogger({ prefix: "fx-telarana:x402" });
 
@@ -61,16 +61,20 @@ export async function defaultReceiptVerifier(args: {
   }
 }
 
-export function requireX402Payment(args: {
-  endpoint: PremiumEndpoint;
-  verifier?: X402ReceiptVerifier;
-}): MiddlewareHandler {
+export async function verifyX402Request(
+  c: Context,
+  args: {
+    endpoint: PremiumEndpoint;
+    verifier?: X402ReceiptVerifier;
+  }
+): Promise<{ ok: true; receipt: X402Receipt; priceUsdc: string } | { ok: false; response: Response }> {
   const priceUsdc = PREMIUM_PRICES[args.endpoint];
   const verifier = args.verifier ?? defaultReceiptVerifier;
-  return async (c, next) => {
-    const header = c.req.header("Payment-Signature") ?? c.req.header("X-Payment") ?? "";
-    if (!header) {
-      return c.json(
+  const header = c.req.header("Payment-Signature") ?? c.req.header("X-Payment") ?? "";
+  if (!header) {
+    return {
+      ok: false,
+      response: c.json(
         {
           error: "payment_required",
           endpoint: args.endpoint,
@@ -78,32 +82,43 @@ export function requireX402Payment(args: {
           message: `This endpoint requires an x402 payment receipt for ${priceUsdc} USDC.`,
         },
         402
-      );
-    }
+      ),
+    };
+  }
 
-    const result = await verifier({ header, endpoint: args.endpoint, priceUsdc });
-    if (!result.ok) {
-      log.warn(
-        JSON.stringify({
-          endpoint: args.endpoint,
-          priceUsdc,
-          status: "rejected",
-          reason: result.reason,
-        })
-      );
-      return c.json({ error: "payment_rejected", reason: result.reason }, 402);
-    }
-
-    c.set("x402Receipt" as never, result.receipt as never);
-    log.info(
+  const result = await verifier({ header, endpoint: args.endpoint, priceUsdc });
+  if (!result.ok) {
+    log.warn(
       JSON.stringify({
         endpoint: args.endpoint,
         priceUsdc,
-        status: "paid",
-        payer: result.receipt.payer,
-        settlementRef: result.receipt.settlementRef,
+        status: "rejected",
+        reason: result.reason,
       })
     );
+    return { ok: false, response: c.json({ error: "payment_rejected", reason: result.reason }, 402) };
+  }
+
+  c.set("x402Receipt" as never, result.receipt as never);
+  log.info(
+    JSON.stringify({
+      endpoint: args.endpoint,
+      priceUsdc,
+      status: "paid",
+      payer: result.receipt.payer,
+      settlementRef: result.receipt.settlementRef,
+    })
+  );
+  return { ok: true, receipt: result.receipt, priceUsdc };
+}
+
+export function requireX402Payment(args: {
+  endpoint: PremiumEndpoint;
+  verifier?: X402ReceiptVerifier;
+}): MiddlewareHandler {
+  return async (c, next) => {
+    const payment = await verifyX402Request(c, args);
+    if (!payment.ok) return payment.response;
     await next();
   };
 }

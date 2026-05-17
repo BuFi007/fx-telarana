@@ -19,3 +19,55 @@ export const marketPairJsonSchema = {
     collateralToken: addressProperty,
   },
 };
+
+const intentBaseRequired = [
+  "hubChainId",
+  "loanToken",
+  "collateralToken",
+  "spokeChainId",
+  "onBehalf",
+  "nonce",
+  "deadline",
+];
+
+const intentBaseProperties = {
+  ...marketPairJsonSchema.properties,
+  spokeChainId: { type: "number" },
+  onBehalf: addressProperty,
+  nonce: uintStringProperty,
+  deadline: { type: "number" },
+};
+
+function intentJsonSchema(extraRequired: string[], extraProperties: Record<string, unknown>) {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: [...intentBaseRequired, ...extraRequired],
+    properties: {
+      ...intentBaseProperties,
+      ...extraProperties,
+    },
+  };
+}
+
+export const supplyIntentJsonSchema = intentJsonSchema(["assets"], {
+  assets: uintStringProperty,
+});
+
+export const borrowIntentJsonSchema = intentJsonSchema(["borrowAssets", "receiver"], {
+  borrowAssets: uintStringProperty,
+  receiver: addressProperty,
+});
+
+export const repayIntentJsonSchema = intentJsonSchema(["assets"], {
+  assets: uintStringProperty,
+});
+
+export const withdrawIntentJsonSchema = intentJsonSchema(["shares", "receiver"], {
+  shares: uintStringProperty,
+  receiver: addressProperty,
+});
+
+export const collateralIntentJsonSchema = intentJsonSchema(["collateral"], {
+  collateral: uintStringProperty,
+});

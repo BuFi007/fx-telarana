@@ -30,7 +30,16 @@ import {
   WAD,
 } from "@fx-telarana/core";
 
-import { addressProperty, marketPairJsonSchema, uintStringProperty } from "./json-schema.js";
+import {
+  addressProperty,
+  borrowIntentJsonSchema,
+  collateralIntentJsonSchema,
+  marketPairJsonSchema,
+  repayIntentJsonSchema,
+  supplyIntentJsonSchema,
+  uintStringProperty,
+  withdrawIntentJsonSchema,
+} from "./json-schema.js";
 import type { ToolDef } from "./types.js";
 
 const inspectPositionSchema = z.object({
@@ -195,18 +204,7 @@ export const fxTelaranaTools = [
     name: "build_supply_intent",
     description: "Build an unsigned EIP-712 supply intent. Never executes a transaction.",
     inputSchema: supplyIntentSchema,
-    jsonSchema: {
-      ...marketPairJsonSchema,
-      required: [...(marketPairJsonSchema.required ?? []), "spokeChainId", "assets", "onBehalf", "nonce", "deadline"],
-      properties: {
-        ...marketPairJsonSchema.properties,
-        spokeChainId: { type: "number" },
-        assets: uintStringProperty,
-        onBehalf: addressProperty,
-        nonce: uintStringProperty,
-        deadline: { type: "number" },
-      },
-    },
+    jsonSchema: supplyIntentJsonSchema,
     signedAction: true,
     async handler(input) {
       return { unsigned: true, typedData: buildSupplyIntent({ chainId: input.hubChainId, ...input }) };
@@ -216,11 +214,7 @@ export const fxTelaranaTools = [
     name: "build_borrow_intent",
     description: "Build an unsigned EIP-712 borrow intent. Never executes a transaction.",
     inputSchema: borrowIntentSchema,
-    jsonSchema: {
-      type: "object",
-      additionalProperties: false,
-      properties: {},
-    },
+    jsonSchema: borrowIntentJsonSchema,
     signedAction: true,
     async handler(input) {
       return { unsigned: true, typedData: buildBorrowIntent({ chainId: input.hubChainId, ...input }) };
@@ -230,7 +224,7 @@ export const fxTelaranaTools = [
     name: "build_repay_intent",
     description: "Build an unsigned EIP-712 repay intent. Never executes a transaction.",
     inputSchema: repayIntentSchema,
-    jsonSchema: { type: "object", additionalProperties: false, properties: {} },
+    jsonSchema: repayIntentJsonSchema,
     signedAction: true,
     async handler(input) {
       return { unsigned: true, typedData: buildRepayIntent({ chainId: input.hubChainId, ...input }) };
@@ -240,7 +234,7 @@ export const fxTelaranaTools = [
     name: "build_withdraw_intent",
     description: "Build an unsigned EIP-712 withdraw intent. Never executes a transaction.",
     inputSchema: withdrawIntentSchema,
-    jsonSchema: { type: "object", additionalProperties: false, properties: {} },
+    jsonSchema: withdrawIntentJsonSchema,
     signedAction: true,
     async handler(input) {
       return { unsigned: true, typedData: buildWithdrawIntent({ chainId: input.hubChainId, ...input }) };
@@ -250,7 +244,7 @@ export const fxTelaranaTools = [
     name: "build_supplyCollateral_intent",
     description: "Build an unsigned EIP-712 supply-collateral intent. Never executes a transaction.",
     inputSchema: collateralIntentSchema,
-    jsonSchema: { type: "object", additionalProperties: false, properties: {} },
+    jsonSchema: collateralIntentJsonSchema,
     signedAction: true,
     async handler(input) {
       return { unsigned: true, typedData: buildSupplyCollateralIntent({ chainId: input.hubChainId, ...input }) };
@@ -260,7 +254,7 @@ export const fxTelaranaTools = [
     name: "build_withdrawCollateral_intent",
     description: "Build an unsigned EIP-712 withdraw-collateral intent. Never executes a transaction.",
     inputSchema: collateralIntentSchema,
-    jsonSchema: { type: "object", additionalProperties: false, properties: {} },
+    jsonSchema: collateralIntentJsonSchema,
     signedAction: true,
     async handler(input) {
       return { unsigned: true, typedData: buildWithdrawCollateralIntent({ chainId: input.hubChainId, ...input }) };

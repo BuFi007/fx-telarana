@@ -2,6 +2,7 @@ node_modules/
 dist/
 .next/
 .turbo/
+.data/
 *.tsbuildinfo
 packages/ponder/ponder-env.d.ts
 .env

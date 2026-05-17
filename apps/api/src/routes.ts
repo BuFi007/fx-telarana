@@ -19,6 +19,7 @@ import {
   getMarketById,
   getMarketByPair,
   hubChainIdSchema,
+  hexSchema,
   liquidationCandidatesQuerySchema,
   listAccountPositions,
   listMarkets,
@@ -42,9 +43,9 @@ import {
 import { buildInternalDefiLlamaPayload } from "@fx-telarana/defillama";
 import { issueLendingSession } from "@fx-telarana/liveblocks/server";
 import { createMcpApp } from "@fx-telarana/mcp/hono";
-import { requireX402Payment } from "@fx-telarana/x402";
+import { requireX402Payment, verifyX402Request } from "@fx-telarana/x402";
 
-import { getIntent, storeIntent } from "./intent-store.js";
+import { getIntent, storeIntent, verifyStoredIntent } from "./intent-store.js";
 import { json } from "./json.js";
 
 const log = createLogger({ prefix: "fx-telarana:api" });
@@ -54,6 +55,16 @@ async function parseJson<TSchema extends z.ZodTypeAny>(schema: TSchema, c: Conte
   return schema.parse(body);
 }
 
+const signatureSchema = hexSchema.refine(
+  (value) => /^0x[0-9a-fA-F]{130}$/.test(value),
+  "Expected a 65-byte ECDSA signature"
+);
+
+const intentSignatureSchema = z.object({
+  signer: addressSchema,
+  signature: signatureSchema,
+});
+
 function ponderApiUrl(): string | null {
   return process.env.PONDER_API_URL ?? process.env.PONDER_BASE_URL ?? null;
 }
@@ -61,8 +72,13 @@ function ponderApiUrl(): string | null {
 async function fetchPonderJson(path: string): Promise<unknown | null> {
   const base = ponderApiUrl();
   if (!base) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    Number(process.env.PONDER_API_TIMEOUT_MS ?? 3_000)
+  );
   try {
-    const response = await fetch(new URL(path, base));
+    const response = await fetch(new URL(path, base), { signal: controller.signal });
     if (!response.ok) {
       log.warn(
         JSON.stringify({
@@ -83,6 +99,8 @@ async function fetchPonderJson(path: string): Promise<unknown | null> {
       })
     );
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -189,13 +207,24 @@ export function createRoutes() {
   app.get(
     "/fx-telarana/markets/:hubChainId/:marketId/historical-apy",
     requireX402Payment({ endpoint: "historical_apy" }),
-    async (c) =>
-      json(c, {
-        hubChainId: Number(c.req.param("hubChainId")),
-        marketId: c.req.param("marketId"),
-        range: c.req.query("range") ?? "30d",
-        points: [],
-      })
+    async (c) => {
+      const range = c.req.query("range") ?? "30d";
+      const hubChainId = Number(c.req.param("hubChainId"));
+      const marketId = c.req.param("marketId");
+      const indexed = await fetchPonderJson(
+        `/fx-telarana/markets/${hubChainId}/${marketId}/historical-apy?range=${encodeURIComponent(range)}`
+      );
+      return json(
+        c,
+        indexed ?? {
+          source: "ponder_unconfigured",
+          hubChainId,
+          marketId,
+          range,
+          points: [],
+        }
+      );
+    }
   );
 
   app.get("/fx-telarana/markets/:hubChainId/:marketId/oracle", async (c) => {
@@ -277,20 +306,26 @@ export function createRoutes() {
     return json(c, payload);
   });
 
-  app.post(
-    "/fx-telarana/quote/borrow-with-sim",
-    requireX402Payment({ endpoint: "borrow_with_sim" }),
-    async (c) => {
-      const body = await parseJson(quoteBorrowSchema.extend({ simulateTenderly: z.boolean().default(true) }), c);
-      log.info(JSON.stringify({ route: "borrow-with-sim", simulateTenderly: body.simulateTenderly }));
-      const payload = await buildBorrowQuotePayload(body);
-      if (!payload) return c.json({ error: "market_not_found" }, 404);
-      return json(c, {
-        quote: payload,
-        simulation: { status: "pending_provider_wiring" },
-      });
-    }
-  );
+  app.post("/fx-telarana/quote/borrow-with-sim", async (c) => {
+    const body = await parseJson(quoteBorrowSchema.extend({ simulateTenderly: z.boolean().default(true) }), c);
+    log.info(JSON.stringify({ route: "borrow-with-sim", simulateTenderly: body.simulateTenderly }));
+    const payment = body.simulateTenderly ? await verifyX402Request(c, { endpoint: "borrow_with_sim" }) : null;
+    if (payment && !payment.ok) return payment.response;
+    const payload = await buildBorrowQuotePayload(body);
+    if (!payload) return c.json({ error: "market_not_found" }, 404);
+    return json(c, {
+      quote: payload,
+      simulation: body.simulateTenderly
+        ? {
+            status: "provider_unconfigured",
+            provider: "tenderly",
+            paid: true,
+            payer: payment?.receipt.payer,
+            settlementRef: payment?.receipt.settlementRef,
+          }
+        : { status: "skipped", paid: false },
+    });
+  });
 
   app.post("/fx-telarana/repay/quote", async (c) => {
     const body = await parseJson(quoteRepaySchema, c);
@@ -324,7 +359,7 @@ export function createRoutes() {
 
   app.post("/fx-telarana/supply/intents", async (c) => {
     const body = await parseJson(supplyIntentSchema, c);
-    return json(c, storeIntent("supply", buildSupplyIntent({ chainId: body.hubChainId, ...body })), 201);
+    return json(c, storeIntent("Supply", buildSupplyIntent({ chainId: body.hubChainId, ...body })), 201);
   });
 
   app.get("/fx-telarana/supply/intents/:id", (c) => {
@@ -332,9 +367,13 @@ export function createRoutes() {
     return intent ? json(c, intent) : c.json({ error: "intent_not_found" }, 404);
   });
 
+  app.post("/fx-telarana/supply/intents/:id/signature", async (c) =>
+    json(c, await verifyStoredIntent(c.req.param("id"), await parseJson(intentSignatureSchema, c)))
+  );
+
   app.post("/fx-telarana/borrow/intents", async (c) => {
     const body = await parseJson(borrowIntentSchema, c);
-    return json(c, storeIntent("borrow", buildBorrowIntent({ chainId: body.hubChainId, ...body })), 201);
+    return json(c, storeIntent("Borrow", buildBorrowIntent({ chainId: body.hubChainId, ...body })), 201);
   });
 
   app.get("/fx-telarana/borrow/intents/:id", (c) => {
@@ -342,33 +381,73 @@ export function createRoutes() {
     return intent ? json(c, intent) : c.json({ error: "intent_not_found" }, 404);
   });
 
+  app.post("/fx-telarana/borrow/intents/:id/signature", async (c) =>
+    json(c, await verifyStoredIntent(c.req.param("id"), await parseJson(intentSignatureSchema, c)))
+  );
+
   app.post("/fx-telarana/repay/intents", async (c) => {
     const body = await parseJson(repayIntentSchema, c);
-    return json(c, storeIntent("repay", buildRepayIntent({ chainId: body.hubChainId, ...body })), 201);
+    return json(c, storeIntent("Repay", buildRepayIntent({ chainId: body.hubChainId, ...body })), 201);
   });
+
+  app.get("/fx-telarana/repay/intents/:id", (c) => {
+    const intent = getIntent(c.req.param("id"));
+    return intent ? json(c, intent) : c.json({ error: "intent_not_found" }, 404);
+  });
+
+  app.post("/fx-telarana/repay/intents/:id/signature", async (c) =>
+    json(c, await verifyStoredIntent(c.req.param("id"), await parseJson(intentSignatureSchema, c)))
+  );
 
   app.post("/fx-telarana/withdraw/intents", async (c) => {
     const body = await parseJson(withdrawIntentSchema, c);
-    return json(c, storeIntent("withdraw", buildWithdrawIntent({ chainId: body.hubChainId, ...body })), 201);
+    return json(c, storeIntent("Withdraw", buildWithdrawIntent({ chainId: body.hubChainId, ...body })), 201);
   });
+
+  app.get("/fx-telarana/withdraw/intents/:id", (c) => {
+    const intent = getIntent(c.req.param("id"));
+    return intent ? json(c, intent) : c.json({ error: "intent_not_found" }, 404);
+  });
+
+  app.post("/fx-telarana/withdraw/intents/:id/signature", async (c) =>
+    json(c, await verifyStoredIntent(c.req.param("id"), await parseJson(intentSignatureSchema, c)))
+  );
 
   app.post("/fx-telarana/collateral/supply/intents", async (c) => {
     const body = await parseJson(collateralIntentSchema, c);
     return json(
       c,
-      storeIntent("supplyCollateral", buildSupplyCollateralIntent({ chainId: body.hubChainId, ...body })),
+      storeIntent("SupplyCollateral", buildSupplyCollateralIntent({ chainId: body.hubChainId, ...body })),
       201
     );
   });
+
+  app.get("/fx-telarana/collateral/supply/intents/:id", (c) => {
+    const intent = getIntent(c.req.param("id"));
+    return intent ? json(c, intent) : c.json({ error: "intent_not_found" }, 404);
+  });
+
+  app.post("/fx-telarana/collateral/supply/intents/:id/signature", async (c) =>
+    json(c, await verifyStoredIntent(c.req.param("id"), await parseJson(intentSignatureSchema, c)))
+  );
 
   app.post("/fx-telarana/collateral/withdraw/intents", async (c) => {
     const body = await parseJson(collateralIntentSchema, c);
     return json(
       c,
-      storeIntent("withdrawCollateral", buildWithdrawCollateralIntent({ chainId: body.hubChainId, ...body })),
+      storeIntent("WithdrawCollateral", buildWithdrawCollateralIntent({ chainId: body.hubChainId, ...body })),
       201
     );
   });
+
+  app.get("/fx-telarana/collateral/withdraw/intents/:id", (c) => {
+    const intent = getIntent(c.req.param("id"));
+    return intent ? json(c, intent) : c.json({ error: "intent_not_found" }, 404);
+  });
+
+  app.post("/fx-telarana/collateral/withdraw/intents/:id/signature", async (c) =>
+    json(c, await verifyStoredIntent(c.req.param("id"), await parseJson(intentSignatureSchema, c)))
+  );
 
   app.get("/fx-telarana/liquidations/candidates", async (c) => {
     const query = liquidationCandidatesQuerySchema.parse({

@@ -5,7 +5,23 @@ import { lendingEvent, market, position } from "ponder:schema";
 import { FxOracleAbi, telarana } from "@fx-telarana/contracts";
 import { WAD, calculateHealthFactorE18, toAssetsUp } from "@fx-telarana/core";
 
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+import {
+  ZERO_ADDRESS,
+  applyBorrowToMarket,
+  applyBorrowToPosition,
+  applyLiquidationToMarket,
+  applyLiquidationToPosition,
+  applyRepayToMarket,
+  applyRepayToPosition,
+  applySupplyCollateralToPosition,
+  applySupplyToMarket,
+  applySupplyToPosition,
+  applyWithdrawCollateralToPosition,
+  applyWithdrawToMarket,
+  applyWithdrawToPosition,
+  positionRowId,
+} from "./lending-state.js";
+
 const hubs = telarana.hubs();
 
 function chainIdFromContext(context: { chain: { id: number } }): number {
@@ -18,14 +34,6 @@ function marketRowId(chainId: number, marketId: `0x${string}`) {
 
 function eventId(event: { transaction: { hash: `0x${string}` }; log: { logIndex: number } }) {
   return `${event.transaction.hash}-${event.log.logIndex}`;
-}
-
-function positionRowId(marketKey: string, account: `0x${string}`) {
-  return `${marketKey}:${account.toLowerCase()}`;
-}
-
-function subFloor(value: bigint, amount: bigint): bigint {
-  return value > amount ? value - amount : 0n;
 }
 
 type LendingEventArgs = {
@@ -151,11 +159,9 @@ ponder.on("MorphoBlue:Supply", async ({ event, context }) => {
     block: event.block.number,
     ts: event.block.timestamp,
   });
-  await context.db.update(market, { id: marketKey }).set((row) => ({
-    totalSupplyAssets: row.totalSupplyAssets + event.args.assets,
-    totalSupplyShares: row.totalSupplyShares + event.args.shares,
-    lastUpdated: event.block.timestamp,
-  }));
+  await context.db.update(market, { id: marketKey }).set((row) =>
+    applySupplyToMarket(row, { ...event.args, lastUpdated: event.block.timestamp })
+  );
   await context.db
     .insert(position)
     .values({
@@ -166,8 +172,7 @@ ponder.on("MorphoBlue:Supply", async ({ event, context }) => {
       lastUpdated: event.block.timestamp,
     })
     .onConflictDoUpdate((row) => ({
-      supplyShares: row.supplyShares + event.args.shares,
-      lastUpdated: event.block.timestamp,
+      ...applySupplyToPosition(row, { shares: event.args.shares, lastUpdated: event.block.timestamp }),
     }));
 });
 
@@ -184,15 +189,12 @@ ponder.on("MorphoBlue:Withdraw", async ({ event, context }) => {
     block: event.block.number,
     ts: event.block.timestamp,
   });
-  await context.db.update(market, { id: marketKey }).set((row) => ({
-    totalSupplyAssets: subFloor(row.totalSupplyAssets, event.args.assets),
-    totalSupplyShares: subFloor(row.totalSupplyShares, event.args.shares),
-    lastUpdated: event.block.timestamp,
-  }));
-  await context.db.update(position, { id: positionRowId(marketKey, event.args.onBehalf) }).set((row) => ({
-    supplyShares: subFloor(row.supplyShares, event.args.shares),
-    lastUpdated: event.block.timestamp,
-  }));
+  await context.db.update(market, { id: marketKey }).set((row) =>
+    applyWithdrawToMarket(row, { ...event.args, lastUpdated: event.block.timestamp })
+  );
+  await context.db.update(position, { id: positionRowId(marketKey, event.args.onBehalf) }).set((row) =>
+    applyWithdrawToPosition(row, { shares: event.args.shares, lastUpdated: event.block.timestamp })
+  );
 });
 
 ponder.on("MorphoBlue:Borrow", async ({ event, context }) => {
@@ -208,11 +210,9 @@ ponder.on("MorphoBlue:Borrow", async ({ event, context }) => {
     block: event.block.number,
     ts: event.block.timestamp,
   });
-  await context.db.update(market, { id: marketKey }).set((row) => ({
-    totalBorrowAssets: row.totalBorrowAssets + event.args.assets,
-    totalBorrowShares: row.totalBorrowShares + event.args.shares,
-    lastUpdated: event.block.timestamp,
-  }));
+  await context.db.update(market, { id: marketKey }).set((row) =>
+    applyBorrowToMarket(row, { ...event.args, lastUpdated: event.block.timestamp })
+  );
   await context.db
     .insert(position)
     .values({
@@ -223,8 +223,7 @@ ponder.on("MorphoBlue:Borrow", async ({ event, context }) => {
       lastUpdated: event.block.timestamp,
     })
     .onConflictDoUpdate((row) => ({
-      borrowShares: row.borrowShares + event.args.shares,
-      lastUpdated: event.block.timestamp,
+      ...applyBorrowToPosition(row, { shares: event.args.shares, lastUpdated: event.block.timestamp }),
     }));
   await refreshPositionHealthFactor(context, marketKey, event.args.onBehalf, event.block.timestamp);
 });
@@ -242,15 +241,12 @@ ponder.on("MorphoBlue:Repay", async ({ event, context }) => {
     block: event.block.number,
     ts: event.block.timestamp,
   });
-  await context.db.update(market, { id: marketKey }).set((row) => ({
-    totalBorrowAssets: subFloor(row.totalBorrowAssets, event.args.assets),
-    totalBorrowShares: subFloor(row.totalBorrowShares, event.args.shares),
-    lastUpdated: event.block.timestamp,
-  }));
-  await context.db.update(position, { id: positionRowId(marketKey, event.args.onBehalf) }).set((row) => ({
-    borrowShares: subFloor(row.borrowShares, event.args.shares),
-    lastUpdated: event.block.timestamp,
-  }));
+  await context.db.update(market, { id: marketKey }).set((row) =>
+    applyRepayToMarket(row, { ...event.args, lastUpdated: event.block.timestamp })
+  );
+  await context.db.update(position, { id: positionRowId(marketKey, event.args.onBehalf) }).set((row) =>
+    applyRepayToPosition(row, { shares: event.args.shares, lastUpdated: event.block.timestamp })
+  );
   await refreshPositionHealthFactor(context, marketKey, event.args.onBehalf, event.block.timestamp);
 });
 
@@ -276,8 +272,7 @@ ponder.on("MorphoBlue:SupplyCollateral", async ({ event, context }) => {
       lastUpdated: event.block.timestamp,
     })
     .onConflictDoUpdate((row) => ({
-      collateral: row.collateral + event.args.assets,
-      lastUpdated: event.block.timestamp,
+      ...applySupplyCollateralToPosition(row, { assets: event.args.assets, lastUpdated: event.block.timestamp }),
     }));
   await refreshPositionHealthFactor(context, marketKey, event.args.onBehalf, event.block.timestamp);
 });
@@ -294,10 +289,9 @@ ponder.on("MorphoBlue:WithdrawCollateral", async ({ event, context }) => {
     block: event.block.number,
     ts: event.block.timestamp,
   });
-  await context.db.update(position, { id: positionRowId(marketKey, event.args.onBehalf) }).set((row) => ({
-    collateral: subFloor(row.collateral, event.args.assets),
-    lastUpdated: event.block.timestamp,
-  }));
+  await context.db.update(position, { id: positionRowId(marketKey, event.args.onBehalf) }).set((row) =>
+    applyWithdrawCollateralToPosition(row, { assets: event.args.assets, lastUpdated: event.block.timestamp })
+  );
   await refreshPositionHealthFactor(context, marketKey, event.args.onBehalf, event.block.timestamp);
 });
 
@@ -314,18 +308,11 @@ ponder.on("MorphoBlue:Liquidate", async ({ event, context }) => {
     block: event.block.number,
     ts: event.block.timestamp,
   });
-  const borrowAssetsReduction = event.args.repaidAssets + event.args.badDebtAssets;
-  const borrowSharesReduction = event.args.repaidShares + event.args.badDebtShares;
-  await context.db.update(market, { id: marketKey }).set((row) => ({
-    totalSupplyAssets: subFloor(row.totalSupplyAssets, event.args.badDebtAssets),
-    totalBorrowAssets: subFloor(row.totalBorrowAssets, borrowAssetsReduction),
-    totalBorrowShares: subFloor(row.totalBorrowShares, borrowSharesReduction),
-    lastUpdated: event.block.timestamp,
-  }));
-  await context.db.update(position, { id: positionRowId(marketKey, event.args.borrower) }).set((row) => ({
-    borrowShares: subFloor(row.borrowShares, borrowSharesReduction),
-    collateral: subFloor(row.collateral, event.args.seizedAssets),
-    lastUpdated: event.block.timestamp,
-  }));
+  await context.db.update(market, { id: marketKey }).set((row) =>
+    applyLiquidationToMarket(row, { ...event.args, lastUpdated: event.block.timestamp })
+  );
+  await context.db.update(position, { id: positionRowId(marketKey, event.args.borrower) }).set((row) =>
+    applyLiquidationToPosition(row, { ...event.args, lastUpdated: event.block.timestamp })
+  );
   await refreshPositionHealthFactor(context, marketKey, event.args.borrower, event.block.timestamp);
 });

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { and, asc, eq, isNotNull, like, lt, sql } from "drizzle-orm";
+import { and, asc, eq, gte, isNotNull, like, lt, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import type { StatusCode } from "hono/utils/http-status";
 import { client, graphql } from "ponder";
 import { db } from "ponder:api";
-import schema, { market, position } from "ponder:schema";
+import schema, { lendingEvent, market, position } from "ponder:schema";
 
 import { WAD, aggregateTvl, stringifyBalances, type LendingMarket } from "@fx-telarana/core";
 
@@ -30,6 +30,22 @@ function marketKeyFromQuery(c: Context) {
   const hubChainId = c.req.query("hubChainId");
   const marketId = c.req.query("marketId")?.toLowerCase();
   return hubChainId && marketId ? `${hubChainId}:${marketId}` : undefined;
+}
+
+function rangeSeconds(range: string): number {
+  const match = range.match(/^(\d+)([dhw])$/);
+  if (!match) return 30 * 24 * 60 * 60;
+  const value = Number(match[1]);
+  const unit = match[2];
+  if (!Number.isFinite(value) || value <= 0) return 30 * 24 * 60 * 60;
+  if (unit === "d") return value * 24 * 60 * 60;
+  if (unit === "h") return value * 60 * 60;
+  return value * 7 * 24 * 60 * 60;
+}
+
+function utilizationE18(row: typeof market.$inferSelect): bigint {
+  if (row.totalSupplyAssets === 0n) return 0n;
+  return (row.totalBorrowAssets * WAD) / row.totalSupplyAssets;
 }
 
 function toLendingMarket(row: typeof market.$inferSelect): LendingMarket {
@@ -68,6 +84,51 @@ app.use("/sql/*", client({ db, schema }));
 app.get("/fx-telarana/markets", async (c) => {
   const rows = await db.select().from(market).orderBy(asc(market.hubChainId), asc(market.marketId));
   return json(c, { markets: rows });
+});
+
+app.get("/fx-telarana/markets/:hubChainId/:marketId/historical-apy", async (c) => {
+  const hubChainId = Number(c.req.param("hubChainId"));
+  const marketId = c.req.param("marketId").toLowerCase();
+  const key = `${hubChainId}:${marketId}`;
+  const range = c.req.query("range") ?? "30d";
+  const cutoff = BigInt(Math.floor(Date.now() / 1000) - rangeSeconds(range));
+  const row = await db.select().from(market).where(eq(market.id, key)).limit(1).then((rows) => rows[0]);
+  if (!row) return json(c, { error: "market_not_found" }, 404);
+  const events = await db
+    .select()
+    .from(lendingEvent)
+    .where(and(eq(lendingEvent.market, key), gte(lendingEvent.ts, cutoff)))
+    .orderBy(asc(lendingEvent.ts))
+    .limit(500);
+  const utilization = utilizationE18(row);
+  return json(c, {
+    source: "ponder",
+    hubChainId,
+    marketId,
+    range,
+    rateModel: "indexed_utilization_pending_irm_adapter",
+    apyUnavailableReason: "IRM borrowRateView adapter is not wired yet; points include indexed utilization and totals.",
+    points: [
+      {
+        ts: row.lastUpdated ?? 0n,
+        eventType: "CurrentState",
+        utilizationE18: utilization,
+        supplyApyE18: null,
+        borrowApyE18: null,
+        totalSupplyAssets: row.totalSupplyAssets,
+        totalBorrowAssets: row.totalBorrowAssets,
+      },
+      ...events.map((event) => ({
+        ts: event.ts,
+        eventType: event.type,
+        utilizationE18: utilization,
+        supplyApyE18: null,
+        borrowApyE18: null,
+        totalSupplyAssets: row.totalSupplyAssets,
+        totalBorrowAssets: row.totalBorrowAssets,
+      })),
+    ],
+  });
 });
 
 app.get("/fx-telarana/liquidations/candidates", async (c) => {
