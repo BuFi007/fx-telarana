@@ -54,6 +54,7 @@ contract MockFxOracle is IFxOracle {
 contract MockTelaranaGatewayHubHook is ITelaranaGatewayHubHook {
     mapping(bytes32 => GatewayReceipt) internal _receipts;
     mapping(bytes32 => bool) public settled;
+    uint256 public settledCount;
 
     function setReceipt(bytes32 requestId, GatewayReceipt memory r) external {
         _receipts[requestId] = r;
@@ -63,22 +64,63 @@ contract MockTelaranaGatewayHubHook is ITelaranaGatewayHubHook {
         return _receipts[requestId];
     }
 
-    function markGatewayAtomicFxSwapSettled(bytes32 requestId, uint256 /*amountOut*/) external {
+    function markGatewayAtomicFxSwapSettled(
+        bytes32 requestId,
+        uint256 /*amountOut*/
+    )
+        external
+    {
         GatewayReceipt storage r = _receipts[requestId];
         require(r.state == GatewayRequestState.MINTED, "not minted");
         require(r.action == GatewayHubAction.MINT_AND_REQUEST_SPOT_FX, "not spot fx");
         r.state = GatewayRequestState.SETTLED;
         settled[requestId] = true;
+        settledCount++;
     }
 
-    function gatewayRoute(bytes32) external pure returns (GatewayHubRoute memory r) { return r; }
+    function gatewayRoute(bytes32) external pure returns (GatewayHubRoute memory r) {
+        return r;
+    }
+
     function gatewayRequestState(bytes32 requestId) external view returns (GatewayRequestState) {
         return _receipts[requestId].state;
     }
-    function setGatewayRoute(bytes32, GatewayHubRoute calldata) external pure { revert("unused"); }
-    function setGatewaySignerMode(bytes32, GatewaySignerMode, bool) external pure { revert("unused"); }
+
+    function setGatewayRoute(bytes32, GatewayHubRoute calldata) external pure {
+        revert("unused");
+    }
+
+    function setGatewaySignerMode(bytes32, GatewaySignerMode, bool) external pure {
+        revert("unused");
+    }
+
+    function setGatewayContextProofMode(bytes32, GatewayContextProofMode) external pure {
+        revert("unused");
+    }
+
+    function setGatewayContextMailbox(address) external pure {
+        revert("unused");
+    }
+
+    function setGatewayContextTrustedSender(uint32, bytes32, bool) external pure {
+        revert("unused");
+    }
+
+    function gatewayMintContextStructHash(GatewayMintContext calldata) external pure returns (bytes32) {
+        return bytes32(0);
+    }
+
+    function gatewayMintContextDigest(GatewayMintContext calldata) external pure returns (bytes32) {
+        return bytes32(0);
+    }
+
     function receiveGatewayMint(bytes calldata, bytes calldata, GatewayMintContext calldata)
-        external pure returns (uint256) { revert("unused"); }
+        external
+        pure
+        returns (uint256)
+    {
+        revert("unused");
+    }
 }
 
 contract FxSpotExecutorTest is Test {
@@ -175,9 +217,7 @@ contract FxSpotExecutorTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                OUTSIDER,
-                executor.EXECUTOR_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, OUTSIDER, executor.EXECUTOR_ROLE()
             )
         );
         vm.prank(OUTSIDER);
@@ -349,25 +389,22 @@ contract FxSpotExecutorTest is Test {
         executor.executeSpotFx(REQUEST_ID);
     }
 
-    /// @notice Codex HIGH#2 — setTokenEnabled rejects tokens whose decimals
-    ///         differ from USDC's. Without this guard, 18-dec token math
-    ///         underpays by 1e12, 0-dec token math overpays by 1e6.
-    function test_setTokenEnabled_revertsOnDecimalsMismatch_18dec() public {
+    /// @notice Codex HIGH#2 v0.2 follow-up — setTokenEnabled stores token
+    ///         decimals so executeSpotFx can scale payout math correctly.
+    function test_setTokenEnabled_acceptsAndStores18Decimals() public {
         MockERC20 dai = new MockERC20("DAI", "DAI", 18);
-        vm.expectRevert(
-            abi.encodeWithSelector(FxSpotExecutor.TokenOutDecimalsMismatch.selector, address(dai), 6, 18)
-        );
         vm.prank(ADMIN);
         executor.setTokenEnabled(address(dai), true);
+        assertTrue(executor.tokenEnabled(address(dai)));
+        assertEq(executor.tokenDecimals(address(dai)), 18);
     }
 
-    function test_setTokenEnabled_revertsOnDecimalsMismatch_0dec() public {
-        MockERC20 odd = new MockERC20("ODD", "ODD", 0);
-        vm.expectRevert(
-            abi.encodeWithSelector(FxSpotExecutor.TokenOutDecimalsMismatch.selector, address(odd), 6, 0)
-        );
+    function test_setTokenEnabled_acceptsAndStores8Decimals() public {
+        MockERC20 jpy = new MockERC20("JPY", "JPY", 8);
         vm.prank(ADMIN);
-        executor.setTokenEnabled(address(odd), true);
+        executor.setTokenEnabled(address(jpy), true);
+        assertTrue(executor.tokenEnabled(address(jpy)));
+        assertEq(executor.tokenDecimals(address(jpy)), 8);
     }
 
     function test_setTokenEnabled_acceptsMatchingDecimals() public {
@@ -375,15 +412,56 @@ contract FxSpotExecutorTest is Test {
         vm.prank(ADMIN);
         executor.setTokenEnabled(address(jpyc), true);
         assertTrue(executor.tokenEnabled(address(jpyc)));
+        assertEq(executor.tokenDecimals(address(jpyc)), 6);
     }
 
-    function test_setTokenEnabled_disableDoesNotCheckDecimals() public {
-        // Disabling an already-enabled token is always allowed even if
-        // decimals were grandfathered (defense-in-depth: lets admin
-        // remove a bad token).
+    function test_setTokenEnabled_disableClearsStoredDecimals() public {
         vm.prank(ADMIN);
         executor.setTokenEnabled(address(eurc), false);
         assertFalse(executor.tokenEnabled(address(eurc)));
+        assertEq(executor.tokenDecimals(address(eurc)), 0);
+    }
+
+    function test_executeSpotFx_scalesSixDecimalUsdcTo18DecimalTokenOut() public {
+        MockERC20 dai = new MockERC20("DAI", "DAI", 18);
+        uint256 midE18 = 2.5e18;
+        uint256 amountIn = 1e6;
+
+        vm.prank(ADMIN);
+        executor.setTokenEnabled(address(dai), true);
+        oracle.setMid(address(usdc), address(dai), midE18);
+
+        uint256 expected = _quote(amountIn, midE18, 5, usdc.decimals(), dai.decimals());
+        usdc.mint(address(executor), amountIn);
+        dai.mint(address(executor), expected);
+        _setReceipt(REQUEST_ID, amountIn, address(dai), expected, TRADER);
+
+        vm.prank(KEEPER);
+        uint256 amountOut = executor.executeSpotFx(REQUEST_ID);
+
+        assertEq(amountOut, expected);
+        assertEq(dai.balanceOf(TRADER), 2_498_750_000_000_000_000);
+    }
+
+    function test_executeSpotFx_scalesSixDecimalUsdcTo8DecimalTokenOut() public {
+        MockERC20 jpy = new MockERC20("JPY", "JPY", 8);
+        uint256 midE18 = 156.25e18;
+        uint256 amountIn = 1e6;
+
+        vm.prank(ADMIN);
+        executor.setTokenEnabled(address(jpy), true);
+        oracle.setMid(address(usdc), address(jpy), midE18);
+
+        uint256 expected = _quote(amountIn, midE18, 5, usdc.decimals(), jpy.decimals());
+        usdc.mint(address(executor), amountIn);
+        jpy.mint(address(executor), expected);
+        _setReceipt(REQUEST_ID, amountIn, address(jpy), expected, TRADER);
+
+        vm.prank(KEEPER);
+        uint256 amountOut = executor.executeSpotFx(REQUEST_ID);
+
+        assertEq(amountOut, expected);
+        assertEq(jpy.balanceOf(TRADER), 15_617_187_500);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -437,6 +515,101 @@ contract FxSpotExecutorTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
+                                  FUZZ
+    //////////////////////////////////////////////////////////////*/
+
+    function testFuzz_executeSpotFx_matchesOracleSpreadQuote(uint96 rawAmount, uint96 rawMid, uint16 rawSpread) public {
+        uint256 amount = bound(uint256(rawAmount), 1, 10_000_000e6);
+        uint256 midE18 = bound(uint256(rawMid), 1e14, 5e18);
+        uint256 spreadBps = bound(uint256(rawSpread), 0, 500);
+        bytes32 requestId = keccak256(abi.encode("spot.fuzz.quote", amount, midE18, spreadBps));
+
+        oracle.setMid(address(usdc), address(eurc), midE18);
+        vm.prank(ADMIN);
+        executor.setDefaultSpreadBps(spreadBps);
+
+        uint256 expected = _quote(amount, midE18, spreadBps, usdc.decimals(), eurc.decimals());
+        usdc.mint(address(executor), amount);
+        eurc.mint(address(executor), expected);
+        _setReceipt(requestId, amount, address(eurc), expected, TRADER);
+
+        vm.prank(KEEPER);
+        uint256 amountOut = executor.executeSpotFx(requestId);
+
+        assertEq(amountOut, expected, "amountOut");
+        assertEq(eurc.balanceOf(TRADER), expected, "recipient payout");
+        assertEq(usdc.balanceOf(address(executor)), amount, "USDC retained");
+        assertTrue(tgh.settled(requestId), "TGH settled");
+    }
+
+    function testFuzz_executeSpotFx_revertsWhenCanonicalMinExceedsQuote(
+        uint96 rawAmount,
+        uint96 rawMid,
+        uint16 rawSpread
+    ) public {
+        uint256 amount = bound(uint256(rawAmount), 1, 10_000_000e6);
+        uint256 midE18 = bound(uint256(rawMid), 1e14, 5e18);
+        uint256 spreadBps = bound(uint256(rawSpread), 0, 500);
+        bytes32 requestId = keccak256(abi.encode("spot.fuzz.slippage", amount, midE18, spreadBps));
+
+        oracle.setMid(address(usdc), address(eurc), midE18);
+        vm.prank(ADMIN);
+        executor.setDefaultSpreadBps(spreadBps);
+
+        uint256 expected = _quote(amount, midE18, spreadBps, usdc.decimals(), eurc.decimals());
+        uint256 minAmountOut = expected + 1;
+        usdc.mint(address(executor), amount);
+        eurc.mint(address(executor), expected);
+        _setReceipt(requestId, amount, address(eurc), minAmountOut, TRADER);
+
+        vm.expectRevert(abi.encodeWithSelector(FxSpotExecutor.SlippageExceeded.selector, expected, minAmountOut));
+        vm.prank(KEEPER);
+        executor.executeSpotFx(requestId);
+    }
+
+    function testFuzz_setTokenEnabled_storesTokenDecimals(uint8 rawDecimals) public {
+        uint8 decimals_ = uint8(bound(uint256(rawDecimals), 0, executor.MAX_TOKEN_DECIMALS()));
+        MockERC20 token = new MockERC20("FUZZ", "FUZZ", decimals_);
+
+        vm.prank(ADMIN);
+        executor.setTokenEnabled(address(token), true);
+
+        assertTrue(executor.tokenEnabled(address(token)));
+        assertEq(executor.tokenDecimals(address(token)), decimals_);
+    }
+
+    function testFuzz_executeSpotFx_matchesDecimalScaledQuote(
+        uint96 rawAmount,
+        uint96 rawMid,
+        uint16 rawSpread,
+        uint8 rawDecimals
+    ) public {
+        uint8 outDecimals = uint8(bound(uint256(rawDecimals), 0, 18));
+        MockERC20 tokenOut = new MockERC20("FX", "FX", outDecimals);
+        uint256 amount = bound(uint256(rawAmount), 1, 1_000_000e6);
+        uint256 midE18 = bound(uint256(rawMid), 1e14, 500e18);
+        uint256 spreadBps = bound(uint256(rawSpread), 0, 500);
+        bytes32 requestId = keccak256(abi.encode("spot.fuzz.decimals", amount, midE18, spreadBps, outDecimals));
+
+        vm.startPrank(ADMIN);
+        executor.setTokenEnabled(address(tokenOut), true);
+        executor.setDefaultSpreadBps(spreadBps);
+        vm.stopPrank();
+        oracle.setMid(address(usdc), address(tokenOut), midE18);
+
+        uint256 expected = _quote(amount, midE18, spreadBps, usdc.decimals(), tokenOut.decimals());
+        usdc.mint(address(executor), amount);
+        tokenOut.mint(address(executor), expected);
+        _setReceipt(requestId, amount, address(tokenOut), expected, TRADER);
+
+        vm.prank(KEEPER);
+        uint256 amountOut = executor.executeSpotFx(requestId);
+
+        assertEq(amountOut, expected, "decimal-scaled amountOut");
+        assertEq(tokenOut.balanceOf(TRADER), expected, "decimal-scaled payout");
+    }
+
+    /*//////////////////////////////////////////////////////////////
                                 HELPERS
     //////////////////////////////////////////////////////////////*/
 
@@ -464,5 +637,199 @@ contract FxSpotExecutorTest is Test {
         internal
     {
         tgh.setReceipt(requestId, _baseReceipt(amount, tokenOut, minAmountOut, recipient));
+    }
+
+    function _quote(uint256 amount, uint256 midE18, uint256 spreadBps, uint8 inDecimals, uint8 outDecimals)
+        internal
+        pure
+        returns (uint256)
+    {
+        uint256 amountInE18 = _scaleDecimals(amount, inDecimals, 18);
+        uint256 grossE18 = amountInE18 * midE18 / 1e18;
+        uint256 gross = _scaleDecimals(grossE18, 18, outDecimals);
+        return gross * (10_000 - spreadBps) / 10_000;
+    }
+
+    function _scaleDecimals(uint256 amount, uint8 fromDecimals, uint8 toDecimals) internal pure returns (uint256) {
+        if (fromDecimals == toDecimals) return amount;
+        if (fromDecimals < toDecimals) return amount * (10 ** uint256(toDecimals - fromDecimals));
+        return amount / (10 ** uint256(fromDecimals - toDecimals));
+    }
+}
+
+contract FxSpotExecutorInvariantHandler {
+    FxSpotExecutor public immutable executor;
+    MockFxOracle public immutable oracle;
+    MockTelaranaGatewayHubHook public immutable tgh;
+    MockERC20 public immutable usdc;
+    MockERC20 public immutable eurc;
+    address public immutable recipientA;
+    address public immutable recipientB;
+
+    uint256 public totalUsdcMinted;
+    uint256 public totalTokenOutSeeded;
+    uint256 public totalTokenOutPaid;
+    uint256 public executions;
+
+    error UnexpectedAmountOut(uint256 actual, uint256 expected);
+
+    constructor(
+        FxSpotExecutor executor_,
+        MockFxOracle oracle_,
+        MockTelaranaGatewayHubHook tgh_,
+        MockERC20 usdc_,
+        MockERC20 eurc_,
+        address recipientA_,
+        address recipientB_
+    ) {
+        executor = executor_;
+        oracle = oracle_;
+        tgh = tgh_;
+        usdc = usdc_;
+        eurc = eurc_;
+        recipientA = recipientA_;
+        recipientB = recipientB_;
+    }
+
+    function execute(uint256 rawAmount, uint256 rawMid, uint16 rawSpread, uint256 rawMinDiscount, bool secondRecipient)
+        external
+    {
+        uint256 amount = _bound(rawAmount, 1, 1_000_000e6);
+        uint256 midE18 = _bound(rawMid, 1e14, 5e18);
+        uint256 spreadBps = _bound(uint256(rawSpread), 0, 500);
+        uint256 expected = _quote(amount, midE18, spreadBps, usdc.decimals(), eurc.decimals());
+        uint256 minDiscount = expected == 0 ? 0 : _bound(rawMinDiscount, 0, expected);
+        uint256 minAmountOut = expected - minDiscount;
+        address recipient = secondRecipient ? recipientB : recipientA;
+        bytes32 requestId =
+            keccak256(abi.encode(address(this), executions, amount, midE18, spreadBps, minAmountOut, recipient));
+
+        oracle.setMid(address(usdc), address(eurc), midE18);
+        executor.setDefaultSpreadBps(spreadBps);
+
+        usdc.mint(address(executor), amount);
+        totalUsdcMinted += amount;
+
+        uint256 reserve = eurc.balanceOf(address(executor));
+        if (reserve < expected) {
+            uint256 topUp = expected - reserve;
+            eurc.mint(address(executor), topUp);
+            totalTokenOutSeeded += topUp;
+        }
+
+        tgh.setReceipt(
+            requestId,
+            ITelaranaGatewayHubHook.GatewayReceipt({
+                routeId: keccak256("spot.invariant.route"),
+                state: ITelaranaGatewayHubHook.GatewayRequestState.MINTED,
+                action: ITelaranaGatewayHubHook.GatewayHubAction.MINT_AND_REQUEST_SPOT_FX,
+                sourceDepositor: recipient,
+                sourceSigner: recipient,
+                recipient: recipient,
+                tokenOut: address(eurc),
+                amount: amount,
+                minAmountOut: minAmountOut,
+                spotRouteId: bytes32(0),
+                metadataRef: bytes32(0)
+            })
+        );
+
+        uint256 amountOut = executor.executeSpotFx(requestId);
+        if (amountOut != expected) revert UnexpectedAmountOut(amountOut, expected);
+
+        totalTokenOutPaid += amountOut;
+        executions++;
+    }
+
+    function _quote(uint256 amount, uint256 midE18, uint256 spreadBps, uint8 inDecimals, uint8 outDecimals)
+        internal
+        pure
+        returns (uint256)
+    {
+        uint256 amountInE18 = _scaleDecimals(amount, inDecimals, 18);
+        uint256 grossE18 = amountInE18 * midE18 / 1e18;
+        uint256 gross = _scaleDecimals(grossE18, 18, outDecimals);
+        return gross * (10_000 - spreadBps) / 10_000;
+    }
+
+    function _scaleDecimals(uint256 amount, uint8 fromDecimals, uint8 toDecimals) internal pure returns (uint256) {
+        if (fromDecimals == toDecimals) return amount;
+        if (fromDecimals < toDecimals) return amount * (10 ** uint256(toDecimals - fromDecimals));
+        return amount / (10 ** uint256(fromDecimals - toDecimals));
+    }
+
+    function _bound(uint256 x, uint256 min, uint256 max) internal pure returns (uint256) {
+        if (max <= min) return min;
+        if (x < min) return min;
+        if (x > max) return min + (x % (max - min + 1));
+        return x;
+    }
+}
+
+/// @notice Stateful v0.2 invariants for the receipt-canonical spot executor.
+///         The handler runs only valid TGH receipts. Invariants assert that
+///         USDC delivered by TGH remains in the executor, tokenOut payouts are
+///         conserved against seeded reserves, and every execution settles TGH.
+contract FxSpotExecutorInvariantTest is Test {
+    FxSpotExecutor public executor;
+    MockFxOracle public oracle;
+    MockTelaranaGatewayHubHook public tgh;
+    MockERC20 public usdc;
+    MockERC20 public eurc;
+    FxSpotExecutorInvariantHandler public handler;
+
+    address internal constant ADMIN = address(uint160(uint256(keccak256("spot.invariant.ADMIN"))));
+    address internal constant RECIPIENT_A = address(uint160(uint256(keccak256("spot.invariant.RECIPIENT_A"))));
+    address internal constant RECIPIENT_B = address(uint160(uint256(keccak256("spot.invariant.RECIPIENT_B"))));
+
+    function setUp() public {
+        usdc = new MockERC20("USDC", "USDC", 6);
+        eurc = new MockERC20("EURC", "EURC", 6);
+        oracle = new MockFxOracle();
+        tgh = new MockTelaranaGatewayHubHook();
+
+        executor = new FxSpotExecutor(address(usdc), address(oracle), address(tgh), ADMIN, 5);
+
+        vm.startPrank(ADMIN);
+        executor.setTokenEnabled(address(eurc), true);
+        vm.stopPrank();
+
+        handler = new FxSpotExecutorInvariantHandler({
+            executor_: executor,
+            oracle_: oracle,
+            tgh_: tgh,
+            usdc_: usdc,
+            eurc_: eurc,
+            recipientA_: RECIPIENT_A,
+            recipientB_: RECIPIENT_B
+        });
+
+        vm.startPrank(ADMIN);
+        executor.grantRole(executor.DEFAULT_ADMIN_ROLE(), address(handler));
+        executor.grantRole(executor.EXECUTOR_ROLE(), address(handler));
+        vm.stopPrank();
+
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = FxSpotExecutorInvariantHandler.execute.selector;
+        targetContract(address(handler));
+        targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
+    }
+
+    function invariant_usdcDeliveredByTghRemainsInExecutor() public view {
+        assertEq(usdc.balanceOf(address(executor)), handler.totalUsdcMinted(), "USDC accounting drift");
+    }
+
+    function invariant_tokenOutPayoutsConservedAgainstSeededReserves() public view {
+        uint256 recipientBalances = eurc.balanceOf(RECIPIENT_A) + eurc.balanceOf(RECIPIENT_B);
+        assertEq(recipientBalances, handler.totalTokenOutPaid(), "recipient payout drift");
+        assertEq(
+            eurc.balanceOf(address(executor)) + recipientBalances,
+            handler.totalTokenOutSeeded(),
+            "tokenOut conservation drift"
+        );
+    }
+
+    function invariant_eachSuccessfulExecutionSettlesTghReceipt() public view {
+        assertEq(tgh.settledCount(), handler.executions(), "settlement count drift");
     }
 }
