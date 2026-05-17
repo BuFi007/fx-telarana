@@ -1,8 +1,8 @@
 # Privacy Hook — Handoff
 
-**Current branch:** `feat/privacy-hook-slice-2-morpho`
-**Slice 2 status:** ✅ Morpho rehypothecation wired into FxPrivacyPool
-**Last green:** 295/295 contract tests passing, all 16 hub contracts under EIP-170
+**Current branch:** `feat/privacy-hook-slice-3-crossccy`
+**Slice 3 status:** ✅ Cross-currency shielded withdraw (USDC→EURC) wired
+**Last green:** 306/306 contract tests passing, all 16 hub contracts under EIP-170
 
 ---
 
@@ -40,16 +40,31 @@
 - [x] Owner-gated `setHotReservePct(uint16)` with bounds check + auto-rebalance
 - [x] Helper views: `totalAssets()`, `hotBalance()`, `morphoSupplyAssets()`
 
-### Slice 3 — cross-currency shielded swap (~3 days)
+### Slice 3 — cross-currency shielded swap ✅ LANDED
 
-**Branch suggestion:** `feat/privacy-hook-slice-3-crossccy`
+**Branch:** `feat/privacy-hook-slice-3-crossccy`
 
-- [ ] Add `FxPrivacyEntrypoint.relayCrossCurrency()` per spec §5.2
-- [ ] Wire `FxSwapHook.swap()` as primary route, bound by `maxDriftBps`
-- [ ] Build `contracts/src/hub/UniV4Router.sol` fallback adapter
-- [ ] Test: USDC→EURC shielded swap via FxSwapHook
-- [ ] Test: same swap with FxSwapHook insufficient → Uniswap V4 fallback
-- [ ] Test: revert when both routes insufficient
+- [x] `FxPrivacyEntrypoint.relayCrossCurrency()` — withdraws shielded asset
+      then atomically swaps to a buyToken before paying out to recipient
+- [x] Reuses `IFxRouterSwapAdapter` (same interface as public `FxRouter` /
+      PR-6 v4-unlock adapter — keeps the swap surface single-sourced)
+- [x] `CrossCurrencyRelayData {recipient, feeRecipient, relayFeeBPS, buyToken, minBuyAmount}`
+      decoded from `Withdrawal.data`; Groth16 `context` commits to full
+      blob so a malicious relayer cannot alter swap target or slippage
+- [x] Owner-gated `setSwapAdapter` + `setCrossCurrencyEnabled` (per-asset)
+- [x] Relay fee skim in SELL asset, same shape as vendored `relay()`
+- [x] Slippage bound enforced two ways: adapter's own minBuyAmount check
+      + entrypoint asserts non-zero adapter return (`AdapterReturnedZero`)
+- [x] 11 unit tests: happy path, fee skim, adapter underpay, unset adapter,
+      asset disabled, buy==asset rejection, fee-over-max revert, owner gates
+
+**NOT included this slice** (deferred items, mainnet-only):
+- Production `IFxRouterSwapAdapter` wrapping v4 PoolManager.unlock + FxSwapHook
+  (lives in the existing `FxRouter` PR-6 surface — slice 3 reuses the
+  interface so we just inject the same adapter when PR-6 lands).
+- External Uniswap V4 fallback adapter — testnet has ~zero v4 liquidity per
+  spec §6; mainnet adapter is the same `IFxRouterSwapAdapter` shape but with
+  an external V4 pool wrapped.
 
 ### Slice 4 — SDK + permissive ASP postman (~3 days)
 
