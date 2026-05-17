@@ -120,7 +120,7 @@ Supporting Arc addresses:
 | FxOracle | `0x77b3A3B420dB98B01085b8C46a753Ed9879e2865` |
 | Keeper / admin | `0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69` |
 
-Perps manifest: [`deployments/perps-5042002.json`](deployments/perps-5042002.json). Trading smoke report: [`reports/SMOKE_ARC_PHASE_B_E_TRADING.md`](reports/SMOKE_ARC_PHASE_B_E_TRADING.md).
+Perps manifest: [`deployments/perps-5042002.json`](deployments/perps-5042002.json). Config manifest: [`deployments/perps-config-5042002.json`](deployments/perps-config-5042002.json). Trading smoke report: [`reports/SMOKE_ARC_PHASE_B_E_TRADING.md`](reports/SMOKE_ARC_PHASE_B_E_TRADING.md).
 
 ### Spokes — 16 total, dual-routed per chain
 

@@ -62,6 +62,38 @@ After broadcast, inject the printed JSON into the perps backend:
 CONTRACT_ADDRESSES_JSON='{"5042002":{"FxPerpClearinghouse":"0x...","FxMarginAccount":"0x...","FxFundingEngine":"0x...","FxHealthChecker":"0x...","FxLiquidationEngine":"0x...","FxOrderSettlement":"0x..."}}'
 ```
 
+## Config Readiness Manifest
+
+After market/funding/liquidation params are configured on Arc, use the
+read-only readiness scripts to prove and export the live state:
+
+```bash
+bun run perps:arc:config:verify
+bun run perps:arc:config:export
+```
+
+`VerifyArcPerpConfig` reverts if any expected address, role, pointer, market
+param, funding param, liquidation param, or minimum protocol liquidity check
+diverges from the Arc trading stack.
+
+`ExportArcPerpConfig` runs the same checks and writes
+`deployments/perps-config-5042002.json`. The JSON is intentionally flat so
+backend agents can parse it without a custom schema. It includes the six perps
+contracts, oracle/USDC/admin/keeper, all four market ids and risk params,
+funding params, liquidation params, open-interest readbacks, liquidity
+readbacks, margin USDC balance, and role booleans.
+
+Useful env overrides:
+
+- `ARC_PERP_CONFIG_PATH`
+- `ARC_PERP_CLEARINGHOUSE`
+- `ARC_PERP_MARGIN`
+- `ARC_PERP_FUNDING`
+- `ARC_PERP_HEALTH`
+- `ARC_PERP_LIQUIDATION`
+- `ARC_PERP_SETTLEMENT`
+- `ARC_PERP_MIN_PROTOCOL_LIQUIDITY`
+
 ## Post-Deploy Admin Steps
 
 Before any live testnet open, execute explicit admin transactions for:
@@ -90,4 +122,3 @@ Expected perps coverage:
   EIP-712 order settlement;
 - 256-run fuzz for required-margin math;
 - 256-run invariants for cash backing and open-interest caps.
-
