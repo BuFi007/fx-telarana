@@ -17,10 +17,15 @@ import {IFxRouterSwapAdapter} from "./FxRouter.sol";
 ///         to a fresh address, routed through `FxSwapHook` via the same
 ///         `IFxRouterSwapAdapter` PR-6 abstracts for the public FxRouter.
 ///
-///         Storage layout NOTE: the vendored Entrypoint is UUPS-upgradeable
-///         and treats its declared slots as fixed. All new state on this
-///         child contract is APPENDED — never insert above. A `__gap`
-///         reserves future-upgrade slots.
+///         Storage layout: this contract is UUPS-upgradeable AND its
+///         parent `Entrypoint` is vendored from an upstream that may add
+///         storage variables in future versions. To prevent slot
+///         collisions with future vendor upgrades, fx-Telarana state is
+///         held in an ERC-7201 namespaced storage struct (see
+///         {FxPrivacyEntrypointStorage}). The fixed deterministic slot
+///         lives outside the linearized inheritance chain, so the vendor
+///         can append state to {Entrypoint} freely without invalidating
+///         our fields.
 contract FxPrivacyEntrypoint is Entrypoint {
     using SafeERC20 for IERC20;
     using ProofLib for ProofLib.WithdrawProof;
@@ -44,23 +49,35 @@ contract FxPrivacyEntrypoint is Entrypoint {
         uint256 minBuyAmount;
     }
 
+    /// @notice ERC-7201 namespaced storage for fx-Telarana state.
+    /// @custom:storage-location erc7201:fx.privacy.entrypoint
+    struct FxPrivacyEntrypointStorage {
+        IFxRouterSwapAdapter swapAdapter;
+        mapping(IERC20 _asset => bool _enabled) crossCurrencyEnabled;
+    }
+
     /*//////////////////////////////////////////////////////////////
-                                STATE (APPEND-ONLY)
+                        NAMESPACED STORAGE SLOT
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Swap adapter wrapping `FxSwapHook` (or any IFxRouterSwapAdapter).
-    ///         Owner-settable; PR-6 wires the production v4-unlock adapter
-    ///         here; tests inject `MockSwapAdapter`.
-    IFxRouterSwapAdapter public swapAdapter;
+    // keccak256(abi.encode(uint256(keccak256("fx.privacy.entrypoint")) - 1))
+    //   & ~bytes32(uint256(0xff))
+    // Evaluated at compile time. The trailing-byte mask gives us a slot
+    // that can never collide with a normal storage allocation.
+    bytes32 private constant _STORAGE_SLOT =
+        keccak256(abi.encode(uint256(keccak256("fx.privacy.entrypoint")) - 1))
+        & ~bytes32(uint256(0xff));
 
-    /// @notice Per-asset opt-in flag for cross-currency relays. Set by owner
-    ///         once a stable swap pool exists for the asset; until then the
-    ///         asset is shielded-only.
-    mapping(IERC20 _asset => bool _enabled) public crossCurrencyEnabled;
-
-    /// @dev Reserved for future state. Always leave the *last* declared
-    ///      slot a `__gap` array to keep upgrades safe.
-    uint256[48] private __gap;
+    function _getFxStorage()
+        private
+        pure
+        returns (FxPrivacyEntrypointStorage storage $)
+    {
+        bytes32 slot = _STORAGE_SLOT;
+        assembly {
+            $.slot := slot
+        }
+    }
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -94,7 +111,21 @@ contract FxPrivacyEntrypoint is Entrypoint {
     error SwapAdapterNotSet();
     error CrossCurrencyDisabled(IERC20 _asset);
     error BuyTokenEqualsAsset();
-    error AdapterReturnedZero();
+    error AdapterUnderdelivered(uint256 received, uint256 minBuyAmount);
+
+    /*//////////////////////////////////////////////////////////////
+                                VIEWS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Currently wired swap adapter.
+    function swapAdapter() external view returns (IFxRouterSwapAdapter) {
+        return _getFxStorage().swapAdapter;
+    }
+
+    /// @notice Whether cross-currency relays are enabled for `_asset`.
+    function crossCurrencyEnabled(IERC20 _asset) external view returns (bool) {
+        return _getFxStorage().crossCurrencyEnabled[_asset];
+    }
 
     /*//////////////////////////////////////////////////////////////
                             ADMIN
@@ -104,15 +135,16 @@ contract FxPrivacyEntrypoint is Entrypoint {
     ///         vendored OZ AccessControl `_OWNER_ROLE`.
     function setSwapAdapter(IFxRouterSwapAdapter _newAdapter) external onlyRole(_OWNER_ROLE) {
         if (address(_newAdapter) == address(0)) revert ZeroAddress();
-        emit SwapAdapterSet(address(swapAdapter), address(_newAdapter));
-        swapAdapter = _newAdapter;
+        FxPrivacyEntrypointStorage storage $ = _getFxStorage();
+        emit SwapAdapterSet(address($.swapAdapter), address(_newAdapter));
+        $.swapAdapter = _newAdapter;
     }
 
     /// @notice Toggle cross-currency relays per asset. Off by default;
     ///         owner flips on once a swap adapter + LP exist for the asset.
     function setCrossCurrencyEnabled(IERC20 _asset, bool _enabled) external onlyRole(_OWNER_ROLE) {
         if (address(_asset) == address(0)) revert ZeroAddress();
-        crossCurrencyEnabled[_asset] = _enabled;
+        _getFxStorage().crossCurrencyEnabled[_asset] = _enabled;
         emit CrossCurrencyEnabled(_asset, _enabled);
     }
 
@@ -122,16 +154,23 @@ contract FxPrivacyEntrypoint is Entrypoint {
 
     /// @notice Process a shielded withdrawal and atomically swap the output
     ///         into a different currency before delivering to the recipient.
-    /// @dev    `_withdrawal.data` must decode as `CrossCurrencyRelayData`.
-    ///         The Groth16 proof's `context` binds the user's intent over
-    ///         the full data blob (buyToken + minBuyAmount included), so the
-    ///         swap target and slippage bound are non-malleable.
+    /// @dev    Trust boundary on the adapter: we do NOT trust the adapter's
+    ///         return value. The adapter is called with `recipient = this`,
+    ///         the contract measures the buyToken balance delta itself,
+    ///         enforces `delta >= minBuyAmount`, and forwards the measured
+    ///         amount to the user's signed recipient. A malicious adapter
+    ///         that keeps the sell asset and returns a non-zero but small
+    ///         `buyAmount` cannot under-deliver — the measured-delta check
+    ///         catches it.
     function relayCrossCurrency(
         IPrivacyPool.Withdrawal calldata _withdrawal,
         ProofLib.WithdrawProof calldata _proof,
         uint256 _scope
     ) external nonReentrant {
-        if (address(swapAdapter) == address(0)) revert SwapAdapterNotSet();
+        FxPrivacyEntrypointStorage storage $ = _getFxStorage();
+        IFxRouterSwapAdapter _adapter = $.swapAdapter;
+        if (address(_adapter) == address(0)) revert SwapAdapterNotSet();
+
         if (_proof.withdrawnValue() == 0) revert InvalidWithdrawalAmount();
         if (_withdrawal.processooor != address(this)) revert InvalidProcessooor();
 
@@ -139,9 +178,9 @@ contract FxPrivacyEntrypoint is Entrypoint {
         if (address(_pool) == address(0)) revert PoolNotFound();
 
         IERC20 _asset = IERC20(_pool.ASSET());
-        if (!crossCurrencyEnabled[_asset]) revert CrossCurrencyDisabled(_asset);
+        if (!$.crossCurrencyEnabled[_asset]) revert CrossCurrencyDisabled(_asset);
 
-        uint256 _balanceBefore = _asset.balanceOf(address(this));
+        uint256 _sellBalanceBefore = _asset.balanceOf(address(this));
 
         // Pool withdraws to address(this).
         _pool.withdraw(_withdrawal, _proof);
@@ -161,33 +200,45 @@ contract FxPrivacyEntrypoint is Entrypoint {
             _asset.safeTransfer(_data.feeRecipient, _feeAmount);
         }
 
-        // Hand the rest to the swap adapter, which delivers buyToken to
-        // the recipient. Adapter must revert on slippage; we additionally
-        // assert non-zero output.
-        _asset.safeTransfer(address(swapAdapter), _amountAfterFee);
-        uint256 _buyAmount = swapAdapter.swapExactInput(
+        // Hand the rest to the swap adapter — recipient is THIS contract,
+        // not the user. We trust nothing the adapter says and measure
+        // delivery ourselves.
+        IERC20 _buyToken = IERC20(_data.buyToken);
+        uint256 _buyBalanceBefore = _buyToken.balanceOf(address(this));
+
+        _asset.safeTransfer(address(_adapter), _amountAfterFee);
+        // The adapter's own slippage gate (its minBuyAmount param) is
+        // belt-and-suspenders; the canonical check is the measured delta
+        // below.
+        _adapter.swapExactInput(
             address(_asset),
-            _data.buyToken,
+            address(_buyToken),
             _amountAfterFee,
             _data.minBuyAmount,
-            _data.recipient
+            address(this)
         );
-        if (_buyAmount == 0) revert AdapterReturnedZero();
+
+        uint256 _measuredOut = _buyToken.balanceOf(address(this)) - _buyBalanceBefore;
+        if (_measuredOut < _data.minBuyAmount) {
+            revert AdapterUnderdelivered(_measuredOut, _data.minBuyAmount);
+        }
+
+        _buyToken.safeTransfer(_data.recipient, _measuredOut);
 
         // Defense-in-depth: the entrypoint must not retain less of the
         // sell asset than before; that would imply the swap adapter pulled
         // from us beyond what we forwarded.
-        uint256 _balanceAfter = _asset.balanceOf(address(this));
-        if (_balanceBefore > _balanceAfter) revert InvalidPoolState();
+        uint256 _sellBalanceAfter = _asset.balanceOf(address(this));
+        if (_sellBalanceBefore > _sellBalanceAfter) revert InvalidPoolState();
 
         emit CrossCurrencyRelayed(
             msg.sender,
             _data.recipient,
             _asset,
-            IERC20(_data.buyToken),
+            _buyToken,
             _withdrawnAmount,
             _feeAmount,
-            _buyAmount
+            _measuredOut
         );
     }
 }

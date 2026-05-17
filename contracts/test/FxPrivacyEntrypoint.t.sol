@@ -20,6 +20,7 @@ import {IPrivacyPool} from "privacy-pools/interfaces/IPrivacyPool.sol";
 import {ProofLib} from "privacy-pools/contracts/lib/ProofLib.sol";
 import {Constants as PpConstants} from "privacy-pools/contracts/lib/Constants.sol";
 import {IVerifier} from "privacy-pools/interfaces/IVerifier.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @notice Always-pass Groth16 stub — relayCrossCurrency tests exercise the
 ///         post-withdraw routing, not the ZK math.
@@ -40,13 +41,14 @@ contract MockMorpho {
         supplyAssetsOf[_mp.loanToken][_onBehalf] += _assets;
         return (_assets, _assets);
     }
-    function withdraw(MorphoMarketParams memory _mp, uint256 _assets, uint256, address _onBehalf, address _receiver)
+    function withdraw(MorphoMarketParams memory _mp, uint256 _assets, uint256 _shares, address _onBehalf, address _receiver)
         external returns (uint256, uint256)
     {
-        require(supplyAssetsOf[_mp.loanToken][_onBehalf] >= _assets, "insufficient");
-        supplyAssetsOf[_mp.loanToken][_onBehalf] -= _assets;
-        IERC20(_mp.loanToken).transfer(_receiver, _assets);
-        return (_assets, _assets);
+        uint256 amount = _assets > 0 ? _assets : _shares;
+        require(supplyAssetsOf[_mp.loanToken][_onBehalf] >= amount, "insufficient");
+        supplyAssetsOf[_mp.loanToken][_onBehalf] -= amount;
+        IERC20(_mp.loanToken).transfer(_receiver, amount);
+        return (amount, amount);
     }
     function expectedSupplyAssets(MorphoMarketParams memory _mp, address _user) external view returns (uint256) {
         return supplyAssetsOf[_mp.loanToken][_user];
@@ -82,6 +84,36 @@ contract MockMarketRegistry is IFxMarketRegistry {
     function borrow(address, address, uint256, address, address) external pure returns (uint256) { return 0; }
     function borrowDelegated(address, address, uint256, address, address) external pure returns (uint256) { return 0; }
     function repay(address, address, uint256, address) external pure returns (uint256) { return 0; }
+}
+
+/// @notice codex-r1 HIGH #1 regression vehicle: an adapter that *claims*
+///         to deliver more than it actually transfers. Measured-delivery
+///         check on the entrypoint must catch this.
+contract MaliciousAdapter is IFxRouterSwapAdapter {
+    using SafeERC20 for IERC20;
+
+    /// @notice Actually transfer this many `buyToken` to `recipient`.
+    uint256 public actualDelivery;
+    /// @notice Pretend to have delivered this in the return value.
+    uint256 public reportedDelivery;
+
+    function setBehavior(uint256 actual, uint256 reported) external {
+        actualDelivery   = actual;
+        reportedDelivery = reported;
+    }
+
+    function swapExactInput(
+        address /*sellToken*/,
+        address buyToken,
+        uint256 /*sellAmountNet*/,
+        uint256 /*minBuyAmount*/,
+        address recipient
+    ) external override returns (uint256 buyAmount) {
+        if (actualDelivery > 0) {
+            IERC20(buyToken).safeTransfer(recipient, actualDelivery);
+        }
+        return reportedDelivery;
+    }
 }
 
 contract FxPrivacyEntrypointTest is Test {
@@ -234,7 +266,8 @@ contract FxPrivacyEntrypointTest is Test {
         assertEq(eurc.balanceOf(RECIPIENT), 99.5e6);
     }
 
-    /// @dev Adapter rate < 1.0 + minBuyAmount enforces slippage bound.
+    /// @dev Adapter delivers nothing but the contract's measured-delivery
+    ///      check catches it.
     function test_relayCrossCurrency_revertsOnAdapterUnderpayment() public {
         uint256 amount = 100e6;
         _depositFromUser(amount, 3);
@@ -250,7 +283,72 @@ contract FxPrivacyEntrypointTest is Test {
         (IPrivacyPool.Withdrawal memory w, ProofLib.WithdrawProof memory p) =
             _craftWithdrawal(data, amount, 0xCC);
 
-        vm.expectRevert(FxPrivacyEntrypoint.AdapterReturnedZero.selector);
+        vm.expectRevert(abi.encodeWithSelector(
+            FxPrivacyEntrypoint.AdapterUnderdelivered.selector, 0, amount
+        ));
+        entrypoint.relayCrossCurrency(w, p, poolScope);
+    }
+
+    /// @dev codex-r1 HIGH #1 regression: malicious adapter LIES about
+    ///      delivery (returns a high claim, transfers only a tiny amount).
+    ///      Old code trusted the return value and would not have caught
+    ///      this. Measured-delivery check now catches it.
+    function test_relayCrossCurrency_catchesAdapterThatLiesAboutDelivery() public {
+        uint256 amount = 100e6;
+        _depositFromUser(amount, 30);
+
+        MaliciousAdapter mal = new MaliciousAdapter();
+        eurc.mint(address(mal), 100e6); // pre-fund so the adapter CAN deliver
+        // Reports 100e6 delivered, actually transfers 1 wei.
+        mal.setBehavior({ actual: 1, reported: amount });
+
+        vm.prank(OWNER);
+        entrypoint.setSwapAdapter(IFxRouterSwapAdapter(address(mal)));
+
+        FxPrivacyEntrypoint.CrossCurrencyRelayData memory data = FxPrivacyEntrypoint.CrossCurrencyRelayData({
+            recipient:    RECIPIENT,
+            feeRecipient: FEE_SINK,
+            relayFeeBPS:  0,
+            buyToken:     address(eurc),
+            minBuyAmount: amount
+        });
+        (IPrivacyPool.Withdrawal memory w, ProofLib.WithdrawProof memory p) =
+            _craftWithdrawal(data, amount, 0x30);
+
+        vm.expectRevert(abi.encodeWithSelector(
+            FxPrivacyEntrypoint.AdapterUnderdelivered.selector, 1, amount
+        ));
+        entrypoint.relayCrossCurrency(w, p, poolScope);
+    }
+
+    /// @dev codex-r1 HIGH #1 regression: adapter keeps the sell tokens
+    ///      and delivers nothing to the entrypoint. Measured delta is 0
+    ///      regardless of what the adapter's return value claims.
+    function test_relayCrossCurrency_catchesAdapterThatKeepsSellTokens() public {
+        uint256 amount = 100e6;
+        _depositFromUser(amount, 31);
+
+        MaliciousAdapter mal = new MaliciousAdapter();
+        // Adapter delivers nothing but reports a non-zero amount — the
+        // pre-r1 `AdapterReturnedZero` check would have passed this.
+        mal.setBehavior({ actual: 0, reported: amount });
+
+        vm.prank(OWNER);
+        entrypoint.setSwapAdapter(IFxRouterSwapAdapter(address(mal)));
+
+        FxPrivacyEntrypoint.CrossCurrencyRelayData memory data = FxPrivacyEntrypoint.CrossCurrencyRelayData({
+            recipient:    RECIPIENT,
+            feeRecipient: FEE_SINK,
+            relayFeeBPS:  0,
+            buyToken:     address(eurc),
+            minBuyAmount: amount
+        });
+        (IPrivacyPool.Withdrawal memory w, ProofLib.WithdrawProof memory p) =
+            _craftWithdrawal(data, amount, 0x31);
+
+        vm.expectRevert(abi.encodeWithSelector(
+            FxPrivacyEntrypoint.AdapterUnderdelivered.selector, 0, amount
+        ));
         entrypoint.relayCrossCurrency(w, p, poolScope);
     }
 

@@ -175,18 +175,52 @@ contract FxPrivacyPool is PrivacyPool, IPrivacyPoolComplex {
         });
     }
 
-    /// @notice Push hot excess into Morpho supply per `hotReservePct`.
-    ///         Skip entirely when set to 100% hot.
+    /// @notice Rebalance the hot/Morpho split toward `hotReservePct`.
+    ///         Bidirectional: if hot is over target, supply the excess to
+    ///         Morpho; if hot is under target (and we have Morpho supply
+    ///         to draw on), withdraw the shortfall back to hot. Special
+    ///         case `hotReservePct = BPS_DENOM` fully unwinds Morpho —
+    ///         critical for owner-driven de-risking.
+    ///
+    ///         Codex-r1 MED #1: prior version early-returned at 100% hot
+    ///         and left existing supply stranded.
     function _rebalance() internal {
-        if (hotReservePct >= BPS_DENOM) return;
-        uint256 hot      = _hotBalance();
+        uint256 sharesHeld = morphoShares;
+        uint256 hot        = _hotBalance();
+
+        // Full-hot mode: unwind everything still in Morpho. Uses shares-mode
+        // withdraw so we don't depend on a freshly-accrued `expectedSupplyAssets`
+        // figure — burn the exact share balance we hold.
+        if (hotReservePct >= BPS_DENOM) {
+            if (sharesHeld > 0) _withdrawAllFromMorpho(sharesHeld);
+            return;
+        }
+
         uint256 supplied = _morphoSupplyAssets();
         uint256 total    = hot + supplied;
         if (total == 0) return;
+
         uint256 targetHot = (total * uint256(hotReservePct)) / BPS_DENOM;
         if (hot > targetHot) {
             _supplyToMorpho(hot - targetHot);
+        } else if (hot < targetHot && supplied > 0) {
+            uint256 needed = targetHot - hot;
+            if (needed > supplied) needed = supplied;
+            _withdrawFromMorpho(needed);
         }
+    }
+
+    /// @notice Burn `shares` of Morpho supply for ASSET — shares-mode
+    ///         withdraw. Used by the full-unwind path (`hotReservePct = 100%`)
+    ///         where we want to exit the exact share balance we hold without
+    ///         needing an accurate `expectedSupplyAssets` snapshot.
+    function _withdrawAllFromMorpho(uint256 shares) internal {
+        if (shares == 0) return;
+        MorphoMarketParams memory mp = _morphoParams();
+        (uint256 assetsOut, uint256 sharesBurned) =
+            MORPHO.withdraw(mp, 0, shares, address(this), address(this));
+        morphoShares = sharesBurned > shares ? 0 : shares - sharesBurned;
+        emit WithdrawnFromMorpho(assetsOut, morphoShares);
     }
 
     /// @notice JIT-pull `needed` of ASSET into hot reserve if missing.

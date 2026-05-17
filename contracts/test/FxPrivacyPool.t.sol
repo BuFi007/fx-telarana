@@ -64,15 +64,18 @@ contract MockMorpho {
     function withdraw(
         MorphoMarketParams memory _mp,
         uint256 _assets,
-        uint256,
+        uint256 _shares,
         address _onBehalf,
         address _receiver
     ) external returns (uint256, uint256) {
-        require(supplyAssetsOf[_mp.loanToken][_onBehalf] >= _assets, "insufficient");
-        supplyAssetsOf[_mp.loanToken][_onBehalf] -= _assets;
-        IERC20(_mp.loanToken).transfer(_receiver, _assets);
+        // Mock-Morpho is 1:1 (shares = assets). Real Morpho rejects both
+        // non-zero; tests don't exercise that path.
+        uint256 amount = _assets > 0 ? _assets : _shares;
+        require(supplyAssetsOf[_mp.loanToken][_onBehalf] >= amount, "insufficient");
+        supplyAssetsOf[_mp.loanToken][_onBehalf] -= amount;
+        IERC20(_mp.loanToken).transfer(_receiver, amount);
         ++withdrawCalls;
-        return (_assets, _assets);
+        return (amount, amount);
     }
 
     function expectedSupplyAssets(MorphoMarketParams memory _mp, address _user) external view returns (uint256) {
@@ -383,6 +386,28 @@ contract FxPrivacyPoolTest is Test {
 
     /// @dev setHotReservePct that lowers the hot target rebalances into
     ///      Morpho on the next interaction.
+    /// @dev codex-r1 MED #1 regression: setting hotPct to 100% must unwind
+    ///      existing Morpho supply, not leave it stranded.
+    function test_setHotReservePct_fullHotUnwindsMorpho() public {
+        uint256 amount = 100e6;
+        vm.startPrank(ENTRYPOINT);
+        usdc.approve(address(pool), amount);
+        pool.deposit(USER, amount, _fakePrecommitment(10));
+        vm.stopPrank();
+
+        // Default 20% hot → 80% landed in Morpho.
+        assertEq(morpho.supplyAssetsOf(address(usdc), address(pool)), 80e6, "supplied before");
+        assertEq(usdc.balanceOf(address(pool)),                       20e6, "hot before");
+
+        // Tighten to 100% hot — should fully unwind.
+        vm.prank(OWNER);
+        pool.setHotReservePct(10_000);
+
+        assertEq(morpho.supplyAssetsOf(address(usdc), address(pool)), 0,      "morpho unwound");
+        assertEq(usdc.balanceOf(address(pool)),                       100e6,  "all hot");
+        assertEq(pool.morphoShares(),                                 0,      "shares burned");
+    }
+
     function test_setHotReservePct_triggersRebalance() public {
         vm.prank(OWNER);
         pool.setHotReservePct(10_000); // 100% hot
