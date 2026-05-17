@@ -35,6 +35,7 @@
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test": "bun test",
     "circle:register": "bun scripts/register-contracts.ts",
+    "assert:lending-surface": "bun scripts/assert-lending-registry-surface.ts",
     "tenderly:label": "bun scripts/tenderly-label.ts",
     "tenderly:verify:hub": "sh scripts/tenderly-verify.sh",
     "tenderly:verify:spoke": "sh scripts/tenderly-verify-spoke.sh",
