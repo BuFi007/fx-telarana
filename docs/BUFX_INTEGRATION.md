@@ -13,60 +13,71 @@ contracts below.
 
 ### Avalanche Fuji — PRIMARY HUB (chainId 43113, CCTP V2 domain 1, Gateway domain 1)
 
-User deposits route here via CCTP V2 spokes. All `enterHub` flows from any spoke
-chain land on Fuji's `FxHubMessageReceiver`.
+User deposits can route here via the Fuji-routed CCTP V2 spokes. Each spoke
+chain now also has an Arc-routed spoke, so the user or integrator must choose
+the destination hub per intent.
 
 | Contract | Address |
 |---|---|
-| `FxSpoke` (local, Fuji-side entry) | `0xb7fc291c27f6a7a659d4d229e5d8a55e58f26ab1` |
-| **`FxHubMessageReceiver` (Stage 6)** | **`0x7eAdfD0c08dd6544f763285bBD31be14179d594B`** |
-| **`FxGatewayHook` (Stage 6)** | **`0x7dA191bfB85D9F14069228cf618519BFb41f371E`** |
-| `FxMarketRegistry` | `0x7ba745b979e027992ECFa51207666e3F5B46cF0a` |
-| `FxOracle` | `0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b` |
-| `FxLiquidator` | `0x2900599ff0e6dd057493d62fac856e5a8f93c6eb` |
-| `FxReceiptEURC` (ERC-4626) | `0xefd7cf5ad5a2db9a3c23e2807f2279de92c730d2` |
-| `FxReceiptUSDC` (ERC-4626) | `0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e` |
-| `MorphoOracleAdapter M1` (EURC/USDC) | `0xda4c3e315fffd0790c9d8a1730c2ba56330cb2ec` |
-| `MorphoOracleAdapter M2` (USDC/EURC) | `0xf0cdaa9cf9e8d52060dcb41a045e3a6d618a9f65` |
+| `FxSpoke` (local, Fuji-side entry) | `0x6EC2197aC1c35Fbe64533101a3DFf081BD45Ed99` |
+| `FxSpokeToArc` (Fuji -> Arc entry) | `0x225cca22879593b41c7dcceb9e961b7881061368` |
+| **`FxHubMessageReceiver` (Stage 6)** | **`0xbBc9AE9dbd3F6D3dB672F0CA2419d0f4C8513062`** |
+| **`FxGatewayHook` (Stage 6)** | **`0x1527f0230e07B202812A0F0E437995323A1a98cB`** |
+| `FxMarketRegistry` | `0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9` |
+| `FxOracle` | `0x4178F9D64F64eD05C25B0D6284f64522436A2a1F` |
+| `FxLiquidator` | `0x113A539625D208b5EcC59f300Be14b9b3508E559` |
+| `FxReceiptEURC` (ERC-4626) | `0x971b6ED14521f354eD13d64506Bf47D84E70F4fc` |
+| `FxReceiptUSDC` (ERC-4626) | `0x629144FDC1d0A6f9F2B12d9747557Cc508728739` |
 | MorphoBlue (self-deployed) | `0xeF64621D41093144D9ED8aB8327eE381ECdB79E6` |
-| IrmMock | `0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA` |
-| MockEURC | `0x50c4ba39caa7f56152d0df4914e1f6b907194992` |
+| AdaptiveCurveIrm | `0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA` |
+| Circle EURC | `0x5E44db7996c682E92a960b65AC713a54AD815c6B` |
 | USDC (Circle) | `0x5425890298aed601595a70AB815c96711a31Bc65` |
-| (deprecated V1 hub) | `0x365DE300dDa61C81a33bcE3606A5d524eD964362` |
-| (deprecated V1 hook) | `0xc63634ebc99f9c9616ee126971CCa486f3AFfF6E` |
 
 Market IDs:
-- M1 EURC/USDC: `0x7d99088a9fe61331c49a92eb16fa3794b0bc2862b211f5a70f31a64cef25029e`
-- M2 USDC/EURC: `0x1700104cf29eceb113e01a1bcdc913e5e10d3d37314cee235752aa88bf153197`
+- M1 EURC/USDC: `0x164ab95c126ae7f5227bc5026e66642ea05b41f3ab50d086704bc7f1dd6470a1`
+- M2 USDC/EURC: `0x77bae5f5fb07741f0873c163edfa5573e7136cb690bb1deff35aa3e664a37a75`
 
-### Arc Testnet — TRADING-EXECUTION HUB (chainId 5042002, CCTP V2 domain 26, Gateway domain 26)
+### Arc Testnet — BASKET + TRADING-EXECUTION HUB (chainId 5042002, CCTP V2 domain 26, Gateway domain 26)
 
 Receives USDC liquidity from Fuji via `FxGatewayHook` (never user-initiated). This
-is where high-frequency trading and perp execution should live — sub-second
-finality, native USDC gas.
+is where high-frequency trading and perp execution should live. Arc also hosts
+the basket money-market proof of concept: EURC plus mAUDF/mJPYC/mMXNB/mKRW1/mZCHF
+against USDC, both directions.
 
 | Contract | Address |
 |---|---|
-| `FxSpoke` (routes to Fuji hub) | `0x13c8463589d460db6f21235eedfd678c22a1ea25` |
-| **`FxHubMessageReceiver` (Stage 6)** | **`0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C`** |
-| **`FxGatewayHook` (Stage 6)** | **`0x2931C50745334d6DFf9eC4E3106fE05b49717DF1`** |
-| `FxMarketRegistry` | `0x813232259c9b922e7571F15220617C80581f1464` |
-| `FxOracle` | `0x77b3A3B420dB98B01085b8C46a753Ed9879e2865` |
-| `FxLiquidator` | `0xa50f7D4D4a1A0D3CF418515973545b80E037B379` |
-| `FxReceiptEURC` (ERC-4626) | `0xF829f57Db8530fa93FCD6e13b00193cbe8cE1493` |
-| `FxReceiptUSDC` (ERC-4626) | `0xdd22365Bba7330BE537c9BC26da9b1b4Db9aC431` |
-| `MorphoOracleAdapter M1` | `0xED58C176E9a37Cda2854AC0Ade409cfb3687cA7d` |
-| `MorphoOracleAdapter M2` | `0x955AAEE698aaA03d5bc32F16434cef78b8Ee1fc7` |
+| `FxSpoke` (Arc -> Fuji) | `0xf93834070e4e4e7ff0e161feca2aeba65c2c6a38` |
+| `FxSpoke` (Arc-local) | `0x10b1ddc4a061991d44643893a24b754b8fc0dc98` |
+| **`FxHubMessageReceiver` (Stage 6)** | **`0x4FBe4cc4ab09648d65195f5B9490D20D12D49a2c`** |
+| **`FxGatewayHook` (Stage 6)** | **`0x412f0CE9cb7697458dF3804d56de259c3e38371B`** |
+| `FxMarketRegistry` | `0xdB59d712a3cD19DccD98F5a245302a94d43f9A8c` |
+| `FxOracle` | `0x625e2870a94F67F575Ed82678C2c619994721D29` |
+| `FxLiquidator` | `0x3DD99ace9ab896C613b47749e6Daae84ceF0433B` |
+| `FxReceiptEURC` (ERC-4626) | `0x8A88024AE640B26b082E5D01BF0BDea9e0F89f3d` |
+| `FxReceiptUSDC` (ERC-4626) | `0x3b94E6A9Dc100CC390B56D1f0BB6a0B706ad3aAA` |
 | MorphoBlue (self-deployed) | `0x3c9b95C6E7B23f094f066733E7797C8680760830` |
-| IrmMock | `0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1` |
+| AdaptiveCurveIrm | `0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1` |
+| FxTimelock / receiver owner | `0x6b44F29DFf260D4426116c313a83e10f741A5a7a` |
 | USDC (Arc native 6-dec form) | `0x3600000000000000000000000000000000000000` |
 | EURC (Circle native) | `0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a` |
-| (deprecated V1 hub) | `0x07db64fb19C6c4a1eBB1B7bfdaFd4676b43Cf276` |
-| (deprecated V1 hook) | `0x004cfa0305c365b1d9b2365f85acf216c96b0e13` |
 
-Market IDs:
-- M1 EURC/USDC: `0xf6fac2b9b801a7ae3deeccfa95a7f1e768b4873a22f0def0d93f7f0172cc2da2`
-- M2 USDC/EURC: `0x9e187a5f252de56b9ffe35f72cdc4137568f9d51698560751cdaff3df60cb5d3`
+Arc basket market IDs:
+
+| Asset | Token | Asset-loan market | USDC-loan market |
+|---|---|---|---|
+| EURC | `0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a` | `0xfd39280abf7d487fdacb075964282ef40cfbc05d29f3dd0de33fd106f999e321` | `0xcd92ddbcde6eac8b696f8f55cff1e0a397c43a10b9c5ea62d3a134333961853b` |
+| mAUDF | `0x4DeB6B4C83588c987C952858225A4725F6e1B1f2` | `0xdecc6eac359fccc90312bcc10d4e3f041b24499e6f5fc6c9b979c63ed3324827` | `0x30b2b4f9a060a4106af7d648ee2997af663dba4a13a80bdaa3b7dcdd86ad024e` |
+| mJPYC | `0xD9eCFc78BDFbD121E8b07Bf96D6E27a1C11C6331` | `0x45af7bde15cc90c3d746c5c33ffe8f841d9a13691d4b61b37488f0728c6d3c4b` | `0x85bd7c3e24560aa9e9e92b38b343f30e7699bd40b5c8623a9da6dddb3fa37c61` |
+| mMXNB | `0xdb6EC7E8ad32D2c6fe05c0862d626A84049c24c5` | `0x2a9537d6924829e4885754f4d5bc162540c85215edcd2a617e4b44237ceb5b03` | `0x44cd73ea5727fab16c3f4eeb4e33d61e3679709ec026423a7cedd135b0fd2a9c` |
+| mKRW1 | `0x204E306FBc71D876E4F105111bBBB1E8113886C3` | `0x9128daa773043c0356fd98ff060eef6cc149eca6efb55b147c600d62d170d379` | `0x19a08dbc14b7db6dbe151ac2bdc5fb7490acc8e2f95ccb8eea768486c93b0b89` |
+| mZCHF | `0xF50D7B5B6699f2D1FB7BCFC80261Ae0fca48396C` | `0x175e4e8d24841d73e51f118e6318e429ff9c772df512de1168a3b8f666647ae3` | `0xa900dd90f3d9e8de4546a2be44c54ff6d0ece155766cd4480e5ec9b20c2e98bb` |
+
+The mock basket is for testnet UI/API integration only. When real issuer
+testnet contracts arrive, deploy new Morpho markets; market IDs depend on token
+addresses. Per-market receipt wrappers are in
+[`deployments/arc-testnet-basket.json`](../deployments/arc-testnet-basket.json)
+under `receipt_*`; BUFX should still read live position state from Morpho by
+market id.
 
 ### Circle Gateway (deterministic CREATE2 — same on every testnet chain)
 
@@ -89,12 +100,16 @@ Everything below is callable from any address — read state, build UIs, generat
 trades:
 
 ### Per-chain hub state
-- `FxMarketRegistry.morphoMarketParams(bytes32 marketId)` → market config
-- `FxMarketRegistry.morpho()` → MorphoBlue address
-- `FxReceipt{EURC,USDC}.totalAssets() / totalSupply() / balanceOf(account)` → ERC-4626 share math
-- `FxOracle.getMid(token)` → cached mid price (last update)
-- `FxOracle.getMidWithUpdate(token, bytes pythPayload)` payable → fresh Pyth-backed price (deduct `getUpdateFee` first)
-- `FxLiquidator.previewLiquidation(...)` → liquidation math without execution
+- `FxMarketRegistry.listPools()` → registered market params
+- `FxMarketRegistry.marketIdOf(loanToken, collateralToken)` → Morpho market id
+- `FxMarketRegistry.paramsOf(loanToken, collateralToken)` → market config
+- `FxMarketRegistry.isPoolLive(loanToken, collateralToken)` → entry-side live flag
+- `FxMarketRegistry.MORPHO()` → MorphoBlue address
+- `Morpho.position(marketId, account)` → supply shares, borrow shares, collateral
+- `Morpho.market(marketId)` → supply/borrow totals
+- `FxReceipt{EURC,USDC}.totalAssets() / totalSupply() / balanceOf(account)` → optional ERC-4626 receipt-token share math
+- `FxOracle.getMid(base, quote)` → cached mid price and last publish time
+- `FxOracle.getMidWithUpdate(base, quote, pythPayload)` payable → fresh Pyth-backed price
 
 ### Gateway state (via FxGatewayHook)
 - `gatewayBalance()` → USDC currently locked under our authority on this chain
@@ -106,19 +121,22 @@ trades:
 
 ### Borrow / lend (Morpho-Blue-style, via FxMarketRegistry)
 
-BUFX contracts (or BUFX-signed txs) can call the registry directly. **Codex-patched
-gate**: `onBehalf` MUST equal `msg.sender` on withdraw / withdrawCollateral / borrow.
-Supply / supplyCollateral / repay accept arbitrary `onBehalf`.
+BUFX contracts (or BUFX-signed txs) can call the registry directly. Registry
+gates direct `withdraw`, `withdrawCollateral`, and `borrow` so `onBehalf` must
+equal `msg.sender`. Trusted relayers use `borrowDelegated` after the user has
+called `setBorrowDelegate(delegate, true)`. Supply / supplyCollateral / repay
+accept arbitrary `onBehalf`.
 
 ```solidity
 interface IFxMarketRegistry {
-    function supply(bytes32 marketId, uint256 assets, address onBehalf, bytes calldata) external returns (uint256 sharesOut);
-    function supplyCollateral(bytes32 marketId, uint256 assets, address onBehalf, bytes calldata) external;
-    function withdraw(bytes32 marketId, uint256 assets, address onBehalf, address receiver) external returns (uint256 assetsOut);
-    function withdrawCollateral(bytes32 marketId, uint256 assets, address onBehalf, address receiver) external;
-    function borrow(bytes32 marketId, uint256 assets, address onBehalf, address receiver) external returns (uint256 assetsOut);
-    function repay(bytes32 marketId, uint256 assets, address onBehalf, bytes calldata) external returns (uint256 assetsRepaid);
-    function liquidate(bytes32 marketId, address borrower, uint256 seizedAssets, uint256 repaidShares, bytes calldata) external returns (uint256, uint256);
+    function supply(address loanToken, address collateralToken, uint256 assets, address onBehalf) external returns (uint256 sharesMinted);
+    function withdraw(address loanToken, address collateralToken, uint256 shares, address onBehalf, address receiver) external returns (uint256 assetsOut);
+    function supplyCollateral(address loanToken, address collateralToken, uint256 collateral, address onBehalf) external;
+    function withdrawCollateral(address loanToken, address collateralToken, uint256 collateral, address onBehalf, address receiver) external;
+    function borrow(address loanToken, address collateralToken, uint256 assets, address onBehalf, address receiver) external returns (uint256 borrowedShares);
+    function borrowDelegated(address loanToken, address collateralToken, uint256 assets, address onBehalf, address receiver) external returns (uint256 borrowedShares);
+    function repay(address loanToken, address collateralToken, uint256 assets, address onBehalf) external returns (uint256 sharesBurned);
+    function setBorrowDelegate(address delegate, bool allowed) external;
 }
 ```
 
@@ -191,27 +209,27 @@ attestation logs to `reports/gateway-attestations.jsonl`.
 
 ---
 
-## How to use cross-hub liquidity today (manual, pre-Stage-6)
+## How to use cross-hub liquidity today
 
-Until Stage 6 lands, BUFX can use the EOA-signed flow:
+Use Stage 6 hub relay. Do not call `FxGatewayHook` directly from BUFX.
 
-1. Hub on Fuji (or someone) approves `FxGatewayHook` to spend USDC
-2. Call `FxGatewayHook.lockForRemote(amount)` AS the hub (only works with hub privkey — for testing, use a hub-impersonating sim on the Fuji vnet)
-3. Off-chain: deployer EOA `0x0646...c69` signs a `BurnIntent` with:
-   - `sourceDomain=1`, `destinationDomain=26`
-   - `sourceContract=GatewayWallet`, `destinationContract=GatewayMinter`
-   - `sourceDepositor=0x0646...c69` (authority)
-   - `destinationRecipient=0x004cfa03...0e13` (Arc FxGatewayHook)
-   - `destinationCaller=0x004cfa03...0e13` (locks mint to the hook only)
-   - `value=<amount>`
-4. POST the intent to Circle's operator API → receive attestation
-5. Call `FxGatewayHook.mintFromRemote(attestationPayload, signature)` on Arc — USDC lands on Arc hub
+1. Ask governance/ops to whitelist the BUFX execution contract on each hub with
+   `FxHubMessageReceiver.setRelayCaller(bufxAddress, true)`.
+2. From the whitelisted BUFX contract on the source hub, call
+   `relayToRemoteHub(amount)`.
+3. The signer service watches `LockedForRemote`, builds the Circle Gateway
+   `BurnIntent`, signs with the pre-1271 deployer EOA authority, and submits it
+   to Circle Gateway.
+4. When Circle returns the attestation, call `relayMintFromRemote(payload, sig)`
+   from the BUFX contract on the destination hub.
+5. The destination hub verifies the mint delta and forwards the minted USDC to
+   `msg.sender`, so the caller must be the BUFX contract/account that should
+   receive the funds.
 
-Burn intent format + signing helper: see `/tmp/circle-gateway/src/lib/BurnIntents.sol`
-(EIP-712 typed-data hash, `BURN_INTENT_TYPEHASH = 0x8b99d17a83a2dd1add9fc2a450e22732c7e8564aa110ab99c20485a7a10ba37c`).
-
-The off-chain signer service is queued on our side — `packages/sdk/scripts/gateway-signer.ts`.
-Happy to share once it lands.
+Signer service:
+[`packages/sdk/scripts/gateway-signer.ts`](../packages/sdk/scripts/gateway-signer.ts).
+Gateway authority remains the deployer EOA until Circle's EIP-1271 support is
+live; then authority rotates to the hub path.
 
 ---
 

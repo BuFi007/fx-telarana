@@ -26,87 +26,124 @@ state, balances, market cards, approval state, lend/borrow/repay/withdraw forms,
 cross-chain spoke entry, Ghost Mode route state, and spot FX request/quote
 panels.
 
-## Current Testing Hub
+## Current Testing Hubs
 
-Primary test hub is Avalanche Fuji.
+Use the SDK and manifests as source of truth:
 
-Native gas token: AVAX. There is no ERC-20 AVAX contract involved in protocol
-calls; users only need AVAX for gas on Avalanche/Fuji.
+- `packages/sdk/src/addresses/index.ts`
+- `packages/sdk/src/telarana-client.ts`
+- `deployments/avalanche-fuji.json`
+- `deployments/arc-testnet.json`
+- `deployments/arc-testnet-basket.json`
 
-Avalanche Fuji hub (Stage 6 — current canonical, deployed 2026-05-15):
+### Avalanche Fuji — canonical EURC money market
+
+Native gas token: AVAX. Users only need AVAX for gas on Avalanche/Fuji.
 
 | Item | Address |
 |---|---|
 | Chain id | `43113` |
 | Deployer | `0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69` |
-| FxOracle | `0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b` |
-| FxMarketRegistry | `0x7ba745b979e027992ECFa51207666e3F5B46cF0a` |
-| FxLiquidator | `0x2900599ff0e6dd057493d62fac856e5a8f93c6eb` |
-| FxHubMessageReceiver | `0x7eAdfD0c08dd6544f763285bBD31be14179d594B` |
-| FxGatewayHook | `0x7dA191bfB85D9F14069228cf618519BFb41f371E` |
+| FxOracle | `0x4178F9D64F64eD05C25B0D6284f64522436A2a1F` |
+| FxMarketRegistry | `0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9` |
+| FxLiquidator | `0x113A539625D208b5EcC59f300Be14b9b3508E559` |
+| FxHubMessageReceiver | `0xbBc9AE9dbd3F6D3dB672F0CA2419d0f4C8513062` |
+| FxGatewayHook | `0x1527f0230e07B202812A0F0E437995323A1a98cB` |
 | MorphoBlue | `0xeF64621D41093144D9ED8aB8327eE381ECdB79E6` |
-| IrmMock | `0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA` |
-| Pyth | `0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509` |
-| CCTP TokenMessengerV2 | `0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA` |
-| CCTP MessageTransmitterV2 | `0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275` |
-| CCTP domain | `1` |
+| AdaptiveCurveIrm | `0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA` |
 | USDC | `0x5425890298aed601595a70AB815c96711a31Bc65` |
 | Circle EURC | `0x5E44db7996c682E92a960b65AC713a54AD815c6B` |
-| Legacy MockEURC | `0x50c4ba39caa7f56152d0df4914e1f6b907194992` |
-| FxReceiptEURC | `0xefd7cf5ad5a2db9a3c23e2807f2279de92c730d2` |
-| FxReceiptUSDC | `0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e` |
-
-> **DEPRECATED:** the V1 Fuji hub receiver `0x365DE300dDa61C81a33bcE3606A5d524eD964362`
-> and self-loop spoke `0xAa875a68b0155da4bD6A528ee9e1137017D18b41` are retired post
-> Stage 6. Do not route new deposits to them. Source of truth:
-> `deployments/avalanche-fuji.json` + `deployments/hub-config-fuji.json`.
+| FxReceiptEURC | `0x971b6ED14521f354eD13d64506Bf47D84E70F4fc` |
+| FxReceiptUSDC | `0x629144FDC1d0A6f9F2B12d9747557Cc508728739` |
 
 Fuji market ids:
 
 | Market | Meaning | Market id |
 |---|---|---|
-| M1 | loan `EURC`, collateral `USDC` | `0x7d99088a9fe61331c49a92eb16fa3794b0bc2862b211f5a70f31a64cef25029e` |
-| M2 | loan `USDC`, collateral `EURC` | `0x1700104cf29eceb113e01a1bcdc913e5e10d3d37314cee235752aa88bf153197` |
-
-The live Fuji hub was originally deployed against the legacy mock. The deploy
-script now defaults to Circle Fuji EURC. Do not label real EURC markets active
-until the new deployment manifest contains the Circle EURC address and matching
-market ids.
+| M1 | loan `EURC`, collateral `USDC` | `0x164ab95c126ae7f5227bc5026e66642ea05b41f3ab50d086704bc7f1dd6470a1` |
+| M2 | loan `USDC`, collateral `EURC` | `0x77bae5f5fb07741f0873c163edfa5573e7136cb690bb1deff35aa3e664a37a75` |
 
 Same-chain hub UX should call `FxMarketRegistry` directly. Do not route a Fuji
 hub user through the Fuji `FxSpoke` unless explicitly testing CCTP self-loop
 behavior.
 
-## Current Spokes To Avalanche Fuji Hub (Stage 6 — current)
+### Arc Testnet — basket money-market proof of concept
 
-The currently listed deployed spokes burn USDC via CCTP V2 and target the Stage 6
-Fuji hub receiver `0x7eAdfD0c08dd6544f763285bBD31be14179d594B` with hub CCTP
-domain `1`. EURC uses the same Circle-only CCTP lane only on chains where Circle
-has published EURC and the matching spoke/manifest entry exists.
+Arc native gas is USDC. Fund via [faucet.circle.com](https://faucet.circle.com)
+and select Arc Testnet.
 
-| Spoke chain | Chain id | FxSpoke (→ Fuji) | Spoke USDC | Spoke CCTP domain |
-|---|---:|---|---|---:|
-| Avalanche Fuji self-loop | `43113` | `0xb7fc291c27f6a7a659d4d229e5d8a55e58f26ab1` | `0x5425890298aed601595a70AB815c96711a31Bc65` | `1` |
-| Ethereum Sepolia | `11155111` | `0xdabf610c279d900b40ca4df62f1e86cc2d0a4fd4` | `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` | `0` |
-| Arbitrum Sepolia | `421614` | `0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e` | `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d` | `3` |
-| OP Sepolia | `11155420` | `0xef64621d41093144d9ed8ab8327ee381ecdb79e6` | `0x5fd84259d66Cd46123540766Be93DFE6D43130D7` | `2` |
-| Polygon Amoy | `80002` | `0x50c4ba39caa7f56152d0df4914e1f6b907194992` | `0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582` | `7` |
-| Unichain Sepolia | `1301` | `0x50c4ba39caa7f56152d0df4914e1f6b907194992` | `0x31d0220469e10c4E71834a79b1f276d740d3768F` | `10` |
-| World Chain Sepolia | `4801` | `0xef64621d41093144d9ed8ab8327ee381ecdb79e6` | `0x66145f38cBAC35Ca6F1Dfb4914dF98F1614aeA88` | `14` |
-| Arc Testnet (→ Fuji) | `5042002` | `0x13c8463589d460db6f21235eedfd678c22a1ea25` | `0x3600000000000000000000000000000000000000` | `26` |
+| Item | Address |
+|---|---|
+| Chain id | `5042002` |
+| FxOracle | `0x625e2870a94F67F575Ed82678C2c619994721D29` |
+| FxMarketRegistry | `0xdB59d712a3cD19DccD98F5a245302a94d43f9A8c` |
+| FxLiquidator | `0x3DD99ace9ab896C613b47749e6Daae84ceF0433B` |
+| FxHubMessageReceiver | `0x4FBe4cc4ab09648d65195f5B9490D20D12D49a2c` |
+| FxGatewayHook | `0x412f0CE9cb7697458dF3804d56de259c3e38371B` |
+| FxTimelock / receiver owner | `0x6b44F29DFf260D4426116c313a83e10f741A5a7a` |
+| MorphoBlue | `0x3c9b95C6E7B23f094f066733E7797C8680760830` |
+| AdaptiveCurveIrm | `0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1` |
+| USDC | `0x3600000000000000000000000000000000000000` |
+| Circle EURC | `0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a` |
 
-> **DEPRECATED:** the V1 Fuji self-loop spoke
-> `0xAa875a68b0155da4bD6A528ee9e1137017D18b41` and the V1 Arc→Fuji spoke
-> `0x729fe51fa88eae24cbcff7a192c5a91e937ceb68` are retired post Stage 6.
+Arc basket assets:
 
-Each non-hub chain also has a *second* spoke that routes to the **Arc** hub
-(`messageReceiver = 0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C`, domain `26`).
-See the `routes:` block in each `deployments/<chain>.json` manifest for the
-exact Arc-routed spoke address — the spider-web topology means every chain
-exposes both a Fuji and an Arc entry path.
+| Asset | Address | Decimals | Status |
+|---|---|---:|---|
+| mAUDF | `0x4DeB6B4C83588c987C952858225A4725F6e1B1f2` | 6 | testnet mock |
+| mJPYC | `0xD9eCFc78BDFbD121E8b07Bf96D6E27a1C11C6331` | 18 | testnet mock |
+| mMXNB | `0xdb6EC7E8ad32D2c6fe05c0862d626A84049c24c5` | 6 | testnet mock |
+| mKRW1 | `0x204E306FBc71D876E4F105111bBBB1E8113886C3` | 0 | testnet mock |
+| mZCHF | `0xF50D7B5B6699f2D1FB7BCFC80261Ae0fca48396C` | 18 | testnet mock |
 
-`packages/sdk/src/addresses/index.ts` is the canonical SDK source for the
-Fuji and Arc hub stacks (synced 2026-05-15 with Stage 6 manifests).
+Do not show BRLA, PHPC, `USDCx`, `BRLAx`, or other synthetic UI labels as active markets. The live Arc registry has 12 markets: EURC plus mAUDF/mJPYC/mMXNB/mKRW1/mZCHF against USDC, both directions. When real issuer testnet tokens arrive, deploy new Morpho markets because market IDs depend on token addresses.
+
+## Current Spokes
+
+Every chain has a Fuji-routed spoke and an Arc-routed spoke. Users pick the
+destination by intent.
+
+| Spoke chain | Chain id | CCTP domain | FxSpoke -> Fuji | FxSpoke -> Arc |
+|---|---:|---:|---|---|
+| Ethereum Sepolia | `11155111` | `0` | `0xf4556f31cace9a80aa584059c81638a5cd344dde` | `0xb912a78e5dbb0848501e1d643bda2193ec64aebc` |
+| OP Sepolia | `11155420` | `2` | `0x2552e1027ff27a285635a9593825e3da8f25808b` | `0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b` |
+| Arbitrum Sepolia | `421614` | `3` | `0xaa875a68b0155da4bd6a528ee9e1137017d18b41` | `0xfa999ca0392523a915e6bbc0026825090ed1a207` |
+| Polygon Amoy | `80002` | `7` | `0x58c1a04bc4e25db2f8474c9df41907cffc894a4b` | `0x71e85194f57338d854eabd158f0cd2c376b9f966` |
+| Unichain Sepolia | `1301` | `10` | `0x58c1a04bc4e25db2f8474c9df41907cffc894a4b` | `0x71e85194f57338d854eabd158f0cd2c376b9f966` |
+| World Chain Sepolia | `4801` | `14` | `0x2552e1027ff27a285635a9593825e3da8f25808b` | `0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b` |
+| Avalanche Fuji | `43113` | `1` | `0x6EC2197aC1c35Fbe64533101a3DFf081BD45Ed99` | `0x225cca22879593b41c7dcceb9e961b7881061368` |
+| Arc Testnet | `5042002` | `26` | `0xf93834070e4e4e7ff0e161feca2aeba65c2c6a38` | `0x10b1ddc4a061991d44643893a24b754b8fc0dc98` |
+
+## UI Contract
+
+The first production UI should be a simple money-market workspace, not a swap
+widget and not an arcade leaderboard. It must reflect the protocol's current
+capabilities exactly:
+
+- Primary nav: `Markets`, `Portfolio`, `Activity`, `Advanced`.
+- Default view: market list plus selected-market action panel.
+- Market list: Fuji USDC/EURC and Arc EURC/mAUDF/mJPYC/mMXNB/mKRW1/mZCHF
+  against USDC. Hide BRLA and PHPC. Do not invent `x` token labels.
+- Action tabs: `Supply`, `Borrow`, `Repay`, `Withdraw`.
+- Borrow form: collateral input, borrow input, max borrow, before/after health
+  factor, liquidation price, borrow APY, oracle freshness, and signature
+  deadline.
+- Withdraw form: separate supplied-asset withdrawal from collateral withdrawal.
+  Collateral withdrawal must show before/after health factor and block unsafe
+  actions.
+- Quote preview: action, hub, origin chain when cross-chain, market id, token
+  amounts, APY impact, health factor before/after, liquidation risk, oracle
+  freshness, and "requires wallet signature".
+- Portfolio rows: market, hub, supplied, borrowed, collateral, net value,
+  health factor, liquidation price, APY, and last updated.
+- Advanced drawer only: market id, registry, oracle, receiver, Gateway hook,
+  raw calldata, EIP-712 typed data, and indexed block.
+
+Visual direction: minimal, calm, high-trust. Use subtle neutral surfaces, thin
+dividers, tabular numbers, small semantic risk color, and 6-8px radii. Avoid
+thick shadows, purple gradients, bubbly buttons, decorative cards, leaderboard
+prominence, and huge empty whitespace. Disable actions when wallet, market,
+oracle, balance, or health-factor state makes the action unsafe.
 
 ## Circle Gateway Hub-To-Hub Liquidity
 
@@ -467,19 +504,26 @@ For the first testing release:
    the planned Ghost route/hook status before any transaction.
 5. Add a "hub destination preview" that decodes `hubCalldata` and shows the
    resulting hub action before the user burns USDC.
-6. Read hub positions from Morpho/FxReceipt where possible, and always expose
-   raw transaction hashes.
+6. Read hub positions from Morpho by market id; treat `FxReceipt` wrappers as
+   optional LP receipt flows, not the primary money-market position source.
+7. Always expose raw transaction hashes.
 
 Use viem with Dynamic's wallet client. Example flow for hub borrow:
 
 ```ts
+import { ChainId, getAddresses } from "@bu/fx-engine";
+
+const fuji = getAddresses(ChainId.AvalancheFuji);
+const registry = fuji.fxMarketRegistry;
+const morpho = fuji.morphoBlue;
+
 // 1. Ensure Morpho registry authorization on Avalanche Fuji.
 await walletClient.writeContract({
   chain: avalancheFuji,
-  address: "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
+  address: morpho,
   abi: MorphoAuthAbi,
   functionName: "setAuthorization",
-  args: ["0x7ba745b979e027992ecfa51207666e3f5b46cf0a", true],
+  args: [registry, true],
 });
 
 // 2. Approve collateral token to the registry.
@@ -488,13 +532,13 @@ await walletClient.writeContract({
   address: usdc,
   abi: erc20Abi,
   functionName: "approve",
-  args: ["0x7ba745b979e027992ecfa51207666e3f5b46cf0a", collateralAmount],
+  args: [registry, collateralAmount],
 });
 
 // 3. Supply collateral.
 await walletClient.writeContract({
   chain: avalancheFuji,
-  address: "0x7ba745b979e027992ecfa51207666e3f5b46cf0a",
+  address: registry,
   abi: FxMarketRegistryAbi,
   functionName: "supplyCollateral",
   args: [eurc, usdc, collateralAmount, userAddress],
@@ -503,7 +547,7 @@ await walletClient.writeContract({
 // 4. Borrow the loan token.
 await walletClient.writeContract({
   chain: avalancheFuji,
-  address: "0x7ba745b979e027992ecfa51207666e3f5b46cf0a",
+  address: registry,
   abi: FxMarketRegistryAbi,
   functionName: "borrow",
   args: [eurc, usdc, borrowAmount, userAddress, userAddress],

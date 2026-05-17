@@ -1,6 +1,8 @@
 # fx-Telaraña — Contracts
 
-Phase 0 Solidity for the fx-Telaraña Hub-and-Spoke protocol on Arc.
+Solidity contracts for the fx-Telaraña dual-hub protocol. Fuji runs the canonical
+USDC/EURC money market; Arc testnet now runs the basket money-market proof of
+concept plus low-latency execution plumbing.
 Spec: `../docs/SPEC.md` (v0.3).
 
 ## Layout
@@ -29,12 +31,13 @@ contracts/
 │   └── spoke/
 │       └── FxSpoke.sol                # CCTP V2 depositForBurnWithHook on each spoke chain
 ├── script/
-│   ├── DeployFxHub.s.sol              # full Arc-side stack
+│   ├── DeployArcBasketHub.s.sol       # full Arc basket hub stack + mock basket markets
+│   ├── DeployFxHub.s.sol              # legacy Arc-side stack
 │   └── DeployFxSpoke.s.sol            # per-spoke deploy (Ethereum, Base)
 └── test/
-    ├── FxOracle.t.sol                 # 12 unit tests (mock Pyth)
-    ├── FxHubMessageReceiver.t.sol     # 10 unit tests (mock CCTP MessageTransmitter)
-    ├── FxSpoke.t.sol                  # 5 unit tests (mock CCTP TokenMessenger)
+    ├── FxOracle.t.sol                 # oracle unit tests (mock Pyth)
+    ├── FxHubMessageReceiver.t.sol     # CCTP receiver tests
+    ├── FxSpoke.t.sol                  # CCTP spoke tests
     ├── MainnetFork.t.sol              # 4 fork tests against Morpho Blue on Ethereum mainnet
     └── mocks/  utils/
 ```
@@ -51,7 +54,7 @@ forge test --no-match-contract MainnetForkTest
 ETH_RPC_URL=https://ethereum-rpc.publicnode.com forge test
 ```
 
-Current status: **36 / 36 tests passing** (32 unit + 4 mainnet fork).
+Current root-suite status: **273 tests passing, 1 skipped Tenderly manifest gate**.
 
 ## Phase 0 decisions (spec v0.2)
 
@@ -71,7 +74,7 @@ Current status: **36 / 36 tests passing** (32 unit + 4 mainnet fork).
 
 ## Verified Arc testnet addresses
 
-Pre-filled in `.env.example`:
+External dependencies:
 
 | Contract | Address |
 |---|---|
@@ -81,6 +84,31 @@ Pre-filled in `.env.example`:
 | CCTP V2 TokenMessenger | `0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA` |
 | CCTP V2 MessageTransmitter | `0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275` |
 | CCTP domain | `26` |
+
+Live Arc basket hub, deployed 2026-05-17:
+
+| Contract | Address |
+|---|---|
+| FxOracle | `0x625e2870a94F67F575Ed82678C2c619994721D29` |
+| FxMarketRegistry | `0xdB59d712a3cD19DccD98F5a245302a94d43f9A8c` |
+| FxLiquidator | `0x3DD99ace9ab896C613b47749e6Daae84ceF0433B` |
+| FxHubMessageReceiver | `0x4FBe4cc4ab09648d65195f5B9490D20D12D49a2c` |
+| FxGatewayHook | `0x412f0CE9cb7697458dF3804d56de259c3e38371B` |
+| FxTimelock / receiver owner | `0x6b44F29DFf260D4426116c313a83e10f741A5a7a` |
+| MorphoBlue | `0x3c9b95C6E7B23f094f066733E7797C8680760830` |
+| AdaptiveCurveIrm | `0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1` |
+
+Mock basket tokens on Arc:
+
+| Token | Address | Decimals |
+|---|---|---:|
+| mAUDF | `0x4DeB6B4C83588c987C952858225A4725F6e1B1f2` | 6 |
+| mJPYC | `0xD9eCFc78BDFbD121E8b07Bf96D6E27a1C11C6331` | 18 |
+| mMXNB | `0xdb6EC7E8ad32D2c6fe05c0862d626A84049c24c5` | 6 |
+| mKRW1 | `0x204E306FBc71D876E4F105111bBBB1E8113886C3` | 0 |
+| mZCHF | `0xF50D7B5B6699f2D1FB7BCFC80261Ae0fca48396C` | 18 |
+
+The Arc basket registry exposes 12 live markets: EURC plus mAUDF/mJPYC/mMXNB/mKRW1/mZCHF against USDC, both directions. Mock asset-loan markets are seeded with 10,000 units, USDC-loan markets are seeded with 1 USDC, and mock faucets are open for UI/API testing. Real issuer testnet token arrivals require new Morpho markets because market IDs depend on token addresses.
 
 Pyth feed ids (verified via Hermes):
 - USDC/USD: `0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a`
@@ -114,11 +142,23 @@ Base Sepolia, Avalanche Fuji, and Arc Testnet use Circle-published testnet EURC
 addresses. Do not deploy `MockEURC` on those chains; use `MockStablecoin` only
 for the non-Circle basket assets that do not have issuer testnet deployments.
 
-### Arc testnet (waiting on Morpho Blue Arc address)
+### Arc basket hub
 
 ```bash
-# When Morpho ships on Arc, fill ARC_MORPHO_BLUE + ARC_MORPHO_ADAPTIVE_IRM + DEPLOYER_PRIVATE_KEY + FX_HUB_LLTV
-forge script script/DeployFxHub.s.sol --rpc-url arc_testnet --broadcast --verify
+# Simulate only.
+ARC_MORPHO_BLUE=0x3c9b95C6E7B23f094f066733E7797C8680760830 \
+ARC_MORPHO_ADAPTIVE_IRM=0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1 \
+DEPLOYER_PRIVATE_KEY=<key> \
+forge script script/DeployArcBasketHub.s.sol --rpc-url https://rpc.testnet.arc.network
+
+# Live deploy.
+ARC_MORPHO_BLUE=0x3c9b95C6E7B23f094f066733E7797C8680760830 \
+ARC_MORPHO_ADAPTIVE_IRM=0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1 \
+ARC_BASKET_MANIFEST=../deployments/arc-testnet-basket.json \
+DEPLOYER_PRIVATE_KEY=<funded-key> \
+forge script script/DeployArcBasketHub.s.sol \
+  --rpc-url https://rpc.testnet.arc.network \
+  --broadcast --slow --legacy
 ```
 
 ### Per-spoke (Ethereum / Base / etc.)
