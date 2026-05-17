@@ -77,6 +77,13 @@ import {
   loadFxPerpRuntimeConfig,
   parseFxPerpContractAddressesJson,
 } from "../perps-runtime.js";
+import {
+  createJsonLogger,
+  keeperComponentsFromString,
+  marketKeysFromString,
+  parseLiquidationCandidates,
+  parseMatchIntent,
+} from "../perps-keeper.js";
 
 const USDC = "0x036cbd53842c5426634e7929541ec2318f3dcf7e" as const;
 const EURC = "0x000000000000000000000000000000000000eefc" as const;
@@ -173,6 +180,70 @@ describe("address registry", () => {
         env: {},
       }),
     ).toThrow(/does not match manifest/);
+  });
+
+  test("Arc perps keeper helpers parse components, matches, candidates, and JSON logs", () => {
+    expect(keeperComponentsFromString("matcher,funding")).toEqual(["matcher", "funding"]);
+    expect(keeperComponentsFromString("all")).toEqual(["matcher", "funding", "liquidation", "canary"]);
+    expect(() => keeperComponentsFromString("unknown")).toThrow(/Unknown keeper component/);
+    expect(marketKeysFromString(undefined, ["EURC_USDC"])).toEqual(["EURC_USDC"]);
+    expect(marketKeysFromString("all", ["EURC_USDC"])).toEqual([
+      "EURC_USDC",
+      "TJPYC_USDC",
+      "TMXNB_USDC",
+      "TCHFC_USDC",
+    ]);
+
+    const marketId = "0x565a6e2fab61800aa18813603b5b485af5bed7dea1aa0845bdaa61502063cab8" as const;
+    const maker = {
+      order: {
+        trader: "0x0000000000000000000000000000000000000a11",
+        marketId,
+        sizeDeltaE18: "10000000000000000",
+        priceE18: "1160000000000000000",
+        maxFee: "1000",
+        orderType: 1,
+        flags: 2,
+        nonce: "1",
+        deadline: "9999999999",
+      },
+      signature: `0x${"11".repeat(65)}`,
+    };
+    const taker = {
+      order: {
+        ...maker.order,
+        trader: "0x0000000000000000000000000000000000000b0b",
+        sizeDeltaE18: "-10000000000000000",
+        flags: 0,
+        nonce: "2",
+      },
+      signature: `0x${"22".repeat(65)}`,
+    };
+    const match = parseMatchIntent({
+      maker,
+      taker,
+      fillSizeE18: "10000000000000000",
+      fillPriceE18: "1160000000000000000",
+    });
+    expect(match.id).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(match.maker.order.nonce).toBe(1n);
+    expect(match.taker.order.sizeDeltaE18).toBe(-10000000000000000n);
+
+    expect(
+      parseLiquidationCandidates(
+        JSON.stringify({
+          EURC_USDC: ["0x0000000000000000000000000000000000000a11"],
+        }),
+      ),
+    ).toEqual({ EURC_USDC: ["0x0000000000000000000000000000000000000a11"] });
+
+    const lines: string[] = [];
+    createJsonLogger("test", (line) => lines.push(line)).info("bigint_ok", { component: "ignored", value: 7n });
+    expect(JSON.parse(lines[0] ?? "{}")).toMatchObject({
+      component: "test",
+      event: "bigint_ok",
+      value: "7",
+    });
   });
 
   test("Arc testnet basket metadata follows Phase 3 mock scope", () => {

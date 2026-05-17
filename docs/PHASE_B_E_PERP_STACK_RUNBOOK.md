@@ -101,6 +101,21 @@ const eurcMarket = getFxPerpMarket(manifest, "EURC_USDC");
 The Arc trading smoke follows this path and accepts `ARC_PERP_CONFIG_PATH` to
 point at an alternate manifest.
 
+Keeper/runtime code should use `@bu/fx-engine/perps-runtime` and
+`@bu/fx-engine/perps-keeper`, not copied addresses:
+
+```ts
+import {
+  assertFxPerpLiveReadiness,
+  loadFxPerpRuntimeConfig,
+} from "@bu/fx-engine/perps-runtime";
+import { runFxPerpKeeperLoop } from "@bu/fx-engine/perps-keeper";
+
+const runtime = loadFxPerpRuntimeConfig();
+await assertFxPerpLiveReadiness(publicClient, runtime);
+await runFxPerpKeeperLoop({ components: ["funding", "liquidation", "canary"] });
+```
+
 Useful env overrides:
 
 - `ARC_PERP_CONFIG_PATH`
@@ -111,6 +126,47 @@ Useful env overrides:
 - `ARC_PERP_LIQUIDATION`
 - `ARC_PERP_SETTLEMENT`
 - `ARC_PERP_MIN_PROTOCOL_LIQUIDITY`
+
+## Keeper Operations
+
+All Arc keeper scripts fail closed unless the live readiness gate passes first:
+
+```bash
+# Read-only canary loop; use ONCE in CI or manual checks.
+ARC_RPC_URL=https://rpc.testnet.arc.network PERP_KEEPER_ONCE=1 bun run perps:arc:canary
+
+# Long-running funding scheduler.
+PERP_KEEPER_PRIVATE_KEY=0x... ARC_RPC_URL=https://rpc.testnet.arc.network bun run perps:arc:funding
+
+# Idempotent signed-order matcher.
+PERP_KEEPER_PRIVATE_KEY=0x... PERP_MATCHES_FILE=./orders.ndjson bun run perps:arc:matcher
+
+# Event-backed liquidation scanner with optional manual candidates.
+PERP_KEEPER_PRIVATE_KEY=0x... PERP_LIQUIDATION_CANDIDATES='{"EURC_USDC":["0x..."]}' bun run perps:arc:liquidations
+
+# Sequential all-in-one loop.
+PERP_KEEPER_PRIVATE_KEY=0x... bun run perps:arc:keeper
+```
+
+Operational env:
+
+- `PERP_KEEPER_STATE_PATH` defaults to `.keeper/perps-5042002-state.json`.
+  It records settled match ids and the next liquidation event scan block.
+- `PERP_DRY_RUN=1` performs readiness, parsing, candidate discovery, and
+  decision logging without sending transactions.
+- `PERP_KEEPER_INTERVAL_MS` controls loop cadence.
+- `PERP_KEEPER_ONCE=1` runs one tick and exits.
+- `PERP_FUNDING_MIN_INTERVAL_SECONDS` prevents zero-elapsed funding pokes.
+- `PERP_MATCHES_JSON` or `PERP_MATCHES_FILE` provides signed maker/taker match
+  intents. The matcher skips already-used nonces before sending.
+- `PERP_LIQUIDATION_SCAN_FROM_BLOCK` and `PERP_LIQUIDATION_SCAN_BLOCK_RANGE`
+  tune event-based candidate discovery.
+- `PERP_CANARY_MARKETS` defaults to `EURC_USDC`; use `all` only once every
+  configured market has a live oracle quote path.
+- `PERP_CANARY_REFRESH_PYTH=1` sends the Pyth refresh through `FxOracle` before
+  quote checks and requires a keeper key.
+- `PERP_CANARY_REQUIRE_QUOTE=1` turns quote warnings into a non-zero process
+  exit for hard monitoring.
 
 ## Post-Deploy Admin Steps
 
