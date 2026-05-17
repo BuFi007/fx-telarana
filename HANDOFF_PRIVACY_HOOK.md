@@ -1,8 +1,8 @@
 # Privacy Hook — Handoff
 
-**Current branch:** `feat/privacy-hook-slice-3-crossccy`
-**Slice 3 status:** ✅ Cross-currency shielded withdraw (USDC→EURC) wired
-**Last green:** 306/306 contract tests passing, all 16 hub contracts under EIP-170
+**Current branch:** `feat/privacy-hook-slice-4-sdk`
+**Slice 4 status:** ✅ TS SDK + permissive ASP postman skeleton
+**Last green:** 306/306 Foundry + 52/52 Bun SDK tests, all 16 hub contracts under EIP-170
 
 ---
 
@@ -66,17 +66,37 @@
   spec §6; mainnet adapter is the same `IFxRouterSwapAdapter` shape but with
   an external V4 pool wrapped.
 
-### Slice 4 — SDK + permissive ASP postman (~3 days)
+### Slice 4 — SDK + permissive ASP postman ✅ LANDED (skeleton)
 
-**Branch suggestion:** `feat/privacy-hook-slice-4-sdk`
+**Branch:** `feat/privacy-hook-slice-4-sdk`
 
-- [ ] Vendor 0xbow TS SDK into `packages/sdk/src/privacy/`
-- [ ] Retarget viem 2.x to our chain configs
-- [ ] CDN host the 17.8 MB `withdraw.zkey` (decision: PSE mirror default, R2 override)
-- [ ] Commit `commitment.zkey` (901 KB) + `*.vkey` + `*.wasm` to `packages/sdk/circuits/`
-- [ ] `packages/relayer-privacy/` Bun service (Hono), strip Uniswap gas-swap
-- [ ] **Permissive ASP-postman bot** — watches `Deposited` events, pushes universal-include root every N seconds
-- [ ] E2E test on Fuji: deposit USDC → wait → withdraw EURC to fresh address via relayer
+- [x] Vendored 0xbow TS SDK core into `packages/sdk/src/privacy/`:
+      `constants`, `types`, `exceptions`, `crypto`, `circuits`, `withdrawal`,
+      `crossCurrency` (fx-Telarana addition), barrel `index`
+- [x] Retargeted to current viem 2.x (`bytesToNumber → bytesToBigInt`)
+- [x] Added deps: `snarkjs`, `@zk-kit/lean-imt`, `maci-crypto`, `@types/snarkjs`
+- [x] `UrlCircuits` loader: fetch `.wasm` / `.zkey` / `.vkey` from any
+      CDN (default-free; explicit baseUrl required)
+- [x] `WithdrawalService.proveWithdrawal` / `verifyWithdrawal` via snarkjs
+- [x] `encodeCrossCurrencyRelayData` / `decodeCrossCurrencyRelayData`
+      helpers — round-trip-safe `Withdrawal.data` for slice 3's relay path
+- [x] 16 SDK unit tests (master keys, secrets, commitment hash, context
+      hash matches Solidity, cross-ccy encode/decode, UrlCircuits)
+- [x] `packages/relayer-privacy/` Bun service skeleton — permissive
+      ASP postman: watches `Deposited`, maintains LeanIMT, periodically
+      publishes a permissive root via `Entrypoint.updateRoot()`
+      (testnet only; Uniswap V3 gas-swap layer stripped per spec)
+
+**Still TODO in slice 4b** (post-merge follow-up):
+- [ ] Commit `commitment.zkey` (901 KB), `*.vkey`, `*.wasm` artifacts (or
+      decide CDN-only); document URL strategy
+- [ ] account/data/contracts services (the viem wrappers — let dApp
+      consumers query labels, build merkle proofs against live tree state)
+- [ ] Real `Deposited` event indexing for label set (current skeleton
+      uses commitments as leaves — slice 4b switches to `LeafInserted`
+      events from each pool for accurate label tracking)
+- [ ] Cross-currency relayer HTTP API (Hono) accepting withdrawal proofs
+- [ ] E2E test on Fuji: deposit USDC → withdraw EURC to fresh address
 
 ---
 

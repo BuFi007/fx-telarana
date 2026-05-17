@@ -23,6 +23,10 @@
     "./ghost": {
       "types": "./dist/ghost.d.ts",
       "default": "./dist/ghost.js"
+    },
+    "./privacy": {
+      "types": "./dist/privacy/index.d.ts",
+      "default": "./dist/privacy/index.js"
     }
   },
   "files": [
@@ -44,8 +48,14 @@
   "peerDependencies": {
     "viem": "^2.0.0"
   },
+  "dependencies": {
+    "@zk-kit/lean-imt": "^2.2.4",
+    "maci-crypto": "^2.5.0",
+    "snarkjs": "^0.7.5"
+  },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/snarkjs": "^0.7.9",
     "typescript": "^5.5.0",
     "viem": "^2.21.0"
   },
