@@ -9,13 +9,29 @@ This document is the **file-by-file mapping** of what gets pulled into our repo.
 
 ## 1. Source repos cloned into `discovery/`
 
-| Path | Upstream | License | Commit / version |
-|---|---|---|---|
-| `discovery/privacy-pools-core/` | `github.com/0xbow-io/privacy-pools-core` | Apache-2.0 | HEAD (May 2026) |
-| `discovery/poseidon-solidity/` | `github.com/privacy-scaling-explorations/poseidon-solidity` | MIT | HEAD |
-| `discovery/zk-kit.solidity/` | `github.com/zk-kit/zk-kit.solidity` | MIT | HEAD |
+Vendored at the following exact commits (codex-r5 LOW: pinned for
+reproducible audit attestation):
 
-All three are gitignored via `discovery/` in `.gitignore` — they exist locally for reference, not committed.
+| Path | Upstream | License | Pinned commit | Subject |
+|---|---|---|---|---|
+| `discovery/privacy-pools-core/` | `github.com/0xbow-io/privacy-pools-core` | Apache-2.0 | `a80836a47451e662f127af17e11430ffa976c234` | `fix(sdk): Fixed 0 values withdrawals processing in SDK (#121)` |
+| `discovery/poseidon-solidity/` | `github.com/privacy-scaling-explorations/poseidon-solidity` | MIT | `6557e66928f576b879343781a964f6c6804f1129` | `Merge pull request #1 from chancehudson/pse-repo-update` |
+| `discovery/zk-kit.solidity/` | `github.com/zk-kit/zk-kit.solidity` | MIT | `a171c845ec7fdc50cdd1fe96c14c27d707cdfbed` | `docs: update contributing, pull request template and license year (#54)` |
+
+To verify any vendored file matches the pin:
+
+```bash
+# Clone the upstream at the pinned SHA
+git clone https://github.com/0xbow-io/privacy-pools-core /tmp/pp-verify
+git -C /tmp/pp-verify checkout a80836a47451e662f127af17e11430ffa976c234
+
+# Diff against our vendored copy — only the documented modifications
+# (pragma + remappings) should appear.
+diff -u /tmp/pp-verify/packages/contracts/src/contracts/State.sol \
+       contracts/lib/privacy-pools/contracts/State.sol
+```
+
+All three discovery clones are gitignored via `discovery/` in `.gitignore` — they exist locally for reference, not committed.
 
 ---
 

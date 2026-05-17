@@ -120,6 +120,15 @@ interface PostmanConfig {
    *  abort (suitable for testnet operators who want manual triage).
    *  codex-r4: prevents silent spin on permanent role loss. */
   maxConsecutivePublishFailures: number;
+  /** If true (default), `latestRoot()` mismatch is treated as our own
+   *  silent failure → republish our local root. Suitable for SINGLE-
+   *  WRITER deployments where this postman holds the only ASP_POSTMAN
+   *  role on the chain.
+   *  If false, mismatch is treated as "another writer beat us" → hold
+   *  publish, increment failure counter, alert. Codex-r5 HIGH #2:
+   *  prevents the postman from overwriting a newer third-party root
+   *  with an older local root. */
+  allowOverwriteOnDivergence: boolean;
   dryRun: boolean;
 }
 
@@ -139,6 +148,7 @@ function loadConfig(): PostmanConfig {
     finalityConfirmations:         BigInt(Bun.env["FINALITY_CONFIRMATIONS"] ?? "5"),
     maxRangePerCall:               BigInt(Bun.env["MAX_RANGE_PER_CALL"] ?? "5000"),
     maxConsecutivePublishFailures: Number(Bun.env["MAX_CONSECUTIVE_PUBLISH_FAILURES"] ?? 0),
+    allowOverwriteOnDivergence:    Bun.env["ALLOW_OVERWRITE_ON_DIVERGENCE"] !== "false",
     dryRun:                        Bun.env["DRY_RUN"] === "true",
   };
 }
@@ -331,6 +341,20 @@ async function main(): Promise<void> {
       // reorg'd out, or a publish silently failed, the on-chain root
       // will differ from our in-memory tree.root → re-mark dirty and
       // retry on this tick.
+      //
+      // Codex-r5 HIGH #2: on mismatch, we MUST NOT blindly republish our
+      // local root. A newer third-party root (concurrent postman with
+      // ASP_POSTMAN role, lagging primary writer) is also a "mismatch",
+      // and overwriting it with our (possibly older) root would clobber
+      // a more recent legitimate root.
+      //
+      // Two strategies, gated by `cfg.allowOverwriteOnDivergence`:
+      //   • allowOverwriteOnDivergence=true (default, single-writer
+      //     deployments): treat any mismatch as our own reorg / silent
+      //     failure and re-publish.
+      //   • allowOverwriteOnDivergence=false: log the mismatch, do NOT
+      //     re-mark dirty, hold publication. Caller is responsible for
+      //     reconciling (off-chain log alert, operator runbook).
       if (state.tree.size > 0 && !state.dirty) {
         try {
           const onchain = await publicClient.readContract({
@@ -339,11 +363,32 @@ async function main(): Promise<void> {
             functionName: "latestRoot",
           });
           if (onchain !== state.tree.root) {
-            log("warn", "on-chain root drift detected; re-marking dirty", {
-              onchain: `0x${onchain.toString(16)}`,
-              local:   `0x${state.tree.root.toString(16)}`,
-            });
-            state.dirty = true;
+            if (cfg.allowOverwriteOnDivergence) {
+              log("warn", "on-chain root drift; re-marking dirty (single-writer mode)", {
+                onchain: `0x${onchain.toString(16)}`,
+                local:   `0x${state.tree.root.toString(16)}`,
+              });
+              state.dirty = true;
+            } else {
+              log("error", "on-chain root divergence (multi-writer guard) — holding publish", {
+                onchain: `0x${onchain.toString(16)}`,
+                local:   `0x${state.tree.root.toString(16)}`,
+              });
+              // Hold publication entirely until operator triage.
+              state.consecutivePublishFailures += 1;
+              if (
+                cfg.maxConsecutivePublishFailures > 0 &&
+                state.consecutivePublishFailures >= cfg.maxConsecutivePublishFailures
+              ) {
+                log("error", "MAX_CONSECUTIVE_PUBLISH_FAILURES exceeded (divergence) — aborting", {
+                  count: state.consecutivePublishFailures,
+                });
+                process.exit(2);
+              }
+              // Skip the publish branch this tick.
+              await Bun.sleep(cfg.pollIntervalSeconds * 1000);
+              continue;
+            }
           }
         } catch (err) {
           // Pre-publish: latestRoot() reverts with NoRootsAvailable when
@@ -368,25 +413,26 @@ async function main(): Promise<void> {
           state.dirty = false;
           state.consecutivePublishFailures = 0;
         } else {
-          // Codex-r3 HIGH #2: receipt-confirmed publication.
-          // Codex-r4 HIGH: confirmations match the indexer's finality
-          // window so the publish path is at least as conservative as
-          // the scan path. A shallow reorg that flips the receipt
-          // status will not have cleared dirty here.
-          const txHash = await walletClient.writeContract({
-            chain: null,
-            account,
-            address: cfg.entrypoint,
-            abi: ENTRYPOINT_ABI,
-            functionName: "updateRoot",
-            args: [root, cid],
-          });
-          log("info", "updateRoot tx sent, awaiting finality", {
-            txHash, confirmations: cfg.finalityConfirmations,
-          });
-
+          // Codex-r5 HIGH #1: wrap the ENTIRE publish attempt (incl.
+          // writeContract send) in one failure-accounted try. Pre-r5,
+          // send-side throws (bad key, RPC unreachable, preflight
+          // revert) skipped the consecutivePublishFailures counter and
+          // could spin forever even when MAX_CONSECUTIVE_PUBLISH_FAILURES
+          // was set non-zero.
           let publishOk = false;
           try {
+            const txHash = await walletClient.writeContract({
+              chain: null,
+              account,
+              address: cfg.entrypoint,
+              abi: ENTRYPOINT_ABI,
+              functionName: "updateRoot",
+              args: [root, cid],
+            });
+            log("info", "updateRoot tx sent, awaiting finality", {
+              txHash, confirmations: cfg.finalityConfirmations,
+            });
+
             const receipt = await publicClient.waitForTransactionReceipt({
               hash: txHash,
               confirmations: Number(cfg.finalityConfirmations),
@@ -403,8 +449,8 @@ async function main(): Promise<void> {
               });
             }
           } catch (err) {
-            log("error", "updateRoot wait failed (will retry)", {
-              txHash, err: String(err),
+            log("error", "updateRoot attempt failed (will retry)", {
+              err: String(err),
             });
           }
 
