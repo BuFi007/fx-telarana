@@ -1,7 +1,6 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: Apache-2.0
 
-import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -20,11 +19,13 @@ import { createPublicClient, createWalletClient } from "viem";
 
 import {
   ChainId,
-  assertFxPerpConfigReady,
   getAddresses,
   getFxPerpMarket,
-  parseFxPerpConfigManifest,
 } from "../src/index.js";
+import {
+  assertFxPerpLiveReadiness,
+  loadFxPerpRuntimeConfig,
+} from "../src/perps-runtime.js";
 
 const ARC_RPC_URL = process.env.ARC_RPC_URL ?? "https://rpc.testnet.arc.network";
 const DEPLOYER_PRIVATE_KEY = normalizePrivateKey(process.env.DEPLOYER_PRIVATE_KEY);
@@ -39,7 +40,11 @@ const arcTestnet = defineChain({
   rpcUrls: { default: { http: [ARC_RPC_URL] } },
 });
 
-const perpConfig = loadPerpConfigManifest(PERP_CONFIG_PATH);
+const perpRuntime = loadFxPerpRuntimeConfig({
+  configPath: PERP_CONFIG_PATH,
+  contractAddressesJson: process.env.CONTRACT_ADDRESSES_JSON,
+});
+const perpConfig = perpRuntime.manifest!;
 const eurcMarket = getFxPerpMarket(perpConfig, "EURC_USDC");
 const arcAddresses = getAddresses(ChainId.ArcTestnet);
 
@@ -163,6 +168,11 @@ async function main() {
   console.log(`perpConfig=${PERP_CONFIG_PATH}`);
   console.log(`perpConfigBlock=${perpConfig.exportedBlockNumber}`);
   console.log(`market=${eurcMarket.key} marketId=${MARKET_ID}`);
+
+  const readiness = await assertFxPerpLiveReadiness(publicClient, perpRuntime);
+  console.log(
+    `readinessGate=passed contracts=${readiness.checkedContracts.length} markets=${readiness.checkedMarkets.length} protocolLiquidity=${readiness.protocolLiquidity}`,
+  );
 
   await refreshPyth();
   const [midE18] = await publicClient.readContract({
@@ -464,15 +474,6 @@ function normalizePrivateKey(value: string | undefined): Hex {
     throw new Error("DEPLOYER_PRIVATE_KEY must be a 32-byte hex string");
   }
   return normalized as Hex;
-}
-
-function loadPerpConfigManifest(path: string) {
-  const manifest = parseFxPerpConfigManifest(JSON.parse(readFileSync(path, "utf8")) as unknown);
-  assertFxPerpConfigReady(manifest);
-  if (manifest.chainId !== arcTestnet.id) {
-    throw new Error(`perp config chainId ${manifest.chainId} does not match Arc ${arcTestnet.id}`);
-  }
-  return manifest;
 }
 
 function parsePythUpdateBody(body: unknown): Hex[] {

@@ -15,6 +15,7 @@
     "contracts:smoke:basket": "cd contracts && forge build --force test/MorphoArtifacts.t.sol && forge test --match-contract AvalancheBasketSmokeTest",
     "perps:arc:config:verify": "forge script contracts/script/ArcPerpConfigReadiness.s.sol:VerifyArcPerpConfig --root contracts --rpc-url ${ARC_RPC_URL:-https://rpc.testnet.arc.network} -vv",
     "perps:arc:config:export": "forge script contracts/script/ArcPerpConfigReadiness.s.sol:ExportArcPerpConfig --root contracts --rpc-url ${ARC_RPC_URL:-https://rpc.testnet.arc.network} -q",
+    "perps:arc:readiness": "cd packages/sdk && bun run perps:arc:readiness",
     "sdk:circle:register": "cd packages/sdk && bun scripts/register-contracts.ts",
     "hyperlane:arc:deploy-core": "npx @hyperlane-xyz/cli core deploy --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --chain arctestnet --config ./hyperlane/arc-testnet/core-config.yaml --yes",
     "hyperlane:fuji:deploy-arc-ism": "npx @hyperlane-xyz/cli ism deploy --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --chain fuji --config ./hyperlane/fuji/arc-testnet-trusted-relayer-ism.yaml --out ./hyperlane/fuji/arc-testnet-trusted-relayer-ism-address.json --yes",

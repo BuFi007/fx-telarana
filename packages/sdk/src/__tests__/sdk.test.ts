@@ -73,6 +73,10 @@ import {
   planSupplyCollateral,
   planWithdraw,
 } from "../index.js";
+import {
+  loadFxPerpRuntimeConfig,
+  parseFxPerpContractAddressesJson,
+} from "../perps-runtime.js";
 
 const USDC = "0x036cbd53842c5426634e7929541ec2318f3dcf7e" as const;
 const EURC = "0x000000000000000000000000000000000000eefc" as const;
@@ -135,6 +139,40 @@ describe("address registry", () => {
     });
     expect(manifest.protocolLiquidity).toBeGreaterThanOrEqual(manifest.minProtocolLiquidity);
     expect(fxPerpContractAddressesJson(manifest)).toContain("FxPerpClearinghouse");
+  });
+
+  test("Arc perps runtime loader gates manifest and CONTRACT_ADDRESSES_JSON parity", () => {
+    const manifestPath = resolve(REPO_ROOT, "deployments/perps-config-5042002.json");
+    const manifest = parseFxPerpConfigManifest(JSON.parse(readFileSync(manifestPath, "utf8")) as unknown);
+    const contractAddressesJson = fxPerpContractAddressesJson(manifest);
+    const runtime = loadFxPerpRuntimeConfig({
+      configPath: manifestPath,
+      contractAddressesJson,
+      env: {},
+    });
+
+    expect(runtime.source).toBe("manifest");
+    expect(runtime.manifest?.chainId).toBe(ChainId.ArcTestnet);
+    expect(runtime.addresses).toEqual(fxPerpsAddressesFromConfigManifest(manifest));
+    expect(loadFxPerpRuntimeConfig({ cwd: resolve(REPO_ROOT, "packages/sdk"), env: {} }).configPath).toBe(
+      manifestPath,
+    );
+    expect(parseFxPerpContractAddressesJson(contractAddressesJson)).toMatchObject({
+      clearinghouse: manifest.addresses.clearinghouse,
+      orderSettlement: manifest.addresses.orderSettlement,
+    });
+
+    const mismatchedJson = contractAddressesJson.replace(
+      manifest.addresses.clearinghouse,
+      "0x0000000000000000000000000000000000000001",
+    );
+    expect(() =>
+      loadFxPerpRuntimeConfig({
+        configPath: manifestPath,
+        contractAddressesJson: mismatchedJson,
+        env: {},
+      }),
+    ).toThrow(/does not match manifest/);
   });
 
   test("Arc testnet basket metadata follows Phase 3 mock scope", () => {

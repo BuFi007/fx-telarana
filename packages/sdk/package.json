@@ -27,6 +27,10 @@
     "./perps": {
       "types": "./dist/perps.d.ts",
       "default": "./dist/perps.js"
+    },
+    "./perps-runtime": {
+      "types": "./dist/perps-runtime.d.ts",
+      "default": "./dist/perps-runtime.js"
     }
   },
   "files": [
@@ -42,6 +46,7 @@
     "tenderly:label": "bun scripts/tenderly-label.ts",
     "tenderly:verify:hub": "sh scripts/tenderly-verify.sh",
     "tenderly:verify:spoke": "sh scripts/tenderly-verify-spoke.sh",
+    "perps:arc:readiness": "bun scripts/perp-arc-readiness-gate.ts",
     "sim:spoke-deposit": "bun scripts/simulator/run-spoke-deposit.ts",
     "sim:matrix": "bun scripts/simulator/run-matrix.ts"
   },
