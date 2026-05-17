@@ -17,7 +17,7 @@
     "FxLiquidator": "0x113A539625D208b5EcC59f300Be14b9b3508E559",
     "MorphoBlue": "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
     "IrmMock": "0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA",
-    "FxSpokeToArc": "0x77b3a3b420db98b01085b8c46a753ed9879e2865",
+    "FxSpokeToArc": "0x225cca22879593b41c7dcceb9e961b7881061368",
     "FxTimelock": "0x01139A1aB806b55116a05d561A74eF65b898ACd5"
   },
   "deprecated": {
@@ -63,7 +63,7 @@
     "FxGatewayHook": "0x67afe0296758271d1f559b7d4c9aecb72d0f36ba8e844cc7f6799432f5686a85",
     "setGatewayHook": "0x86f229cbe7a4034b9ae27e3397eb8d06ecabceb82fb4bee98b184c582670c937",
     "FxSpoke": "0xefa822eef234cfbac53fd8b029a9a38a022adbf94eae05bb36e0a16c8405d8c6",
-    "FxSpokeToArc": "0x4ff34cb91fb381a30db8fae461c9dd6f5af8ae389ef5a5327cd42c1f37260446",
+    "FxSpokeToArc": "0xf2155f14abfeb6d9ec42fd259cc481057e358f90f6f4647948610ba5d7c2a4ea",
     "CanonicalFujiEURCHub": "0x2e6c2653a30ca8140b2f912af5314d50a6fe3c8c12a31d4fdfa3c2652958581d",
     "FxOracle": "0x5e32d72862d8356278ef7da06f5ef9cdb1a82eef48c8eb3c8cdf852c6a018df2",
     "FxMarketRegistry": "0x49b4dee982dfb5d23415496ec5d0aa20ba857e74150ea9044c8b2123dda2c111"
@@ -88,14 +88,14 @@
       "purpose": "Borrow / lend / supply liquidity on the Fuji-side Morpho markets. Money-market substrate."
     },
     "arc": {
-      "fxSpoke": "0x77b3a3b420db98b01085b8c46a753ed9879e2865",
+      "fxSpoke": "0x225cca22879593b41c7dcceb9e961b7881061368",
       "hub": {
         "network": "arc-testnet",
         "chainId": 5042002,
-        "messageReceiver": "0xED8D2F831A8b7EbF7eb86a52323D23e2277F26b6",
+        "messageReceiver": "0x4FBe4cc4ab09648d65195f5B9490D20D12D49a2c",
         "cctpDomain": 26
       },
-      "purpose": "High-frequency FX trading + perp execution on Arc. Also runs Morpho markets (borrow/lend works here too)."
+      "purpose": "High-frequency FX trading + basket money-market execution on Arc. Arc now exposes EURC plus mock AUDF/JPYC/MXNB/KRW1/ZCHF markets."
     }
   },
   "messageReceiver": "0xbBc9AE9dbd3F6D3dB672F0CA2419d0f4C8513062"

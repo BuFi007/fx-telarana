@@ -36,9 +36,9 @@ contract DeployFxSpoke is Script {
     address constant FUJI_HUB_RECEIVER = 0xbBc9AE9dbd3F6D3dB672F0CA2419d0f4C8513062;
     uint32 constant FUJI_HUB_DOMAIN = 1; // Avalanche Fuji CCTP V2 domain
 
-    // Live Arc hub (Stage 6 deploy, 2026-05-15). Default for spokes routing
-    // to the Arc trading-execution hub. See deployments/arc-testnet.json.
-    address constant ARC_HUB_RECEIVER = 0xED8D2F831A8b7EbF7eb86a52323D23e2277F26b6;
+    // Live Arc basket hub (2026-05-17). Default for spokes routing to the
+    // Arc trading-execution and basket money-market hub. See deployments/arc-testnet.json.
+    address constant ARC_HUB_RECEIVER = 0x4FBe4cc4ab09648d65195f5B9490D20D12D49a2c;
     uint32 constant ARC_HUB_DOMAIN = 26; // Arc Testnet CCTP V2 domain
 
     function run() external {

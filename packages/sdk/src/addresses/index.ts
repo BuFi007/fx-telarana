@@ -208,8 +208,9 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
   },
   [ChainId.UnichainSepolia]: {
     // Fuji-routed spoke refreshed during the 2026-05-17 canonical Fuji EURC migration.
+    // Arc-routed spoke refreshed during the 2026-05-17 Arc basket hub migration.
     fxSpoke: "0x58c1a04bc4e25db2f8474c9df41907cffc894a4b",
-    fxSpokeAlt: "0x068cd7d70d37acfb58413422c584fc295c08db12",
+    fxSpokeAlt: "0x71e85194f57338d854eabd158f0cd2c376b9f966",
     // CCTP V2 testnet deterministic addresses (domain 10)
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
@@ -234,7 +235,7 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     // Fuji-resident spoke that routes to the LOCAL Fuji hub (self-loop CCTP V2).
     fxSpoke: "0x6EC2197aC1c35Fbe64533101a3DFf081BD45Ed99",
     // Fuji-resident spoke that routes to the ARC hub (cross-hub spider-web edge).
-    fxSpokeAlt: "0x77b3A3B420dB98B01085b8C46a753Ed9879e2865",
+    fxSpokeAlt: "0x225cca22879593b41c7dcceb9e961b7881061368",
     morphoBlue: "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
     adaptiveCurveIrm: "0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA",
     pyth: "0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509",
@@ -249,21 +250,22 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.ArcTestnet]: {
-    // Arc = TRADING-EXECUTION HUB. Refreshed 2026-05-17 with the current
-    // registry surface and a receiver-bound Gateway hook.
-    fxOracle: "0x217860736E626781f9AaA91731b307619f90f65B",
-    fxMarketRegistry: "0x1126aA03E678f2bc87A936AA63Df972c7c338b8b",
-    fxLiquidator: "0x4dB43e41420ACC39ee88dBc1cB868567968C0F12",
-    fxReceiptEURC: "0x7926D3b1D1360632e81F811FE9a39866Fe16074F",
-    fxReceiptUSDC: "0x9559A55Ea94aF58002a857f73B15c8EF4E850Fd8",
-    fxHubMessageReceiver: "0xED8D2F831A8b7EbF7eb86a52323D23e2277F26b6",
-    fxGatewayHook: "0x6a134214303136Ea8aa1cfA054Baf3ca74eCdad9",
+    // Arc = TRADING-EXECUTION HUB. Refreshed 2026-05-17 with the basket
+    // money-market stack, current registry surface, receiver-bound Gateway
+    // hook, and 12 EURC/mock stablecoin Morpho markets.
+    fxOracle: "0x625e2870a94F67F575Ed82678C2c619994721D29",
+    fxMarketRegistry: "0xdB59d712a3cD19DccD98F5a245302a94d43f9A8c",
+    fxLiquidator: "0x3DD99ace9ab896C613b47749e6Daae84ceF0433B",
+    fxReceiptEURC: "0x8A88024AE640B26b082E5D01BF0BDea9e0F89f3d",
+    fxReceiptUSDC: "0x3b94E6A9Dc100CC390B56D1f0BB6a0B706ad3aAA",
+    fxHubMessageReceiver: "0x4FBe4cc4ab09648d65195f5B9490D20D12D49a2c",
+    fxGatewayHook: "0x412f0CE9cb7697458dF3804d56de259c3e38371B",
     morphoBlue: "0x3c9b95C6E7B23f094f066733E7797C8680760830",
     adaptiveCurveIrm: "0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1",
     // Arc-resident spoke that routes to the FUJI hub (sends users back).
     fxSpoke: "0xf93834070e4e4e7ff0e161feca2aeba65c2c6a38",
     // Arc-resident spoke that routes to the LOCAL Arc hub (self-loop CCTP V2).
-    fxSpokeAlt: "0xb7bda9e3a09c91be6e616b58e1d855850ff46aed",
+    fxSpokeAlt: "0x10b1ddc4a061991d44643893a24b754b8fc0dc98",
     pyth: "0x2880aB155794e7179c9eE2e38200202908C17B43",
     usdc: "0x3600000000000000000000000000000000000000",
     eurc: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
@@ -277,6 +279,7 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     stablecoinBasket: {
       audf: {
         symbol: "AUDF",
+        address: "0x4DeB6B4C83588c987C952858225A4725F6e1B1f2",
         decimals: 6,
         pythFeedId: PYTH_FEED_AUD_USD,
         pythFeedInverted: false,
@@ -290,6 +293,7 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
       },
       jpyc: {
         symbol: "JPYC",
+        address: "0xD9eCFc78BDFbD121E8b07Bf96D6E27a1C11C6331",
         decimals: 18,
         pythFeedId: PYTH_FEED_USD_JPY,
         pythFeedInverted: true,
@@ -298,6 +302,7 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
       },
       krw1: {
         symbol: "KRW1",
+        address: "0x204E306FBc71D876E4F105111bBBB1E8113886C3",
         decimals: 0,
         pythFeedId: PYTH_FEED_USD_KRW,
         pythFeedInverted: true,
@@ -306,6 +311,7 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
       },
       mxnb: {
         symbol: "MXNB",
+        address: "0xdb6EC7E8ad32D2c6fe05c0862d626A84049c24c5",
         decimals: 6,
         pythFeedId: PYTH_FEED_USD_MXN,
         pythFeedInverted: true,
@@ -319,6 +325,7 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
       },
       zchf: {
         symbol: "ZCHF",
+        address: "0xF50D7B5B6699f2D1FB7BCFC80261Ae0fca48396C",
         decimals: 18,
         pythFeedId: PYTH_FEED_USD_CHF,
         pythFeedInverted: true,
@@ -456,9 +463,9 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
   },
   [ChainId.Sepolia]: {
     // Stage 6 spokes (2026-05-15). `fxSpoke` routes to Fuji hub;
-    // `fxSpokeAlt` routes to Arc hub. Synced from deployments/ethereum-sepolia.json.
+    // `fxSpokeAlt` routes to Arc hub. Arc route refreshed for the basket hub.
     fxSpoke: "0xf4556f31cace9a80aa584059c81638a5cd344dde",
-    fxSpokeAlt: "0xabc638aad2c4cacfbab54b38101025789c261c05",
+    fxSpokeAlt: "0xb912a78e5dbb0848501e1d643bda2193ec64aebc",
     // CCTP V2 domain 0
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
@@ -472,9 +479,9 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.OpSepolia]: {
-    // Stage 6 spokes. Synced from deployments/op-sepolia.json.
+    // Stage 6 spokes. Arc route refreshed for the basket hub.
     fxSpoke: "0x2552e1027ff27a285635a9593825e3da8f25808b",
-    fxSpokeAlt: "0x50c4ba39caa7f56152d0df4914e1f6b907194992",
+    fxSpokeAlt: "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b",
     // CCTP V2 domain 2
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
@@ -486,9 +493,9 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.ArbitrumSepolia]: {
-    // Stage 6 spokes. Synced from deployments/arbitrum-sepolia.json.
+    // Stage 6 spokes. Arc route refreshed for the basket hub.
     fxSpoke: "0xaa875a68b0155da4bd6a528ee9e1137017d18b41",
-    fxSpokeAlt: "0x3f5d9b44aa1d59d26b20862d91533d60B32d9aFa",
+    fxSpokeAlt: "0xfa999ca0392523a915e6bbc0026825090ed1a207",
     // CCTP V2 domain 3
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
@@ -500,9 +507,9 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.PolygonAmoy]: {
-    // Stage 6 spokes. Synced from deployments/polygon-amoy.json.
+    // Stage 6 spokes. Arc route refreshed for the basket hub.
     fxSpoke: "0x58c1a04bc4e25db2f8474c9df41907cffc894a4b",
-    fxSpokeAlt: "0x068cd7d70d37acfb58413422c584fc295c08db12",
+    fxSpokeAlt: "0x71e85194f57338d854eabd158f0cd2c376b9f966",
     // CCTP V2 domain 7
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
@@ -524,9 +531,9 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
   },
   [ChainId.WorldChainSepolia]: {
-    // Stage 6 spokes. Synced from deployments/worldchain-sepolia.json.
+    // Stage 6 spokes. Arc route refreshed for the basket hub.
     fxSpoke: "0x2552e1027ff27a285635a9593825e3da8f25808b",
-    fxSpokeAlt: "0x50c4ba39caa7f56152d0df4914e1f6b907194992",
+    fxSpokeAlt: "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b",
     // CCTP V2 domain 14
     cctpTokenMessengerV2: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
     cctpMessageTransmitterV2: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",

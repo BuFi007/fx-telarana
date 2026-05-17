@@ -93,6 +93,7 @@ describe("address registry", () => {
     const a = getAddresses(ChainId.ArcTestnet);
     expect(a.stablecoinBasket?.audf).toMatchObject({
       symbol: "AUDF",
+      address: "0x4DeB6B4C83588c987C952858225A4725F6e1B1f2",
       decimals: 6,
       pythFeedInverted: false,
       redstoneFeedId: "AUD",
@@ -100,6 +101,7 @@ describe("address registry", () => {
     });
     expect(a.stablecoinBasket?.jpyc).toMatchObject({
       symbol: "JPYC",
+      address: "0xD9eCFc78BDFbD121E8b07Bf96D6E27a1C11C6331",
       decimals: 18,
       pythFeedInverted: true,
       redstoneFeedId: "JPY",
@@ -107,6 +109,7 @@ describe("address registry", () => {
     });
     expect(a.stablecoinBasket?.mxnb).toMatchObject({
       symbol: "MXNB",
+      address: "0xdb6EC7E8ad32D2c6fe05c0862d626A84049c24c5",
       decimals: 6,
       pythFeedInverted: true,
       redstoneFeedId: "MXN",
@@ -114,6 +117,7 @@ describe("address registry", () => {
     });
     expect(a.stablecoinBasket?.krw1).toMatchObject({
       symbol: "KRW1",
+      address: "0x204E306FBc71D876E4F105111bBBB1E8113886C3",
       decimals: 0,
       pythFeedInverted: true,
       redstoneFeedId: "KRW",
@@ -121,6 +125,7 @@ describe("address registry", () => {
     });
     expect(a.stablecoinBasket?.zchf).toMatchObject({
       symbol: "ZCHF",
+      address: "0xF50D7B5B6699f2D1FB7BCFC80261Ae0fca48396C",
       decimals: 18,
       pythFeedInverted: true,
       redstoneFeedId: "CHF",
@@ -174,7 +179,7 @@ describe("address registry", () => {
   test("Avalanche Fuji points at the canonical EURC hub stack and self-loop spoke", () => {
     const a = getAddresses(ChainId.AvalancheFuji);
     expect(a.fxSpoke).toBe("0x6EC2197aC1c35Fbe64533101a3DFf081BD45Ed99");
-    expect(a.fxSpokeAlt).toBe("0x77b3A3B420dB98B01085b8C46a753Ed9879e2865");
+    expect(a.fxSpokeAlt).toBe("0x225cca22879593b41c7dcceb9e961b7881061368");
     expect(a.fxHubMessageReceiver).toBe("0xbBc9AE9dbd3F6D3dB672F0CA2419d0f4C8513062");
     expect(a.fxGatewayHook).toBe("0x1527f0230e07B202812A0F0E437995323A1a98cB");
     expect(a.cctpDomain).toBe(1);
@@ -189,19 +194,19 @@ describe("address registry", () => {
 
   test("Arc testnet points at the current hub stack and spider-web spokes", () => {
     const a = getAddresses(ChainId.ArcTestnet);
-    expect(a.fxHubMessageReceiver).toBe("0xED8D2F831A8b7EbF7eb86a52323D23e2277F26b6");
-    expect(a.fxGatewayHook).toBe("0x6a134214303136Ea8aa1cfA054Baf3ca74eCdad9");
-    expect(a.fxMarketRegistry).toBe("0x1126aA03E678f2bc87A936AA63Df972c7c338b8b");
-    expect(a.fxOracle).toBe("0x217860736E626781f9AaA91731b307619f90f65B");
-    expect(a.fxReceiptUSDC).toBe("0x9559A55Ea94aF58002a857f73B15c8EF4E850Fd8");
-    expect(a.fxReceiptEURC).toBe("0x7926D3b1D1360632e81F811FE9a39866Fe16074F");
-    expect(a.fxLiquidator).toBe("0x4dB43e41420ACC39ee88dBc1cB868567968C0F12");
+    expect(a.fxHubMessageReceiver).toBe("0x4FBe4cc4ab09648d65195f5B9490D20D12D49a2c");
+    expect(a.fxGatewayHook).toBe("0x412f0CE9cb7697458dF3804d56de259c3e38371B");
+    expect(a.fxMarketRegistry).toBe("0xdB59d712a3cD19DccD98F5a245302a94d43f9A8c");
+    expect(a.fxOracle).toBe("0x625e2870a94F67F575Ed82678C2c619994721D29");
+    expect(a.fxReceiptUSDC).toBe("0x3b94E6A9Dc100CC390B56D1f0BB6a0B706ad3aAA");
+    expect(a.fxReceiptEURC).toBe("0x8A88024AE640B26b082E5D01BF0BDea9e0F89f3d");
+    expect(a.fxLiquidator).toBe("0x3DD99ace9ab896C613b47749e6Daae84ceF0433B");
     expect(a.morphoBlue).toBe("0x3c9b95C6E7B23f094f066733E7797C8680760830");
     expect(a.adaptiveCurveIrm).toBe("0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1");
     // Arc-resident spoke routing TO Fuji is the primary user entry from Arc.
     expect(a.fxSpoke).toBe("0xf93834070e4e4e7ff0e161feca2aeba65c2c6a38");
     // Arc-resident spoke routing TO local Arc hub (self-loop).
-    expect(a.fxSpokeAlt).toBe("0xb7bda9e3a09c91be6e616b58e1d855850ff46aed");
+    expect(a.fxSpokeAlt).toBe("0x10b1ddc4a061991d44643893a24b754b8fc0dc98");
     expect(a.cctpDomain).toBe(26);
   });
 });

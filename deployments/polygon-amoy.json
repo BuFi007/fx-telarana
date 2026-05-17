@@ -5,7 +5,7 @@
   "deployedAt": "2026-05-14",
   "contracts": {
     "FxSpoke": "0x58c1a04bc4e25db2f8474c9df41907cffc894a4b",
-    "FxSpokeToArc": "0x068cd7d70d37acfb58413422c584fc295c08db12"
+    "FxSpokeToArc": "0x71e85194f57338d854eabd158f0cd2c376b9f966"
   },
   "external": {
     "CctpTokenMessengerV2": "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA",
@@ -31,17 +31,17 @@
       "purpose": "Borrow / lend / supply liquidity on the Fuji-side Morpho markets. Money-market substrate."
     },
     "arc": {
-      "fxSpoke": "0x068cd7d70d37acfb58413422c584fc295c08db12",
+      "fxSpoke": "0x71e85194f57338d854eabd158f0cd2c376b9f966",
       "hub": {
         "network": "arc-testnet",
         "chainId": 5042002,
-        "messageReceiver": "0xED8D2F831A8b7EbF7eb86a52323D23e2277F26b6",
+        "messageReceiver": "0x4FBe4cc4ab09648d65195f5B9490D20D12D49a2c",
         "cctpDomain": 26
       },
-      "purpose": "High-frequency FX trading + perp execution on Arc. Also runs Morpho markets (borrow/lend works here too)."
+      "purpose": "High-frequency FX trading + basket money-market execution on Arc. Arc now exposes EURC plus mock AUDF/JPYC/MXNB/KRW1/ZCHF markets."
     }
   },
   "deploymentTx": {
-    "FxSpokeToArc": "0x9ad666b54b6905457fb026d4e3017edbf1b22b53771e02fc177d9e2654dd3754"
+    "FxSpokeToArc": "0x1162f0d41483a933085798db84a0a62006d49f3945e68c77b9c829439ffaa487"
   }
 }
