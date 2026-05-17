@@ -1,8 +1,8 @@
 # Privacy Hook — Handoff
 
-**Current branch:** `feat/privacy-hook-slice-1-vendor`
-**Slice 1 status:** ✅ Vendored + USDC deposit/withdraw plumbing online
-**Last green:** 287/287 contract tests passing, all 16 hub contracts under EIP-170
+**Current branch:** `feat/privacy-hook-slice-2-morpho`
+**Slice 2 status:** ✅ Morpho rehypothecation wired into FxPrivacyPool
+**Last green:** 295/295 contract tests passing, all 16 hub contracts under EIP-170
 
 ---
 
@@ -28,16 +28,17 @@
 
 ## Slices remaining (testnet path to feature-complete)
 
-### Slice 2 — Morpho yield path (~1 day)
+### Slice 2 — Morpho yield path ✅ LANDED
 
-**Branch suggestion:** `feat/privacy-hook-slice-2-morpho`
+**Branch:** `feat/privacy-hook-slice-2-morpho`
 
-- [ ] Override `_pull` to supply hot-excess to Morpho via `IFxMarketRegistry`
-- [ ] Override `_push` to JIT-withdraw from Morpho when hot reserve < amount
-- [ ] Add `hotReservePct`, `marketRegistry`, `collateral` immutables to FxPrivacyPool constructor
-- [ ] Reuse pattern from `FxSwapHook.sol:1014-1069` verbatim
-- [ ] Fork test against ETH mainnet (or Fuji testnet Morpho) verifying supply accrual
-- [ ] Owner-gated `setHotReservePct(uint16)` for emergency drain
+- [x] `_pull` override: pulls ASSET from sender then `_rebalance()` supplies hot-excess to Morpho
+- [x] `_push` override: `_ensureHot()` JIT-withdraws from Morpho when hot < amount, then transfers
+- [x] Constructor extended: `_morpho`, `_registry`, `_collateral` + `hotReservePct` mutable (default 20%)
+- [x] Pattern lifted from `FxSwapHook.sol:1014-1069` (paramsOf → MorphoMarketParams → supply/withdraw → expectedSupplyAssets)
+- [x] Mainnet fork tests in `MainnetFork.t.sol` against real Morpho Blue (USDC/EURC market): deposit splits to hot+supply, owner-tightening hotPct round-trips through Morpho without loss
+- [x] Owner-gated `setHotReservePct(uint16)` with bounds check + auto-rebalance
+- [x] Helper views: `totalAssets()`, `hotBalance()`, `morphoSupplyAssets()`
 
 ### Slice 3 — cross-currency shielded swap (~3 days)
 
@@ -105,17 +106,18 @@ the demarcation line between "testnet feature-complete privacy hook" and
 ## Next session quick-start
 
 ```bash
-# Resume on the slice-1 branch
-git checkout feat/privacy-hook-slice-1-vendor
+# Resume on the slice-2 branch
+git checkout feat/privacy-hook-slice-2-morpho
 
-# Cut slice 2
-git checkout -b feat/privacy-hook-slice-2-morpho
-
-# Reference for Morpho rehyp pattern
-sed -n '1014,1069p' contracts/src/hub/FxSwapHook.sol
+# Cut slice 3
+git checkout -b feat/privacy-hook-slice-3-crossccy
 
 # Run privacy tests
 cd contracts && forge test --match-contract FxPrivacyPoolTest -vv
+
+# Fork test (requires ETH_RPC_URL)
+cd contracts && ETH_RPC_URL=https://ethereum-rpc.publicnode.com forge test \
+  --match-test test_fork_privacyPool -vvv
 
 # Run full suite
 cd contracts && forge test --no-match-contract MainnetForkTest
