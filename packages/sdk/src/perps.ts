@@ -58,6 +58,10 @@ export interface FxPerpConfigManifest {
   usdc: Address;
   fxOracle: Address;
   addresses: FxPerpsAddresses;
+  fundingLinks?: {
+    clearinghouseFundingEngine: Address;
+    marginFundingSettlementHook: Address;
+  };
   protocolLiquidity: bigint;
   totalAccountMargin: bigint;
   marginUsdcBalance: bigint;
@@ -96,6 +100,7 @@ export function parseFxPerpConfigManifest(input: unknown): FxPerpConfigManifest 
       orderSettlement: addressField(source, "FxOrderSettlement"),
       keeperAdmin: keeper,
     },
+    fundingLinks: fundingLinksField(source),
     protocolLiquidity: bigintField(source, "protocolLiquidity"),
     totalAccountMargin: bigintField(source, "totalAccountMargin"),
     marginUsdcBalance: bigintField(source, "marginUsdcBalance"),
@@ -137,8 +142,16 @@ export function assertFxPerpConfigReady(manifest: FxPerpConfigManifest): void {
   if (manifest.marginUsdcBalance < manifest.protocolLiquidity + manifest.totalAccountMargin) {
     throw new Error(
       `Perps margin USDC balance ${manifest.marginUsdcBalance} below ` +
-        `protocolLiquidity + totalAccountMargin ${manifest.protocolLiquidity + manifest.totalAccountMargin}`,
+      `protocolLiquidity + totalAccountMargin ${manifest.protocolLiquidity + manifest.totalAccountMargin}`,
     );
+  }
+  if (manifest.fundingLinks) {
+    if (manifest.fundingLinks.clearinghouseFundingEngine !== manifest.addresses.fundingEngine) {
+      throw new Error("Perps config manifest clearinghouse funding engine link does not match FxFundingEngine");
+    }
+    if (manifest.fundingLinks.marginFundingSettlementHook !== manifest.addresses.clearinghouse) {
+      throw new Error("Perps config manifest margin funding settlement hook does not match FxPerpClearinghouse");
+    }
   }
 }
 
@@ -194,6 +207,16 @@ function roleFields(source: Record<string, unknown>): Record<FxPerpRoleKey, bool
     },
     {} as Record<FxPerpRoleKey, boolean>,
   );
+}
+
+function fundingLinksField(source: Record<string, unknown>): FxPerpConfigManifest["fundingLinks"] {
+  if (source.clearinghouse_fundingEngine === undefined && source.margin_fundingSettlementHook === undefined) {
+    return undefined;
+  }
+  return {
+    clearinghouseFundingEngine: addressField(source, "clearinghouse_fundingEngine"),
+    marginFundingSettlementHook: addressField(source, "margin_fundingSettlementHook"),
+  };
 }
 
 function objectField(input: unknown, label: string): Record<string, unknown> {

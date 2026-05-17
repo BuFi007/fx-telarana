@@ -8,6 +8,7 @@ import {
   concatHex,
   defineChain,
   http,
+  isHex,
   keccak256,
   parseAbi,
   toHex,
@@ -66,6 +67,7 @@ const HEALTHY_MARGIN = 250_000n; // 0.25 USDC
 const LIQUIDATION_MARGIN = 100_000n; // 0.10 USDC
 const ORDER_TYPE_LIMIT = 1;
 const FLAG_POST_ONLY = 2;
+const HERMES_TIMEOUT_MS = 10_000;
 
 const erc20Abi = parseAbi([
   "function allowance(address owner, address spender) view returns (uint256)",
@@ -97,8 +99,8 @@ const clearinghouseAbi = parseAbi([
 ]);
 
 const settlementAbi = parseAbi([
-  "function hashOrder((address trader,bytes32 marketId,int256 sizeDeltaE18,uint256 priceE18,uint8 orderType,uint8 flags,uint64 nonce,uint64 deadline) order) view returns (bytes32)",
-  "function settleMatch((address trader,bytes32 marketId,int256 sizeDeltaE18,uint256 priceE18,uint8 orderType,uint8 flags,uint64 nonce,uint64 deadline) maker, bytes makerSig, (address trader,bytes32 marketId,int256 sizeDeltaE18,uint256 priceE18,uint8 orderType,uint8 flags,uint64 nonce,uint64 deadline) taker, bytes takerSig, uint256 fillSizeE18, uint256 fillPriceE18)",
+  "function hashOrder((address trader,bytes32 marketId,int256 sizeDeltaE18,uint256 priceE18,uint256 maxFee,uint8 orderType,uint8 flags,uint64 nonce,uint64 deadline) order) view returns (bytes32)",
+  "function settleMatch((address trader,bytes32 marketId,int256 sizeDeltaE18,uint256 priceE18,uint256 maxFee,uint8 orderType,uint8 flags,uint64 nonce,uint64 deadline) maker, bytes makerSig, (address trader,bytes32 marketId,int256 sizeDeltaE18,uint256 priceE18,uint256 maxFee,uint8 orderType,uint8 flags,uint64 nonce,uint64 deadline) taker, bytes takerSig, uint256 fillSizeE18, uint256 fillPriceE18)",
 ]);
 
 const fundingAbi = parseAbi([
@@ -122,6 +124,7 @@ const signedOrderTypes = {
     { name: "marketId", type: "bytes32" },
     { name: "sizeDeltaE18", type: "int256" },
     { name: "priceE18", type: "uint256" },
+    { name: "maxFee", type: "uint256" },
     { name: "orderType", type: "uint8" },
     { name: "flags", type: "uint8" },
     { name: "nonce", type: "uint64" },
@@ -134,6 +137,7 @@ type SignedOrder = {
   marketId: Hex;
   sizeDeltaE18: bigint;
   priceE18: bigint;
+  maxFee: bigint;
   orderType: number;
   flags: number;
   nonce: bigint;
@@ -187,8 +191,8 @@ async function main() {
   const deadline = now + 3600n;
   const nonceBase = BigInt(Date.now());
 
-  const makerOrder = order(deployer.address, SIZE_E18, quotePrice, nonceBase + 1n, deadline, FLAG_POST_ONLY);
-  const takerOrder = order(taker.address, -SIZE_E18, quotePrice, nonceBase + 2n, deadline, 0);
+  const makerOrder = order(deployer.address, SIZE_E18, quotePrice, feeAmount, nonceBase + 1n, deadline, FLAG_POST_ONLY);
+  const takerOrder = order(taker.address, -SIZE_E18, quotePrice, feeAmount, nonceBase + 2n, deadline, 0);
   const makerSig = await signOrder(deployer, makerOrder);
   const takerSig = await signOrder(taker, takerOrder);
   console.log(`makerDigest=${await hashOrder(makerOrder)}`);
@@ -219,8 +223,11 @@ async function main() {
   );
 
   const liquidationEntryPrice = quotePrice * 50n;
-  const victimOrder = order(victim.address, SIZE_E18, liquidationEntryPrice, nonceBase + 3n, deadline, FLAG_POST_ONLY);
-  const hedgeOrder = order(hedge.address, -SIZE_E18, liquidationEntryPrice, nonceBase + 4n, deadline, 0);
+  const liquidationMaxFee = feeAmount * 50n + 10_000n;
+  const victimOrder =
+    order(victim.address, SIZE_E18, liquidationEntryPrice, liquidationMaxFee, nonceBase + 3n, deadline, FLAG_POST_ONLY);
+  const hedgeOrder =
+    order(hedge.address, -SIZE_E18, liquidationEntryPrice, liquidationMaxFee, nonceBase + 4n, deadline, 0);
   const victimSig = await signOrder(victim, victimOrder);
   const hedgeSig = await signOrder(hedge, hedgeOrder);
   console.log(`victimDigest=${await hashOrder(victimOrder)}`);
@@ -307,12 +314,16 @@ async function refreshPyth() {
 async function fetchPythUpdate(): Promise<Hex[]> {
   const url =
     `https://hermes.pyth.network/v2/updates/price/latest?ids[]=${FEEDS.usdc}&ids[]=${FEEDS.eurc}`;
-  const response = await fetch(url);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), HERMES_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!response.ok) throw new Error(`pyth hermes ${response.status}: ${await response.text()}`);
-  const body = await response.json() as { binary?: { data?: string[] } };
-  const updates = body.binary?.data;
-  if (!updates?.length) throw new Error("pyth hermes returned no update data");
-  return updates.map((item) => `0x${item}` as Hex);
+  return parsePythUpdateBody(await response.json());
 }
 
 async function approveIfNeeded(spender: Address, amount: bigint) {
@@ -395,6 +406,7 @@ function order(
   trader: Address,
   sizeDeltaE18: bigint,
   priceE18: bigint,
+  maxFee: bigint,
   nonce: bigint,
   deadline: bigint,
   flags: number,
@@ -404,6 +416,7 @@ function order(
     marketId: MARKET_ID,
     sizeDeltaE18,
     priceE18,
+    maxFee,
     orderType: ORDER_TYPE_LIMIT,
     flags,
     nonce,
@@ -460,6 +473,28 @@ function loadPerpConfigManifest(path: string) {
     throw new Error(`perp config chainId ${manifest.chainId} does not match Arc ${arcTestnet.id}`);
   }
   return manifest;
+}
+
+function parsePythUpdateBody(body: unknown): Hex[] {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new Error("pyth hermes response must be an object");
+  }
+  const binary = (body as Record<string, unknown>).binary;
+  if (!binary || typeof binary !== "object" || Array.isArray(binary)) {
+    throw new Error("pyth hermes response missing binary object");
+  }
+  const data = (binary as Record<string, unknown>).data;
+  if (!Array.isArray(data) || data.length === 0) {
+    throw new Error("pyth hermes returned no update data");
+  }
+  return data.map((item, index) => {
+    if (typeof item !== "string") throw new Error(`pyth hermes update ${index} must be a string`);
+    const normalized = item.startsWith("0x") ? item : `0x${item}`;
+    if (normalized.length <= 2 || normalized.length % 2 !== 0 || !isHex(normalized, { strict: true })) {
+      throw new Error(`pyth hermes update ${index} must be hex`);
+    }
+    return normalized as Hex;
+  });
 }
 
 function requireAddress(value: Address | undefined, label: string): Address {

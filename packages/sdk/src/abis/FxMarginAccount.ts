@@ -147,6 +147,19 @@ export const FxMarginAccountAbi = [
   },
   {
     "type": "function",
+    "name": "fundingSettlementHook",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRoleAdmin",
     "inputs": [
       {
@@ -411,6 +424,19 @@ export const FxMarginAccountAbi = [
   },
   {
     "type": "function",
+    "name": "setFundingSettlementHook",
+    "inputs": [
+      {
+        "name": "hook",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "supportsInterface",
     "inputs": [
       {
@@ -483,6 +509,19 @@ export const FxMarginAccountAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "FundingSettlementHookSet",
+    "inputs": [
+      {
+        "name": "hook",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -848,6 +887,17 @@ export const FxMarginAccountAbi = [
     "type": "error",
     "name": "Int256Overflow",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidFundingSettlementHook",
+    "inputs": [
+      {
+        "name": "hook",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
     "type": "error",

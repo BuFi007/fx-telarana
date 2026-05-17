@@ -104,7 +104,11 @@ abstract contract ArcPerpConfigReadinessBase is Script {
         _expectAddress("clearinghouse.USDC", stack.clearinghouse.USDC(), stack.usdc);
         _expectAddress("clearinghouse.ORACLE", address(stack.clearinghouse.ORACLE()), stack.oracle);
         _expectAddress("clearinghouse.marginAccount", stack.clearinghouse.marginAccount(), address(stack.margin));
+        _expectAddress("clearinghouse.fundingEngine", stack.clearinghouse.fundingEngine(), address(stack.funding));
         _expectAddress("margin.USDC", address(stack.margin.USDC()), stack.usdc);
+        _expectAddress(
+            "margin.fundingSettlementHook", stack.margin.fundingSettlementHook(), address(stack.clearinghouse)
+        );
         _expectAddress("funding.CLEARINGHOUSE", address(stack.funding.CLEARINGHOUSE()), address(stack.clearinghouse));
         _expectAddress("funding.MARGIN", address(stack.funding.MARGIN()), address(stack.margin));
         _expectAddress("health.CLEARINGHOUSE", address(stack.health.CLEARINGHOUSE()), address(stack.clearinghouse));
@@ -214,6 +218,8 @@ abstract contract ArcPerpConfigReadinessBase is Script {
         vm.serializeAddress(root, "FxHealthChecker", address(stack.health));
         vm.serializeAddress(root, "FxLiquidationEngine", address(stack.liquidation));
         vm.serializeAddress(root, "FxOrderSettlement", address(stack.settlement));
+        vm.serializeAddress(root, "clearinghouse_fundingEngine", stack.clearinghouse.fundingEngine());
+        vm.serializeAddress(root, "margin_fundingSettlementHook", stack.margin.fundingSettlementHook());
         vm.serializeUint(root, "protocolLiquidity", stack.margin.protocolLiquidity());
         vm.serializeUint(root, "totalAccountMargin", stack.margin.totalAccountMargin());
         vm.serializeUint(root, "marginUsdcBalance", IERC20(stack.usdc).balanceOf(address(stack.margin)));

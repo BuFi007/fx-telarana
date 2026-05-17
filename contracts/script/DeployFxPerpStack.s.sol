@@ -29,7 +29,8 @@ import {FxPerpClearinghouse} from "../src/perp/FxPerpClearinghouse.sol";
 ///   2. Configure funding params with FxFundingEngine.configureFunding.
 ///   3. Configure liquidation params with FxLiquidationEngine.configureLiquidation.
 ///   4. Seed FxMarginAccount protocol liquidity before opening unmatched positions.
-///   5. Inject the printed CONTRACT_ADDRESSES_JSON into BUFX/perps backend env.
+///   5. Export the Arc config manifest after market/funding/liquidation params are live.
+///   6. Inject the printed CONTRACT_ADDRESSES_JSON into BUFX/perps backend env.
 contract DeployFxPerpStack is Script {
     function run() external {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
@@ -61,6 +62,8 @@ contract DeployFxPerpStack is Script {
             new FxLiquidationEngine(address(health), address(clearinghouse), address(margin), initialAdmin);
         FxOrderSettlement settlement = new FxOrderSettlement(address(clearinghouse), initialAdmin);
 
+        clearinghouse.setFundingEngine(address(funding));
+        margin.setFundingSettlementHook(address(clearinghouse));
         margin.grantRole(margin.CLEARINGHOUSE_ROLE(), address(clearinghouse));
         margin.grantRole(margin.CLEARINGHOUSE_ROLE(), address(funding));
         margin.grantRole(margin.CLEARINGHOUSE_ROLE(), address(liquidation));
@@ -108,7 +111,7 @@ contract DeployFxPerpStack is Script {
         console2.log("  1. Run dry-run first; do not broadcast until user approves.");
         console2.log("  2. Configure market/funding/liquidation risk params from explicit user choices.");
         console2.log("  3. Seed protocol liquidity in FxMarginAccount before unmatched testnet opens.");
-        console2.log("  4. Inject the six addresses into CONTRACT_ADDRESSES_JSON.");
+        console2.log("  4. Export the config manifest and inject the six addresses into CONTRACT_ADDRESSES_JSON.");
     }
 
     function _writeManifest(

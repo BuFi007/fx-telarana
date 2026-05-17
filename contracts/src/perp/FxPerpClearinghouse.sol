@@ -8,6 +8,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import {IFxOracle} from "../interfaces/IFxOracle.sol";
+import {IFxFundingEngine} from "./interfaces/IFxFundingEngine.sol";
 import {IFxMarginAccount} from "./interfaces/IFxMarginAccount.sol";
 import {IFxPerpClearinghouse} from "./interfaces/IFxPerpClearinghouse.sol";
 import {FxPerpMath} from "./FxPerpMath.sol";
@@ -34,13 +35,17 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
     IFxOracle public immutable ORACLE;
     IFxMarginAccount private immutable MARGIN_ACCOUNT;
     uint8 public immutable MARGIN_DECIMALS;
+    address public fundingEngine;
 
     mapping(bytes32 marketId => MarketConfig config) private _marketConfig;
+    mapping(bytes32 marketId => bool configured) private _marketConfigured;
     mapping(bytes32 marketId => mapping(address trader => Position position)) private _position;
+    bytes32[] private _marketIds;
     mapping(bytes32 marketId => uint256 amount) public openInterestLong;
     mapping(bytes32 marketId => uint256 amount) public openInterestShort;
 
     event MarketConfigured(bytes32 indexed marketId, MarketConfig config);
+    event FundingEngineSet(address indexed fundingEngine);
     event PositionIncreased(
         bytes32 indexed marketId,
         address indexed trader,
@@ -72,9 +77,12 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
     error OpenInterestCapExceeded(bytes32 marketId, uint256 nextOpenInterest, uint256 cap);
     error SkewCapExceeded(bytes32 marketId, uint256 nextSkew, uint256 cap);
     error Int256Overflow();
+    error FundingEngineNotSet();
+    error InvalidFundingEngine(address fundingEngine);
 
     constructor(address usdc_, address oracle_, address marginAccount_, address initialAdmin) {
-        if (usdc_ == address(0) || oracle_ == address(0) || marginAccount_ == address(0) || initialAdmin == address(0)) {
+        if (usdc_ == address(0) || oracle_ == address(0) || marginAccount_ == address(0) || initialAdmin == address(0))
+        {
             revert ZeroAddress();
         }
         USDC = usdc_;
@@ -89,8 +97,24 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
 
     function configureMarket(bytes32 marketId, MarketConfig calldata config) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _validateMarketConfig(marketId, config);
+        if (!_marketConfigured[marketId]) {
+            _marketConfigured[marketId] = true;
+            _marketIds.push(marketId);
+        }
         _marketConfig[marketId] = config;
         emit MarketConfigured(marketId, config);
+    }
+
+    function setFundingEngine(address fundingEngine_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (fundingEngine_ == address(0) || fundingEngine_.code.length == 0) {
+            revert InvalidFundingEngine(fundingEngine_);
+        }
+        IFxFundingEngine engine = IFxFundingEngine(fundingEngine_);
+        if (address(engine.CLEARINGHOUSE()) != address(this) || address(engine.MARGIN()) != address(MARGIN_ACCOUNT)) {
+            revert InvalidFundingEngine(fundingEngine_);
+        }
+        fundingEngine = fundingEngine_;
+        emit FundingEngineSet(fundingEngine_);
     }
 
     function openOrIncrease(bytes32 marketId, address trader, int256 sizeDeltaE18, uint256 maxFee)
@@ -100,6 +124,7 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         onlyRole(EXECUTOR_ROLE)
         returns (bytes32 positionKey)
     {
+        _settleFunding(marketId, trader);
         uint256 priceE18 = _price(marketId);
         positionKey = _applyIncrease(marketId, trader, sizeDeltaE18, priceE18, maxFee);
     }
@@ -111,17 +136,12 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         onlyRole(EXECUTOR_ROLE)
         returns (uint256 marginReleased)
     {
+        _settleFunding(marketId, trader);
         uint256 priceE18 = _price(marketId);
         (marginReleased,,) = _applyDecrease(marketId, trader, sizeDeltaE18, priceE18);
     }
 
-    function applyOrderFill(
-        bytes32 marketId,
-        address trader,
-        int256 sizeDeltaE18,
-        uint256 fillPriceE18,
-        uint256 maxFee
-    )
+    function applyOrderFill(bytes32 marketId, address trader, int256 sizeDeltaE18, uint256 fillPriceE18, uint256 maxFee)
         external
         whenNotPaused
         nonReentrant
@@ -129,6 +149,7 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         returns (bytes32 positionKey)
     {
         if (fillPriceE18 == 0) revert ZeroAmount();
+        _settleFunding(marketId, trader);
         Position memory p = _position[marketId][trader];
         if (p.sizeE18 != 0 && !FxPerpMath.sameSign(p.sizeE18, sizeDeltaE18)) {
             (, positionKey,) = _applyDecreaseOrFlip(marketId, trader, sizeDeltaE18, fillPriceE18, maxFee);
@@ -145,6 +166,7 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         returns (uint256 marginReleased, int256 pnl, uint256 badDebt)
     {
         if (maxSizeToCloseAbsE18 == 0) revert ZeroAmount();
+        _settleFunding(marketId, trader);
         Position memory p = _position[marketId][trader];
         if (p.sizeE18 == 0) revert PositionNotFound(marketId, trader);
         uint256 closeAbs = FxPerpMath.abs(p.sizeE18);
@@ -186,8 +208,26 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         return address(MARGIN_ACCOUNT);
     }
 
+    function marketIdCount() external view returns (uint256) {
+        return _marketIds.length;
+    }
+
+    function marketIdAt(uint256 index) external view returns (bytes32) {
+        return _marketIds[index];
+    }
+
     function maxOpenInterest(bytes32 marketId) external view returns (uint256) {
         return _marketConfig[marketId].maxOpenInterestUsd;
+    }
+
+    function settleTraderFunding(address trader) external nonReentrant returns (int256 fundingPaid) {
+        if (trader == address(0)) revert ZeroAddress();
+        for (uint256 i = 0; i < _marketIds.length; i++) {
+            bytes32 marketId = _marketIds[i];
+            if (_position[marketId][trader].sizeE18 != 0) {
+                fundingPaid += _settleFunding(marketId, trader);
+            }
+        }
     }
 
     function pause() external onlyRole(OPERATIONS_ROLE) {
@@ -231,9 +271,7 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         else openInterestShort[marketId] += notional;
 
         positionKey = keccak256(abi.encode(marketId, trader));
-        emit PositionIncreased(
-            marketId, trader, sizeDeltaE18, p.sizeE18, p.entryPriceE18, p.marginReserved, feeAmount
-        );
+        emit PositionIncreased(marketId, trader, sizeDeltaE18, p.sizeE18, p.entryPriceE18, p.marginReserved, feeAmount);
     }
 
     function _applyDecreaseOrFlip(
@@ -255,9 +293,7 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         int256 closeDelta = beforePosition.sizeE18 > 0 ? -currentAbsSigned : currentAbsSigned;
         (marginReleased,, badDebt) = _applyDecrease(marketId, trader, closeDelta, fillPriceE18);
         int256 openRemainderSigned = (deltaAbs - currentAbs).toInt256();
-        int256 openRemainder = beforePosition.sizeE18 > 0
-            ? -openRemainderSigned
-            : openRemainderSigned;
+        int256 openRemainder = beforePosition.sizeE18 > 0 ? -openRemainderSigned : openRemainderSigned;
         positionKey = _applyIncrease(marketId, trader, openRemainder, fillPriceE18, maxFee);
     }
 
@@ -294,7 +330,8 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         }
 
         if (closedSignedSize > 0) {
-            openInterestLong[marketId] = oiReduction > openInterestLong[marketId] ? 0 : openInterestLong[marketId] - oiReduction;
+            openInterestLong[marketId] =
+                oiReduction > openInterestLong[marketId] ? 0 : openInterestLong[marketId] - oiReduction;
         } else {
             openInterestShort[marketId] =
                 oiReduction > openInterestShort[marketId] ? 0 : openInterestShort[marketId] - oiReduction;
@@ -308,6 +345,13 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
     function _realizeFee(address trader, uint256 feeAmount) internal {
         if (feeAmount > uint256(type(int256).max)) revert Int256Overflow();
         MARGIN_ACCOUNT.realizePnl(trader, -feeAmount.toInt256());
+    }
+
+    function _settleFunding(bytes32 marketId, address trader) internal returns (int256 fundingPaid) {
+        if (trader == address(0)) revert ZeroAddress();
+        address engine = fundingEngine;
+        if (engine == address(0)) revert FundingEngineNotSet();
+        return IFxFundingEngine(engine).settleFunding(marketId, trader);
     }
 
     function _assertOiCaps(
@@ -324,9 +368,13 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
             else shortOi += notional;
         }
         uint256 larger = longOi > shortOi ? longOi : shortOi;
-        if (larger > config.maxOpenInterestUsd) revert OpenInterestCapExceeded(marketId, larger, config.maxOpenInterestUsd);
+        if (larger > config.maxOpenInterestUsd) {
+            revert OpenInterestCapExceeded(marketId, larger, config.maxOpenInterestUsd);
+        }
         uint256 skew = longOi > shortOi ? longOi - shortOi : shortOi - longOi;
-        if (config.maxSkewUsd != 0 && skew > config.maxSkewUsd) revert SkewCapExceeded(marketId, skew, config.maxSkewUsd);
+        if (config.maxSkewUsd != 0 && skew > config.maxSkewUsd) {
+            revert SkewCapExceeded(marketId, skew, config.maxSkewUsd);
+        }
     }
 
     function _enabledMarket(bytes32 marketId) internal view returns (MarketConfig memory config) {

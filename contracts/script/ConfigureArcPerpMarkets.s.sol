@@ -73,6 +73,13 @@ contract ConfigureArcPerpMarkets is Script {
         console2.log("protocol liquidity target  ", protocolLiquidityTarget);
 
         vm.startBroadcast(pk);
+        if (clearinghouse.fundingEngine() != address(funding)) {
+            clearinghouse.setFundingEngine(address(funding));
+        }
+        if (margin.fundingSettlementHook() != address(clearinghouse)) {
+            margin.setFundingSettlementHook(address(clearinghouse));
+        }
+
         _configureMarket(clearinghouse, funding, "EURC", EURC, EURC_OI_CAP);
         _configureMarket(clearinghouse, funding, "tJPYC", TJPYC, TEST_FIAT_OI_CAP);
         _configureMarket(clearinghouse, funding, "tMXNB", TMXNB, TEST_FIAT_OI_CAP);
@@ -80,9 +87,7 @@ contract ConfigureArcPerpMarkets is Script {
 
         liquidation.configureLiquidation(
             FxLiquidationEngine.LiquidationConfig({
-                bountyBps: LIQUIDATION_BOUNTY_BPS,
-                bountyCap: LIQUIDATION_BOUNTY_CAP,
-                flagDelay: LIQUIDATION_FLAG_DELAY
+                bountyBps: LIQUIDATION_BOUNTY_BPS, bountyCap: LIQUIDATION_BOUNTY_CAP, flagDelay: LIQUIDATION_FLAG_DELAY
             })
         );
 

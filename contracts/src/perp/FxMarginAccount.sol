@@ -9,6 +9,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import {FxPerpMath} from "./FxPerpMath.sol";
+import {IFxFundingSettlementHook} from "./interfaces/IFxFundingSettlementHook.sol";
 import {IFxMarginAccount} from "./interfaces/IFxMarginAccount.sol";
 
 /// @title FxMarginAccount
@@ -34,6 +35,7 @@ contract FxMarginAccount is IFxMarginAccount, AccessControl, Pausable, Reentranc
 
     uint256 public totalAccountMargin;
     uint256 public protocolLiquidity;
+    address public fundingSettlementHook;
 
     event MarginDeposited(address indexed trader, address indexed payer, uint256 amount);
     event MarginWithdrawn(address indexed trader, uint256 amount);
@@ -43,6 +45,7 @@ contract FxMarginAccount is IFxMarginAccount, AccessControl, Pausable, Reentranc
     event ProtocolLiquidityDeposited(address indexed payer, uint256 amount);
     event ProtocolLiquidityWithdrawn(address indexed to, uint256 amount);
     event LiquidatorRewardPaid(address indexed trader, address indexed liquidator, uint256 amount);
+    event FundingSettlementHookSet(address indexed hook);
 
     error ZeroAddress();
     error ZeroAmount();
@@ -50,6 +53,7 @@ contract FxMarginAccount is IFxMarginAccount, AccessControl, Pausable, Reentranc
     error InsufficientFreeMargin(address trader, uint256 requested, uint256 available);
     error InsufficientMargin(address trader, uint256 requested, uint256 available);
     error InsufficientProtocolLiquidity(uint256 requested, uint256 available);
+    error InvalidFundingSettlementHook(address hook);
 
     constructor(address usdc_, address initialAdmin) {
         if (usdc_ == address(0) || initialAdmin == address(0)) revert ZeroAddress();
@@ -73,12 +77,19 @@ contract FxMarginAccount is IFxMarginAccount, AccessControl, Pausable, Reentranc
         emit MarginDeposited(trader, msg.sender, amount);
     }
 
+    function setFundingSettlementHook(address hook) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (hook != address(0) && hook.code.length == 0) revert InvalidFundingSettlementHook(hook);
+        fundingSettlementHook = hook;
+        emit FundingSettlementHookSet(hook);
+    }
+
     function withdrawMargin(address trader, uint256 amount) external whenNotPaused nonReentrant {
         if (trader == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
         if (msg.sender != trader && !hasRole(ACCOUNT_OPERATOR_ROLE, msg.sender)) {
             revert UnauthorizedAccount(msg.sender, trader);
         }
+        _settleFunding(trader);
         uint256 free = freeMarginOf(trader);
         if (amount > free) revert InsufficientFreeMargin(trader, amount, free);
         _margin[trader] -= amount;
@@ -187,5 +198,11 @@ contract FxMarginAccount is IFxMarginAccount, AccessControl, Pausable, Reentranc
 
     function unpause() external onlyRole(OPERATIONS_ROLE) {
         _unpause();
+    }
+
+    function _settleFunding(address trader) internal {
+        address hook = fundingSettlementHook;
+        if (hook == address(0)) return;
+        IFxFundingSettlementHook(hook).settleTraderFunding(trader);
     }
 }

@@ -261,6 +261,19 @@ export const FxPerpClearinghouseAbi = [
   },
   {
     "type": "function",
+    "name": "fundingEngine",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRoleAdmin",
     "inputs": [
       {
@@ -429,6 +442,38 @@ export const FxPerpClearinghouseAbi = [
             "internalType": "uint256"
           }
         ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "marketIdAt",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "marketIdCount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -662,6 +707,38 @@ export const FxPerpClearinghouseAbi = [
   },
   {
     "type": "function",
+    "name": "setFundingEngine",
+    "inputs": [
+      {
+        "name": "fundingEngine_",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "settleTraderFunding",
+    "inputs": [
+      {
+        "name": "trader",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "fundingPaid",
+        "type": "int256",
+        "internalType": "int256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "supportsInterface",
     "inputs": [
       {
@@ -731,6 +808,19 @@ export const FxPerpClearinghouseAbi = [
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FundingEngineSet",
+    "inputs": [
+      {
+        "name": "fundingEngine",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -1034,6 +1124,11 @@ export const FxPerpClearinghouseAbi = [
   },
   {
     "type": "error",
+    "name": "FundingEngineNotSet",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "Int256Overflow",
     "inputs": []
   },
@@ -1041,6 +1136,17 @@ export const FxPerpClearinghouseAbi = [
     "type": "error",
     "name": "Int256Overflow",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidFundingEngine",
+    "inputs": [
+      {
+        "name": "fundingEngine",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
     "type": "error",

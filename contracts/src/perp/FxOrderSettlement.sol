@@ -31,7 +31,7 @@ contract FxOrderSettlement is IFxOrderSettlement, EIP712, AccessControl, Pausabl
     uint8 public constant FLAG_POST_ONLY = 2;
 
     bytes32 public constant SIGNED_ORDER_TYPEHASH = keccak256(
-        "SignedOrder(address trader,bytes32 marketId,int256 sizeDeltaE18,uint256 priceE18,uint8 orderType,uint8 flags,uint64 nonce,uint64 deadline)"
+        "SignedOrder(address trader,bytes32 marketId,int256 sizeDeltaE18,uint256 priceE18,uint256 maxFee,uint8 orderType,uint8 flags,uint64 nonce,uint64 deadline)"
     );
 
     IFxPerpClearinghouse public immutable CLEARINGHOUSE;
@@ -57,9 +57,7 @@ contract FxOrderSettlement is IFxOrderSettlement, EIP712, AccessControl, Pausabl
     error ReduceOnlyViolation(address trader);
     error PostOnlyTaker();
 
-    constructor(address clearinghouse_, address initialAdmin)
-        EIP712("TelaranaFxOrderSettlement", "1")
-    {
+    constructor(address clearinghouse_, address initialAdmin) EIP712("TelaranaFxOrderSettlement", "1") {
         if (clearinghouse_ == address(0) || initialAdmin == address(0)) revert ZeroAddress();
         CLEARINGHOUSE = IFxPerpClearinghouse(clearinghouse_);
         _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
@@ -74,12 +72,7 @@ contract FxOrderSettlement is IFxOrderSettlement, EIP712, AccessControl, Pausabl
         bytes calldata takerSig,
         uint256 fillSizeE18,
         uint256 fillPriceE18
-    )
-        external
-        whenNotPaused
-        nonReentrant
-        onlyRole(SETTLER_ROLE)
-    {
+    ) external whenNotPaused nonReentrant onlyRole(SETTLER_ROLE) {
         if (fillSizeE18 == 0 || fillPriceE18 == 0) revert ZeroAmount();
         if (maker.trader == address(0) || taker.trader == address(0)) revert ZeroAddress();
         if (maker.trader == taker.trader || maker.marketId != taker.marketId) revert InvalidMatch();
@@ -101,8 +94,8 @@ contract FxOrderSettlement is IFxOrderSettlement, EIP712, AccessControl, Pausabl
         _useNonce(maker.trader, maker.nonce);
         _useNonce(taker.trader, taker.nonce);
 
-        CLEARINGHOUSE.applyOrderFill(maker.marketId, maker.trader, makerDelta, fillPriceE18, type(uint256).max);
-        CLEARINGHOUSE.applyOrderFill(taker.marketId, taker.trader, takerDelta, fillPriceE18, type(uint256).max);
+        CLEARINGHOUSE.applyOrderFill(maker.marketId, maker.trader, makerDelta, fillPriceE18, maker.maxFee);
+        CLEARINGHOUSE.applyOrderFill(taker.marketId, taker.trader, takerDelta, fillPriceE18, taker.maxFee);
 
         emit MatchSettled(maker.marketId, maker.trader, taker.trader, fillSizeE18, fillPriceE18);
     }
@@ -129,7 +122,9 @@ contract FxOrderSettlement is IFxOrderSettlement, EIP712, AccessControl, Pausabl
             revert InvalidOrderType(order.orderType);
         }
         if (order.deadline < block.timestamp) revert ExpiredOrder(order.trader, order.deadline);
-        if (!SignatureChecker.isValidSignatureNow(order.trader, _hashOrder(order), sig)) revert InvalidSignature(order.trader);
+        if (!SignatureChecker.isValidSignatureNow(order.trader, _hashOrder(order), sig)) {
+            revert InvalidSignature(order.trader);
+        }
         if (order.orderType == ORDER_TYPE_LIMIT) {
             bool buy = order.sizeDeltaE18 > 0;
             if ((buy && fillPriceE18 > order.priceE18) || (!buy && fillPriceE18 < order.priceE18)) {
@@ -138,10 +133,15 @@ contract FxOrderSettlement is IFxOrderSettlement, EIP712, AccessControl, Pausabl
         }
     }
 
-    function _validateReduceOnly(SignedOrder calldata order, int256 signedFillDelta, uint256 fillSizeE18) internal view {
+    function _validateReduceOnly(SignedOrder calldata order, int256 signedFillDelta, uint256 fillSizeE18)
+        internal
+        view
+    {
         if ((order.flags & FLAG_REDUCE_ONLY) == 0) return;
         IFxPerpClearinghouse.Position memory p = CLEARINGHOUSE.position(order.marketId, order.trader);
-        if (p.sizeE18 == 0 || FxPerpMath.sameSign(p.sizeE18, signedFillDelta)) revert ReduceOnlyViolation(order.trader);
+        if (p.sizeE18 == 0 || FxPerpMath.sameSign(p.sizeE18, signedFillDelta)) {
+            revert ReduceOnlyViolation(order.trader);
+        }
         if (fillSizeE18 > FxPerpMath.abs(p.sizeE18)) revert ReduceOnlyViolation(order.trader);
     }
 
@@ -153,6 +153,7 @@ contract FxOrderSettlement is IFxOrderSettlement, EIP712, AccessControl, Pausabl
                 order.marketId,
                 order.sizeDeltaE18,
                 order.priceE18,
+                order.maxFee,
                 order.orderType,
                 order.flags,
                 order.nonce,

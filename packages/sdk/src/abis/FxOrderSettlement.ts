@@ -281,6 +281,11 @@ export const FxOrderSettlementAbi = [
             "internalType": "uint256"
           },
           {
+            "name": "maxFee",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
             "name": "orderType",
             "type": "uint8",
             "internalType": "uint8"
@@ -422,6 +427,11 @@ export const FxOrderSettlementAbi = [
             "internalType": "uint256"
           },
           {
+            "name": "maxFee",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
             "name": "orderType",
             "type": "uint8",
             "internalType": "uint8"
@@ -470,6 +480,11 @@ export const FxOrderSettlementAbi = [
           },
           {
             "name": "priceE18",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "maxFee",
             "type": "uint256",
             "internalType": "uint256"
           },

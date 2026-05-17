@@ -7,6 +7,7 @@ interface IFxOrderSettlement {
         bytes32 marketId;
         int256 sizeDeltaE18;
         uint256 priceE18;
+        uint256 maxFee;
         uint8 orderType;
         uint8 flags;
         uint64 nonce;

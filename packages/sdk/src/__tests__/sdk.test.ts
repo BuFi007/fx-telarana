@@ -766,10 +766,13 @@ describe("ABI exports", () => {
     expect(clearinghouseFunctions).toContain("openOrIncrease");
     expect(clearinghouseFunctions).toContain("applyOrderFill");
     expect(clearinghouseFunctions).toContain("liquidatePosition");
+    expect(clearinghouseFunctions).toContain("setFundingEngine");
+    expect(clearinghouseFunctions).toContain("settleTraderFunding");
 
     const marginFunctions = FxMarginAccountAbi.filter((x) => x.type === "function").map((x) => x.name);
     expect(marginFunctions).toContain("depositMargin");
     expect(marginFunctions).toContain("depositProtocolLiquidity");
+    expect(marginFunctions).toContain("setFundingSettlementHook");
 
     const fundingFunctions = FxFundingEngineAbi.filter((x) => x.type === "function").map((x) => x.name);
     expect(fundingFunctions).toContain("configureFunding");

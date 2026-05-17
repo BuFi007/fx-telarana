@@ -92,6 +92,8 @@ contract FxPerpStackTest is Test {
         liquidation = new FxLiquidationEngine(address(health), address(clearinghouse), address(margin), ADMIN);
         settlement = new FxOrderSettlement(address(clearinghouse), ADMIN);
 
+        clearinghouse.setFundingEngine(address(funding));
+        margin.setFundingSettlementHook(address(clearinghouse));
         margin.grantRole(margin.CLEARINGHOUSE_ROLE(), address(clearinghouse));
         margin.grantRole(margin.CLEARINGHOUSE_ROLE(), address(funding));
         margin.grantRole(margin.CLEARINGHOUSE_ROLE(), address(liquidation));
@@ -102,8 +104,13 @@ contract FxPerpStackTest is Test {
         settlement.grantRole(settlement.SETTLER_ROLE(), KEEPER);
 
         clearinghouse.configureMarket(MARKET_ID, _marketConfig(1_000_000e6, 1_000_000e6));
-        funding.configureFunding(MARKET_ID, FxFundingEngine.FundingConfig({enabled: true, maxFundingRateBpsPerSecond: 1, fundingVelocityBps: 1_000}));
-        liquidation.configureLiquidation(FxLiquidationEngine.LiquidationConfig({bountyBps: 1_000, bountyCap: 50e6, flagDelay: 0}));
+        funding.configureFunding(
+            MARKET_ID,
+            FxFundingEngine.FundingConfig({enabled: true, maxFundingRateBpsPerSecond: 1, fundingVelocityBps: 1_000})
+        );
+        liquidation.configureLiquidation(
+            FxLiquidationEngine.LiquidationConfig({bountyBps: 1_000, bountyCap: 50e6, flagDelay: 0})
+        );
         vm.stopPrank();
 
         _seedProtocolLiquidity(1_000e6);
@@ -210,6 +217,7 @@ contract FxPerpStackTest is Test {
             marketId: MARKET_ID,
             sizeDeltaE18: 5e18,
             priceE18: PRICE_1_10,
+            maxFee: 10_000,
             orderType: settlement.ORDER_TYPE_LIMIT(),
             flags: settlement.FLAG_POST_ONLY(),
             nonce: 1,
@@ -220,6 +228,7 @@ contract FxPerpStackTest is Test {
             marketId: MARKET_ID,
             sizeDeltaE18: -5e18,
             priceE18: PRICE_1_10,
+            maxFee: 10_000,
             orderType: settlement.ORDER_TYPE_LIMIT(),
             flags: 0,
             nonce: 2,
@@ -240,6 +249,41 @@ contract FxPerpStackTest is Test {
         settlement.settleMatch(makerOrder, makerSig, takerOrder, takerSig, 5e18, PRICE_1_10);
     }
 
+    function test_orderSettlementHonorsSignedMaxFee() public {
+        _deposit(maker, 100e6);
+        _deposit(taker, 100e6);
+
+        IFxOrderSettlement.SignedOrder memory makerOrder = IFxOrderSettlement.SignedOrder({
+            trader: maker,
+            marketId: MARKET_ID,
+            sizeDeltaE18: 5e18,
+            priceE18: PRICE_1_10,
+            maxFee: 1,
+            orderType: settlement.ORDER_TYPE_LIMIT(),
+            flags: settlement.FLAG_POST_ONLY(),
+            nonce: 11,
+            deadline: uint64(block.timestamp + 1 hours)
+        });
+        IFxOrderSettlement.SignedOrder memory takerOrder = IFxOrderSettlement.SignedOrder({
+            trader: taker,
+            marketId: MARKET_ID,
+            sizeDeltaE18: -5e18,
+            priceE18: PRICE_1_10,
+            maxFee: 10_000,
+            orderType: settlement.ORDER_TYPE_LIMIT(),
+            flags: 0,
+            nonce: 12,
+            deadline: uint64(block.timestamp + 1 hours)
+        });
+
+        bytes memory makerSig = _signOrder(MAKER_PK, makerOrder);
+        bytes memory takerSig = _signOrder(TAKER_PK, takerOrder);
+
+        vm.expectRevert(abi.encodeWithSelector(FxPerpClearinghouse.SlippageFeeExceeded.selector, 2_750, 1));
+        vm.prank(KEEPER);
+        settlement.settleMatch(makerOrder, makerSig, takerOrder, takerSig, 5e18, PRICE_1_10);
+    }
+
     function test_fundingSettlesLongHeavySkew() public {
         vm.prank(ADMIN);
         clearinghouse.configureMarket(MARKET_ID, _marketConfig(100e6, 100e6));
@@ -252,6 +296,43 @@ contract FxPerpStackTest is Test {
         vm.warp(block.timestamp + 1 hours);
         funding.settleFunding(MARKET_ID, TRADER);
         assertLt(margin.marginOf(TRADER), beforeMargin, "long-heavy funding charges long");
+    }
+
+    function test_closeSettlesFundingBeforePositionClears() public {
+        vm.prank(ADMIN);
+        clearinghouse.configureMarket(MARKET_ID, _marketConfig(100e6, 100e6));
+        _deposit(TRADER, 100e6);
+        vm.prank(KEEPER);
+        clearinghouse.openOrIncrease(MARKET_ID, TRADER, 10e18, 6_000);
+        funding.pokeFundingRate(MARKET_ID);
+
+        uint256 beforeMargin = margin.marginOf(TRADER);
+        vm.warp(block.timestamp + 1 hours);
+        vm.prank(KEEPER);
+        clearinghouse.decreaseOrClose(MARKET_ID, TRADER, -10e18);
+
+        (,,, int256 latestIndex) = funding.fundingState(MARKET_ID);
+        assertEq(funding.traderFundingIndex(MARKET_ID, TRADER), latestIndex, "funding index settled");
+        assertLt(margin.marginOf(TRADER), beforeMargin, "funding charged before close");
+        assertEq(clearinghouse.position(MARKET_ID, TRADER).sizeE18, 0, "position closed");
+    }
+
+    function test_withdrawSettlesFundingBeforeFreeMarginCheck() public {
+        vm.prank(ADMIN);
+        clearinghouse.configureMarket(MARKET_ID, _marketConfig(100e6, 100e6));
+        _deposit(TRADER, 100e6);
+        vm.prank(KEEPER);
+        clearinghouse.openOrIncrease(MARKET_ID, TRADER, 10e18, 6_000);
+        funding.pokeFundingRate(MARKET_ID);
+
+        uint256 beforeMargin = margin.marginOf(TRADER);
+        vm.warp(block.timestamp + 1 hours);
+        vm.prank(TRADER);
+        margin.withdrawMargin(TRADER, 1);
+
+        (,,, int256 latestIndex) = funding.fundingState(MARKET_ID);
+        assertEq(funding.traderFundingIndex(MARKET_ID, TRADER), latestIndex, "funding index settled");
+        assertLt(margin.marginOf(TRADER), beforeMargin - 1, "funding charged before withdrawal");
     }
 
     function testFuzz_requiredMarginUsesConfiguredInitialMargin(uint96 rawSize, uint96 rawPrice) public {

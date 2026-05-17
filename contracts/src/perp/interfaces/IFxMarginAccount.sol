@@ -12,4 +12,5 @@ interface IFxMarginAccount {
     function realizePnl(address trader, int256 pnl) external returns (uint256 badDebt);
     function payLiquidatorReward(address trader, address liquidator, uint256 amount) external;
     function marginDecimals() external view returns (uint8);
+    function fundingSettlementHook() external view returns (address);
 }

@@ -11,6 +11,7 @@ import {FxLiquidationEngine} from "../../src/perp/FxLiquidationEngine.sol";
 import {FxMarginAccount} from "../../src/perp/FxMarginAccount.sol";
 import {FxOrderSettlement} from "../../src/perp/FxOrderSettlement.sol";
 import {FxPerpClearinghouse} from "../../src/perp/FxPerpClearinghouse.sol";
+import {FxPerpMath} from "../../src/perp/FxPerpMath.sol";
 import {IFxPerpClearinghouse} from "../../src/perp/interfaces/IFxPerpClearinghouse.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockPerpOracle} from "./FxPerpStack.t.sol";
@@ -23,6 +24,8 @@ contract FxPerpInvariantHandler is Test {
     MockPerpOracle internal immutable oracle;
     FxMarginAccount internal immutable margin;
     FxPerpClearinghouse internal immutable clearinghouse;
+    FxFundingEngine internal immutable funding;
+    FxLiquidationEngine internal immutable liquidation;
     bytes32 internal immutable marketId;
     address internal immutable keeper;
     address[] internal traders;
@@ -33,6 +36,8 @@ contract FxPerpInvariantHandler is Test {
         MockPerpOracle oracle_,
         FxMarginAccount margin_,
         FxPerpClearinghouse clearinghouse_,
+        FxFundingEngine funding_,
+        FxLiquidationEngine liquidation_,
         bytes32 marketId_,
         address keeper_,
         address[3] memory traders_
@@ -42,9 +47,13 @@ contract FxPerpInvariantHandler is Test {
         oracle = oracle_;
         margin = margin_;
         clearinghouse = clearinghouse_;
+        funding = funding_;
+        liquidation = liquidation_;
         marketId = marketId_;
         keeper = keeper_;
-        for (uint256 i = 0; i < traders_.length; i++) traders.push(traders_[i]);
+        for (uint256 i = 0; i < traders_.length; i++) {
+            traders.push(traders_[i]);
+        }
     }
 
     function openLong(uint8 traderIndex, uint96 rawSize) external {
@@ -61,6 +70,47 @@ contract FxPerpInvariantHandler is Test {
         uint256 closeSize = bound(uint256(rawSize), 1, SafeCast.toUint256(p.sizeE18));
         vm.prank(keeper);
         try clearinghouse.decreaseOrClose(marketId, trader, -closeSize.toInt256()) {} catch {}
+    }
+
+    function openShort(uint8 traderIndex, uint96 rawSize) external {
+        address trader = traders[uint256(traderIndex) % traders.length];
+        uint256 size = bound(uint256(rawSize), 1e15, 5e18);
+        vm.prank(keeper);
+        try clearinghouse.openOrIncrease(marketId, trader, -size.toInt256(), type(uint256).max) {} catch {}
+    }
+
+    function closeShort(uint8 traderIndex, uint96 rawSize) external {
+        address trader = traders[uint256(traderIndex) % traders.length];
+        IFxPerpClearinghouse.Position memory p = clearinghouse.position(marketId, trader);
+        if (p.sizeE18 >= 0) return;
+        uint256 closeSize = bound(uint256(rawSize), 1, FxPerpMath.abs(p.sizeE18));
+        vm.prank(keeper);
+        try clearinghouse.decreaseOrClose(marketId, trader, closeSize.toInt256()) {} catch {}
+    }
+
+    function settleFunding(uint8 traderIndex, uint16 rawElapsed) external {
+        address trader = traders[uint256(traderIndex) % traders.length];
+        uint256 elapsed = bound(uint256(rawElapsed), 1, 1 hours);
+        vm.warp(block.timestamp + elapsed);
+        try funding.settleFunding(marketId, trader) {} catch {}
+    }
+
+    function withdrawFreeMargin(uint8 traderIndex, uint96 rawAmount) external {
+        address trader = traders[uint256(traderIndex) % traders.length];
+        uint256 free = margin.freeMarginOf(trader);
+        if (free == 0) return;
+        uint256 amount = bound(uint256(rawAmount), 1, free);
+        vm.prank(trader);
+        try margin.withdrawMargin(trader, amount) {} catch {}
+    }
+
+    function liquidateIfNeeded(uint8 traderIndex) external {
+        address trader = traders[uint256(traderIndex) % traders.length];
+        try liquidation.flagAccount(marketId, trader) {}
+        catch {
+            return;
+        }
+        try liquidation.liquidate(marketId, trader, type(uint256).max) {} catch {}
     }
 
     function movePrice(uint96 rawPrice) external {
@@ -96,12 +146,21 @@ contract FxPerpStackInvariantTest is StdInvariant, Test {
             new FxLiquidationEngine(address(health), address(clearinghouse), address(margin), ADMIN);
         FxOrderSettlement settlement = new FxOrderSettlement(address(clearinghouse), ADMIN);
 
+        clearinghouse.setFundingEngine(address(funding));
+        margin.setFundingSettlementHook(address(clearinghouse));
         margin.grantRole(margin.CLEARINGHOUSE_ROLE(), address(clearinghouse));
         margin.grantRole(margin.CLEARINGHOUSE_ROLE(), address(funding));
         margin.grantRole(margin.CLEARINGHOUSE_ROLE(), address(liquidation));
         clearinghouse.grantRole(clearinghouse.EXECUTOR_ROLE(), KEEPER);
         clearinghouse.grantRole(clearinghouse.ORDER_SETTLEMENT_ROLE(), address(settlement));
         clearinghouse.grantRole(clearinghouse.LIQUIDATION_ENGINE_ROLE(), address(liquidation));
+        funding.configureFunding(
+            MARKET_ID,
+            FxFundingEngine.FundingConfig({enabled: true, maxFundingRateBpsPerSecond: 1, fundingVelocityBps: 1_000})
+        );
+        liquidation.configureLiquidation(
+            FxLiquidationEngine.LiquidationConfig({bountyBps: 1_000, bountyCap: 50e6, flagDelay: 0})
+        );
         clearinghouse.configureMarket(
             MARKET_ID,
             IFxPerpClearinghouse.MarketConfig({
@@ -122,10 +181,14 @@ contract FxPerpStackInvariantTest is StdInvariant, Test {
             address(uint160(uint256(keccak256("perp.inv.TRADER_B")))),
             address(uint160(uint256(keccak256("perp.inv.TRADER_C"))))
         ];
-        for (uint256 i = 0; i < traders.length; i++) _deposit(traders[i], 1_000e6);
+        for (uint256 i = 0; i < traders.length; i++) {
+            _deposit(traders[i], 1_000e6);
+        }
         _seedProtocolLiquidity(10_000e6);
 
-        handler = new FxPerpInvariantHandler(usdc, eurc, oracle, margin, clearinghouse, MARKET_ID, KEEPER, traders);
+        handler = new FxPerpInvariantHandler(
+            usdc, eurc, oracle, margin, clearinghouse, funding, liquidation, MARKET_ID, KEEPER, traders
+        );
         targetContract(address(handler));
     }
 

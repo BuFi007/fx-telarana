@@ -26,13 +26,9 @@ interface IFxPerpClearinghouse {
     function decreaseOrClose(bytes32 marketId, address trader, int256 sizeDeltaE18)
         external
         returns (uint256 marginReleased);
-    function applyOrderFill(
-        bytes32 marketId,
-        address trader,
-        int256 sizeDeltaE18,
-        uint256 fillPriceE18,
-        uint256 maxFee
-    ) external returns (bytes32 positionKey);
+    function applyOrderFill(bytes32 marketId, address trader, int256 sizeDeltaE18, uint256 fillPriceE18, uint256 maxFee)
+        external
+        returns (bytes32 positionKey);
     function liquidatePosition(bytes32 marketId, address trader, uint256 maxSizeToCloseAbsE18)
         external
         returns (uint256 marginReleased, int256 pnl, uint256 badDebt);
@@ -47,4 +43,6 @@ interface IFxPerpClearinghouse {
     function openInterestShort(bytes32 marketId) external view returns (uint256);
     function maxOpenInterest(bytes32 marketId) external view returns (uint256);
     function marginAccount() external view returns (address);
+    function fundingEngine() external view returns (address);
+    function settleTraderFunding(address trader) external returns (int256 fundingPaid);
 }
