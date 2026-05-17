@@ -63,12 +63,14 @@ import {ITelaranaGatewayHubHook} from "../interfaces/ITelaranaGatewayHubHook.sol
 ///   `amountOut = amountIn * mid * (1 - spread)`
 ///
 /// implemented as two `mulDiv` calls against OZ `Math.mulDiv` (overflow-safe
-/// 512-bit intermediate). Same arithmetic shape used by:
-///   * Synthetix v2 `Exchanger.exchange` (synth source amount * exchangeRate
-///     * (UNIT - exchangeFee) / UNIT — see SIP-198 / Exchanger.sol).
-///   * GMX v1 swap path with `priceImpactDelta = 0`
-///     (gmx-contracts/Vault.sol::swap — without price impact, swaps reduce
-///     to `usdOut = usdIn * (1 - swapFeeBps/BASIS_POINTS_DIVISOR)`).
+/// 512-bit intermediate). Same arithmetic shape used by vendored references:
+///   * `contracts/lib/gmx-synthetics/contracts/swap/SwapUtils.sol`, which
+///     computes `amountOut = amountIn * tokenInPrice / tokenOutPrice` after
+///     fees and impact adjustments.
+///   * `contracts/lib/gmx-synthetics/contracts/pricing/SwapPricingUtils.sol`,
+///     which applies swap fee factors before output calculation.
+///   * `contracts/lib/synthetix-v3/markets/spot-market/contracts/storage/Price.sol`,
+///     which provides the decimal scaling pattern used for the v0.2 follow-up.
 ///
 /// No bonding curve, no integrals, no in-house derivations. Per the
 /// project's "no novel math in production" rule.
@@ -78,7 +80,7 @@ import {ITelaranaGatewayHubHook} from "../interfaces/ITelaranaGatewayHubHook.sol
 /// This contract is the pre-hook surface. When Uniswap v4 PoolManager
 /// ships on Arc, this surface gets wrapped by an inheriting v4 hook
 /// modeled on OZ's `BaseCustomCurve`
-/// (`references/openzeppelin-uniswap-hooks/src/base/BaseCustomCurve.sol`).
+/// (`contracts/lib/openzeppelin-uniswap-hooks/src/base/BaseCustomCurve.sol`).
 /// At that point `_getUnspecifiedAmount` will compute the same
 /// oracle-anchored quote this contract computes today, and the hook bits
 /// will gate access. Until then, this executor stays keeper-driven via
