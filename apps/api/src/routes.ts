@@ -54,6 +54,38 @@ async function parseJson<TSchema extends z.ZodTypeAny>(schema: TSchema, c: Conte
   return schema.parse(body);
 }
 
+function ponderApiUrl(): string | null {
+  return process.env.PONDER_API_URL ?? process.env.PONDER_BASE_URL ?? null;
+}
+
+async function fetchPonderJson(path: string): Promise<unknown | null> {
+  const base = ponderApiUrl();
+  if (!base) return null;
+  try {
+    const response = await fetch(new URL(path, base));
+    if (!response.ok) {
+      log.warn(
+        JSON.stringify({
+          msg: "ponder api request failed",
+          path,
+          status: response.status,
+        })
+      );
+      return null;
+    }
+    return response.json();
+  } catch (error) {
+    log.warn(
+      JSON.stringify({
+        msg: "ponder api request failed",
+        path,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    );
+    return null;
+  }
+}
+
 async function buildBorrowQuotePayload(body: z.output<typeof quoteBorrowSchema>) {
   const market = await getMarketByPair(body);
   if (!market) return null;
@@ -338,20 +370,30 @@ export function createRoutes() {
     );
   });
 
-  app.get("/fx-telarana/liquidations/candidates", (c) => {
+  app.get("/fx-telarana/liquidations/candidates", async (c) => {
     const query = liquidationCandidatesQuerySchema.parse({
       hubChainId: c.req.query("hubChainId") ? Number(c.req.query("hubChainId")) : undefined,
       marketId: c.req.query("marketId"),
       limit: c.req.query("limit"),
       cursor: c.req.query("cursor"),
     });
-    return json(c, { ...query, source: "ponder_pending", candidates: [] });
+    const search = new URLSearchParams();
+    search.set("limit", String(query.limit));
+    if (query.hubChainId) search.set("hubChainId", String(query.hubChainId));
+    if (query.marketId) search.set("marketId", query.marketId);
+    const indexed = await fetchPonderJson(`/fx-telarana/liquidations/candidates?${search.toString()}`);
+    return json(c, indexed ?? { ...query, source: "ponder_unconfigured", candidates: [] });
   });
 
   app.get(
     "/fx-telarana/liquidations/density",
     requireX402Payment({ endpoint: "liquidation_density" }),
-    (c) => json(c, { density: [], source: "ponder_pending" })
+    async (c) => {
+      const search = new URLSearchParams();
+      if (c.req.query("hubChainId")) search.set("hubChainId", c.req.query("hubChainId")!);
+      const indexed = await fetchPonderJson(`/fx-telarana/liquidations/density?${search.toString()}`);
+      return json(c, indexed ?? { density: [], source: "ponder_unconfigured" });
+    }
   );
 
   app.get("/fx-telarana/tvl", async (c) => {
@@ -378,9 +420,10 @@ export function createRoutes() {
     });
   });
 
-  app.get("/fx-telarana/tvl/defillama", async (c) =>
-    json(c, buildInternalDefiLlamaPayload(await listMarkets()))
-  );
+  app.get("/fx-telarana/tvl/defillama", async (c) => {
+    const indexed = await fetchPonderJson("/fx-telarana/tvl/defillama");
+    return json(c, indexed ?? buildInternalDefiLlamaPayload(await listMarkets()));
+  });
 
   return app;
 }

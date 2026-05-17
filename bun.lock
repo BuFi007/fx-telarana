@@ -113,6 +113,8 @@
       "version": "0.1.0",
       "dependencies": {
         "@fx-telarana/contracts": "workspace:*",
+        "@fx-telarana/core": "workspace:*",
+        "drizzle-orm": "^0.41.0",
         "hono": "^4.12.7",
         "ponder": "^0.16.6",
         "viem": "^2.31.0",

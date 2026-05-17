@@ -3,6 +3,7 @@ export * from "./chains.js";
 export * from "./clients.js";
 export * from "./constants.js";
 export * from "./errors.js";
+export * from "./intent-verification.js";
 export * from "./intents.js";
 export * from "./liquidations.js";
 export * from "./market-view.js";

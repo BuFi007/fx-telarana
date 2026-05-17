@@ -124,6 +124,13 @@ export function buildSupplyIntent(input: BaseIntentInput & { assets: bigint }) {
   };
 }
 
+export type FxTelaranaIntentTypedData =
+  | ReturnType<typeof buildSupplyIntent>
+  | ReturnType<typeof buildBorrowIntent>
+  | ReturnType<typeof buildRepayIntent>
+  | ReturnType<typeof buildWithdrawIntent>
+  | ReturnType<typeof buildSupplyCollateralIntent>;
+
 export function buildBorrowIntent(input: BaseIntentInput & { borrowAssets: bigint; receiver: Address }) {
   return {
     domain: domainFor(input.chainId),
