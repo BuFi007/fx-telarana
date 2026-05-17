@@ -27,6 +27,13 @@ interface ITelaranaGatewayHubHook {
         SETTLED
     }
 
+    enum GatewayContextProofMode {
+        NONE,
+        SIGNED_INTENT,
+        HYPERLANE,
+        SIGNED_INTENT_OR_HYPERLANE
+    }
+
     struct GatewayHubRoute {
         uint32 sourceDomain;
         uint32 destinationDomain;
@@ -68,6 +75,11 @@ interface ITelaranaGatewayHubHook {
         uint256 minAmountOut;
         bytes32 spotRouteId;
         bytes32 metadataRef;
+    }
+
+    struct GatewayContextProof {
+        uint8 version;
+        bytes sourceDepositorSignature;
     }
 
     event GatewayHubRouteConfigured(
@@ -137,6 +149,16 @@ interface ITelaranaGatewayHubHook {
 
     event GatewaySignerModeUpdated(bytes32 indexed routeId, GatewaySignerMode signerMode, bool allowed);
 
+    event GatewayContextProofModeUpdated(bytes32 indexed routeId, GatewayContextProofMode mode);
+
+    event GatewayContextHashProven(
+        bytes32 indexed requestId, bytes32 indexed routeId, uint32 indexed origin, bytes32 sender, bytes32 contextHash
+    );
+
+    event GatewayContextMailboxSet(address indexed mailbox);
+
+    event GatewayContextTrustedSenderSet(uint32 indexed origin, bytes32 indexed sender, bool trusted);
+
     function gatewayRoute(bytes32 routeId) external view returns (GatewayHubRoute memory route);
 
     function gatewayRequestState(bytes32 requestId) external view returns (GatewayRequestState state);
@@ -146,6 +168,16 @@ interface ITelaranaGatewayHubHook {
     function setGatewayRoute(bytes32 routeId, GatewayHubRoute calldata route) external;
 
     function setGatewaySignerMode(bytes32 routeId, GatewaySignerMode signerMode, bool allowed) external;
+
+    function setGatewayContextProofMode(bytes32 routeId, GatewayContextProofMode mode) external;
+
+    function setGatewayContextMailbox(address mailbox) external;
+
+    function setGatewayContextTrustedSender(uint32 origin, bytes32 sender, bool trusted) external;
+
+    function gatewayMintContextStructHash(GatewayMintContext calldata context) external pure returns (bytes32);
+
+    function gatewayMintContextDigest(GatewayMintContext calldata context) external view returns (bytes32);
 
     function receiveGatewayMint(
         bytes calldata attestationPayload,

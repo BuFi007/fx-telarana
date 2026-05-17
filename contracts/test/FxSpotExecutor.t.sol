@@ -94,6 +94,26 @@ contract MockTelaranaGatewayHubHook is ITelaranaGatewayHubHook {
         revert("unused");
     }
 
+    function setGatewayContextProofMode(bytes32, GatewayContextProofMode) external pure {
+        revert("unused");
+    }
+
+    function setGatewayContextMailbox(address) external pure {
+        revert("unused");
+    }
+
+    function setGatewayContextTrustedSender(uint32, bytes32, bool) external pure {
+        revert("unused");
+    }
+
+    function gatewayMintContextStructHash(GatewayMintContext calldata) external pure returns (bytes32) {
+        return bytes32(0);
+    }
+
+    function gatewayMintContextDigest(GatewayMintContext calldata) external pure returns (bytes32) {
+        return bytes32(0);
+    }
+
     function receiveGatewayMint(bytes calldata, bytes calldata, GatewayMintContext calldata)
         external
         pure

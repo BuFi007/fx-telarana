@@ -22,6 +22,7 @@ import {TelaranaGatewayHubHook} from "../src/hub/TelaranaGatewayHubHook.sol";
 ///
 /// Post-deploy wiring (separate broadcast — see scripts/configure-tgh.ts):
 ///   setGatewayRoute(routeId, ...) for each direction TGH should accept
+///   setGatewayContextProofMode(routeId, SIGNED_INTENT_OR_HYPERLANE) for receipt parity
 ///   grantRole(EXECUTOR_ROLE, keeperEOA)
 contract DeployTelaranaGatewayHubHook is Script {
     function run() external {
@@ -29,8 +30,8 @@ contract DeployTelaranaGatewayHubHook is Script {
         address deployer = vm.addr(pk);
 
         address gatewayMinter = vm.envAddress("GATEWAY_MINTER");
-        address usdc          = vm.envAddress("USDC");
-        address initialAdmin  = vm.envOr("INITIAL_ADMIN", deployer);
+        address usdc = vm.envAddress("USDC");
+        address initialAdmin = vm.envOr("INITIAL_ADMIN", deployer);
 
         console2.log("============================================");
         console2.log("Deploying TelaranaGatewayHubHook");
@@ -41,9 +42,7 @@ contract DeployTelaranaGatewayHubHook is Script {
         console2.log("initialAdmin   ", initialAdmin);
 
         vm.startBroadcast(pk);
-        TelaranaGatewayHubHook hook = new TelaranaGatewayHubHook(
-            usdc, gatewayMinter, initialAdmin
-        );
+        TelaranaGatewayHubHook hook = new TelaranaGatewayHubHook(usdc, gatewayMinter, initialAdmin);
         vm.stopBroadcast();
 
         console2.log("============================================");
@@ -53,8 +52,9 @@ contract DeployTelaranaGatewayHubHook is Script {
         console2.log("Next steps (do NOT skip):");
         console2.log("  1. Save the address into deployments/<chain>.json + hub-config-<chain>.json");
         console2.log("  2. Configure GatewayHubRoute via setGatewayRoute for each route this hook accepts");
-        console2.log("  3. Grant EXECUTOR_ROLE to the keeper EOA that will call receiveGatewayMint");
-        console2.log("  4. Update the off-chain BurnIntent signer to target this hook as");
+        console2.log("  3. Configure GatewayContextProofMode for every spot-FX route");
+        console2.log("  4. Grant EXECUTOR_ROLE to the keeper EOA that will call receiveGatewayMint");
+        console2.log("  5. Update the off-chain BurnIntent signer to target this hook as");
         console2.log("     destinationRecipient + destinationCaller for spot-FX BurnIntents");
     }
 }
