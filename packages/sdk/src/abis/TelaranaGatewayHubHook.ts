@@ -50,6 +50,19 @@ export const TelaranaGatewayHubHookAbi = [
   },
   {
     "type": "function",
+    "name": "GATEWAY_CONTEXT_PROOF_VERSION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "GATEWAY_MINTER",
     "inputs": [],
     "outputs": [
@@ -57,6 +70,19 @@ export const TelaranaGatewayHubHookAbi = [
         "name": "",
         "type": "address",
         "internalType": "contract ICircleGatewayMinter"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "GATEWAY_MINT_CONTEXT_TYPEHASH",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "stateMutability": "view"
@@ -86,6 +112,267 @@ export const TelaranaGatewayHubHookAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "eip712Domain",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "fields",
+        "type": "bytes1",
+        "internalType": "bytes1"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "version",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "chainId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "verifyingContract",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "extensions",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "gatewayContextMailbox",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "gatewayContextProofMode",
+    "inputs": [
+      {
+        "name": "routeId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "mode",
+        "type": "uint8",
+        "internalType": "enum ITelaranaGatewayHubHook.GatewayContextProofMode"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "gatewayContextTrustedSender",
+    "inputs": [
+      {
+        "name": "origin",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "sender",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "trusted",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "gatewayMintContextDigest",
+    "inputs": [
+      {
+        "name": "context",
+        "type": "tuple",
+        "internalType": "struct ITelaranaGatewayHubHook.GatewayMintContext",
+        "components": [
+          {
+            "name": "routeId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "requestId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "action",
+            "type": "uint8",
+            "internalType": "enum ITelaranaGatewayHubHook.GatewayHubAction"
+          },
+          {
+            "name": "sourceDepositor",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "sourceSigner",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "recipient",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "tokenOut",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "amount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "minAmountOut",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "spotRouteId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "metadataRef",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "hookData",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "gatewayMintContextStructHash",
+    "inputs": [
+      {
+        "name": "context",
+        "type": "tuple",
+        "internalType": "struct ITelaranaGatewayHubHook.GatewayMintContext",
+        "components": [
+          {
+            "name": "routeId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "requestId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "action",
+            "type": "uint8",
+            "internalType": "enum ITelaranaGatewayHubHook.GatewayHubAction"
+          },
+          {
+            "name": "sourceDepositor",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "sourceSigner",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "recipient",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "tokenOut",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "amount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "minAmountOut",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "spotRouteId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "metadataRef",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "hookData",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "pure"
   },
   {
     "type": "function",
@@ -297,6 +584,29 @@ export const TelaranaGatewayHubHookAbi = [
   },
   {
     "type": "function",
+    "name": "handle",
+    "inputs": [
+      {
+        "name": "origin",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "sender",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "messageBody",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
     "name": "hasRole",
     "inputs": [
       {
@@ -353,6 +663,25 @@ export const TelaranaGatewayHubHookAbi = [
         "name": "",
         "type": "bool",
         "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "provenGatewayMintContextHash",
+    "inputs": [
+      {
+        "name": "requestId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "contextHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "stateMutability": "view"
@@ -486,6 +815,60 @@ export const TelaranaGatewayHubHookAbi = [
   },
   {
     "type": "function",
+    "name": "setGatewayContextMailbox",
+    "inputs": [
+      {
+        "name": "mailbox",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setGatewayContextProofMode",
+    "inputs": [
+      {
+        "name": "routeId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "mode",
+        "type": "uint8",
+        "internalType": "enum ITelaranaGatewayHubHook.GatewayContextProofMode"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setGatewayContextTrustedSender",
+    "inputs": [
+      {
+        "name": "origin",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "sender",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "trusted",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setGatewayRoute",
     "inputs": [
       {
@@ -610,6 +993,12 @@ export const TelaranaGatewayHubHookAbi = [
   },
   {
     "type": "event",
+    "name": "EIP712DomainChanged",
+    "inputs": [],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "GatewayAtomicFxSwapRequested",
     "inputs": [
       {
@@ -696,6 +1085,100 @@ export const TelaranaGatewayHubHookAbi = [
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "GatewayContextHashProven",
+    "inputs": [
+      {
+        "name": "requestId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "routeId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "origin",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "sender",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "contextHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "GatewayContextMailboxSet",
+    "inputs": [
+      {
+        "name": "mailbox",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "GatewayContextProofModeUpdated",
+    "inputs": [
+      {
+        "name": "routeId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "mode",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "enum ITelaranaGatewayHubHook.GatewayContextProofMode"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "GatewayContextTrustedSenderSet",
+    "inputs": [
+      {
+        "name": "origin",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "sender",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "trusted",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
       }
     ],
     "anonymous": false
@@ -1109,6 +1592,43 @@ export const TelaranaGatewayHubHookAbi = [
   },
   {
     "type": "error",
+    "name": "GatewayContextProofMismatch",
+    "inputs": [
+      {
+        "name": "requestId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "expected",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "actual",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "GatewayContextProofMissing",
+    "inputs": [
+      {
+        "name": "requestId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidGatewayContextProof",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidMintAmount",
     "inputs": [
       {
@@ -1136,8 +1656,24 @@ export const TelaranaGatewayHubHookAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidShortString",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidSpotRequest",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotMailbox",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
     "type": "error",
@@ -1222,6 +1758,17 @@ export const TelaranaGatewayHubHookAbi = [
   },
   {
     "type": "error",
+    "name": "StringTooLong",
+    "inputs": [
+      {
+        "name": "str",
+        "type": "string",
+        "internalType": "string"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "UnauthorizedRouteCaller",
     "inputs": [
       {
@@ -1240,6 +1787,22 @@ export const TelaranaGatewayHubHookAbi = [
     "type": "error",
     "name": "UnexpectedHookData",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "UntrustedGatewayContextSender",
+    "inputs": [
+      {
+        "name": "origin",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "sender",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
   },
   {
     "type": "error",

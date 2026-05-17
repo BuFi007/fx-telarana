@@ -15,6 +15,12 @@ import {
   FxGhostSpokeRouterAbi,
   FxMarketRegistryAbi,
   FxOracleAbi,
+  FxFundingEngineAbi,
+  FxHealthCheckerAbi,
+  FxLiquidationEngineAbi,
+  FxMarginAccountAbi,
+  FxOrderSettlementAbi,
+  FxPerpClearinghouseAbi,
   FxSpokeAbi,
   FxSpokeIntentRouterAbi,
   FxSwapHookAbi,
@@ -86,6 +92,15 @@ describe("address registry", () => {
       mailbox: "0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9",
       interchainGasPaymaster: "0x0000000000000000000000000000000000000000",
       interchainAccountRouter: "0x113A539625D208b5EcC59f300Be14b9b3508E559",
+    });
+    expect(a.fxPerps).toMatchObject({
+      clearinghouse: "0x25cDf2ad4Fd446e85273c4D7C77a03F22C742865",
+      marginAccount: "0x1869D0253286dF29ce0AB8d29207772C7fD9dc35",
+      fundingEngine: "0x725822e8BC6edbcBa52914149e25f2671290C6D2",
+      healthChecker: "0x9cc0D71e2Af1532e74C2Af8aE7248ACB501039d5",
+      liquidationEngine: "0x01f71c1E74350633bBC9d554ca35DA40412DCFB7",
+      orderSettlement: "0x49ad97Fa2b67252373f4683bD4a4B49AA3AF5565",
+      keeperAdmin: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
     });
   });
 
@@ -709,6 +724,37 @@ describe("ABI exports", () => {
     expect(fnNames).toContain("receiveGatewayMint");
     expect(fnNames).toContain("markGatewayAtomicFxSwapSettled");
     expect(fnNames).toContain("gatewayReceipt");
+  });
+
+  test("Phase B-E perp ABI exports expose trading and risk surfaces", () => {
+    const clearinghouseFunctions = FxPerpClearinghouseAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(clearinghouseFunctions).toContain("configureMarket");
+    expect(clearinghouseFunctions).toContain("quoteFee");
+    expect(clearinghouseFunctions).toContain("openOrIncrease");
+    expect(clearinghouseFunctions).toContain("applyOrderFill");
+    expect(clearinghouseFunctions).toContain("liquidatePosition");
+
+    const marginFunctions = FxMarginAccountAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(marginFunctions).toContain("depositMargin");
+    expect(marginFunctions).toContain("depositProtocolLiquidity");
+
+    const fundingFunctions = FxFundingEngineAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(fundingFunctions).toContain("configureFunding");
+    expect(fundingFunctions).toContain("pokeFundingRate");
+    expect(fundingFunctions).toContain("settleFunding");
+
+    const healthFunctions = FxHealthCheckerAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(healthFunctions).toContain("healthFactor");
+    expect(healthFunctions).toContain("isLiquidatable");
+
+    const liquidationFunctions = FxLiquidationEngineAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(liquidationFunctions).toContain("configureLiquidation");
+    expect(liquidationFunctions).toContain("flagAccount");
+    expect(liquidationFunctions).toContain("liquidate");
+
+    const settlementFunctions = FxOrderSettlementAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(settlementFunctions).toContain("hashOrder");
+    expect(settlementFunctions).toContain("settleMatch");
   });
 
   test("Bufi pass ABI exposes the Ghost Mode verifier surface", () => {
