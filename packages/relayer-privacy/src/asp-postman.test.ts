@@ -177,9 +177,10 @@ describe("PoolRegistered ABI alignment with Solidity emission", () => {
     });
 
     expect(decoded.eventName).toBe("PoolRegistered");
-    expect(decoded.args._pool.toLowerCase()).toBe(pool.toLowerCase());
-    expect(decoded.args._asset.toLowerCase()).toBe(asset.toLowerCase());
-    expect(decoded.args._scope).toBe(scope);
+    const args = decoded.args!;
+    expect(args._pool.toLowerCase()).toBe(pool.toLowerCase());
+    expect(args._asset.toLowerCase()).toBe(asset.toLowerCase());
+    expect(args._scope).toBe(scope);
   });
 
   test("an incorrectly-indexed ABI fails to decode (regression guard)", () => {

@@ -71,6 +71,13 @@ const ENTRYPOINT_ABI = [
     ],
     outputs: [{ name: "_index", type: "uint256" }],
   },
+  {
+    type: "function",
+    name: "latestRoot",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "_root", type: "uint256" }],
+  },
 ] as const;
 
 const PRIVACY_POOL_ABI = [
@@ -102,10 +109,17 @@ interface PostmanConfig {
    *  latency; setting it BELOW the first PoolRegistered event is also
    *  fine. Setting it ABOVE will lose history — see r2 finding HIGH. */
   fromBlock: bigint;
-  /** Confirmations to wait before treating a block as final. */
+  /** Confirmations to wait before treating a block as final. The same
+   *  value is used for both event scanning AND root publication so the
+   *  publish path is at least as conservative as the indexer
+   *  (codex-r4 HIGH). */
   finalityConfirmations: bigint;
   /** Maximum block range per `getContractEvents` call (RPC pagination). */
   maxRangePerCall: bigint;
+  /** Max consecutive publish failures before the loop aborts. 0 = never
+   *  abort (suitable for testnet operators who want manual triage).
+   *  codex-r4: prevents silent spin on permanent role loss. */
+  maxConsecutivePublishFailures: number;
   dryRun: boolean;
 }
 
@@ -120,11 +134,12 @@ function loadConfig(): PostmanConfig {
     rpcUrl,
     privateKey,
     entrypoint,
-    pollIntervalSeconds:   Number(Bun.env["POLL_INTERVAL_SECONDS"] ?? 30),
-    fromBlock:             BigInt(Bun.env["FROM_BLOCK"] ?? "0"),
-    finalityConfirmations: BigInt(Bun.env["FINALITY_CONFIRMATIONS"] ?? "5"),
-    maxRangePerCall:       BigInt(Bun.env["MAX_RANGE_PER_CALL"] ?? "5000"),
-    dryRun:                Bun.env["DRY_RUN"] === "true",
+    pollIntervalSeconds:           Number(Bun.env["POLL_INTERVAL_SECONDS"] ?? 30),
+    fromBlock:                     BigInt(Bun.env["FROM_BLOCK"] ?? "0"),
+    finalityConfirmations:         BigInt(Bun.env["FINALITY_CONFIRMATIONS"] ?? "5"),
+    maxRangePerCall:               BigInt(Bun.env["MAX_RANGE_PER_CALL"] ?? "5000"),
+    maxConsecutivePublishFailures: Number(Bun.env["MAX_CONSECUTIVE_PUBLISH_FAILURES"] ?? 0),
+    dryRun:                        Bun.env["DRY_RUN"] === "true",
   };
 }
 
@@ -171,16 +186,21 @@ interface IndexerState {
   applied: Set<string>;
   /** The published Merkle tree (LeanIMT over Poseidon). */
   tree: LeanIMT<bigint>;
+  /** Tree mutated since the last successfully-confirmed updateRoot. */
   dirty: boolean;
+  /** Consecutive failed publish attempts. Codex-r4: lets the loop bail
+   *  on persistent failure (e.g. permanent loss of ASP_POSTMAN role). */
+  consecutivePublishFailures: number;
 }
 
 function newState(): IndexerState {
   return {
-    cursor:  0n,
-    pools:   [],
-    applied: new Set<string>(),
-    tree:    new LeanIMT<bigint>((a: bigint, b: bigint) => poseidon([a, b])),
-    dirty:   false,
+    cursor:                     0n,
+    pools:                      [],
+    applied:                    new Set<string>(),
+    tree:                       new LeanIMT<bigint>((a: bigint, b: bigint) => poseidon([a, b])),
+    dirty:                      false,
+    consecutivePublishFailures: 0,
   };
 }
 
@@ -306,6 +326,36 @@ async function main(): Promise<void> {
         state.cursor = finalized;
       }
 
+      // Codex-r4 HIGH: reconcile against on-chain `latestRoot()` BEFORE
+      // deciding whether to publish. If a previously-cleared root was
+      // reorg'd out, or a publish silently failed, the on-chain root
+      // will differ from our in-memory tree.root → re-mark dirty and
+      // retry on this tick.
+      if (state.tree.size > 0 && !state.dirty) {
+        try {
+          const onchain = await publicClient.readContract({
+            address:      cfg.entrypoint,
+            abi:          ENTRYPOINT_ABI,
+            functionName: "latestRoot",
+          });
+          if (onchain !== state.tree.root) {
+            log("warn", "on-chain root drift detected; re-marking dirty", {
+              onchain: `0x${onchain.toString(16)}`,
+              local:   `0x${state.tree.root.toString(16)}`,
+            });
+            state.dirty = true;
+          }
+        } catch (err) {
+          // Pre-publish: latestRoot() reverts with NoRootsAvailable when
+          // no root has ever been pushed. That's normal on a fresh chain
+          // — just publish.
+          if (!String(err).includes("NoRootsAvailable")) {
+            log("warn", "latestRoot() reconcile failed (continuing)", { err: String(err) });
+          }
+          state.dirty = true;
+        }
+      }
+
       if (state.dirty && state.tree.size > 0) {
         const root = state.tree.root;
         const cid = `permissive-root-${state.tree.size}-${Date.now().toString(36)}`
@@ -316,14 +366,13 @@ async function main(): Promise<void> {
         });
         if (cfg.dryRun) {
           state.dirty = false;
+          state.consecutivePublishFailures = 0;
         } else {
-          // Codex-r3 HIGH #2: only clear `dirty` AFTER a successful
-          // mined receipt. `writeContract` only proves the tx was
-          // submitted to the mempool; reverts, drops, replacements, or
-          // nonce gaps would otherwise leave on-chain `latestRoot()`
-          // stale while the in-memory state believes the root was
-          // published. Subsequent ticks would not retry until another
-          // deposit re-dirtied the tree.
+          // Codex-r3 HIGH #2: receipt-confirmed publication.
+          // Codex-r4 HIGH: confirmations match the indexer's finality
+          // window so the publish path is at least as conservative as
+          // the scan path. A shallow reorg that flips the receipt
+          // status will not have cleared dirty here.
           const txHash = await walletClient.writeContract({
             chain: null,
             account,
@@ -332,21 +381,51 @@ async function main(): Promise<void> {
             functionName: "updateRoot",
             args: [root, cid],
           });
-          log("info", "updateRoot tx sent, awaiting receipt", { txHash });
-
-          const receipt = await publicClient.waitForTransactionReceipt({
-            hash: txHash,
-            confirmations: 1,
+          log("info", "updateRoot tx sent, awaiting finality", {
+            txHash, confirmations: cfg.finalityConfirmations,
           });
 
-          if (receipt.status !== "success") {
-            log("error", "updateRoot reverted — keeping dirty=true for retry", {
-              txHash, status: receipt.status,
+          let publishOk = false;
+          try {
+            const receipt = await publicClient.waitForTransactionReceipt({
+              hash: txHash,
+              confirmations: Number(cfg.finalityConfirmations),
             });
-            // Do NOT clear state.dirty — next tick retries.
-          } else {
-            log("info", "updateRoot confirmed", { txHash, block: String(receipt.blockNumber) });
+            publishOk = receipt.status === "success";
+            if (!publishOk) {
+              log("error", "updateRoot receipt non-success", {
+                txHash, status: receipt.status,
+              });
+            } else {
+              log("info", "updateRoot finalized", {
+                txHash, block: String(receipt.blockNumber),
+                confirmations: cfg.finalityConfirmations,
+              });
+            }
+          } catch (err) {
+            log("error", "updateRoot wait failed (will retry)", {
+              txHash, err: String(err),
+            });
+          }
+
+          if (publishOk) {
             state.dirty = false;
+            state.consecutivePublishFailures = 0;
+          } else {
+            state.consecutivePublishFailures += 1;
+            log("warn", "publish failed; keeping dirty=true", {
+              consecutiveFailures: state.consecutivePublishFailures,
+              maxBeforeAbort:      cfg.maxConsecutivePublishFailures,
+            });
+            if (
+              cfg.maxConsecutivePublishFailures > 0 &&
+              state.consecutivePublishFailures >= cfg.maxConsecutivePublishFailures
+            ) {
+              log("error", "MAX_CONSECUTIVE_PUBLISH_FAILURES exceeded — aborting", {
+                count: state.consecutivePublishFailures,
+              });
+              process.exit(2);
+            }
           }
         }
       }
