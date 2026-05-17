@@ -1,0 +1,438 @@
+#!/usr/bin/env bun
+// SPDX-License-Identifier: Apache-2.0
+
+import {
+  concatHex,
+  defineChain,
+  http,
+  keccak256,
+  parseAbi,
+  toHex,
+  type Address,
+  type Hex,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { createPublicClient, createWalletClient } from "viem";
+
+const ARC_RPC_URL = process.env.ARC_RPC_URL ?? "https://rpc.testnet.arc.network";
+const DEPLOYER_PRIVATE_KEY = normalizePrivateKey(process.env.DEPLOYER_PRIVATE_KEY);
+
+const arcTestnet = defineChain({
+  id: 5_042_002,
+  name: "Arc Testnet",
+  nativeCurrency: { name: "Arc Testnet Gas", symbol: "ETH", decimals: 18 },
+  rpcUrls: { default: { http: [ARC_RPC_URL] } },
+});
+
+const ADDR = {
+  usdc: "0x3600000000000000000000000000000000000000" as Address,
+  eurc: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a" as Address,
+  pyth: "0x2880aB155794e7179c9eE2e38200202908C17B43" as Address,
+  oracle: "0x77b3A3B420dB98B01085b8C46a753Ed9879e2865" as Address,
+  clearinghouse: "0x25cDf2ad4Fd446e85273c4D7C77a03F22C742865" as Address,
+  margin: "0x1869D0253286dF29ce0AB8d29207772C7fD9dc35" as Address,
+  funding: "0x725822e8BC6edbcBa52914149e25f2671290C6D2" as Address,
+  health: "0x9cc0D71e2Af1532e74C2Af8aE7248ACB501039d5" as Address,
+  liquidation: "0x01f71c1E74350633bBC9d554ca35DA40412DCFB7" as Address,
+  settlement: "0x49ad97Fa2b67252373f4683bD4a4B49AA3AF5565" as Address,
+};
+
+const FEEDS = {
+  usdc: "eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
+  eurc: "76fa85158bf14ede77087fe3ae472f66213f6ea2f5b411cb2de472794990fa5c",
+};
+
+const MARKET_ID = "0x565a6e2fab61800aa18813603b5b485af5bed7dea1aa0845bdaa61502063cab8" as Hex;
+const SIZE_E18 = 10_000_000_000_000_000n; // 0.01 EURC
+const HEALTHY_MARGIN = 250_000n; // 0.25 USDC
+const LIQUIDATION_MARGIN = 100_000n; // 0.10 USDC
+const ORDER_TYPE_LIMIT = 1;
+const FLAG_POST_ONLY = 2;
+
+const erc20Abi = parseAbi([
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function balanceOf(address account) view returns (uint256)",
+]);
+
+const pythAbi = parseAbi([
+  "function getUpdateFee(bytes[] updateData) view returns (uint256)",
+]);
+
+const oracleAbi = parseAbi([
+  "function getMidWithUpdatePyth(address base, address quote, bytes[] pythUpdate) payable returns (uint256,uint256)",
+  "function getMid(address base, address quote) view returns (uint256,uint256)",
+]);
+
+const marginAbi = parseAbi([
+  "function depositMargin(address trader, uint256 amount)",
+  "function marginOf(address trader) view returns (uint256)",
+  "function reservedMarginOf(address trader) view returns (uint256)",
+  "function protocolLiquidity() view returns (uint256)",
+]);
+
+const clearinghouseAbi = parseAbi([
+  "function quoteFee(bytes32 marketId, address trader, int256 sizeDeltaE18) view returns (uint256 feeAmount, uint256 priceE18)",
+  "function position(bytes32 marketId, address trader) view returns ((int256 sizeE18,uint256 entryPriceE18,uint256 marginReserved,uint64 lastFundingVersion))",
+  "function openInterestLong(bytes32 marketId) view returns (uint256)",
+  "function openInterestShort(bytes32 marketId) view returns (uint256)",
+]);
+
+const settlementAbi = parseAbi([
+  "function hashOrder((address trader,bytes32 marketId,int256 sizeDeltaE18,uint256 priceE18,uint8 orderType,uint8 flags,uint64 nonce,uint64 deadline) order) view returns (bytes32)",
+  "function settleMatch((address trader,bytes32 marketId,int256 sizeDeltaE18,uint256 priceE18,uint8 orderType,uint8 flags,uint64 nonce,uint64 deadline) maker, bytes makerSig, (address trader,bytes32 marketId,int256 sizeDeltaE18,uint256 priceE18,uint8 orderType,uint8 flags,uint64 nonce,uint64 deadline) taker, bytes takerSig, uint256 fillSizeE18, uint256 fillPriceE18)",
+]);
+
+const fundingAbi = parseAbi([
+  "function pokeFundingRate(bytes32 marketId)",
+  "function fundingState(bytes32 marketId) view returns (uint64 currentVersion,uint256 lastUpdate,int256 currentRateE18PerSecond,int256 cumulativeFundingE18)",
+]);
+
+const healthAbi = parseAbi([
+  "function healthFactor(bytes32 marketId, address trader) view returns (uint256)",
+  "function isLiquidatable(bytes32 marketId, address trader) view returns (bool)",
+]);
+
+const liquidationAbi = parseAbi([
+  "function flagAccount(bytes32 marketId, address trader)",
+  "function liquidate(bytes32 marketId, address trader, uint256 maxSizeToCloseAbsE18) returns (uint256 liquidatorReward,int256 socializedLoss)",
+]);
+
+const signedOrderTypes = {
+  SignedOrder: [
+    { name: "trader", type: "address" },
+    { name: "marketId", type: "bytes32" },
+    { name: "sizeDeltaE18", type: "int256" },
+    { name: "priceE18", type: "uint256" },
+    { name: "orderType", type: "uint8" },
+    { name: "flags", type: "uint8" },
+    { name: "nonce", type: "uint64" },
+    { name: "deadline", type: "uint64" },
+  ],
+} as const;
+
+type SignedOrder = {
+  trader: Address;
+  marketId: Hex;
+  sizeDeltaE18: bigint;
+  priceE18: bigint;
+  orderType: number;
+  flags: number;
+  nonce: bigint;
+  deadline: bigint;
+};
+
+const deployer = privateKeyToAccount(DEPLOYER_PRIVATE_KEY);
+const taker = privateKeyToAccount(derivePrivateKey("arc-perp-smoke:taker"));
+const victim = privateKeyToAccount(derivePrivateKey("arc-perp-smoke:victim"));
+const hedge = privateKeyToAccount(derivePrivateKey("arc-perp-smoke:hedge"));
+
+const publicClient = createPublicClient({ chain: arcTestnet, transport: http(ARC_RPC_URL) });
+const walletClient = createWalletClient({ account: deployer, chain: arcTestnet, transport: http(ARC_RPC_URL) });
+
+async function main() {
+  const chainId = await publicClient.getChainId();
+  if (chainId !== arcTestnet.id) throw new Error(`wrong chain: ${chainId}`);
+
+  console.log(`admin=${deployer.address}`);
+  console.log(`taker=${taker.address}`);
+  console.log(`victim=${victim.address}`);
+  console.log(`hedge=${hedge.address}`);
+
+  await refreshPyth();
+  const [midE18] = await publicClient.readContract({
+    address: ADDR.oracle,
+    abi: oracleAbi,
+    functionName: "getMid",
+    args: [ADDR.eurc, ADDR.usdc],
+  });
+  console.log(`oracleMidE18=${midE18}`);
+
+  const [feeAmount, quotePrice] = await publicClient.readContract({
+    address: ADDR.clearinghouse,
+    abi: clearinghouseAbi,
+    functionName: "quoteFee",
+    args: [MARKET_ID, deployer.address, SIZE_E18],
+  });
+  console.log(`quoteFee fee=${feeAmount} priceE18=${quotePrice}`);
+
+  await approveIfNeeded(ADDR.margin, HEALTHY_MARGIN * 2n + LIQUIDATION_MARGIN * 2n);
+  await depositMargin(deployer.address, HEALTHY_MARGIN);
+  await depositMargin(taker.address, HEALTHY_MARGIN);
+  await depositMargin(victim.address, LIQUIDATION_MARGIN);
+  await depositMargin(hedge.address, LIQUIDATION_MARGIN);
+
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  const deadline = now + 3600n;
+  const nonceBase = BigInt(Date.now());
+
+  const makerOrder = order(deployer.address, SIZE_E18, quotePrice, nonceBase + 1n, deadline, FLAG_POST_ONLY);
+  const takerOrder = order(taker.address, -SIZE_E18, quotePrice, nonceBase + 2n, deadline, 0);
+  const makerSig = await signOrder(deployer, makerOrder);
+  const takerSig = await signOrder(taker, takerOrder);
+  console.log(`makerDigest=${await hashOrder(makerOrder)}`);
+  console.log(`takerDigest=${await hashOrder(takerOrder)}`);
+  const healthySettle = await walletClient.writeContract({
+    address: ADDR.settlement,
+    abi: settlementAbi,
+    functionName: "settleMatch",
+    args: [makerOrder, makerSig, takerOrder, takerSig, SIZE_E18, quotePrice],
+  });
+  await wait("healthy settleMatch", healthySettle);
+
+  const fundingPoke = await walletClient.writeContract({
+    address: ADDR.funding,
+    abi: fundingAbi,
+    functionName: "pokeFundingRate",
+    args: [MARKET_ID],
+  });
+  await wait("pokeFundingRate", fundingPoke);
+  const fundingState = await publicClient.readContract({
+    address: ADDR.funding,
+    abi: fundingAbi,
+    functionName: "fundingState",
+    args: [MARKET_ID],
+  });
+  console.log(
+    `fundingState version=${fundingState[0]} rate=${fundingState[2]} cumulative=${fundingState[3]}`,
+  );
+
+  const liquidationEntryPrice = quotePrice * 50n;
+  const victimOrder = order(victim.address, SIZE_E18, liquidationEntryPrice, nonceBase + 3n, deadline, FLAG_POST_ONLY);
+  const hedgeOrder = order(hedge.address, -SIZE_E18, liquidationEntryPrice, nonceBase + 4n, deadline, 0);
+  const victimSig = await signOrder(victim, victimOrder);
+  const hedgeSig = await signOrder(hedge, hedgeOrder);
+  console.log(`victimDigest=${await hashOrder(victimOrder)}`);
+  console.log(`hedgeDigest=${await hashOrder(hedgeOrder)}`);
+  const liquidationSettle = await walletClient.writeContract({
+    address: ADDR.settlement,
+    abi: settlementAbi,
+    functionName: "settleMatch",
+    args: [victimOrder, victimSig, hedgeOrder, hedgeSig, SIZE_E18, liquidationEntryPrice],
+  });
+  await wait("liquidation-candidate settleMatch", liquidationSettle);
+
+  await refreshPyth();
+  const healthFactor = await publicClient.readContract({
+    address: ADDR.health,
+    abi: healthAbi,
+    functionName: "healthFactor",
+    args: [MARKET_ID, victim.address],
+  });
+  const liquidatable = await publicClient.readContract({
+    address: ADDR.health,
+    abi: healthAbi,
+    functionName: "isLiquidatable",
+    args: [MARKET_ID, victim.address],
+  });
+  console.log(`liquidationScanner victimHealthFactorBps=${healthFactor} liquidatable=${liquidatable}`);
+  if (!liquidatable) throw new Error("liquidation scanner did not find the intentional candidate");
+
+  await liquidateVictimPass("liquidate");
+  let victimPosition = await readPosition(victim.address);
+  for (let i = 0; i < 3 && victimPosition.sizeE18 !== 0n; i++) {
+    await refreshPyth();
+    const stillLiquidatable = await publicClient.readContract({
+      address: ADDR.health,
+      abi: healthAbi,
+      functionName: "isLiquidatable",
+      args: [MARKET_ID, victim.address],
+    });
+    if (!stillLiquidatable) break;
+    console.log(`cleanupLiquidationPass=${i + 1} remainingSize=${victimPosition.sizeE18}`);
+    await liquidateVictimPass(`cleanup liquidate ${i + 1}`);
+    victimPosition = await readPosition(victim.address);
+  }
+  const longOi = await publicClient.readContract({
+    address: ADDR.clearinghouse,
+    abi: clearinghouseAbi,
+    functionName: "openInterestLong",
+    args: [MARKET_ID],
+  });
+  const shortOi = await publicClient.readContract({
+    address: ADDR.clearinghouse,
+    abi: clearinghouseAbi,
+    functionName: "openInterestShort",
+    args: [MARKET_ID],
+  });
+  const protocolLiquidity = await publicClient.readContract({
+    address: ADDR.margin,
+    abi: marginAbi,
+    functionName: "protocolLiquidity",
+  });
+  console.log(`victimPositionAfter size=${victimPosition.sizeE18} reserved=${victimPosition.marginReserved}`);
+  console.log(`openInterest long=${longOi} short=${shortOi}`);
+  console.log(`protocolLiquidity=${protocolLiquidity}`);
+}
+
+async function refreshPyth() {
+  const updateData = await fetchPythUpdate();
+  const fee = await publicClient.readContract({
+    address: ADDR.pyth,
+    abi: pythAbi,
+    functionName: "getUpdateFee",
+    args: [updateData],
+  });
+  const hash = await walletClient.writeContract({
+    address: ADDR.oracle,
+    abi: oracleAbi,
+    functionName: "getMidWithUpdatePyth",
+    args: [ADDR.eurc, ADDR.usdc, updateData],
+    value: fee,
+  });
+  await wait("oracle.getMidWithUpdatePyth", hash);
+}
+
+async function fetchPythUpdate(): Promise<Hex[]> {
+  const url =
+    `https://hermes.pyth.network/v2/updates/price/latest?ids[]=${FEEDS.usdc}&ids[]=${FEEDS.eurc}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`pyth hermes ${response.status}: ${await response.text()}`);
+  const body = await response.json() as { binary?: { data?: string[] } };
+  const updates = body.binary?.data;
+  if (!updates?.length) throw new Error("pyth hermes returned no update data");
+  return updates.map((item) => `0x${item}` as Hex);
+}
+
+async function approveIfNeeded(spender: Address, amount: bigint) {
+  const allowance = await publicClient.readContract({
+    address: ADDR.usdc,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: [deployer.address, spender],
+  });
+  if (allowance >= amount) return;
+  const hash = await walletClient.writeContract({
+    address: ADDR.usdc,
+    abi: erc20Abi,
+    functionName: "approve",
+    args: [spender, amount],
+  });
+  await wait("USDC.approve margin", hash);
+}
+
+async function depositMargin(trader: Address, amount: bigint) {
+  const hash = await walletClient.writeContract({
+    address: ADDR.margin,
+    abi: marginAbi,
+    functionName: "depositMargin",
+    args: [trader, amount],
+  });
+  await wait(`depositMargin ${trader}`, hash);
+  const margin = await publicClient.readContract({
+    address: ADDR.margin,
+    abi: marginAbi,
+    functionName: "marginOf",
+    args: [trader],
+  });
+  const reserved = await publicClient.readContract({
+    address: ADDR.margin,
+    abi: marginAbi,
+    functionName: "reservedMarginOf",
+    args: [trader],
+  });
+  console.log(`margin trader=${trader} balance=${margin} reserved=${reserved}`);
+}
+
+async function liquidateVictimPass(label: string) {
+  const position = await readPosition(victim.address);
+  const maxClose = abs(position.sizeE18);
+  if (maxClose === 0n) return;
+
+  const flagHash = await walletClient.writeContract({
+    address: ADDR.liquidation,
+    abi: liquidationAbi,
+    functionName: "flagAccount",
+    args: [MARKET_ID, victim.address],
+  });
+  await wait(`${label} flagAccount`, flagHash);
+
+  await refreshPyth();
+  const liquidationHash = await walletClient.writeContract({
+    address: ADDR.liquidation,
+    abi: liquidationAbi,
+    functionName: "liquidate",
+    args: [MARKET_ID, victim.address, maxClose],
+  });
+  await wait(label, liquidationHash);
+}
+
+async function readPosition(trader: Address) {
+  return publicClient.readContract({
+    address: ADDR.clearinghouse,
+    abi: clearinghouseAbi,
+    functionName: "position",
+    args: [MARKET_ID, trader],
+  });
+}
+
+function abs(value: bigint): bigint {
+  return value < 0n ? -value : value;
+}
+
+function order(
+  trader: Address,
+  sizeDeltaE18: bigint,
+  priceE18: bigint,
+  nonce: bigint,
+  deadline: bigint,
+  flags: number,
+): SignedOrder {
+  return {
+    trader,
+    marketId: MARKET_ID,
+    sizeDeltaE18,
+    priceE18,
+    orderType: ORDER_TYPE_LIMIT,
+    flags,
+    nonce,
+    deadline,
+  };
+}
+
+async function signOrder(account: typeof deployer, signedOrder: SignedOrder): Promise<Hex> {
+  return account.signTypedData({
+    domain: {
+      name: "TelaranaFxOrderSettlement",
+      version: "1",
+      chainId: arcTestnet.id,
+      verifyingContract: ADDR.settlement,
+    },
+    types: signedOrderTypes,
+    primaryType: "SignedOrder",
+    message: signedOrder,
+  });
+}
+
+async function hashOrder(signedOrder: SignedOrder): Promise<Hex> {
+  return publicClient.readContract({
+    address: ADDR.settlement,
+    abi: settlementAbi,
+    functionName: "hashOrder",
+    args: [signedOrder],
+  });
+}
+
+async function wait(label: string, hash: Hex) {
+  const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  if (receipt.status !== "success") throw new Error(`${label} reverted: ${hash}`);
+  console.log(`${label} tx=${hash}`);
+}
+
+function derivePrivateKey(label: string): Hex {
+  return keccak256(concatHex([DEPLOYER_PRIVATE_KEY, toHex(label)]));
+}
+
+function normalizePrivateKey(value: string | undefined): Hex {
+  if (!value) throw new Error("DEPLOYER_PRIVATE_KEY is required");
+  const normalized = value.startsWith("0x") ? value : `0x${value}`;
+  if (!/^0x[0-9a-fA-F]{64}$/.test(normalized)) {
+    throw new Error("DEPLOYER_PRIVATE_KEY must be a 32-byte hex string");
+  }
+  return normalized as Hex;
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
