@@ -86,6 +86,11 @@ export class DurableIntentStore {
     return this.#intents.get(id) ?? null;
   }
 
+  nextNonce(args: { chainId: number | bigint; action: FxTelaranaAction; account: Address }): bigint {
+    this.#load();
+    return this.#nonceByScope.get(nonceScope(args)) ?? 0n;
+  }
+
   async verify(id: string, args: { signer: Address; signature: Hex }): Promise<StoredIntent> {
     this.#load();
     const intent = this.#intents.get(id);
@@ -184,6 +189,14 @@ export function getIntent(id: string): StoredIntent | null {
 
 export function verifyStoredIntent(id: string, args: { signer: Address; signature: Hex }): Promise<StoredIntent> {
   return intentStore.verify(id, args);
+}
+
+export function getNextIntentNonce(args: {
+  chainId: number | bigint;
+  action: FxTelaranaAction;
+  account: Address;
+}): bigint {
+  return intentStore.nextNonce(args);
 }
 
 export function resetIntentStoreForTests(): void {

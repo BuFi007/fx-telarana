@@ -45,7 +45,7 @@ import { issueLendingSession } from "@fx-telarana/liveblocks/server";
 import { createMcpApp } from "@fx-telarana/mcp/hono";
 import { requireX402Payment, verifyX402Request } from "@fx-telarana/x402";
 
-import { getIntent, storeIntent, verifyStoredIntent } from "./intent-store.js";
+import { getIntent, getNextIntentNonce, storeIntent, verifyStoredIntent } from "./intent-store.js";
 import { json } from "./json.js";
 
 const log = createLogger({ prefix: "fx-telarana:api" });
@@ -64,6 +64,15 @@ const intentSignatureSchema = z.object({
   signer: addressSchema,
   signature: signatureSchema,
 });
+
+const intentActionSchema = z.enum([
+  "Supply",
+  "Borrow",
+  "Repay",
+  "Withdraw",
+  "SupplyCollateral",
+  "WithdrawCollateral",
+]);
 
 function ponderApiUrl(): string | null {
   return process.env.PONDER_API_URL ?? process.env.PONDER_BASE_URL ?? null;
@@ -309,10 +318,10 @@ export function createRoutes() {
   app.post("/fx-telarana/quote/borrow-with-sim", async (c) => {
     const body = await parseJson(quoteBorrowSchema.extend({ simulateTenderly: z.boolean().default(true) }), c);
     log.info(JSON.stringify({ route: "borrow-with-sim", simulateTenderly: body.simulateTenderly }));
-    const payment = body.simulateTenderly ? await verifyX402Request(c, { endpoint: "borrow_with_sim" }) : null;
-    if (payment && !payment.ok) return payment.response;
     const payload = await buildBorrowQuotePayload(body);
     if (!payload) return c.json({ error: "market_not_found" }, 404);
+    const payment = body.simulateTenderly ? await verifyX402Request(c, { endpoint: "borrow_with_sim" }) : null;
+    if (payment && !payment.ok) return payment.response;
     return json(c, {
       quote: payload,
       simulation: body.simulateTenderly
@@ -354,6 +363,18 @@ export function createRoutes() {
         totalSupplyAssets: state.totalSupplyAssets,
         totalSupplyShares: state.totalSupplyShares,
       }),
+    });
+  });
+
+  app.get("/fx-telarana/intents/nonce/:hubChainId/:action/:address", (c) => {
+    const chainId = hubChainIdSchema.parse(Number(c.req.param("hubChainId")));
+    const action = intentActionSchema.parse(c.req.param("action"));
+    const account = addressSchema.parse(c.req.param("address"));
+    return json(c, {
+      hubChainId: chainId,
+      action,
+      account,
+      nextNonce: getNextIntentNonce({ chainId, action, account }),
     });
   });
 

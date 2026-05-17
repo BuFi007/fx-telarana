@@ -21,3 +21,4 @@ hyperlane/**/validator-signatures*/
 bun.lockb
 .env.local
 contracts/.env.tenderly
+.gstack/

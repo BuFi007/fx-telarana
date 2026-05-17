@@ -181,7 +181,9 @@ export default async function Home() {
                 <dd>-</dd>
               </div>
             </dl>
-            <button type="button">Build intent</button>
+            <button type="button" disabled>
+              {markets.length > 0 ? "Connect wallet first" : "Market required"}
+            </button>
           </section>
         </div>
 

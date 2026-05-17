@@ -53,6 +53,10 @@ describe("api routes", () => {
   });
 
   test("stores unsigned intents and verifies signatures with strict nonce consumption", async () => {
+    const nonceBefore = await app.request(`/fx-telarana/intents/nonce/43113/Supply/${ALICE.address}`);
+    expect(nonceBefore.status).toBe(200);
+    await expect(nonceBefore.json()).resolves.toMatchObject({ nextNonce: "0" });
+
     const created = await app.request("/fx-telarana/supply/intents", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -71,6 +75,9 @@ describe("api routes", () => {
     });
     expect(verified.status).toBe(200);
     await expect(verified.json()).resolves.toMatchObject({ status: "verified", signer: ALICE.address });
+
+    const nonceAfter = await app.request(`/fx-telarana/intents/nonce/43113/Supply/${ALICE.address}`);
+    await expect(nonceAfter.json()).resolves.toMatchObject({ nextNonce: "1" });
 
     const replayCreated = await app.request("/fx-telarana/supply/intents", {
       method: "POST",

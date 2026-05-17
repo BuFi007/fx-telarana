@@ -120,6 +120,11 @@ dt {
   cursor: pointer;
 }
 
+.quote button:disabled {
+  background: #9aa8a2;
+  cursor: not-allowed;
+}
+
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
