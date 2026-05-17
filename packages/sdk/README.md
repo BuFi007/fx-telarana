@@ -9,6 +9,7 @@ TypeScript SDK for the fx-Telaraña Hub-and-Spoke protocol.
 - **`EligibilityReason` enum** — the machine-readable contract between pasillo `/fx/eligibility` and the frontend.
 - **`plan*` calldata builders** — `planSupply`, `planBorrow`, `planRepay`, `planEnterHub`, …
 - **`getMid` / `getMidVerified`** — typed reads against `FxOracle`. `getMidVerified` runs the RedStone deviation gate (caller must wrap the tx with the RedStone SDK so the signed payload is in msg.data tail).
+- **Phase B-E perps runtime gate** — `@bu/fx-engine/perps-runtime` loads `deployments/perps-config-5042002.json`, checks optional `CONTRACT_ADDRESSES_JSON` parity, and verifies live Arc roles, links, markets, funding, liquidation, and liquidity before keeper loops start.
 
 ## Install
 
@@ -82,6 +83,18 @@ bun run abis:sync
 ```bash
 bun test
 ```
+
+## Arc Perps Readiness
+
+Run this before starting matcher, funding, liquidation, or canary workers:
+
+```bash
+ARC_RPC_URL=https://rpc.testnet.arc.network bun run perps:arc:readiness
+```
+
+The gate loads `ARC_PERP_CONFIG_PATH` or defaults to the repo's
+`deployments/perps-config-5042002.json`. If `CONTRACT_ADDRESSES_JSON` is also
+present, it must match the manifest exactly.
 
 ## License
 

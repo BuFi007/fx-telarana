@@ -36,6 +36,7 @@ export interface FxAddresses {
   fxSpokeAlt?: Address;
   fxGatewayHook?: Address;
   fxSwapHook?: Address;
+  fxPerps?: FxPerpsAddresses;
 
   /// External dependencies
   morphoBlue: Address;
@@ -56,6 +57,16 @@ export interface FxAddresses {
   pythFeedUSDC: `0x${string}`;
   pythFeedEURC: `0x${string}`;
   pythFeedEURUSD: `0x${string}`;
+}
+
+export interface FxPerpsAddresses {
+  clearinghouse: Address;
+  marginAccount: Address;
+  fundingEngine: Address;
+  healthChecker: Address;
+  liquidationEngine: Address;
+  orderSettlement: Address;
+  keeperAdmin: Address;
 }
 
 export interface StablecoinBasketToken {
@@ -267,6 +278,15 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     fxReceiptUSDC: "0xdd22365Bba7330BE537c9BC26da9b1b4Db9aC431",
     fxHubMessageReceiver: "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
     fxGatewayHook: "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1",
+    fxPerps: {
+      clearinghouse: "0x6A265045D9A3291D2881d77DDC62e2781A2418c5",
+      marginAccount: "0x35c7cD02cFa0c2889547482B71c1a5114d8439C6",
+      fundingEngine: "0x88B70872759E1aA24858746779Cb15ca9F2cdcf3",
+      healthChecker: "0x272305e821D810eC5741761F98DbDC273efD47E6",
+      liquidationEngine: "0xD384560E5f8CE969BF4C1BDfAFACc5304AFbe8f2",
+      orderSettlement: "0x0F62FCdA2de63d905Cb167301C00251A9bB6dAa1",
+      keeperAdmin: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    },
     morphoBlue: "0x3c9b95C6E7B23f094f066733E7797C8680760830",
     // Arc-resident spoke that routes to the FUJI hub (sends users back).
     fxSpoke: "0x13c8463589d460db6f21235eedfd678c22a1ea25",

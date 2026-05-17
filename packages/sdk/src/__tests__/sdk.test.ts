@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "bun:test";
 import { encodeFunctionData } from "viem";
 
@@ -9,12 +12,19 @@ import {
   EligibilityReason,
   FxRouteMode,
   FxHyperlaneAction,
+  FX_PERP_MARKET_KEYS,
   FxHyperlaneHubReceiverAbi,
   FxGhostCommitmentRegistryAbi,
   FxGhostKycHookAbi,
   FxGhostSpokeRouterAbi,
   FxMarketRegistryAbi,
   FxOracleAbi,
+  FxFundingEngineAbi,
+  FxHealthCheckerAbi,
+  FxLiquidationEngineAbi,
+  FxMarginAccountAbi,
+  FxOrderSettlementAbi,
+  FxPerpClearinghouseAbi,
   FxSpokeAbi,
   FxSpokeIntentRouterAbi,
   FxSwapHookAbi,
@@ -42,9 +52,14 @@ import {
   buildGatewayBurnIntent,
   encodeGatewayMintCalldata,
   evmAddressToGatewayBytes32,
+  assertFxPerpConfigReady,
+  fxPerpContractAddressesJson,
+  fxPerpsAddressesFromConfigManifest,
   gatewayBurnIntentToJson,
+  getFxPerpMarket,
   getAddresses,
   hyperlaneAddressToBytes32,
+  parseFxPerpConfigManifest,
   resolveRouteMode,
   planExecuteHyperlaneIntent,
   planExecuteRoutedHyperlaneIntent,
@@ -58,6 +73,10 @@ import {
   planSupplyCollateral,
   planWithdraw,
 } from "../index.js";
+import {
+  loadFxPerpRuntimeConfig,
+  parseFxPerpContractAddressesJson,
+} from "../perps-runtime.js";
 
 const USDC = "0x036cbd53842c5426634e7929541ec2318f3dcf7e" as const;
 const EURC = "0x000000000000000000000000000000000000eefc" as const;
@@ -65,6 +84,7 @@ const ALICE = "0x000000000000000000000000000000000000a11c" as const;
 const ROUTE = "0x000000000000000000000000000000000000a0df" as const;
 const INTENT_ID = "0x1111111111111111111111111111111111111111111111111111111111111111" as const;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
 describe("address registry", () => {
   test("Base Sepolia includes Morpho + Pyth + USDC", () => {
@@ -87,6 +107,72 @@ describe("address registry", () => {
       interchainGasPaymaster: "0x0000000000000000000000000000000000000000",
       interchainAccountRouter: "0x113A539625D208b5EcC59f300Be14b9b3508E559",
     });
+    expect(a.fxPerps).toMatchObject({
+      clearinghouse: "0x6A265045D9A3291D2881d77DDC62e2781A2418c5",
+      marginAccount: "0x35c7cD02cFa0c2889547482B71c1a5114d8439C6",
+      fundingEngine: "0x88B70872759E1aA24858746779Cb15ca9F2cdcf3",
+      healthChecker: "0x272305e821D810eC5741761F98DbDC273efD47E6",
+      liquidationEngine: "0xD384560E5f8CE969BF4C1BDfAFACc5304AFbe8f2",
+      orderSettlement: "0x0F62FCdA2de63d905Cb167301C00251A9bB6dAa1",
+      keeperAdmin: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    });
+  });
+
+  test("Arc perps manifest parses and matches SDK address registry", () => {
+    const manifestPath = resolve(REPO_ROOT, "deployments/perps-config-5042002.json");
+    const manifest = parseFxPerpConfigManifest(JSON.parse(readFileSync(manifestPath, "utf8")) as unknown);
+    assertFxPerpConfigReady(manifest);
+
+    expect(manifest.chainId).toBe(ChainId.ArcTestnet);
+    expect(manifest.usdc).toBe("0x3600000000000000000000000000000000000000");
+    expect(fxPerpsAddressesFromConfigManifest(manifest)).toEqual(getAddresses(ChainId.ArcTestnet).fxPerps);
+    expect(FX_PERP_MARKET_KEYS.map((key) => getFxPerpMarket(manifest, key).enabled)).toEqual([
+      true,
+      true,
+      true,
+      true,
+    ]);
+    expect(getFxPerpMarket(manifest, "EURC_USDC")).toMatchObject({
+      marketId: "0x565a6e2fab61800aa18813603b5b485af5bed7dea1aa0845bdaa61502063cab8",
+      baseToken: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+      tradingFeeBps: 5,
+    });
+    expect(manifest.protocolLiquidity).toBeGreaterThanOrEqual(manifest.minProtocolLiquidity);
+    expect(fxPerpContractAddressesJson(manifest)).toContain("FxPerpClearinghouse");
+  });
+
+  test("Arc perps runtime loader gates manifest and CONTRACT_ADDRESSES_JSON parity", () => {
+    const manifestPath = resolve(REPO_ROOT, "deployments/perps-config-5042002.json");
+    const manifest = parseFxPerpConfigManifest(JSON.parse(readFileSync(manifestPath, "utf8")) as unknown);
+    const contractAddressesJson = fxPerpContractAddressesJson(manifest);
+    const runtime = loadFxPerpRuntimeConfig({
+      configPath: manifestPath,
+      contractAddressesJson,
+      env: {},
+    });
+
+    expect(runtime.source).toBe("manifest");
+    expect(runtime.manifest?.chainId).toBe(ChainId.ArcTestnet);
+    expect(runtime.addresses).toEqual(fxPerpsAddressesFromConfigManifest(manifest));
+    expect(loadFxPerpRuntimeConfig({ cwd: resolve(REPO_ROOT, "packages/sdk"), env: {} }).configPath).toBe(
+      manifestPath,
+    );
+    expect(parseFxPerpContractAddressesJson(contractAddressesJson)).toMatchObject({
+      clearinghouse: manifest.addresses.clearinghouse,
+      orderSettlement: manifest.addresses.orderSettlement,
+    });
+
+    const mismatchedJson = contractAddressesJson.replace(
+      manifest.addresses.clearinghouse,
+      "0x0000000000000000000000000000000000000001",
+    );
+    expect(() =>
+      loadFxPerpRuntimeConfig({
+        configPath: manifestPath,
+        contractAddressesJson: mismatchedJson,
+        env: {},
+      }),
+    ).toThrow(/does not match manifest/);
   });
 
   test("Arc testnet basket metadata follows Phase 3 mock scope", () => {
@@ -709,6 +795,40 @@ describe("ABI exports", () => {
     expect(fnNames).toContain("receiveGatewayMint");
     expect(fnNames).toContain("markGatewayAtomicFxSwapSettled");
     expect(fnNames).toContain("gatewayReceipt");
+  });
+
+  test("Phase B-E perp ABI exports expose trading and risk surfaces", () => {
+    const clearinghouseFunctions = FxPerpClearinghouseAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(clearinghouseFunctions).toContain("configureMarket");
+    expect(clearinghouseFunctions).toContain("quoteFee");
+    expect(clearinghouseFunctions).toContain("openOrIncrease");
+    expect(clearinghouseFunctions).toContain("applyOrderFill");
+    expect(clearinghouseFunctions).toContain("liquidatePosition");
+    expect(clearinghouseFunctions).toContain("setFundingEngine");
+    expect(clearinghouseFunctions).toContain("settleTraderFunding");
+
+    const marginFunctions = FxMarginAccountAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(marginFunctions).toContain("depositMargin");
+    expect(marginFunctions).toContain("depositProtocolLiquidity");
+    expect(marginFunctions).toContain("setFundingSettlementHook");
+
+    const fundingFunctions = FxFundingEngineAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(fundingFunctions).toContain("configureFunding");
+    expect(fundingFunctions).toContain("pokeFundingRate");
+    expect(fundingFunctions).toContain("settleFunding");
+
+    const healthFunctions = FxHealthCheckerAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(healthFunctions).toContain("healthFactor");
+    expect(healthFunctions).toContain("isLiquidatable");
+
+    const liquidationFunctions = FxLiquidationEngineAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(liquidationFunctions).toContain("configureLiquidation");
+    expect(liquidationFunctions).toContain("flagAccount");
+    expect(liquidationFunctions).toContain("liquidate");
+
+    const settlementFunctions = FxOrderSettlementAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(settlementFunctions).toContain("hashOrder");
+    expect(settlementFunctions).toContain("settleMatch");
   });
 
   test("Bufi pass ABI exposes the Ghost Mode verifier surface", () => {
