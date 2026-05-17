@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "bun:test";
 import { encodeFunctionData } from "viem";
 
@@ -9,6 +12,7 @@ import {
   EligibilityReason,
   FxRouteMode,
   FxHyperlaneAction,
+  FX_PERP_MARKET_KEYS,
   FxHyperlaneHubReceiverAbi,
   FxGhostCommitmentRegistryAbi,
   FxGhostKycHookAbi,
@@ -48,9 +52,14 @@ import {
   buildGatewayBurnIntent,
   encodeGatewayMintCalldata,
   evmAddressToGatewayBytes32,
+  assertFxPerpConfigReady,
+  fxPerpContractAddressesJson,
+  fxPerpsAddressesFromConfigManifest,
   gatewayBurnIntentToJson,
+  getFxPerpMarket,
   getAddresses,
   hyperlaneAddressToBytes32,
+  parseFxPerpConfigManifest,
   resolveRouteMode,
   planExecuteHyperlaneIntent,
   planExecuteRoutedHyperlaneIntent,
@@ -71,6 +80,7 @@ const ALICE = "0x000000000000000000000000000000000000a11c" as const;
 const ROUTE = "0x000000000000000000000000000000000000a0df" as const;
 const INTENT_ID = "0x1111111111111111111111111111111111111111111111111111111111111111" as const;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
 describe("address registry", () => {
   test("Base Sepolia includes Morpho + Pyth + USDC", () => {
@@ -102,6 +112,29 @@ describe("address registry", () => {
       orderSettlement: "0x49ad97Fa2b67252373f4683bD4a4B49AA3AF5565",
       keeperAdmin: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
     });
+  });
+
+  test("Arc perps manifest parses and matches SDK address registry", () => {
+    const manifestPath = resolve(REPO_ROOT, "deployments/perps-config-5042002.json");
+    const manifest = parseFxPerpConfigManifest(JSON.parse(readFileSync(manifestPath, "utf8")) as unknown);
+    assertFxPerpConfigReady(manifest);
+
+    expect(manifest.chainId).toBe(ChainId.ArcTestnet);
+    expect(manifest.usdc).toBe("0x3600000000000000000000000000000000000000");
+    expect(fxPerpsAddressesFromConfigManifest(manifest)).toEqual(getAddresses(ChainId.ArcTestnet).fxPerps);
+    expect(FX_PERP_MARKET_KEYS.map((key) => getFxPerpMarket(manifest, key).enabled)).toEqual([
+      true,
+      true,
+      true,
+      true,
+    ]);
+    expect(getFxPerpMarket(manifest, "EURC_USDC")).toMatchObject({
+      marketId: "0x565a6e2fab61800aa18813603b5b485af5bed7dea1aa0845bdaa61502063cab8",
+      baseToken: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+      tradingFeeBps: 5,
+    });
+    expect(manifest.protocolLiquidity).toBeGreaterThanOrEqual(manifest.minProtocolLiquidity);
+    expect(fxPerpContractAddressesJson(manifest)).toContain("FxPerpClearinghouse");
   });
 
   test("Arc testnet basket metadata follows Phase 3 mock scope", () => {

@@ -1,6 +1,9 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: Apache-2.0
 
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   concatHex,
   defineChain,
@@ -14,8 +17,19 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { createPublicClient, createWalletClient } from "viem";
 
+import {
+  ChainId,
+  assertFxPerpConfigReady,
+  getAddresses,
+  getFxPerpMarket,
+  parseFxPerpConfigManifest,
+} from "../src/index.js";
+
 const ARC_RPC_URL = process.env.ARC_RPC_URL ?? "https://rpc.testnet.arc.network";
 const DEPLOYER_PRIVATE_KEY = normalizePrivateKey(process.env.DEPLOYER_PRIVATE_KEY);
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+const PERP_CONFIG_PATH =
+  process.env.ARC_PERP_CONFIG_PATH ?? resolve(REPO_ROOT, "deployments/perps-config-5042002.json");
 
 const arcTestnet = defineChain({
   id: 5_042_002,
@@ -24,25 +38,29 @@ const arcTestnet = defineChain({
   rpcUrls: { default: { http: [ARC_RPC_URL] } },
 });
 
+const perpConfig = loadPerpConfigManifest(PERP_CONFIG_PATH);
+const eurcMarket = getFxPerpMarket(perpConfig, "EURC_USDC");
+const arcAddresses = getAddresses(ChainId.ArcTestnet);
+
 const ADDR = {
-  usdc: "0x3600000000000000000000000000000000000000" as Address,
-  eurc: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a" as Address,
-  pyth: "0x2880aB155794e7179c9eE2e38200202908C17B43" as Address,
-  oracle: "0x77b3A3B420dB98B01085b8C46a753Ed9879e2865" as Address,
-  clearinghouse: "0x25cDf2ad4Fd446e85273c4D7C77a03F22C742865" as Address,
-  margin: "0x1869D0253286dF29ce0AB8d29207772C7fD9dc35" as Address,
-  funding: "0x725822e8BC6edbcBa52914149e25f2671290C6D2" as Address,
-  health: "0x9cc0D71e2Af1532e74C2Af8aE7248ACB501039d5" as Address,
-  liquidation: "0x01f71c1E74350633bBC9d554ca35DA40412DCFB7" as Address,
-  settlement: "0x49ad97Fa2b67252373f4683bD4a4B49AA3AF5565" as Address,
+  usdc: perpConfig.usdc,
+  eurc: eurcMarket.baseToken,
+  pyth: requireAddress(arcAddresses.pyth, "Arc Pyth"),
+  oracle: perpConfig.fxOracle,
+  clearinghouse: perpConfig.addresses.clearinghouse,
+  margin: perpConfig.addresses.marginAccount,
+  funding: perpConfig.addresses.fundingEngine,
+  health: perpConfig.addresses.healthChecker,
+  liquidation: perpConfig.addresses.liquidationEngine,
+  settlement: perpConfig.addresses.orderSettlement,
 };
 
 const FEEDS = {
-  usdc: "eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
-  eurc: "76fa85158bf14ede77087fe3ae472f66213f6ea2f5b411cb2de472794990fa5c",
+  usdc: strip0x(requireHex(arcAddresses.pythFeedUSDC, "Arc Pyth USDC feed")),
+  eurc: strip0x(requireHex(arcAddresses.pythFeedEURC, "Arc Pyth EURC feed")),
 };
 
-const MARKET_ID = "0x565a6e2fab61800aa18813603b5b485af5bed7dea1aa0845bdaa61502063cab8" as Hex;
+const MARKET_ID = eurcMarket.marketId;
 const SIZE_E18 = 10_000_000_000_000_000n; // 0.01 EURC
 const HEALTHY_MARGIN = 250_000n; // 0.25 USDC
 const LIQUIDATION_MARGIN = 100_000n; // 0.10 USDC
@@ -138,6 +156,9 @@ async function main() {
   console.log(`taker=${taker.address}`);
   console.log(`victim=${victim.address}`);
   console.log(`hedge=${hedge.address}`);
+  console.log(`perpConfig=${PERP_CONFIG_PATH}`);
+  console.log(`perpConfigBlock=${perpConfig.exportedBlockNumber}`);
+  console.log(`market=${eurcMarket.key} marketId=${MARKET_ID}`);
 
   await refreshPyth();
   const [midE18] = await publicClient.readContract({
@@ -430,6 +451,29 @@ function normalizePrivateKey(value: string | undefined): Hex {
     throw new Error("DEPLOYER_PRIVATE_KEY must be a 32-byte hex string");
   }
   return normalized as Hex;
+}
+
+function loadPerpConfigManifest(path: string) {
+  const manifest = parseFxPerpConfigManifest(JSON.parse(readFileSync(path, "utf8")) as unknown);
+  assertFxPerpConfigReady(manifest);
+  if (manifest.chainId !== arcTestnet.id) {
+    throw new Error(`perp config chainId ${manifest.chainId} does not match Arc ${arcTestnet.id}`);
+  }
+  return manifest;
+}
+
+function requireAddress(value: Address | undefined, label: string): Address {
+  if (!value) throw new Error(`${label} missing from SDK address registry`);
+  return value;
+}
+
+function requireHex(value: Hex | undefined, label: string): Hex {
+  if (!value) throw new Error(`${label} missing from SDK address registry`);
+  return value;
+}
+
+function strip0x(value: Hex): string {
+  return value.startsWith("0x") ? value.slice(2) : value;
 }
 
 main().catch((error) => {

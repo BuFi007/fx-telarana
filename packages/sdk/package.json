@@ -23,6 +23,10 @@
     "./ghost": {
       "types": "./dist/ghost.d.ts",
       "default": "./dist/ghost.js"
+    },
+    "./perps": {
+      "types": "./dist/perps.d.ts",
+      "default": "./dist/perps.js"
     }
   },
   "files": [

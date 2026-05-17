@@ -83,6 +83,24 @@ contracts, oracle/USDC/admin/keeper, all four market ids and risk params,
 funding params, liquidation params, open-interest readbacks, liquidity
 readbacks, margin USDC balance, and role booleans.
 
+SDK/keeper code should parse that manifest instead of copying addresses or
+market ids:
+
+```ts
+import {
+  assertFxPerpConfigReady,
+  getFxPerpMarket,
+  parseFxPerpConfigManifest,
+} from "@bu/fx-engine/perps";
+
+const manifest = parseFxPerpConfigManifest(JSON.parse(rawJson));
+assertFxPerpConfigReady(manifest);
+const eurcMarket = getFxPerpMarket(manifest, "EURC_USDC");
+```
+
+The Arc trading smoke follows this path and accepts `ARC_PERP_CONFIG_PATH` to
+point at an alternate manifest.
+
 Useful env overrides:
 
 - `ARC_PERP_CONFIG_PATH`

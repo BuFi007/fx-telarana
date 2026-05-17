@@ -5,6 +5,7 @@ export * from "./eligibility.js";
 export * from "./gateway.js";
 export * from "./ghost.js";
 export * from "./helpers/index.js";
+export * from "./perps.js";
 export * from "./rfq-pasillo.js";
 export * from "./spot-fx.js";
 export * from "./telarana-client.js";
