@@ -259,6 +259,7 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     fxHubMessageReceiver: "0xED8D2F831A8b7EbF7eb86a52323D23e2277F26b6",
     fxGatewayHook: "0x6a134214303136Ea8aa1cfA054Baf3ca74eCdad9",
     morphoBlue: "0x3c9b95C6E7B23f094f066733E7797C8680760830",
+    adaptiveCurveIrm: "0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1",
     // Arc-resident spoke that routes to the FUJI hub (sends users back).
     fxSpoke: "0xf93834070e4e4e7ff0e161feca2aeba65c2c6a38",
     // Arc-resident spoke that routes to the LOCAL Arc hub (self-loop CCTP V2).
@@ -325,7 +326,6 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
         source: "mock",
       },
     },
-    // morphoBlue + adaptiveCurveIrm: TBD on Arc
   },
   [ChainId.AvalancheMainnet]: {
     usdc: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",

@@ -197,6 +197,7 @@ describe("address registry", () => {
     expect(a.fxReceiptEURC).toBe("0x7926D3b1D1360632e81F811FE9a39866Fe16074F");
     expect(a.fxLiquidator).toBe("0x4dB43e41420ACC39ee88dBc1cB868567968C0F12");
     expect(a.morphoBlue).toBe("0x3c9b95C6E7B23f094f066733E7797C8680760830");
+    expect(a.adaptiveCurveIrm).toBe("0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1");
     // Arc-resident spoke routing TO Fuji is the primary user entry from Arc.
     expect(a.fxSpoke).toBe("0xf93834070e4e4e7ff0e161feca2aeba65c2c6a38");
     // Arc-resident spoke routing TO local Arc hub (self-loop).
