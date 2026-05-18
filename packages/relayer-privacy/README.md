@@ -31,8 +31,56 @@ only.
 
 | Service | Status | Purpose |
 |---|---|---|
-| `asp-postman` | **skeleton** | Watches `Deposited` events on `FxPrivacyEntrypoint`, maintains the in-memory label set, periodically calls `updateRoot()` with a permissive Merkle root that approves every observed deposit. |
-| `cross-currency-relayer` | _deferred_ | HTTP server (Hono) that accepts withdrawal proofs + `CrossCurrencyRelayData` and submits to `relayCrossCurrency()`. |
+| `asp-postman` | shipping | Watches `Deposited` events on each registered pool, maintains the canonical-ordered LeanIMT, publishes a permissive ASP root via `Entrypoint.updateRoot()` (testnet only — every label approved). Single-writer constraint (see below). |
+| `relayer-api` | shipping | Hono HTTP server on `RELAYER_PORT`. `POST /v1/relayCrossCurrency` accepts a JSON withdrawal proof + `CrossCurrencyRelayData`, validates the schema, rate-limits per-IP, and submits to `FxPrivacyEntrypoint.relayCrossCurrency()`. Stateless — viem manages the relayer wallet's nonce; redundant instances are safe because the on-chain nullifier double-spend gate makes only the first land. |
+
+## Cross-currency relayer HTTP API
+
+```bash
+# Start the server
+bun run --cwd packages/relayer-privacy relayer-api
+```
+
+```http
+GET /health → 200 { ok: true, entrypoint, dryRun, maxRelayFeeBPS }
+
+POST /v1/relayCrossCurrency
+Content-Type: application/json
+
+{
+  "scope": "0x...",              # PrivacyPool scope (decimal string)
+  "data": {
+    "recipient":    "0x...",     # user's signed recipient
+    "feeRecipient": "0x...",     # who gets relayFeeBPS in sell asset
+    "relayFeeBPS":  "50",        # ≤ RELAYER_MAX_FEE_BPS or 400 returned
+    "buyToken":     "0x...",     # asset delivered to recipient
+    "minBuyAmount": "99500000"   # entrypoint enforces measured-delta gate
+  },
+  "proof": {
+    "pA": ["...", "..."],
+    "pB": [["...", "..."], ["...", "..."]],
+    "pC": ["...", "..."],
+    "pubSignals": ["...", "...", "...", "...",
+                   "...", "...", "...", "..."]
+  }
+}
+
+→ 200 { ok: true, txHash: "0x..." }
+→ 400 { error: "bad_request" | "fee_too_high", ... }
+→ 429 { error: "rate_limited" }
+→ 500 { error: "relay_failed", message: "..." }
+```
+
+Security:
+- The Groth16 proof itself is the authorization. The relayer doesn't
+  validate it; the on-chain entrypoint does (codex-r1 HIGH #1
+  measured-delivery gate + r2 MED recipient-delta gate make sure a
+  malicious adapter or under-delivery is caught contract-side).
+- `RELAYER_MAX_FEE_BPS` (default 5%) blocks payloads requesting absurd
+  relayer fees — a soft cap above what the on-chain
+  `assetConfig[asset].maxRelayFeeBPS` would already enforce.
+- Rate limit is in-memory (testnet only). Production-style deploys
+  should sit this behind a real edge / WAF.
 
 ## ASP postman — permissive mode
 
