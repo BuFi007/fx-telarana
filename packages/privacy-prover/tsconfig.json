@@ -12,7 +12,10 @@
     "declaration": true,
     "declarationMap": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    // NB: no `rootDir` in the dev tsconfig — the path-mapping to
+    // ../sdk/src/privacy pulls SDK sources into the program for
+    // type-checking. tsconfig.build.json sets rootDir and clears the
+    // path map so emit stays self-contained.
     "noEmit": true,
     "types": ["bun"],
     "paths": {

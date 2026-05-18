@@ -21,6 +21,7 @@
     "scripts/fetch-circuits.sh"
   ],
   "scripts": {
+    "prebuild": "cd ../sdk && bun run build",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "bun test",

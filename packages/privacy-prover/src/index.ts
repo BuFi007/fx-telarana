@@ -5,3 +5,5 @@
 // (types, crypto, circuit interface, encoding helpers).
 
 export * from "./withdrawal.js";
+export * from "./convert.js";
+export type { WithdrawalProof } from "./types.js";

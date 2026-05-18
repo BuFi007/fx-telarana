@@ -8,9 +8,17 @@
 // strategies; this version is the LEAN surface a dApp needs to build
 // withdrawal proofs:
 //
-//   1. Fetch IPrivacyPool.Deposited events for a pool (canonical order).
+//   1. Fetch IState.LeafInserted events for a pool (canonical order).
+//      LeafInserted is emitted for BOTH deposits AND withdrawal change
+//      notes — covering ALL leaves in the pool's state tree.
 //   2. Reconstruct the LeanIMT and produce a Merkle inclusion proof for
 //      a given commitment.
+//   3. Optional getDepositsForPool() helper for dApp UIs that want to
+//      surface specific Deposited events (e.g. user's deposit history).
+//
+// Codex-r10 HIGH: prior version sourced from Deposited only, missing
+// the change-note commitments emitted by withdraw() — those users would
+// have been unable to spend their change notes afterwards.
 //
 // No snarkjs dependency — this file stays clean Apache surface.
 
@@ -42,8 +50,10 @@ export interface DepositRecord {
 }
 
 /**
- * Minimal `IPrivacyPool.Deposited` ABI fragment. Matches the on-chain
- * emission verified in the postman tests (codex-r3 HIGH #1):
+ * `IPrivacyPool.Deposited` ABI fragment — for dApp UI surfaces that
+ * want to inspect deposit history specifically. NOT the source for
+ * state-tree reconstruction (use `LeafInserted` for that — it covers
+ * deposit + withdrawal change notes).
  *
  *   event Deposited(
  *     address indexed _depositor,
@@ -65,6 +75,25 @@ const POOL_DEPOSITED_ABI = [{
   anonymous: false,
 }] as const;
 
+/**
+ * `IState.LeafInserted` ABI fragment — the authoritative source for
+ * state-tree reconstruction. Emitted by `State._insert` on EVERY leaf
+ * that lands in the LeanIMT: deposit commitments AND withdrawal change
+ * notes (`_proof.newCommitmentHash()`).
+ *
+ *   event LeafInserted(uint256 _index, uint256 _leaf, uint256 _root);
+ */
+const POOL_LEAF_INSERTED_ABI = [{
+  type: "event",
+  name: "LeafInserted",
+  inputs: [
+    { name: "_index", type: "uint256", indexed: false },
+    { name: "_leaf",  type: "uint256", indexed: false },
+    { name: "_root",  type: "uint256", indexed: false },
+  ],
+  anonymous: false,
+}] as const;
+
 export interface DataServiceConfig {
   /** Block to start scanning from. Default 0n (genesis). */
   fromBlock?: bigint;
@@ -81,6 +110,22 @@ const DEFAULT_CFG: Required<DataServiceConfig> = {
 };
 
 /**
+ * Output of {@link PrivacyDataService.getLeavesForPool} — one record
+ * per `IState.LeafInserted` log, canonically ordered. Covers BOTH
+ * deposits AND withdrawal change notes.
+ */
+export interface LeafRecord {
+  readonly blockNumber: bigint;
+  readonly transactionIndex: number;
+  readonly logIndex: number;
+  /** Tree position assigned to this leaf at insertion time. */
+  readonly index: bigint;
+  readonly leaf: bigint;
+  /** Root after insertion. */
+  readonly root: bigint;
+}
+
+/**
  * Lean read-only privacy-pool indexer.
  */
 export class PrivacyDataService {
@@ -90,10 +135,53 @@ export class PrivacyDataService {
   ) {}
 
   /**
-   * Fetch every `Deposited` log emitted by `pool` in [fromBlock, toBlock],
-   * canonically ordered. Pages through the range respecting
-   * `cfg.maxRangePerCall` so this works on RPC providers with strict
-   * pagination ceilings.
+   * Fetch every `LeafInserted` log emitted by `pool`, canonically
+   * ordered. THIS is the source of truth for state-tree
+   * reconstruction — covers deposit commitments + withdrawal change
+   * notes (codex-r10 HIGH).
+   */
+  async getLeavesForPool(pool: Address): Promise<LeafRecord[]> {
+    const endRequested = this.cfg.toBlock === "latest"
+      ? await this.client.getBlockNumber()
+      : this.cfg.toBlock;
+
+    const out: LeafRecord[] = [];
+    let cursor = this.cfg.fromBlock;
+    while (cursor <= endRequested) {
+      const windowEnd = cursor + this.cfg.maxRangePerCall - 1n > endRequested
+        ? endRequested
+        : cursor + this.cfg.maxRangePerCall - 1n;
+      const logs = await this.client.getContractEvents({
+        address:   pool,
+        abi:       POOL_LEAF_INSERTED_ABI,
+        eventName: "LeafInserted",
+        fromBlock: cursor,
+        toBlock:   windowEnd,
+      });
+      for (const ev of logs) {
+        if (ev.blockNumber == null || ev.transactionIndex == null || ev.logIndex == null) continue;
+        const a = ev.args as { _index?: bigint; _leaf?: bigint; _root?: bigint };
+        if (typeof a._index !== "bigint" || typeof a._leaf !== "bigint" || typeof a._root !== "bigint") continue;
+        out.push({
+          blockNumber:      ev.blockNumber,
+          transactionIndex: ev.transactionIndex,
+          logIndex:         ev.logIndex,
+          index:            a._index,
+          leaf:             a._leaf,
+          root:             a._root,
+        });
+      }
+      cursor = windowEnd + 1n;
+    }
+    out.sort(compareCanonical);
+    return out;
+  }
+
+  /**
+   * Fetch every `Deposited` log emitted by `pool`. Useful for dApp UI
+   * surfaces (e.g. "show me my deposit history") that need the value /
+   * label / precommitment of each deposit specifically. NOT the source
+   * for state-tree reconstruction — use {@link getLeavesForPool}.
    */
   async getDepositsForPool(pool: Address): Promise<DepositRecord[]> {
     const endRequested = this.cfg.toBlock === "latest"
@@ -158,19 +246,25 @@ export class PrivacyDataService {
   }
 
   /**
-   * Reconstruct the pool's LeanIMT from all observed deposits and
-   * return a Merkle inclusion proof for `targetCommitment`.
+   * Reconstruct the pool's LeanIMT from ALL observed leaves (deposits
+   * + withdrawal change notes) and return a Merkle inclusion proof for
+   * `targetCommitment`. This is what the user's Groth16 withdrawal
+   * proof binds against; the same algorithm runs on-chain in
+   * `InternalLeanIMT`.
    *
-   * This proof is what the user's Groth16 withdrawal proof binds
-   * against. The same algorithm runs on-chain in `InternalLeanIMT`.
+   * Codex-r10 HIGH: prior version rebuilt from `Deposited` only,
+   * missing the change notes that `withdraw()` inserts. After a
+   * partial withdraw, a user holding the change note would have been
+   * unable to spend it because their inclusion proof would target a
+   * tree state that never existed on-chain.
    */
   async buildMerkleProof(
     pool: Address,
     targetCommitment: bigint,
   ): Promise<LeanIMTMerkleProof<bigint>> {
-    const deposits = await this.getDepositsForPool(pool);
+    const leaves = await this.getLeavesForPool(pool);
     const tree = new LeanIMT<bigint>((a, b) => poseidon([a, b]));
-    for (const d of deposits) tree.insert(d.commitment);
+    for (const l of leaves) tree.insert(l.leaf);
 
     const idx = tree.indexOf(targetCommitment);
     if (idx === -1) {
