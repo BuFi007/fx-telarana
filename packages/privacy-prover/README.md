@@ -22,15 +22,54 @@ dApp consumers who need to generate proofs install `@bu/privacy-prover`
 explicitly and accept its GPL terms. Consumers who only need types /
 encoding / commitment helpers stay on the Apache SDK alone.
 
+## Circuit artifacts
+
+The Groth16 prover needs four binary files at runtime:
+
+| File | Purpose | Size | Shipped how |
+|---|---|---:|---|
+| `commitment.vkey.json` | Verifying key (commitment circuit) | 3 KB | ✅ committed to `circuits/` |
+| `withdraw.vkey.json` | Verifying key (withdraw circuit) | 4 KB | ✅ committed to `circuits/` |
+| `commitment.wasm` | Witness generator (commitment) | 2.3 MB | downloaded by `circuits:fetch` |
+| `withdraw.wasm` | Witness generator (withdraw) | 2.5 MB | downloaded by `circuits:fetch` |
+| `commitment.zkey` | Proving key (commitment) | 901 KB | downloaded by `circuits:fetch` |
+| `withdraw.zkey` | Proving key (withdraw) | 17.8 MB | downloaded by `circuits:fetch` |
+
+Verifying keys are tiny + committed so an integrator can validate proofs
+without fetching anything. The .wasm + .zkey files are too large for git;
+`scripts/fetch-circuits.sh` downloads them from the upstream 0xbow
+ceremony output (commit `a80836a4`, pinned in
+`docs/PRIVACY_HOOK_VENDOR_MAP.md`) and verifies SHA-256.
+
+```bash
+# One-shot fetch (uses raw.githubusercontent default URL)
+bun run --cwd packages/privacy-prover circuits:fetch
+
+# Or mirror to your own CDN/R2/IPFS and override
+PROVER_CIRCUITS_BASE=https://my.cdn.example/v1/ \
+  bun run --cwd packages/privacy-prover circuits:fetch
+```
+
+The script checks SHA-256 against the known-good values before accepting
+a download, so a tampered mirror cannot poison your local cache.
+
 ## Usage
 
 ```ts
 import { WithdrawalService } from "@bu/privacy-prover";
 import { UrlCircuits, type WithdrawalProofInput } from "@bu/fx-engine/privacy";
 
+// In a Node/Bun runtime — point at the local fetched copy.
 const circuits = new UrlCircuits({
-  baseUrl: "https://your-cdn.example/privacy-circuits/",
+  baseUrl: "file:///" +
+    `${__dirname}/../../packages/privacy-prover/circuits/`,
 });
+
+// In a browser — point at your hosted CDN (or IPFS gateway):
+// const circuits = new UrlCircuits({
+//   baseUrl: "https://cdn.example.com/fx-privacy-circuits/v1/",
+// });
+
 const prover = new WithdrawalService(circuits);
 
 const proof = await prover.proveWithdrawal(commitment, input);
