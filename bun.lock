@@ -5,6 +5,19 @@
     "": {
       "name": "fx-telarana",
     },
+    "packages/privacy-prover": {
+      "name": "@bu/privacy-prover",
+      "version": "0.0.1",
+      "dependencies": {
+        "@bu/fx-engine": "workspace:*",
+        "snarkjs": "^0.7.5",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "@types/snarkjs": "^0.7.9",
+        "typescript": "^5.5.0",
+      },
+    },
     "packages/relayer-privacy": {
       "name": "@bu/relayer-privacy",
       "version": "0.0.1",
@@ -25,11 +38,9 @@
       "dependencies": {
         "@zk-kit/lean-imt": "^2.2.4",
         "maci-crypto": "^2.5.0",
-        "snarkjs": "^0.7.5",
       },
       "devDependencies": {
         "@types/bun": "latest",
-        "@types/snarkjs": "^0.7.9",
         "typescript": "^5.5.0",
         "viem": "^2.21.0",
       },
@@ -45,6 +56,8 @@
     "@adraffy/ens-normalize": ["@adraffy/ens-normalize@1.11.1", "", {}, "sha512-nhCBV3quEgesuf7c7KYfperqSS14T8bYuvJ8PcLJp6znkZpFc0AuW4qBtr8eKVyPPe/8RSr7sglCWPU5eaxwKQ=="],
 
     "@bu/fx-engine": ["@bu/fx-engine@workspace:packages/sdk"],
+
+    "@bu/privacy-prover": ["@bu/privacy-prover@workspace:packages/privacy-prover"],
 
     "@bu/relayer-privacy": ["@bu/relayer-privacy@workspace:packages/relayer-privacy"],
 

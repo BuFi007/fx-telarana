@@ -110,6 +110,13 @@ slots that the post-r1 impl does NOT read. Concretely:
      one-shot `reinitializer` that copies the legacy slots before
      promoting the new implementation.
 
+**License boundary (codex-r8 HIGH)** — `@bu/fx-engine` (Apache-2.0) does NOT
+depend on `snarkjs` (GPL-3.0). The Groth16 prover lives in a separate
+package, `@bu/privacy-prover` (GPL-3.0), which dApp consumers install
+explicitly. Splitting prevents GPL contagion of the public SDK. See
+`packages/privacy-prover/README.md` for usage. **Do not merge snarkjs
+back into @bu/fx-engine** under any pretext.
+
 **Single-writer constraint (codex-r7)** — the vendored `Entrypoint.updateRoot`
 is append-only; safe multi-writer publication requires an on-chain CAS
 (`updateRootIfLatest(expected, new, cid)`). v1 ships single-writer only.

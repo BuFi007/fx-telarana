@@ -1,20 +1,21 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: GPL-3.0
 //
-// Vendored from 0xbow-io/privacy-pools-core sdk/src/core/withdrawal.service.ts
-// (Apache-2.0). Modifications:
-//   - Import paths localized.
-//   - `AccountCommitment` shape inlined (we don't ship that service tier yet).
-// No algorithmic changes.
+// Vendored from 0xbow-io/privacy-pools-core
+// sdk/src/core/withdrawal.service.ts (Apache-2.0 upstream).
+// Re-licensed GPL-3.0 here because it directly depends on
+// snarkjs (GPL-3.0). Codex-r8 HIGH: keeps the public Apache
+// SDK clean of GPL dependencies.
 
 import * as snarkjs from "snarkjs";
 
-import { CircuitName, type CircuitsInterface } from "./circuits.js";
-import { ProofError } from "./exceptions.js";
-import type {
-  Commitment,
-  WithdrawalProof,
-  WithdrawalProofInput,
-} from "./types.js";
+import {
+  CircuitName,
+  type CircuitsInterface,
+  type Commitment,
+  type WithdrawalProofInput,
+} from "@bu/fx-engine/privacy";
+
+import { ProofError, type WithdrawalProof } from "./types.js";
 
 /** Lite shape mirroring 0xbow's `AccountCommitment` — kept private so
  *  consumers always pass a full {@link Commitment}. */

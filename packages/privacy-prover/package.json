@@ -1,0 +1,35 @@
+{
+  "name": "@bu/privacy-prover",
+  "version": "0.0.1",
+  "description": "Groth16 prover for fx-Telarana Privacy Pool withdrawals. Separated from @bu/fx-engine because snarkjs is GPL-3.0 — keeping the public SDK Apache-clean.",
+  "license": "GPL-3.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@bu/fx-engine": "workspace:*",
+    "snarkjs": "^0.7.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/snarkjs": "^0.7.9",
+    "typescript": "^5.5.0"
+  }
+}

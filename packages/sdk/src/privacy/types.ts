@@ -3,8 +3,12 @@
 // Domain types for the fx-Telarana Privacy Hook SDK. Vendored from
 // 0xbow-io/privacy-pools-core (Apache-2.0). Branded `Hash` / `Secret`
 // types are preserved to keep parity with the upstream type-safety model.
+//
+// Codex-r8 HIGH: this file is Apache-2.0 and MUST NOT pull in GPL types
+// (e.g. `snarkjs.Groth16Proof`). Proof types live in `@bu/privacy-prover`
+// (GPL-3.0). Withdrawal/Commitment Groth16-proof structs are NOT
+// declared here; consumers that need them install the prover package.
 
-import type { Groth16Proof, PublicSignals } from "snarkjs";
 import type { LeanIMTMerkleProof } from "@zk-kit/lean-imt";
 import type { Address, Hex } from "viem";
 
@@ -36,11 +40,6 @@ export interface Commitment {
   readonly preimage: CommitmentPreimage;
 }
 
-export interface CommitmentProof {
-  readonly proof: Groth16Proof;
-  readonly publicSignals: PublicSignals;
-}
-
 /**
  * Mirrors `IPrivacyPool.Withdrawal`. `processooor` is the address allowed to
  * call `pool.withdraw` (always the FxPrivacyEntrypoint in our flows).
@@ -50,11 +49,6 @@ export interface CommitmentProof {
 export interface Withdrawal {
   readonly processooor: Address;
   readonly data: Hex;
-}
-
-export interface WithdrawalProof {
-  readonly proof: Groth16Proof;
-  readonly publicSignals: PublicSignals;
 }
 
 export interface WithdrawalProofInput {
