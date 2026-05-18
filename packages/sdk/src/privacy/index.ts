@@ -30,3 +30,4 @@ export * from "./exceptions.js";
 export * from "./crypto.js";
 export * from "./circuits.js";
 export * from "./crossCurrency.js";
+export * from "./services/index.js";

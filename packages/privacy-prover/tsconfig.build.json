@@ -1,6 +1,16 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": false
+    "noEmit": false,
+    // Codex-r9 HIGH: build emit MUST treat @bu/fx-engine/privacy as an
+    // EXTERNAL package, resolved through its dist exports — NOT
+    // path-mapped to SDK source. Otherwise tsc would pull SDK files into
+    // the prover program and emit them under the prover's dist tree,
+    // breaking the package layout relative to package.json `exports`.
+    //
+    // The dev tsconfig.json keeps the path mapping so contributors get
+    // type-checking without a build dance; the production build forbids
+    // it.
+    "paths": {}
   }
 }
