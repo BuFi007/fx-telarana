@@ -3,6 +3,30 @@
 Off-chain Bun services that operate the **fx-Telaraña Privacy Hook** on testnet.
 **Testnet only.** Mainnet requires a real ASP partnership and bug-bounty pass.
 
+## ⚠️ Single-writer deployment ONLY
+
+The vendored `FxPrivacyEntrypoint.updateRoot(uint256, string)` is append-only
+and carries no expected-prior-root parameter. Running **two or more postman
+processes** against the same entrypoint is **not safe**:
+
+- Each tick reads `latestRoot()`, detects "drift" from its own local tree,
+  and republishes. With concurrent writers, this oscillates — postman A
+  publishes root_v2, postman B reads root_v2 ≠ its local root_v1, publishes
+  root_v1, clobbering the newer root.
+- There is no off-chain TOCTOU guard strong enough to fix this without an
+  on-chain compare-and-set primitive (codex-r7 finding).
+
+**Operational requirement:** grant the `ASP_POSTMAN` role to exactly ONE
+key, and run exactly ONE postman process against that key. If you need
+redundancy (HA failover), use a passive standby that does NOT hold the
+role — promote it (rotate the role) only when the primary is confirmed
+dead.
+
+Future work (slice 4b / contracts v2): add `updateRootIfLatest(expected,
+new, cid)` on `FxPrivacyEntrypoint` to make multi-writer mode safe at the
+contract layer. Until then, this constraint is enforced operationally
+only.
+
 ## Scope (slice 4)
 
 | Service | Status | Purpose |

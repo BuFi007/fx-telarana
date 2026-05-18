@@ -17,7 +17,6 @@ import {
 
 import {
   applyDeposits,
-  checkPublishGate,
   compareCanonical,
   newState,
   type CanonicalDeposit,
@@ -126,71 +125,6 @@ describe("applyDeposits — canonical insertion across pools", () => {
     state.dirty = false;
     applyDeposits(state, [dep(1n, 0, 0, POOL_A, 7n)]); // duplicate only
     expect(state.dirty).toBe(false);
-  });
-});
-
-/// @notice codex-r6 HIGH regression. The multi-writer divergence gate
-/// must run as a publish PRECONDITION — not just in the !dirty branch.
-/// New deposits dirty the tree and pre-r6 jumped straight to publish,
-/// clobbering newer third-party roots silently.
-describe("checkPublishGate (codex-r6 HIGH)", () => {
-  test("single-writer mode: always OK regardless of divergence", () => {
-    const r = checkPublishGate({
-      allowOverwriteOnDivergence: true,
-      lastConfirmedOnChainRoot:   1n,
-      onchainRoot:                999n,
-    });
-    expect(r.ok).toBe(true);
-    expect((r as { reason: string }).reason).toBe("single-writer-mode");
-  });
-
-  test("fresh chain (no roots yet): OK to publish first root", () => {
-    const r = checkPublishGate({
-      allowOverwriteOnDivergence: false,
-      lastConfirmedOnChainRoot:   null,
-      onchainRoot:                null,
-    });
-    expect(r.ok).toBe(true);
-    expect((r as { reason: string }).reason).toBe("no-roots-yet");
-  });
-
-  test("never-published-yet but chain has a root: BLOCK (treat as divergence)", () => {
-    const r = checkPublishGate({
-      allowOverwriteOnDivergence: false,
-      lastConfirmedOnChainRoot:   null,
-      onchainRoot:                7n,
-    });
-    expect(r.ok).toBe(false);
-    if (!r.ok) {
-      expect(r.onchain).toBe(7n);
-      expect(r.expected).toBe(null);
-    }
-  });
-
-  test("on-chain root matches last confirmed: OK", () => {
-    const r = checkPublishGate({
-      allowOverwriteOnDivergence: false,
-      lastConfirmedOnChainRoot:   42n,
-      onchainRoot:                42n,
-    });
-    expect(r.ok).toBe(true);
-    expect((r as { reason: string }).reason).toBe("matches-last-confirmed");
-  });
-
-  test("on-chain root has moved past last confirmed: BLOCK", () => {
-    // Concurrent writer scenario: we previously confirmed root=42, then
-    // a new deposit dirtied our tree, but in the meantime another
-    // postman published root=99. The gate must catch this.
-    const r = checkPublishGate({
-      allowOverwriteOnDivergence: false,
-      lastConfirmedOnChainRoot:   42n,
-      onchainRoot:                99n,
-    });
-    expect(r.ok).toBe(false);
-    if (!r.ok) {
-      expect(r.onchain).toBe(99n);
-      expect(r.expected).toBe(42n);
-    }
   });
 });
 

@@ -110,6 +110,12 @@ slots that the post-r1 impl does NOT read. Concretely:
      one-shot `reinitializer` that copies the legacy slots before
      promoting the new implementation.
 
+**Single-writer constraint (codex-r7)** — the vendored `Entrypoint.updateRoot`
+is append-only; safe multi-writer publication requires an on-chain CAS
+(`updateRootIfLatest(expected, new, cid)`). v1 ships single-writer only.
+Operationally: grant `ASP_POSTMAN` to exactly one key, run exactly one
+postman process. See `packages/relayer-privacy/README.md` for the runbook.
+
 **Still TODO in slice 4b** (post-merge follow-up):
 - [ ] Commit `commitment.zkey` (901 KB), `*.vkey`, `*.wasm` artifacts (or
       decide CDN-only); document URL strategy

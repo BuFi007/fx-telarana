@@ -120,15 +120,6 @@ interface PostmanConfig {
    *  abort (suitable for testnet operators who want manual triage).
    *  codex-r4: prevents silent spin on permanent role loss. */
   maxConsecutivePublishFailures: number;
-  /** If true (default), `latestRoot()` mismatch is treated as our own
-   *  silent failure → republish our local root. Suitable for SINGLE-
-   *  WRITER deployments where this postman holds the only ASP_POSTMAN
-   *  role on the chain.
-   *  If false, mismatch is treated as "another writer beat us" → hold
-   *  publish, increment failure counter, alert. Codex-r5 HIGH #2:
-   *  prevents the postman from overwriting a newer third-party root
-   *  with an older local root. */
-  allowOverwriteOnDivergence: boolean;
   dryRun: boolean;
 }
 
@@ -148,7 +139,6 @@ function loadConfig(): PostmanConfig {
     finalityConfirmations:         BigInt(Bun.env["FINALITY_CONFIRMATIONS"] ?? "5"),
     maxRangePerCall:               BigInt(Bun.env["MAX_RANGE_PER_CALL"] ?? "5000"),
     maxConsecutivePublishFailures: Number(Bun.env["MAX_CONSECUTIVE_PUBLISH_FAILURES"] ?? 0),
-    allowOverwriteOnDivergence:    Bun.env["ALLOW_OVERWRITE_ON_DIVERGENCE"] !== "false",
     dryRun:                        Bun.env["DRY_RUN"] === "true",
   };
 }
@@ -201,12 +191,6 @@ interface IndexerState {
   /** Consecutive failed publish attempts. Codex-r4: lets the loop bail
    *  on persistent failure (e.g. permanent loss of ASP_POSTMAN role). */
   consecutivePublishFailures: number;
-  /** Codex-r6 HIGH: last on-chain root this process confirmed it wrote
-   *  (via successful waitForTransactionReceipt + status==success), or
-   *  `null` if we've never observed a publish. Used by the publish
-   *  gate when `ALLOW_OVERWRITE_ON_DIVERGENCE=false` to detect another
-   *  writer beating us between ticks. */
-  lastConfirmedOnChainRoot: bigint | null;
 }
 
 function newState(): IndexerState {
@@ -217,53 +201,7 @@ function newState(): IndexerState {
     tree:                       new LeanIMT<bigint>((a: bigint, b: bigint) => poseidon([a, b])),
     dirty:                      false,
     consecutivePublishFailures: 0,
-    lastConfirmedOnChainRoot:   null,
   };
-}
-
-/// Outcome of the multi-writer divergence gate. Exported for tests.
-export type DivergenceCheck =
-  | { ok: true; reason: "single-writer-mode" }
-  | { ok: true; reason: "no-roots-yet" }
-  | { ok: true; reason: "matches-last-confirmed" }
-  | { ok: true; reason: "first-publish" }
-  | { ok: false; reason: "diverged"; onchain: bigint; expected: bigint | null };
-
-/// Decide whether `writeContract(updateRoot, ...)` should proceed.
-/// Returns ok=true if our `lastConfirmedOnChainRoot` still matches what
-/// `latestRoot()` returns (or if the chain has no roots yet, or we're in
-/// single-writer mode and skip the check). Returns ok=false if another
-/// writer's root appears on-chain between our publishes — caller must
-/// skip the write, increment the failure counter, and alert.
-export function checkPublishGate(args: {
-  allowOverwriteOnDivergence: boolean;
-  lastConfirmedOnChainRoot:   bigint | null;
-  onchainRoot:                bigint | null;
-}): DivergenceCheck {
-  if (args.allowOverwriteOnDivergence) {
-    return { ok: true, reason: "single-writer-mode" };
-  }
-  // Fresh chain: latestRoot() reverts with NoRootsAvailable, surfaced
-  // here as `null`. Always OK to publish the first root.
-  if (args.onchainRoot === null) {
-    return { ok: true, reason: "no-roots-yet" };
-  }
-  // First publish from this process when there IS an existing root —
-  // we haven't observed a confirmed write, so we can't know whether the
-  // on-chain root is ours or another writer's. Treat as divergence.
-  if (args.lastConfirmedOnChainRoot === null) {
-    return {
-      ok: false, reason: "diverged",
-      onchain: args.onchainRoot, expected: null,
-    };
-  }
-  if (args.onchainRoot !== args.lastConfirmedOnChainRoot) {
-    return {
-      ok: false, reason: "diverged",
-      onchain: args.onchainRoot, expected: args.lastConfirmedOnChainRoot,
-    };
-  }
-  return { ok: true, reason: "matches-last-confirmed" };
 }
 
 function applyDeposits(state: IndexerState, deposits: CanonicalDeposit[]): void {
@@ -389,24 +327,17 @@ async function main(): Promise<void> {
       }
 
       // Codex-r4 HIGH: reconcile against on-chain `latestRoot()` BEFORE
-      // deciding whether to publish. If a previously-cleared root was
-      // reorg'd out, or a publish silently failed, the on-chain root
-      // will differ from our in-memory tree.root → re-mark dirty and
-      // retry on this tick.
+      // deciding whether to publish. Single-writer mode (the only mode
+      // we support in v1 — see README) treats ANY mismatch as our own
+      // silent failure (reorg, dropped receipt) and re-marks dirty so
+      // the next branch republishes.
       //
-      // Codex-r5 HIGH #2: on mismatch, we MUST NOT blindly republish our
-      // local root. A newer third-party root (concurrent postman with
-      // ASP_POSTMAN role, lagging primary writer) is also a "mismatch",
-      // and overwriting it with our (possibly older) root would clobber
-      // a more recent legitimate root.
-      //
-      // Two strategies, gated by `cfg.allowOverwriteOnDivergence`:
-      //   • allowOverwriteOnDivergence=true (default, single-writer
-      //     deployments): treat any mismatch as our own reorg / silent
-      //     failure and re-publish.
-      //   • allowOverwriteOnDivergence=false: log the mismatch, do NOT
-      //     re-mark dirty, hold publication. Caller is responsible for
-      //     reconciling (off-chain log alert, operator runbook).
+      // Codex-r7: we deliberately do NOT ship multi-writer mode in v1.
+      // Safe multi-writer publication requires an on-chain compare-and-
+      // set (`updateRootIfLatest(expected, new, cid)`), which would
+      // touch the vendored Entrypoint. Until that lands, the postman
+      // assumes it is the sole holder of the ASP_POSTMAN role on the
+      // entrypoint. The runbook documents this constraint.
       if (state.tree.size > 0 && !state.dirty) {
         try {
           const onchain = await publicClient.readContract({
@@ -415,32 +346,11 @@ async function main(): Promise<void> {
             functionName: "latestRoot",
           });
           if (onchain !== state.tree.root) {
-            if (cfg.allowOverwriteOnDivergence) {
-              log("warn", "on-chain root drift; re-marking dirty (single-writer mode)", {
-                onchain: `0x${onchain.toString(16)}`,
-                local:   `0x${state.tree.root.toString(16)}`,
-              });
-              state.dirty = true;
-            } else {
-              log("error", "on-chain root divergence (multi-writer guard) — holding publish", {
-                onchain: `0x${onchain.toString(16)}`,
-                local:   `0x${state.tree.root.toString(16)}`,
-              });
-              // Hold publication entirely until operator triage.
-              state.consecutivePublishFailures += 1;
-              if (
-                cfg.maxConsecutivePublishFailures > 0 &&
-                state.consecutivePublishFailures >= cfg.maxConsecutivePublishFailures
-              ) {
-                log("error", "MAX_CONSECUTIVE_PUBLISH_FAILURES exceeded (divergence) — aborting", {
-                  count: state.consecutivePublishFailures,
-                });
-                process.exit(2);
-              }
-              // Skip the publish branch this tick.
-              await Bun.sleep(cfg.pollIntervalSeconds * 1000);
-              continue;
-            }
+            log("warn", "on-chain root drift; re-marking dirty (single-writer mode)", {
+              onchain: `0x${onchain.toString(16)}`,
+              local:   `0x${state.tree.root.toString(16)}`,
+            });
+            state.dirty = true;
           }
         } catch (err) {
           // Pre-publish: latestRoot() reverts with NoRootsAvailable when
@@ -455,72 +365,6 @@ async function main(): Promise<void> {
 
       if (state.dirty && state.tree.size > 0) {
         const root = state.tree.root;
-
-        // Codex-r6 HIGH: the divergence guard above only fires when
-        // !state.dirty. New deposits make the tree dirty and jump
-        // straight here, bypassing the multi-writer reconcile. In
-        // `allowOverwriteOnDivergence=false` mode the divergence check
-        // must run as a publish PRECONDITION — fetch latestRoot() right
-        // before the write and abort if it diverges from our last
-        // confirmed write.
-        if (!cfg.allowOverwriteOnDivergence && !cfg.dryRun) {
-          let onchainRoot: bigint | null = null;
-          try {
-            onchainRoot = await publicClient.readContract({
-              address:      cfg.entrypoint,
-              abi:          ENTRYPOINT_ABI,
-              functionName: "latestRoot",
-            });
-          } catch (err) {
-            if (String(err).includes("NoRootsAvailable")) {
-              onchainRoot = null;
-            } else {
-              log("warn", "pre-publish latestRoot() failed; treating as divergent", {
-                err: String(err),
-              });
-              // Conservative: missing read → treat as not-OK to publish,
-              // increment counter, retry next tick.
-              state.consecutivePublishFailures += 1;
-              if (
-                cfg.maxConsecutivePublishFailures > 0 &&
-                state.consecutivePublishFailures >= cfg.maxConsecutivePublishFailures
-              ) {
-                log("error", "MAX_CONSECUTIVE_PUBLISH_FAILURES exceeded (read fail) — aborting", {
-                  count: state.consecutivePublishFailures,
-                });
-                process.exit(2);
-              }
-              await Bun.sleep(cfg.pollIntervalSeconds * 1000);
-              continue;
-            }
-          }
-          const gate = checkPublishGate({
-            allowOverwriteOnDivergence: cfg.allowOverwriteOnDivergence,
-            lastConfirmedOnChainRoot:   state.lastConfirmedOnChainRoot,
-            onchainRoot,
-          });
-          if (!gate.ok) {
-            log("error", "pre-publish divergence — another writer beat us; HOLDING publish", {
-              onchain:  `0x${gate.onchain.toString(16)}`,
-              expected: gate.expected === null
-                ? "(none — never confirmed a publish)"
-                : `0x${gate.expected.toString(16)}`,
-            });
-            state.consecutivePublishFailures += 1;
-            if (
-              cfg.maxConsecutivePublishFailures > 0 &&
-              state.consecutivePublishFailures >= cfg.maxConsecutivePublishFailures
-            ) {
-              log("error", "MAX_CONSECUTIVE_PUBLISH_FAILURES exceeded (divergence) — aborting", {
-                count: state.consecutivePublishFailures,
-              });
-              process.exit(2);
-            }
-            await Bun.sleep(cfg.pollIntervalSeconds * 1000);
-            continue;
-          }
-        }
-
         const cid = `permissive-root-${state.tree.size}-${Date.now().toString(36)}`
           .padEnd(32, "x")
           .slice(0, 64);
@@ -575,10 +419,6 @@ async function main(): Promise<void> {
           if (publishOk) {
             state.dirty = false;
             state.consecutivePublishFailures = 0;
-            // Codex-r6 HIGH: remember the root we just confirmed
-            // on-chain so the next tick's divergence gate has a
-            // reliable base.
-            state.lastConfirmedOnChainRoot = root;
           } else {
             state.consecutivePublishFailures += 1;
             log("warn", "publish failed; keeping dirty=true", {
