@@ -262,6 +262,25 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
+    // MXNB on Fuji is the LIVE Bitso testnet deployment (real issuer
+    // token, not a mock). Add via `DeployFujiMxnbMarkets.s.sol`.
+    stablecoinBasket: {
+      audf: { symbol: "AUDF", source: "blocked", blockedReason: "Not deployed on Fuji testnet." },
+      brla: { symbol: "BRLA", source: "blocked", blockedReason: "Not deployed on Fuji testnet." },
+      jpyc: { symbol: "JPYC", source: "blocked", blockedReason: "Not deployed on Fuji testnet." },
+      krw1: { symbol: "KRW1", source: "blocked", blockedReason: "Not deployed on Fuji testnet." },
+      mxnb: {
+        symbol: "MXNB",
+        address: "0xAB99d44185af87AeB08361588F00F59B0CE85eBb",
+        decimals: 6,
+        pythFeedId: PYTH_FEED_USD_MXN,
+        pythFeedInverted: true,
+        redstoneFeedId: "MXN",
+        source: "issuer",
+      },
+      phpc: { symbol: "PHPC", source: "blocked", blockedReason: "Not deployed on Fuji testnet." },
+      zchf: { symbol: "ZCHF", source: "blocked", blockedReason: "Not deployed on Fuji testnet." },
+    },
   },
   [ChainId.ArcTestnet]: {
     // Arc = TRADING-EXECUTION HUB (Stage 6 live, 2026-05-15). Receives USDC
@@ -499,6 +518,24 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
+    // MXNB on Ethereum Sepolia is the LIVE Bitso testnet deployment.
+    stablecoinBasket: {
+      audf: { symbol: "AUDF", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
+      brla: { symbol: "BRLA", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
+      jpyc: { symbol: "JPYC", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
+      krw1: { symbol: "KRW1", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
+      mxnb: {
+        symbol: "MXNB",
+        address: "0x34D4CeBB03Af55b99B68342Ac4bD78e598D9A9fC",
+        decimals: 6,
+        pythFeedId: PYTH_FEED_USD_MXN,
+        pythFeedInverted: true,
+        redstoneFeedId: "MXN",
+        source: "issuer",
+      },
+      phpc: { symbol: "PHPC", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
+      zchf: { symbol: "ZCHF", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
+    },
   },
   [ChainId.OpSepolia]: {
     // Stage 6 spokes. Synced from deployments/op-sepolia.json.
@@ -527,6 +564,25 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
+    // MXNB on Arbitrum Sepolia is the LIVE Bitso testnet deployment.
+    // (We already hold 10k MXNB on this chain for protocol-bootstrap LPing.)
+    stablecoinBasket: {
+      audf: { symbol: "AUDF", source: "blocked", blockedReason: "Not deployed on Arbitrum Sepolia." },
+      brla: { symbol: "BRLA", source: "blocked", blockedReason: "Not deployed on Arbitrum Sepolia." },
+      jpyc: { symbol: "JPYC", source: "blocked", blockedReason: "Not deployed on Arbitrum Sepolia." },
+      krw1: { symbol: "KRW1", source: "blocked", blockedReason: "Not deployed on Arbitrum Sepolia." },
+      mxnb: {
+        symbol: "MXNB",
+        address: "0xb56E3E3769EfB85214Cb4fA42eBA198E9FDA92bf",
+        decimals: 6,
+        pythFeedId: PYTH_FEED_USD_MXN,
+        pythFeedInverted: true,
+        redstoneFeedId: "MXN",
+        source: "issuer",
+      },
+      phpc: { symbol: "PHPC", source: "blocked", blockedReason: "Not deployed on Arbitrum Sepolia." },
+      zchf: { symbol: "ZCHF", source: "blocked", blockedReason: "Not deployed on Arbitrum Sepolia." },
+    },
   },
   [ChainId.PolygonAmoy]: {
     // Stage 6 spokes. Synced from deployments/polygon-amoy.json.
