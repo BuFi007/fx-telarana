@@ -27,6 +27,59 @@ new, cid)` on `FxPrivacyEntrypoint` to make multi-writer mode safe at the
 contract layer. Until then, this constraint is enforced operationally
 only.
 
+## Running on live Fuji + Arc (Track C3a — local foreground)
+
+Each chain needs its own postman process pointing at its own SQLite file.
+Templates live alongside this README:
+
+```bash
+# One-time setup
+cp packages/relayer-privacy/.env.fuji.example packages/relayer-privacy/.env.fuji
+cp packages/relayer-privacy/.env.arc.example  packages/relayer-privacy/.env.arc
+# Fill in PRIVATE_KEY in both (see ASP_POSTMAN rotation note below).
+
+# Run — two terminals, one per chain (or two tmux/screen panes):
+bun run --cwd packages/relayer-privacy asp-postman --env-file=.env.fuji
+bun run --cwd packages/relayer-privacy asp-postman --env-file=.env.arc
+```
+
+SQLite state lives under `./.relayer-state/postman-{fuji,arc}.db`. Stop
+and restart either process — the cursor + leaves + discovered pools are
+hydrated from disk and scanning resumes mid-stream instead of re-running
+from `FROM_BLOCK`.
+
+Verified bring-up (2026-05-19, dry-run smoke):
+
+| Chain | FROM_BLOCK | Pools discovered | Cursor reached |
+|---|---|---|---|
+| Fuji | `55529759` | `0xC490Be46…Ec7f` (USDC) | `55548550` (finalized head) |
+| Arc Testnet | `43028523` | `0xC11C216C…988f` (USDC), `0x7B4582CD…234c` (EURC) | `43049009` (finalized head) |
+
+Heads-up — Avalanche Fuji's public RPC caps `eth_getLogs` at 2048 blocks
+per call; the `.env.fuji.example` template ships with `MAX_RANGE_PER_CALL=2000`
+to stay under it. Arc accepts the default `5000`.
+
+## ASP_POSTMAN rotation (deferred — Track C2)
+
+The privacy hub deploys grant the `ASP_POSTMAN` role to the deployer EOA
+(`0x0646FFe1…eC69`) on both chains. For v1 testnet bring-up we keep that
+key as the postman, so the relayer process is configured with
+`PRIVATE_KEY=$DEPLOYER_PRIVATE_KEY` (Track C2b, deferred).
+
+To rotate to a dedicated relayer EOA (Track C2a) later:
+
+```bash
+# On each FxPrivacyEntrypoint proxy, as the deployer:
+cast send <proxy> "grantRole(bytes32,address)" \
+  $(cast keccak "ASP_POSTMAN") <relayerEOA> --private-key $DEPLOYER_PRIVATE_KEY
+
+cast send <proxy> "revokeRole(bytes32,address)" \
+  $(cast keccak "ASP_POSTMAN") $DEPLOYER_ADDRESS --private-key $DEPLOYER_PRIVATE_KEY
+```
+
+Then point `PRIVATE_KEY=<relayerEOA-key>` in both `.env.{fuji,arc}`. The
+single-writer constraint still holds — the new EOA is the single writer.
+
 ## Scope (slice 4)
 
 | Service | Status | Purpose |
