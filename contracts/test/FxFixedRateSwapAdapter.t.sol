@@ -23,6 +23,12 @@ contract FxFixedRateSwapAdapterTest is Test {
 
         adapter = new FxFixedRateSwapAdapter(OWNER);
 
+        // Codex round-11 HIGH: swap path is gated by authorizedCaller.
+        // The whole test suite simulates the entrypoint pattern, so the
+        // mock caller (`CALLER`) needs to be authorized.
+        vm.prank(OWNER);
+        adapter.setAuthorizedCaller(CALLER, true);
+
         // Pre-fund both legs.
         usdc.mint(address(adapter), 1_000_000 * 10**6); // 1M USDC
         eurc.mint(address(adapter), 1_000_000 * 10**6); // 1M EURC
@@ -221,6 +227,74 @@ contract FxFixedRateSwapAdapterTest is Test {
         vm.prank(CALLER);
         vm.expectRevert(FxFixedRateSwapAdapter.SellEqualsBuy.selector);
         adapter.swapExactInput(address(usdc), address(usdc), 100 * 10**6, 0, RECIPIENT);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    authorizedCaller gate (codex r11 HIGH)
+    //////////////////////////////////////////////////////////////*/
+
+    function test_swap_reverts_unauthorizedCaller() public {
+        _enableUsdcEurc(0.925e18);
+        usdc.mint(address(adapter), 100 * 10**6);
+
+        address attacker = address(0xDEAD);
+        vm.prank(attacker);
+        vm.expectRevert(
+            abi.encodeWithSelector(FxFixedRateSwapAdapter.NotAuthorizedCaller.selector, attacker)
+        );
+        adapter.swapExactInput(address(usdc), address(eurc), 100 * 10**6, 0, RECIPIENT);
+    }
+
+    function test_swap_reverts_directEoaDrainAttempt_codexR11() public {
+        // The exact codex-r11 repro: an EOA calls swapExactInput WITHOUT
+        // ever transferring any sell tokens, and tries to walk away with
+        // the adapter's buy-side seed. Authorization gate must reject.
+        _enableUsdcEurc(0.92e18); // Arc-live rate
+        // Adapter starts with 1M USDC + 1M EURC from setUp.
+
+        address attacker = address(0xBADBAD);
+        vm.prank(attacker);
+        vm.expectRevert(
+            abi.encodeWithSelector(FxFixedRateSwapAdapter.NotAuthorizedCaller.selector, attacker)
+        );
+        adapter.swapExactInput(address(usdc), address(eurc), 1_086_956, 0, attacker);
+    }
+
+    function test_setAuthorizedCaller_nonOwner_reverts() public {
+        vm.expectRevert(FxFixedRateSwapAdapter.NotOwner.selector);
+        adapter.setAuthorizedCaller(CALLER, true);
+    }
+
+    function test_setAuthorizedCaller_zero_reverts() public {
+        vm.prank(OWNER);
+        vm.expectRevert(FxFixedRateSwapAdapter.ZeroAddress.selector);
+        adapter.setAuthorizedCaller(address(0), true);
+    }
+
+    function test_setAuthorizedCaller_persistsAndEmits() public {
+        address newCaller = address(0xABCD);
+        vm.prank(OWNER);
+        vm.expectEmit();
+        emit FxFixedRateSwapAdapter.AuthorizedCallerSet(newCaller, true);
+        adapter.setAuthorizedCaller(newCaller, true);
+        assertTrue(adapter.authorizedCaller(newCaller));
+    }
+
+    function test_setAuthorizedCaller_canBeRevoked() public {
+        // CALLER is authorized in setUp.
+        assertTrue(adapter.authorizedCaller(CALLER));
+
+        vm.prank(OWNER);
+        adapter.setAuthorizedCaller(CALLER, false);
+        assertFalse(adapter.authorizedCaller(CALLER));
+
+        _enableUsdcEurc(0.925e18);
+        usdc.mint(address(adapter), 100 * 10**6);
+        vm.prank(CALLER);
+        vm.expectRevert(
+            abi.encodeWithSelector(FxFixedRateSwapAdapter.NotAuthorizedCaller.selector, CALLER)
+        );
+        adapter.swapExactInput(address(usdc), address(eurc), 100 * 10**6, 0, RECIPIENT);
     }
 
     function test_swap_bidirectional() public {

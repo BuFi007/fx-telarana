@@ -66,9 +66,18 @@ contract FxFixedRateSwapAdapter is IFxRouterSwapAdapter {
     /// are required for a swap to succeed.
     mapping(address => mapping(address => bool)) public enabled;
 
+    /// Allowlist of contracts permitted to call `swapExactInput`.
+    /// Codex round-11 HIGH (Track B): the adapter is owner-funded vending
+    /// machine — without a caller gate, ANY EOA can call `swapExactInput`
+    /// directly and drain the buy-side seed liquidity without ever
+    /// transferring sell tokens. Lock to the privacy entrypoint (and any
+    /// future router) via this map.
+    mapping(address => bool) public authorizedCaller;
+
     event OwnerTransferred(address indexed previousOwner, address indexed newOwner);
     event RateSet(address indexed sellToken, address indexed buyToken, uint256 rate);
     event PairEnabled(address indexed sellToken, address indexed buyToken, bool enabled);
+    event AuthorizedCallerSet(address indexed caller, bool authorized);
     event Swapped(
         address indexed sellToken,
         address indexed buyToken,
@@ -79,6 +88,7 @@ contract FxFixedRateSwapAdapter is IFxRouterSwapAdapter {
     event LiquidityWithdrawn(address indexed token, address indexed to, uint256 amount);
 
     error NotOwner();
+    error NotAuthorizedCaller(address caller);
     error ZeroAddress();
     error PairDisabled();
     error SellEqualsBuy();
@@ -136,6 +146,16 @@ contract FxFixedRateSwapAdapter is IFxRouterSwapAdapter {
         token.safeTransfer(to, amount);
     }
 
+    /// @notice Authorize / revoke a caller for `swapExactInput`. The
+    ///         expected primary caller is `FxPrivacyEntrypoint`. Adding
+    ///         `FxRouter` (PR-5 surface) is also legitimate when that
+    ///         contract eventually injects this same adapter.
+    function setAuthorizedCaller(address caller, bool authorized) external onlyOwner {
+        if (caller == address(0)) revert ZeroAddress();
+        authorizedCaller[caller] = authorized;
+        emit AuthorizedCallerSet(caller, authorized);
+    }
+
     /*//////////////////////////////////////////////////////////////
                         IFxRouterSwapAdapter
     //////////////////////////////////////////////////////////////*/
@@ -146,8 +166,9 @@ contract FxFixedRateSwapAdapter is IFxRouterSwapAdapter {
     ///      balance (transferred by the caller — `FxPrivacyEntrypoint` does
     ///      `_asset.safeTransfer(adapter, _amountAfterFee)` before calling
     ///      this). We don't pull via transferFrom; that simplifies the
-    ///      trust + allowance dance. The adapter assumes the caller
-    ///      delivered what it claims.
+    ///      trust + allowance dance. The adapter assumes the *authorized*
+    ///      caller delivered what it claims. Unauthorized callers are
+    ///      rejected at the top of the function (Codex round-11 HIGH).
     function swapExactInput(
         address sellToken,
         address buyToken,
@@ -155,6 +176,14 @@ contract FxFixedRateSwapAdapter is IFxRouterSwapAdapter {
         uint256 minBuyAmount,
         address recipient
     ) external returns (uint256 buyAmount) {
+        // CRITICAL caller gate: without this check, ANY EOA could call
+        // swapExactInput and walk away with the adapter's buy-side
+        // liquidity for free — the function never verifies that
+        // `sellAmountNet` was actually delivered (see @dev comment above
+        // and Codex round-11 finding). Only callers the owner has
+        // allowlisted (e.g. the privacy entrypoint) can invoke this.
+        if (!authorizedCaller[msg.sender]) revert NotAuthorizedCaller(msg.sender);
+
         if (sellToken == address(0) || buyToken == address(0)) revert ZeroAddress();
         if (recipient == address(0)) revert ZeroAddress();
         if (sellToken == buyToken) revert SellEqualsBuy();

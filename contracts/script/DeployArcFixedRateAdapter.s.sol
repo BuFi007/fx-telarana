@@ -94,6 +94,11 @@ contract DeployArcFixedRateAdapter is Script {
         adapter.setEnabled(address(usdc), address(eurc), true);
         adapter.setEnabled(address(eurc), address(usdc), true);
 
+        // 2.5) Codex round-11 HIGH: authorize the privacy entrypoint as
+        //      the only caller. Without this, any EOA can drain seed
+        //      liquidity by calling swapExactInput directly.
+        adapter.setAuthorizedCaller(address(entrypoint), true);
+
         // 3) Wire the entrypoint. setSwapAdapter + setCrossCurrencyEnabled
         //    are owner-only; deployer holds OWNER_ROLE from the original
         //    privacy hook deploy.
