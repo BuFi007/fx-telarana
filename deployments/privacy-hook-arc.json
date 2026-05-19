@@ -3,13 +3,14 @@
   "chainId": 5042002,
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
   "deployedAt": "2026-05-18",
-  "scope": "Privacy Hook v1 (Option A) — shielded USDC pool only on Arc Testnet. Collateral leg uses REAL Circle EURC (0x89B5...), not the MockEURC kludge Fuji needs. Cross-currency relay NOT wired; relayCrossCurrency reverts SwapAdapterNotSet until owner injects a concrete IFxRouterSwapAdapter.",
+  "scope": "Privacy Hook v1 (Track A1 partial) — shielded USDC + EURC pools live on Arc Testnet. Cross-currency relay NOT wired yet; relayCrossCurrency reverts SwapAdapterNotSet until owner injects a concrete IFxRouterSwapAdapter (Track B).",
   "contracts": {
     "WithdrawalVerifier": "0x7f0326cea0796e31ed38f01b1e8660faad7bb6ee",
     "CommitmentVerifier": "0x9056facd889a94e4acba8cbc4c8a81ed47ba8ea0",
     "FxPrivacyEntrypointImpl": "0x4506441df7960b2cb2b600b0d37dfd3ea79fa92a",
     "FxPrivacyEntrypoint": "0xd11cddd1f04e850d3810a71608a49907c80f2736",
-    "FxPrivacyPoolUSDC": "0xc11c216c9c7a36848b1d4276d223160c8b51988f"
+    "FxPrivacyPoolUSDC": "0xc11c216c9c7a36848b1d4276d223160c8b51988f",
+    "FxPrivacyPoolEURC": "0x7B4582CDE65c8cC00fE24B16dBA60472242d234c"
   },
   "poseidon": {
     "PoseidonT3": "0x3333333C0A88F9BE4fd23ed0536F9B6c427e3B93",
@@ -24,14 +25,24 @@
     "FxMarketRegistry": "0x813232259c9b922e7571F15220617C80581f1464",
     "CollateralForRehyp": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
   },
-  "registry": {
-    "asset": "USDC",
-    "pool": "0xc11c216c9c7a36848b1d4276d223160c8b51988f",
-    "minimumDeposit": "1000000",
-    "minimumDepositHumanReadable": "1 USDC",
-    "vettingFeeBPS": "0",
-    "maxRelayFeeBPS": "500"
-  },
+  "registry": [
+    {
+      "asset": "USDC",
+      "pool": "0xc11c216c9c7a36848b1d4276d223160c8b51988f",
+      "minimumDeposit": "1000000",
+      "minimumDepositHumanReadable": "1 USDC",
+      "vettingFeeBPS": "0",
+      "maxRelayFeeBPS": "500"
+    },
+    {
+      "asset": "EURC",
+      "pool": "0x7B4582CDE65c8cC00fE24B16dBA60472242d234c",
+      "minimumDeposit": "1000000",
+      "minimumDepositHumanReadable": "1 EURC",
+      "vettingFeeBPS": "0",
+      "maxRelayFeeBPS": "500"
+    }
+  ],
   "roles": {
     "owner": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
     "asp_postman": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
@@ -43,7 +54,8 @@
     "FxPrivacyEntrypointImpl": "0xe6beee1e968b72d9362d154a96153ee29149ef50a702191d429124de5469f4b4",
     "FxPrivacyEntrypointProxy": "0x833b8e084d1534ea204b2eb277c06a641d389112e2ff52ab69530d4b1d8fd1f2",
     "FxPrivacyPoolUSDC": "0xd6317748603eeecd2c8b2c3eb180feecfc0fc787c20afbae526287f9179d3c2d",
-    "registerPool": "0xc7332ef7cba5d96ace950a8aa48732428bf23a422e4b89ea69f2d91ff59a69f6",
+    "registerPoolUSDC": "0xc7332ef7cba5d96ace950a8aa48732428bf23a422e4b89ea69f2d91ff59a69f6",
+    "FxPrivacyPoolEURC": "see contracts/broadcast/AddArcEurcPool.s.sol/5042002/run-latest.json",
     "Poseidon": "see contracts/broadcast/DeployPoseidon.s.sol/5042002/run-latest.json"
   },
   "verification": {

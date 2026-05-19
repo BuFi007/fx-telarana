@@ -27,9 +27,9 @@ import {Script, console2} from "forge-std/Script.sol";
 /// missing and asserts the post-deploy bytecode is non-empty.
 ///
 /// Required env:
-///   DEPLOYER_PRIVATE_KEY — funded on Fuji (small balance is enough; the
-///                          tx target is the Arachnid deployer).
-contract DeployPoseidonFuji is Script {
+///   DEPLOYER_PRIVATE_KEY — funded on the target chain (small balance
+///                          is enough; the tx target is Arachnid).
+contract DeployPoseidon is Script {
     /// Arachnid's deterministic deployer (live on every major EVM testnet
     /// and most mainnets).
     address constant ARACHNID_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;

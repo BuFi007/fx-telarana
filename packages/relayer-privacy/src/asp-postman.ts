@@ -19,12 +19,18 @@
 //      the range fetch on each tick, so restarts converge to the same
 //      tree as long as `FROM_BLOCK` is below the first deposit.
 //
-// Still deferred to slice 4b:
-//   • Durable persistence of the cursor + leaf set (currently in-memory,
-//     so restarts re-scan from FROM_BLOCK each time).
+// Still deferred:
 //   • Reorg-safety beyond the finality-confirmations window.
 //   • Real ASP screening (this is the permissive variant — every observed
 //     label is approved; mainnet swaps in a real screening provider).
+//
+// Track C1 (this slice): cursor + leaf set + discovered-pools are now
+// persisted to SQLite via `./persistence.ts`. On restart the postman
+// rehydrates state from `${DATA_DIR}/postman.db` (default `./.relayer-state/`),
+// replays leaves into a fresh LeanIMT in canonical insertion order, and
+// resumes scanning from the stored cursor. The DB is per-process; honor
+// the single-writer constraint (README §single-writer) by never pointing
+// two postman processes at the same DB file.
 
 import { LeanIMT } from "@zk-kit/lean-imt";
 import { poseidon } from "maci-crypto/build/ts/hashing.js";
@@ -38,6 +44,8 @@ import {
   type WalletClient,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+
+import { PostmanStore } from "./persistence.js";
 
 // ---------------------------------------------------------------------------
 // ABIs (minimal — just the events + writes we need)
@@ -120,6 +128,10 @@ interface PostmanConfig {
    *  abort (suitable for testnet operators who want manual triage).
    *  codex-r4: prevents silent spin on permanent role loss. */
   maxConsecutivePublishFailures: number;
+  /** SQLite path for persisted cursor + leaves + pools. The directory is
+   *  auto-created if missing. Track C1: restarts pick up where the last
+   *  tick left off instead of re-scanning from FROM_BLOCK. */
+  dbPath: string;
   dryRun: boolean;
 }
 
@@ -139,6 +151,7 @@ function loadConfig(): PostmanConfig {
     finalityConfirmations:         BigInt(Bun.env["FINALITY_CONFIRMATIONS"] ?? "5"),
     maxRangePerCall:               BigInt(Bun.env["MAX_RANGE_PER_CALL"] ?? "5000"),
     maxConsecutivePublishFailures: Number(Bun.env["MAX_CONSECUTIVE_PUBLISH_FAILURES"] ?? 0),
+    dbPath:                        Bun.env["DB_PATH"] ?? `${Bun.env["DATA_DIR"] ?? "./.relayer-state"}/postman.db`,
     dryRun:                        Bun.env["DRY_RUN"] === "true",
   };
 }
@@ -204,15 +217,31 @@ function newState(): IndexerState {
   };
 }
 
-function applyDeposits(state: IndexerState, deposits: CanonicalDeposit[]): void {
+interface AppliedLeaf {
+  /** Canonical insertion key `${blockNumber}:${txIndex}:${logIndex}`. */
+  key: string;
+  /** Commitment label inserted into the LeanIMT. */
+  label: bigint;
+  /** 0-indexed position in canonical insertion order (= tree size - 1
+   *  after this insert). The persistence layer stores this so a restart
+   *  can replay the leaves in the same order, deterministically rebuilding
+   *  the tree. */
+  order: number;
+}
+
+function applyDeposits(state: IndexerState, deposits: CanonicalDeposit[]): AppliedLeaf[] {
   deposits.sort(compareCanonical);
+  const applied: AppliedLeaf[] = [];
   for (const d of deposits) {
     const key = `${d.blockNumber}:${d.transactionIndex}:${d.logIndex}`;
     if (state.applied.has(key)) continue;
+    const order = state.tree.size;
     state.applied.add(key);
     state.tree.insert(d.label);
     state.dirty = true;
+    applied.push({ key, label: d.label, order });
   }
+  return applied;
 }
 
 async function fetchRange(
@@ -302,11 +331,35 @@ async function main(): Promise<void> {
     pollIntervalSeconds:   cfg.pollIntervalSeconds,
     fromBlock:             cfg.fromBlock,
     finalityConfirmations: cfg.finalityConfirmations,
+    dbPath:                cfg.dbPath,
     dryRun:                cfg.dryRun,
   });
 
+  // Track C1: open the persistent store, then hydrate state from it.
+  // If the DB is empty, we initialize from FROM_BLOCK as before. If it
+  // has prior state, we replay leaves into a fresh LeanIMT and resume
+  // the cursor — no FROM_BLOCK rescan on restart.
+  const store = new PostmanStore(cfg.dbPath);
   const state = newState();
-  state.cursor = cfg.fromBlock === 0n ? 0n : cfg.fromBlock - 1n;
+  const persisted = store.load();
+  if (persisted.leaves.length > 0 || persisted.cursor > 0n || persisted.pools.length > 0) {
+    state.cursor = persisted.cursor;
+    state.pools = persisted.pools.slice();
+    for (const leaf of persisted.leaves) {
+      state.applied.add(leaf.key);
+      state.tree.insert(leaf.label);
+    }
+    log("info", "hydrated state from disk", {
+      cursor:    state.cursor,
+      pools:     state.pools.length,
+      treeSize:  state.tree.size,
+      treeRoot:  state.tree.size > 0 ? `0x${state.tree.root.toString(16)}` : "(empty)",
+    });
+    // Mark dirty so the first tick reconciles vs on-chain `latestRoot`.
+    state.dirty = state.tree.size > 0;
+  } else {
+    state.cursor = cfg.fromBlock === 0n ? 0n : cfg.fromBlock - 1n;
+  }
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -321,9 +374,26 @@ async function main(): Promise<void> {
         log("info", "scanning canonical range", {
           from, to: finalized, knownPools: state.pools.length, treeSize: state.tree.size,
         });
+        const knownPoolsBefore = state.pools.length;
         const fresh = await fetchRange(publicClient, cfg, state.pools, from, finalized);
-        applyDeposits(state, fresh);
+        const applied = applyDeposits(state, fresh);
         state.cursor = finalized;
+
+        // Track C1: persist range outcomes atomically. We persist BEFORE
+        // attempting publication so a crash between insert and publish
+        // recovers cleanly (next start sees the same tree, marks dirty,
+        // retries). The transaction is local-only — no network IO.
+        store.transaction(() => {
+          // New pools first (the discovered order may include some we
+          // already saw — recordPool is idempotent).
+          for (let i = knownPoolsBefore; i < state.pools.length; i++) {
+            store.recordPool(state.pools[i]!);
+          }
+          for (const leaf of applied) {
+            store.appendLeaf(leaf.key, leaf.label, leaf.order);
+          }
+          store.setCursor(state.cursor);
+        });
       }
 
       // Codex-r4 HIGH: reconcile against on-chain `latestRoot()` BEFORE
@@ -454,6 +524,7 @@ export {
   applyDeposits,
   compareCanonical,
   newState,
+  type AppliedLeaf,
   type CanonicalDeposit,
   type IndexerState,
 };
