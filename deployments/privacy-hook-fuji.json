@@ -1,0 +1,49 @@
+{
+  "network": "avalanche-fuji",
+  "chainId": 43113,
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "deployedAt": "2026-05-18",
+  "scope": "Privacy Hook v1 (Option A) — shielded USDC pool only, no cross-currency relay wired yet. Cross-ccy relayCrossCurrency reverts SwapAdapterNotSet until owner wires a concrete IFxRouterSwapAdapter against FxSwapHook.",
+  "contracts": {
+    "WithdrawalVerifier": "0x18bd44dd57661ed746e127b378bf1d8e2ae64bf1",
+    "CommitmentVerifier": "0x4c4e1ec5dae12a8cbac7ff4187e2c3e5719ac71b",
+    "FxPrivacyEntrypointImpl": "0xcd04c6e2277a50c93368da77a28ba917083c205a",
+    "FxPrivacyEntrypoint": "0x6d5e3d5be0be2b29d48eda2fa35fa8d787d3c953",
+    "FxPrivacyPoolUSDC": "0xc490be46d2b87b92f146ab4dd907784d9658ec7f"
+  },
+  "poseidon": {
+    "PoseidonT3": "0x3333333C0A88F9BE4fd23ed0536F9B6c427e3B93",
+    "PoseidonT4": "0x4443338EF595F44e0121df4C21102677B142ECF0",
+    "deployer": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+    "note": "Arachnid CREATE2 canonical addresses — shared with Semaphore / 0xbow / Tornado. T3 was already on Fuji from another project; T4 deployed by this session."
+  },
+  "external": {
+    "USDC": "0x5425890298aed601595a70AB815c96711a31Bc65",
+    "MorphoBlue": "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
+    "FxMarketRegistry": "0x7ba745b979e027992ECFa51207666e3F5B46cF0a",
+    "CollateralForRehyp": "0x50C4BA39CAA7f56152d0df4914e1F6b907194992"
+  },
+  "registry": {
+    "asset": "USDC",
+    "pool": "0xc490be46d2b87b92f146ab4dd907784d9658ec7f",
+    "minimumDeposit": "1000000",
+    "minimumDepositHumanReadable": "1 USDC",
+    "vettingFeeBPS": "0",
+    "maxRelayFeeBPS": "500"
+  },
+  "roles": {
+    "owner": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    "asp_postman": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    "rotation": "Owner currently holds ASP_POSTMAN. Rotate to relayer EOA via entrypoint.grantRole + revokeRole once relayer service has a stable key."
+  },
+  "deploymentTx": {
+    "WithdrawalVerifier": "0x94c5dcd9e78fd1ad77c84b124e8904b16d00ae29a138daa3e2db56ec291c7e3e",
+    "CommitmentVerifier": "0x3add0af77cd43fc78c0836e2feb1c4690e990564a7193a8503fc6a4a8a360e24",
+    "FxPrivacyEntrypointImpl": "0x224b612248b8cdb82aa4f1a0c8f287048714fe572e0d3e0382813a2b3a6075cb",
+    "FxPrivacyEntrypointProxy": "0x966882e46d01c4e7c1b47fdd92454a2f8d5654a5e139ff275c8beb56ebbea0aa",
+    "FxPrivacyPoolUSDC": "0xfce4058cf23764da6fa1a0c94748345d6483492e341cb8d228d7446004e7e55f",
+    "registerPool": "0xe77f3e1c391be75a57cdef71e13495f412e1158070913bd3238059ee15ea4d14",
+    "PoseidonT4": "see contracts/broadcast/DeployPoseidonFuji.s.sol/43113/run-latest.json"
+  },
+  "notes": "v1 testnet scope: USDC-only shielded pool. EURC deferred (MockEURC is not user-acquirable). MXNB deferred (privacy branch lineage pre-Stage 6). Cross-currency relay disabled. Verifier choice: vendored 0xbow WithdrawalVerifier + CommitmentVerifier (used as ragequit verifier). UUPS proxy initialized with deployer as both OWNER_ROLE and ASP_POSTMAN — rotate ASP_POSTMAN to relayer EOA after relayer service has a stable key. Poseidon linked via foundry [profile.deploy] libraries at canonical PSE addresses (T3=0x3333..., T4=0x4443...)."
+}
