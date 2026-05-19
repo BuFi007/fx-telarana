@@ -25,6 +25,7 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "bun test",
+    "smoke": "bun build scripts/smoke.ts --target node --outfile dist/smoke.mjs --external snarkjs && node dist/smoke.mjs",
     "circuits:fetch": "bash scripts/fetch-circuits.sh"
   },
   "dependencies": {
