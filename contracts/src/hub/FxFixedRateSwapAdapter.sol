@@ -146,10 +146,32 @@ contract FxFixedRateSwapAdapter is IFxRouterSwapAdapter {
         token.safeTransfer(to, amount);
     }
 
-    /// @notice Authorize / revoke a caller for `swapExactInput`. The
-    ///         expected primary caller is `FxPrivacyEntrypoint`. Adding
-    ///         `FxRouter` (PR-5 surface) is also legitimate when that
-    ///         contract eventually injects this same adapter.
+    /// @notice Authorize / revoke a caller for `swapExactInput`.
+    ///
+    /// ## CRITICAL INTEGRATION INVARIANT (codex round-12 LOW)
+    ///
+    /// `swapExactInput` prices the swap from the caller-claimed
+    /// `sellAmountNet`, NOT from a measured received-amount delta. The
+    /// adapter therefore trusts every authorized caller to actually
+    /// transfer `sellAmountNet` of `sellToken` to the adapter BEFORE
+    /// calling `swapExactInput`. `FxPrivacyEntrypoint.relayCrossCurrency`
+    /// honors this invariant: see `FxPrivacyEntrypoint.sol` where it
+    /// `safeTransfer`s `_amountAfterFee` to the adapter on the same line
+    /// as the call.
+    ///
+    /// Authorizing ANY caller that does not deliver before calling
+    /// re-opens the original drain class (codex round-11 HIGH applied to
+    /// a future caller instead of an EOA). When considering a new
+    /// authorized caller:
+    ///   1. Audit the caller's pre-swap delivery path.
+    ///   2. If it pulls via allowance or otherwise doesn't pre-transfer,
+    ///      do NOT authorize it without first reworking this adapter to
+    ///      compute `buyAmount` from a measured received delta.
+    ///   3. The expected primary caller is `FxPrivacyEntrypoint`.
+    ///      `FxRouter` (PR-5 surface) follows the same pre-transfer
+    ///      pattern (`pullSellFromTaker` → `forwardToAdapter`); it is
+    ///      authorize-safe when that contract eventually injects this
+    ///      adapter.
     function setAuthorizedCaller(address caller, bool authorized) external onlyOwner {
         if (caller == address(0)) revert ZeroAddress();
         authorizedCaller[caller] = authorized;
