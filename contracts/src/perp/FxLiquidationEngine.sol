@@ -38,6 +38,17 @@ contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, R
 
     event LiquidationConfigured(LiquidationConfig config);
     event AccountFlagged(bytes32 indexed marketId, address indexed trader, address indexed flagger);
+    /// @notice Emitted whenever a flag is cleared without liquidation.
+    /// `auto = true` means the flag was cleared inside `liquidate()`
+    /// because the position recovered (codex contract review P1 #5
+    /// auto-rescind). `auto = false` means a third party called
+    /// `rescindFlag(...)` directly.
+    event AccountFlagRescinded(
+        bytes32 indexed marketId,
+        address indexed trader,
+        address indexed caller,
+        bool auto_
+    );
     event AccountLiquidated(
         bytes32 indexed marketId,
         address indexed trader,
@@ -50,6 +61,7 @@ contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, R
     error ZeroAmount();
     error InvalidConfig();
     error AccountHealthy(bytes32 marketId, address trader);
+    error AccountStillLiquidatable(bytes32 marketId, address trader);
     error AccountNotFlagged(bytes32 marketId, address trader);
     error FlagDelayPending(uint256 readyAt, uint256 nowTs);
     error Int256Overflow();
@@ -73,9 +85,37 @@ contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, R
 
     function flagAccount(bytes32 marketId, address trader) external whenNotPaused {
         if (trader == address(0)) revert ZeroAddress();
-        if (!HEALTH.isLiquidatable(marketId, trader)) revert AccountHealthy(marketId, trader);
+        // Codex contract review P1 #1: gate the flag through the strict
+        // deviation-gated oracle path so a Pyth flicker (while RedStone
+        // disagrees) can't pre-arm a flag against a healthy account.
+        // Caller (flagger) MUST wrap the tx with the RedStone SDK so the
+        // signed price payload lands in calldata tail.
+        if (!HEALTH.isLiquidatableVerified(marketId, trader)) revert AccountHealthy(marketId, trader);
         flaggedAt[marketId][trader] = block.timestamp;
         emit AccountFlagged(marketId, trader, msg.sender);
+    }
+
+    /// @notice Clear a flag against `trader` if the position is currently
+    ///         healthy under the strict-oracle health check. Callable by
+    ///         anyone — anti-grief surface against the flag-bomb attack
+    ///         (codex contract review P1 #5):
+    ///
+    ///         1. Attacker calls flagAccount during a transient dip.
+    ///         2. Price recovers; victim is healthy again; flag persists.
+    ///         3. flagDelay elapses.
+    ///         4. Price dips a second time; attacker calls liquidate with
+    ///            zero second delay.
+    ///
+    ///         With this surface, anyone (the victim, a friendly keeper,
+    ///         the protocol) can clear the stale flag the moment health
+    ///         recovers, so step 4 requires a fresh flag + delay.
+    function rescindFlag(bytes32 marketId, address trader) external whenNotPaused {
+        if (flaggedAt[marketId][trader] == 0) revert AccountNotFlagged(marketId, trader);
+        if (HEALTH.isLiquidatableVerified(marketId, trader)) {
+            revert AccountStillLiquidatable(marketId, trader);
+        }
+        delete flaggedAt[marketId][trader];
+        emit AccountFlagRescinded(marketId, trader, msg.sender, false);
     }
 
     function liquidate(bytes32 marketId, address trader, uint256 maxSizeToCloseAbsE18)
@@ -85,7 +125,27 @@ contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, R
         returns (uint256 liquidatorReward, int256 socializedLoss)
     {
         if (maxSizeToCloseAbsE18 == 0) revert ZeroAmount();
-        if (!HEALTH.isLiquidatable(marketId, trader)) revert AccountHealthy(marketId, trader);
+        // Codex contract review P1 #5 (auto-rescind): if the position
+        // recovered between flag and trigger, clear the flag here
+        // instead of letting it persist into a future dip. Belt and
+        // braces with `rescindFlag` — the public path catches recovery
+        // before the delay elapses; this catches recovery after the
+        // delay elapses, where a liquidator's revert would otherwise
+        // leave the flag spendable on the next dip.
+        //
+        // The auto-rescind branch returns early (no revert) so the
+        // storage write persists across the call. Reverting here would
+        // unwind the `delete` and leave the flag spendable, which is
+        // exactly the bug we're fixing. The keeper gets zero reward —
+        // they wasted gas trying to liquidate a healthy account.
+        if (!HEALTH.isLiquidatableVerified(marketId, trader)) {
+            if (flaggedAt[marketId][trader] != 0) {
+                delete flaggedAt[marketId][trader];
+                emit AccountFlagRescinded(marketId, trader, msg.sender, true);
+                return (0, 0);
+            }
+            revert AccountHealthy(marketId, trader);
+        }
         uint256 flagTs = flaggedAt[marketId][trader];
         if (flagTs == 0) revert AccountNotFlagged(marketId, trader);
         uint256 readyAt = flagTs + liquidationConfig.flagDelay;

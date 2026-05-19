@@ -68,6 +68,18 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase, AccessContro
     event RedstoneFeedSet(address indexed token, bytes32 redstoneFeedId);
     event ConfigUpdated(uint256 maxOracleAge, uint256 maxDeviationBps, uint256 maxConfidenceBps);
 
+    // Hard upper bounds on oracle config. Constructor + setConfig enforce
+    // both `> 0` (rejecting no-op gates) AND `<= MAX_*` (defense-in-depth
+    // against admin key compromise widening the gate to useless values).
+    // Picked to match documented defaults at ~10× headroom: 30 min
+    // staleness, 5% deviation, 5% confidence band. Past these the gate
+    // is operationally meaningless — a healthy asset doesn't need 24h
+    // staleness tolerance, and a 65% confidence band silences the gate
+    // entirely (codex contract review P2 #7).
+    uint256 public constant MAX_ORACLE_AGE_HARD_CAP = 30 minutes;
+    uint256 public constant MAX_DEVIATION_BPS_HARD_CAP = 500;     // 5.00%
+    uint256 public constant MAX_CONFIDENCE_BPS_HARD_CAP = 500;    // 5.00%
+
     /*//////////////////////////////////////////////////////////////
                                 CTOR
     //////////////////////////////////////////////////////////////*/
@@ -84,7 +96,7 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase, AccessContro
         uint256 maxConfidenceBps_
     ) {
         if (pyth_ == address(0) || initialAdmin == address(0)) revert ZeroAddress();
-        if (maxOracleAge_ == 0 || maxDeviationBps_ == 0 || maxConfidenceBps_ == 0) revert InvalidConfig();
+        _validateConfig(maxOracleAge_, maxDeviationBps_, maxConfidenceBps_);
 
         PYTH = IPyth(pyth_);
         maxOracleAge = maxOracleAge_;
@@ -94,6 +106,15 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase, AccessContro
         _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
 
         emit ConfigUpdated(maxOracleAge_, maxDeviationBps_, maxConfidenceBps_);
+    }
+
+    /// @dev Shared by constructor + `setConfig`. Both `> 0` (no-op gate)
+    ///      AND `<= MAX_*` (defense vs. admin compromise widening gate).
+    function _validateConfig(uint256 maxAge, uint256 maxDevBps, uint256 maxConfBps) internal pure {
+        if (maxAge == 0 || maxDevBps == 0 || maxConfBps == 0) revert InvalidConfig();
+        if (maxAge > MAX_ORACLE_AGE_HARD_CAP) revert InvalidConfig();
+        if (maxDevBps > MAX_DEVIATION_BPS_HARD_CAP) revert InvalidConfig();
+        if (maxConfBps > MAX_CONFIDENCE_BPS_HARD_CAP) revert InvalidConfig();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -123,7 +144,7 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase, AccessContro
     }
 
     function setConfig(uint256 maxAge, uint256 maxDevBps, uint256 maxConfBps) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (maxAge == 0 || maxDevBps == 0 || maxConfBps == 0) revert InvalidConfig();
+        _validateConfig(maxAge, maxDevBps, maxConfBps);
         maxOracleAge = maxAge;
         maxDeviationBps = maxDevBps;
         maxConfidenceBps = maxConfBps;

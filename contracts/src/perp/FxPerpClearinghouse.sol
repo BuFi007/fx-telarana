@@ -173,7 +173,12 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         if (maxSizeToCloseAbsE18 < closeAbs) closeAbs = maxSizeToCloseAbsE18;
         int256 closeAbsSigned = closeAbs.toInt256();
         int256 closeDelta = p.sizeE18 > 0 ? -closeAbsSigned : closeAbsSigned;
-        uint256 priceE18 = _price(marketId);
+        // Codex contract review P1 #1: liquidation uses the strict
+        // deviation-gated price. Caller (FxLiquidationEngine) MUST wrap
+        // the tx with the RedStone SDK so the signed payload is in
+        // calldata tail. Same pattern the keeper SDK uses for
+        // FxGatewayHook.
+        uint256 priceE18 = _priceVerified(marketId);
         (marginReleased, pnl, badDebt) = _applyDecrease(marketId, trader, closeDelta, priceE18);
     }
 
@@ -193,6 +198,23 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         Position memory p = _position[marketId][trader];
         if (p.sizeE18 == 0) return 0;
         uint256 priceE18 = _priceView(config);
+        return FxPerpMath.pnl(p.sizeE18, p.entryPriceE18, priceE18, MARGIN_DECIMALS);
+    }
+
+    /// @inheritdoc IFxPerpClearinghouse
+    // Codex contract review P1 #1: the lenient unrealizedPnl path uses
+    // ORACLE.getMid (Pyth-first with no two-source agreement gate). A
+    // brief Pyth manipulation while RedStone disagrees would be enough
+    // to compute PnL for a wrongful liquidation. This sibling reads the
+    // strict deviation-gated path so liquidator + verified-health
+    // callers can trust the result. Off-chain monitoring still reads
+    // the lenient `unrealizedPnl` (no RedStone payload needed in
+    // calldata).
+    function unrealizedPnlVerified(bytes32 marketId, address trader) public view returns (int256 pnlAmount) {
+        MarketConfig memory config = _enabledMarket(marketId);
+        Position memory p = _position[marketId][trader];
+        if (p.sizeE18 == 0) return 0;
+        uint256 priceE18 = _priceViewVerified(config);
         return FxPerpMath.pnl(p.sizeE18, p.entryPriceE18, priceE18, MARGIN_DECIMALS);
     }
 
@@ -389,6 +411,20 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
 
     function _priceView(MarketConfig memory config) internal view returns (uint256 priceE18) {
         (priceE18,) = ORACLE.getMid(config.baseToken, USDC);
+    }
+
+    /// Verified-price counterparts. Use `ORACLE.getMidVerified`, which
+    /// reads RedStone signed payload from msg.data tail and enforces a
+    /// deviation gate against Pyth. Reserved for liquidation + PnL
+    /// realization where a Pyth flicker would otherwise be exploitable
+    /// (codex contract review P1 #1).
+    function _priceVerified(bytes32 marketId) internal view returns (uint256 priceE18) {
+        MarketConfig memory config = _enabledMarket(marketId);
+        return _priceViewVerified(config);
+    }
+
+    function _priceViewVerified(MarketConfig memory config) internal view returns (uint256 priceE18) {
+        (priceE18,) = ORACLE.getMidVerified(config.baseToken, USDC);
     }
 
     function _validateMarketConfig(bytes32 marketId, MarketConfig calldata config) internal pure {
