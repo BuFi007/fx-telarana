@@ -250,10 +250,11 @@ describe("address registry", () => {
     const a = getAddresses(ChainId.ArcTestnet);
     expect(a.stablecoinBasket?.audf).toMatchObject({
       symbol: "AUDF",
+      address: "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
       decimals: 6,
       pythFeedInverted: false,
       redstoneFeedId: "AUD",
-      source: "mock",
+      source: "issuer",
     });
     expect(a.stablecoinBasket?.jpyc).toMatchObject({
       symbol: "JPYC",

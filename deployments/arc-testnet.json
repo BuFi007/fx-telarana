@@ -17,7 +17,10 @@
     "FxLiquidator": "0xa50f7D4D4a1A0D3CF418515973545b80E037B379",
     "MorphoBlue": "0x3c9b95C6E7B23f094f066733E7797C8680760830",
     "IrmMock": "0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1",
-    "FxSpokeToArc": "0x5d10d2c3b9951054845534b2f60a68ebc0898cd3"
+    "FxSpokeToArc": "0x5d10d2c3b9951054845534b2f60a68ebc0898cd3",
+    "FxOracleAudf": "0xbE28Ac2E302cFe7d69cF9A052AeD1F167C44E75c",
+    "MorphoOracleAdapterM3": "0xabE94A3f63d5C0E43ce71CDEddA96323c773507a",
+    "MorphoOracleAdapterM4": "0x30355f72ab4aFb005683cC47D29aDB721bEbEdAb"
   },
   "deprecated": {
     "V1FxHubMessageReceiver": "0x07db64fb19C6c4a1eBB1B7bfdaFd4676b43Cf276",
@@ -31,6 +34,8 @@
     "CctpDomain": "26",
     "USDC": "0x3600000000000000000000000000000000000000",
     "EURC": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+    "AUDF": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+    "AUDFFaucet": "0x14e18b333C971B92887de1fa9a23b5451F32213e",
     "Pyth": "0x2880aB155794e7179c9eE2e38200202908C17B43",
     "GatewayWallet": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
     "GatewayMinter": "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
@@ -38,8 +43,11 @@
   },
   "marketIds": {
     "M1_EURC_USDC": "0xf6fac2b9b801a7ae3deeccfa95a7f1e768b4873a22f0def0d93f7f0172cc2da2",
-    "M2_USDC_EURC": "0x9e187a5f252de56b9ffe35f72cdc4137568f9d51698560751cdaff3df60cb5d3"
+    "M2_USDC_EURC": "0x9e187a5f252de56b9ffe35f72cdc4137568f9d51698560751cdaff3df60cb5d3",
+    "M3_AUDF_USDC": "0x9053f4eeb53341cc43953030d52023d84aa9c1ad0cacb2312cdfc76078b227a4",
+    "M4_USDC_AUDF": "0x6ffe9245d0750dc7190730f03b2a8f7bbcf91b5f80fea88388d68a4eabc6daad"
   },
+  "marketIdsNote": "M3 + M4 added 2026-05-18 via contracts/script/DeployArcAudfMarkets.s.sol. Both verified via MorphoBlue.idToMarketParams. M3/M4 use FxOracleAudf (fresh, USDC+AUDF, AUD/USD not inverted); M1/M2 keep using the original FxOracle (USDC+EURC, owned by FxTimelock, not retrofittable).",
   "hub": {
     "network": "avalanche-fuji",
     "chainId": 43113,

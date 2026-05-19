@@ -324,11 +324,12 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     stablecoinBasket: {
       audf: {
         symbol: "AUDF",
+        address: "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
         decimals: 6,
         pythFeedId: PYTH_FEED_AUD_USD,
         pythFeedInverted: false,
         redstoneFeedId: "AUD",
-        source: "mock",
+        source: "issuer",
       },
       brla: {
         symbol: "BRLA",
@@ -519,8 +520,18 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
     // MXNB on Ethereum Sepolia is the LIVE Bitso testnet deployment.
+    // AUDF on Ethereum Sepolia is the LIVE Forte testnet deployment
+    // (same address as mainnet; faucet 0x14e18b...). Confirmed 2026-05-18.
     stablecoinBasket: {
-      audf: { symbol: "AUDF", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
+      audf: {
+        symbol: "AUDF",
+        address: "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+        decimals: 6,
+        pythFeedId: PYTH_FEED_AUD_USD,
+        pythFeedInverted: false,
+        redstoneFeedId: "AUD",
+        source: "issuer",
+      },
       brla: { symbol: "BRLA", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
       jpyc: { symbol: "JPYC", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
       krw1: { symbol: "KRW1", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
