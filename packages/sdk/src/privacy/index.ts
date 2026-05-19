@@ -14,6 +14,11 @@
 //   • Circuit-artifact loader interface (UrlCircuits — fetches .wasm/.zkey
 //     from any CDN; no snarkjs dependency)
 //   • Cross-currency relay encode/decode (fx-Telarana addition)
+//   • PrivacyTradeClient — integrator facade with bundled chain configs.
+//     Closes shield / relay / cross-currency loops to 3 method calls.
+//     Apache-clean; accepts an injected IWithdrawalProver so consumers
+//     wire @bu/privacy-prover (GPL) themselves without contaminating
+//     this SDK's license posture.
 //
 // What this SDK INTENTIONALLY does NOT ship (codex-r8 HIGH):
 //   • The Groth16 prover — `WithdrawalService` lives in `@bu/privacy-prover`

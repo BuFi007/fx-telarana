@@ -16,6 +16,7 @@
         "@types/bun": "latest",
         "@types/snarkjs": "^0.7.9",
         "typescript": "^5.5.0",
+        "viem": "^2.21.0",
       },
     },
     "packages/relayer-privacy": {

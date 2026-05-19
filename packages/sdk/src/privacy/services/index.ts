@@ -2,3 +2,4 @@
 
 export * from "./dataService.js";
 export * from "./contractsService.js";
+export * from "./privacyTradeClient.js";
