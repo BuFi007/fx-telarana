@@ -198,12 +198,12 @@ export function buildApp(args: {
 
     const relayFeeBPS = BigInt(r.data.relayFeeBPS);
     if (relayFeeBPS > BigInt(args.cfg.maxRelayFeeBPS)) {
-      log("warn", "rejected over-fee request", {
-        ip, requested: r.data.relayFeeBPS, max: args.cfg.maxRelayFeeBPS,
-      });
+      // Don't echo the requested fee back — it's trade metadata. The
+      // client already knows what it sent; the over-fee response just
+      // surfaces the protocol cap.
+      log("warn", "rejected over-fee request", { ip });
       return c.json({
         error: "fee_too_high",
-        requested: r.data.relayFeeBPS,
         max: String(args.cfg.maxRelayFeeBPS),
       }, 400);
     }
@@ -222,13 +222,12 @@ export function buildApp(args: {
       pubSignals: r.proof.pubSignals,
     };
 
-    log("info", "received relayCrossCurrency", {
-      ip,
-      buyToken: data.buyToken,
-      relayFeeBPS: data.relayFeeBPS,
-      minBuyAmount: data.minBuyAmount,
-      dryRun: args.cfg.dryRun,
-    });
+    // Codex round-13 TECH-HIGH: do NOT log trade metadata (buyToken,
+    // relayFeeBPS, minBuyAmount) — those fields are part of the user's
+    // private swap intent and shouldn't live in the relayer's log
+    // stream. The proof's `context` already commits to them on-chain
+    // and the entrypoint's events carry whatever the chain needs.
+    log("info", "received relayCrossCurrency", { ip, dryRun: args.cfg.dryRun });
 
     if (args.cfg.dryRun) {
       return c.json({ ok: true, dryRun: true });
