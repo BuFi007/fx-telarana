@@ -113,12 +113,29 @@ Each direction must exercise `supply`, `supplyCollateral`, `borrow`, `repay`,
 
 Treat `deployments/perps-config-5042002.json` and
 `deployments/perps-config-43113.json` as readiness targets until the fresh stack
-is broadcast and the exporters rewrite them from live state:
+is broadcast and the exporters rewrite them from live state. Pass the freshly
+deployed stack addresses explicitly; the scripts intentionally do not default to
+old live perp contracts.
 
 ```bash
+ARC_PERP_CLEARINGHOUSE=0x... ARC_PERP_MARGIN=0x... \
+ARC_PERP_FUNDING=0x... ARC_PERP_HEALTH=0x... \
+ARC_PERP_LIQUIDATION=0x... ARC_PERP_SETTLEMENT=0x... \
 bun run perps:arc:config:verify
+
+ARC_PERP_CLEARINGHOUSE=0x... ARC_PERP_MARGIN=0x... \
+ARC_PERP_FUNDING=0x... ARC_PERP_HEALTH=0x... \
+ARC_PERP_LIQUIDATION=0x... ARC_PERP_SETTLEMENT=0x... \
 bun run perps:arc:config:export
+
+FUJI_PERP_CLEARINGHOUSE=0x... FUJI_PERP_MARGIN=0x... \
+FUJI_PERP_FUNDING=0x... FUJI_PERP_HEALTH=0x... \
+FUJI_PERP_LIQUIDATION=0x... FUJI_PERP_SETTLEMENT=0x... \
 bun run perps:fuji:config:verify
+
+FUJI_PERP_CLEARINGHOUSE=0x... FUJI_PERP_MARGIN=0x... \
+FUJI_PERP_FUNDING=0x... FUJI_PERP_HEALTH=0x... \
+FUJI_PERP_LIQUIDATION=0x... FUJI_PERP_SETTLEMENT=0x... \
 bun run perps:fuji:config:export
 ```
 

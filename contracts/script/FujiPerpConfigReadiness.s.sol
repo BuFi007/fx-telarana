@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {Script, console2} from "forge-std/Script.sol";
@@ -20,13 +20,6 @@ abstract contract FujiPerpConfigReadinessBase is Script {
     address internal constant DEFAULT_ADMIN = 0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69;
     address internal constant DEFAULT_USDC = 0x5425890298aed601595a70AB815c96711a31Bc65;
     address internal constant DEFAULT_ORACLE = 0xf7fcDCA3f9c92418A980A31df7f87De7E1a1a04b;
-
-    address internal constant DEFAULT_CLEARINGHOUSE = 0x22013f712190034D8Ee43F3894461c27709E74AC;
-    address internal constant DEFAULT_MARGIN = 0x21bB1Bb922b04CbCFD1AD7Bd6788F5251917acb2;
-    address internal constant DEFAULT_FUNDING = 0x3a4459dBa18806e700423aAbEA1df1fefc928C6a;
-    address internal constant DEFAULT_HEALTH = 0x7Ff02e5F618a051acad9BbF9b1295E423062BB56;
-    address internal constant DEFAULT_LIQUIDATION = 0xED58C176E9a37Cda2854AC0Ade409cfb3687cA7d;
-    address internal constant DEFAULT_SETTLEMENT = 0x955AAEE698aaA03d5bc32F16434cef78b8Ee1fc7;
 
     address internal constant EURC = 0x5E44db7996c682E92a960b65AC713a54AD815c6B;
     address internal constant MXNB = 0xAB99d44185af87AeB08361588F00F59B0CE85eBb;
@@ -80,12 +73,12 @@ abstract contract FujiPerpConfigReadinessBase is Script {
 
     function _readStack() internal view returns (Stack memory stack) {
         stack = Stack({
-            clearinghouse: FxPerpClearinghouse(vm.envOr("FUJI_PERP_CLEARINGHOUSE", DEFAULT_CLEARINGHOUSE)),
-            margin: FxMarginAccount(vm.envOr("FUJI_PERP_MARGIN", DEFAULT_MARGIN)),
-            funding: FxFundingEngine(vm.envOr("FUJI_PERP_FUNDING", DEFAULT_FUNDING)),
-            health: FxHealthChecker(vm.envOr("FUJI_PERP_HEALTH", DEFAULT_HEALTH)),
-            liquidation: FxLiquidationEngine(vm.envOr("FUJI_PERP_LIQUIDATION", DEFAULT_LIQUIDATION)),
-            settlement: FxOrderSettlement(vm.envOr("FUJI_PERP_SETTLEMENT", DEFAULT_SETTLEMENT)),
+            clearinghouse: FxPerpClearinghouse(vm.envAddress("FUJI_PERP_CLEARINGHOUSE")),
+            margin: FxMarginAccount(vm.envAddress("FUJI_PERP_MARGIN")),
+            funding: FxFundingEngine(vm.envAddress("FUJI_PERP_FUNDING")),
+            health: FxHealthChecker(vm.envAddress("FUJI_PERP_HEALTH")),
+            liquidation: FxLiquidationEngine(vm.envAddress("FUJI_PERP_LIQUIDATION")),
+            settlement: FxOrderSettlement(vm.envAddress("FUJI_PERP_SETTLEMENT")),
             admin: vm.envOr("INITIAL_ADMIN", DEFAULT_ADMIN),
             keeper: vm.envOr("KEEPER", DEFAULT_ADMIN),
             usdc: vm.envOr("FUJI_USDC", DEFAULT_USDC),

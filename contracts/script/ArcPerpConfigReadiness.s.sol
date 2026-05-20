@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {Script, console2} from "forge-std/Script.sol";
@@ -20,13 +20,6 @@ abstract contract ArcPerpConfigReadinessBase is Script {
     address internal constant DEFAULT_ADMIN = 0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69;
     address internal constant DEFAULT_USDC = 0x3600000000000000000000000000000000000000;
     address internal constant DEFAULT_ORACLE = 0x77b3A3B420dB98B01085b8C46a753Ed9879e2865;
-
-    address internal constant DEFAULT_CLEARINGHOUSE = 0x6A265045D9A3291D2881d77DDC62e2781A2418c5;
-    address internal constant DEFAULT_MARGIN = 0x35c7cD02cFa0c2889547482B71c1a5114d8439C6;
-    address internal constant DEFAULT_FUNDING = 0x88B70872759E1aA24858746779Cb15ca9F2cdcf3;
-    address internal constant DEFAULT_HEALTH = 0x272305e821D810eC5741761F98DbDC273efD47E6;
-    address internal constant DEFAULT_LIQUIDATION = 0xD384560E5f8CE969BF4C1BDfAFACc5304AFbe8f2;
-    address internal constant DEFAULT_SETTLEMENT = 0x0F62FCdA2de63d905Cb167301C00251A9bB6dAa1;
 
     address internal constant EURC = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
     address internal constant TJPYC = 0xB176f6E0c8ecc2be208F72Ad34c54e5F10F1882a;
@@ -79,12 +72,12 @@ abstract contract ArcPerpConfigReadinessBase is Script {
 
     function _readStack() internal view returns (Stack memory stack) {
         stack = Stack({
-            clearinghouse: FxPerpClearinghouse(vm.envOr("ARC_PERP_CLEARINGHOUSE", DEFAULT_CLEARINGHOUSE)),
-            margin: FxMarginAccount(vm.envOr("ARC_PERP_MARGIN", DEFAULT_MARGIN)),
-            funding: FxFundingEngine(vm.envOr("ARC_PERP_FUNDING", DEFAULT_FUNDING)),
-            health: FxHealthChecker(vm.envOr("ARC_PERP_HEALTH", DEFAULT_HEALTH)),
-            liquidation: FxLiquidationEngine(vm.envOr("ARC_PERP_LIQUIDATION", DEFAULT_LIQUIDATION)),
-            settlement: FxOrderSettlement(vm.envOr("ARC_PERP_SETTLEMENT", DEFAULT_SETTLEMENT)),
+            clearinghouse: FxPerpClearinghouse(vm.envAddress("ARC_PERP_CLEARINGHOUSE")),
+            margin: FxMarginAccount(vm.envAddress("ARC_PERP_MARGIN")),
+            funding: FxFundingEngine(vm.envAddress("ARC_PERP_FUNDING")),
+            health: FxHealthChecker(vm.envAddress("ARC_PERP_HEALTH")),
+            liquidation: FxLiquidationEngine(vm.envAddress("ARC_PERP_LIQUIDATION")),
+            settlement: FxOrderSettlement(vm.envAddress("ARC_PERP_SETTLEMENT")),
             admin: vm.envOr("INITIAL_ADMIN", DEFAULT_ADMIN),
             keeper: vm.envOr("KEEPER", DEFAULT_ADMIN),
             usdc: vm.envOr("ARC_USDC", DEFAULT_USDC),

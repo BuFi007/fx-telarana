@@ -115,7 +115,7 @@ contract FxPerpStackTest is Test {
             FxFundingEngine.FundingConfig({enabled: true, maxFundingRateBpsPerSecond: 1, fundingVelocityBps: 1_000})
         );
         liquidation.configureLiquidation(
-            FxLiquidationEngine.LiquidationConfig({bountyBps: 1_000, bountyCap: 50e6, flagDelay: 0})
+            FxLiquidationEngine.LiquidationConfig({bountyBps: 1_000, bountyCap: 50e6, flagDelay: 60})
         );
         vm.stopPrank();
 
@@ -206,6 +206,7 @@ contract FxPerpStackTest is Test {
 
         vm.prank(LIQUIDATOR);
         liquidation.flagAccount(MARKET_ID, TRADER);
+        vm.warp(block.timestamp + liquidation.MIN_LIQUIDATION_FLAG_DELAY());
         vm.prank(LIQUIDATOR);
         (, int256 socializedLoss) = liquidation.liquidate(MARKET_ID, TRADER, 10e18);
 

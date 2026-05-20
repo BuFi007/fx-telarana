@@ -164,7 +164,8 @@ contract FxPerpSafetySprint1Test is Test {
         clearinghouse = new FxPerpClearinghouseTestHarness(address(usdc), address(oracle), address(margin), ADMIN);
         funding = new FxFundingEngine(address(clearinghouse), address(margin), ADMIN);
         health = new FxHealthCheckerTestHarness(address(clearinghouse), address(margin), ADMIN);
-        liquidation = new FxLiquidationEngineTestHarness(address(health), address(clearinghouse), address(margin), ADMIN);
+        liquidation =
+            new FxLiquidationEngineTestHarness(address(health), address(clearinghouse), address(margin), ADMIN);
 
         clearinghouse.setFundingEngine(address(funding));
         margin.setFundingSettlementHook(address(clearinghouse));
@@ -185,6 +186,14 @@ contract FxPerpSafetySprint1Test is Test {
         vm.stopPrank();
 
         _seedProtocolLiquidity(1_000e6);
+    }
+
+    function test_p1_5_configRejectsUnsafeFlagDelay() public {
+        vm.expectRevert(abi.encodeWithSelector(FxLiquidationEngine.UnsafeLiquidationFlagDelay.selector, 59, 60));
+        vm.prank(ADMIN);
+        liquidation.configureLiquidation(
+            FxLiquidationEngine.LiquidationConfig({bountyBps: 1_000, bountyCap: 50e6, flagDelay: 59})
+        );
     }
 
     // -------- P1 #1: verified-oracle path on flag + liquidate --------

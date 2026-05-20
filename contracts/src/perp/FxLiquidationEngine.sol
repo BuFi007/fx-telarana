@@ -24,6 +24,7 @@ contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, R
     using SafeCast for uint256;
 
     bytes32 public constant OPERATIONS_ROLE = keccak256("OPERATIONS_ROLE");
+    uint256 public constant MIN_LIQUIDATION_FLAG_DELAY = 60;
 
     struct LiquidationConfig {
         uint16 bountyBps;
@@ -45,12 +46,7 @@ contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, R
     /// because the position recovered (codex contract review P1 #5
     /// auto-rescind). `auto = false` means a third party called
     /// `rescindFlag(...)` directly.
-    event AccountFlagRescinded(
-        bytes32 indexed marketId,
-        address indexed trader,
-        address indexed caller,
-        bool auto_
-    );
+    event AccountFlagRescinded(bytes32 indexed marketId, address indexed trader, address indexed caller, bool auto_);
     event AccountLiquidated(
         bytes32 indexed marketId,
         address indexed trader,
@@ -67,9 +63,13 @@ contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, R
     error AccountNotFlagged(bytes32 marketId, address trader);
     error FlagDelayPending(uint256 readyAt, uint256 nowTs);
     error Int256Overflow();
+    error UnsafeLiquidationFlagDelay(uint256 delay, uint256 minimum);
 
     constructor(address health_, address clearinghouse_, address marginAccount_, address initialAdmin) {
-        if (health_ == address(0) || clearinghouse_ == address(0) || marginAccount_ == address(0) || initialAdmin == address(0)) {
+        if (
+            health_ == address(0) || clearinghouse_ == address(0) || marginAccount_ == address(0)
+                || initialAdmin == address(0)
+        ) {
             revert ZeroAddress();
         }
         HEALTH = IFxHealthChecker(health_);
@@ -81,6 +81,9 @@ contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, R
 
     function configureLiquidation(LiquidationConfig calldata config) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (config.bountyBps > 5_000) revert InvalidConfig();
+        if (config.flagDelay < MIN_LIQUIDATION_FLAG_DELAY) {
+            revert UnsafeLiquidationFlagDelay(config.flagDelay, MIN_LIQUIDATION_FLAG_DELAY);
+        }
         liquidationConfig = config;
         emit LiquidationConfigured(config);
     }
@@ -197,8 +200,7 @@ contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, R
         returns (bool liquidatable)
     {
         bytes memory ret = proxyCalldataView(
-            address(HEALTH),
-            abi.encodeCall(IFxHealthChecker.isLiquidatableVerified, (marketId, trader))
+            address(HEALTH), abi.encodeCall(IFxHealthChecker.isLiquidatableVerified, (marketId, trader))
         );
         liquidatable = abi.decode(ret, (bool));
     }

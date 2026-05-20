@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {Script, console2} from "forge-std/Script.sol";
@@ -21,11 +21,6 @@ contract ConfigureArcPerpMarkets is Script {
     uint256 internal constant ARC_CHAIN_ID = 5_042_002;
 
     address internal constant DEFAULT_USDC = 0x3600000000000000000000000000000000000000;
-    address internal constant DEFAULT_CLEARINGHOUSE = 0x6A265045D9A3291D2881d77DDC62e2781A2418c5;
-    address internal constant DEFAULT_MARGIN = 0x35c7cD02cFa0c2889547482B71c1a5114d8439C6;
-    address internal constant DEFAULT_FUNDING = 0x88B70872759E1aA24858746779Cb15ca9F2cdcf3;
-    address internal constant DEFAULT_LIQUIDATION = 0xD384560E5f8CE969BF4C1BDfAFACc5304AFbe8f2;
-
     address internal constant EURC = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
     address internal constant TJPYC = 0xB176f6E0c8ecc2be208F72Ad34c54e5F10F1882a;
     address internal constant TMXNB = 0xe8F76f90553F50E76731afbeF1ac83a9152fFBEb;
@@ -55,11 +50,10 @@ contract ConfigureArcPerpMarkets is Script {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(pk);
         address usdc = vm.envOr("ARC_USDC", DEFAULT_USDC);
-        FxPerpClearinghouse clearinghouse =
-            FxPerpClearinghouse(vm.envOr("ARC_PERP_CLEARINGHOUSE", DEFAULT_CLEARINGHOUSE));
-        FxMarginAccount margin = FxMarginAccount(vm.envOr("ARC_PERP_MARGIN", DEFAULT_MARGIN));
-        FxFundingEngine funding = FxFundingEngine(vm.envOr("ARC_PERP_FUNDING", DEFAULT_FUNDING));
-        FxLiquidationEngine liquidation = FxLiquidationEngine(vm.envOr("ARC_PERP_LIQUIDATION", DEFAULT_LIQUIDATION));
+        FxPerpClearinghouse clearinghouse = FxPerpClearinghouse(vm.envAddress("ARC_PERP_CLEARINGHOUSE"));
+        FxMarginAccount margin = FxMarginAccount(vm.envAddress("ARC_PERP_MARGIN"));
+        FxFundingEngine funding = FxFundingEngine(vm.envAddress("ARC_PERP_FUNDING"));
+        FxLiquidationEngine liquidation = FxLiquidationEngine(vm.envAddress("ARC_PERP_LIQUIDATION"));
         uint256 protocolLiquidityTarget =
             vm.envOr("ARC_PERP_PROTOCOL_LIQUIDITY_TARGET", DEFAULT_PROTOCOL_LIQUIDITY_TARGET);
 

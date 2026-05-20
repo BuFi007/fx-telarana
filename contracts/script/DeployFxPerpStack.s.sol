@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
 import {Script, console2} from "forge-std/Script.sol";
@@ -27,7 +27,8 @@ interface ISprint1FxOracle {
 ///   FX_ORACLE — MUST be a sprint-1 FxOracle or this script refuses to deploy.
 ///
 /// Optional env:
-///   INITIAL_ADMIN — defaults to deployer
+///   INITIAL_ADMIN — defaults to deployer and must equal deployer for this
+///                   bootstrap script. Handoff happens after configure/export.
 ///   KEEPER        — defaults to deployer; receives keeper execution roles
 ///   PERP_DEPLOYMENT_PATH — defaults to deployments/perps-<chainid>.json
 ///
@@ -51,6 +52,7 @@ contract DeployFxPerpStack is Script {
     error OracleHardCapMismatch(address oracle, string selectorName, uint256 actual, uint256 expected);
     error OracleConfigOutsideSprint1Caps(address oracle, uint256 maxAge, uint256 maxDevBps, uint256 maxConfBps);
     error UnsafeLiquidationFlagDelay(uint256 delay);
+    error BootstrapAdminMustBeDeployer(address deployer, address initialAdmin);
 
     function run() external {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
@@ -76,6 +78,7 @@ contract DeployFxPerpStack is Script {
 
         _verifySprint1Oracle(oracle);
         _validateLiquidationDelay();
+        _validateBootstrapAdmin(deployer, initialAdmin);
 
         vm.startBroadcast(pk);
         FxMarginAccount margin = new FxMarginAccount(usdc, initialAdmin);
@@ -228,6 +231,10 @@ contract DeployFxPerpStack is Script {
         if (LIQUIDATION_FLAG_DELAY < MIN_LIQUIDATION_FLAG_DELAY) {
             revert UnsafeLiquidationFlagDelay(LIQUIDATION_FLAG_DELAY);
         }
+    }
+
+    function _validateBootstrapAdmin(address deployer, address initialAdmin) internal pure {
+        if (initialAdmin != deployer) revert BootstrapAdminMustBeDeployer(deployer, initialAdmin);
     }
 
     function _contractAddressesJson(

@@ -81,6 +81,19 @@ export const FxLiquidationEngineAbi = [
   },
   {
     "type": "function",
+    "name": "MIN_LIQUIDATION_FLAG_DELAY",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "OPERATIONS_ROLE",
     "inputs": [],
     "outputs": [
@@ -855,6 +868,22 @@ export const FxLiquidationEngineAbi = [
     "inputs": [
       {
         "name": "valueByteSize",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "UnsafeLiquidationFlagDelay",
+    "inputs": [
+      {
+        "name": "delay",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "minimum",
         "type": "uint256",
         "internalType": "uint256"
       }

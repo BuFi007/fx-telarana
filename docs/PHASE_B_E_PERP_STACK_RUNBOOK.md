@@ -51,7 +51,7 @@ Arc testnet dry-run:
 DEPLOYER_PRIVATE_KEY="$DEPLOYER_PRIVATE_KEY" \
 USDC=0x3600000000000000000000000000000000000000 \
 FX_ORACLE=0x77b3A3B420dB98B01085b8C46a753Ed9879e2865 \
-INITIAL_ADMIN="$INITIAL_ADMIN" \
+INITIAL_ADMIN="$(cast wallet address --private-key "$DEPLOYER_PRIVATE_KEY")" \
 KEEPER=0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69 \
 forge script contracts/script/DeployFxPerpStack.s.sol:DeployFxPerpStack \
   --root contracts \
@@ -68,7 +68,7 @@ Fuji dry-run is the same generic deploy script with Fuji env:
 DEPLOYER_PRIVATE_KEY="$DEPLOYER_PRIVATE_KEY" \
 USDC=0x5425890298aed601595a70AB815c96711a31Bc65 \
 FX_ORACLE="$FUJI_FX_ORACLE" \
-INITIAL_ADMIN="$INITIAL_ADMIN" \
+INITIAL_ADMIN="$(cast wallet address --private-key "$DEPLOYER_PRIVATE_KEY")" \
 KEEPER=0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69 \
 PERP_DEPLOYMENT_PATH=deployments/perps-43113.json \
 forge script contracts/script/DeployFxPerpStack.s.sol:DeployFxPerpStack \
@@ -80,6 +80,11 @@ forge script contracts/script/DeployFxPerpStack.s.sol:DeployFxPerpStack \
 The script writes `deployments/perps-5042002.json` unless
 `PERP_DEPLOYMENT_PATH` is set. It also prints a ready-to-inject
 `CONTRACT_ADDRESSES_JSON` object.
+
+`INITIAL_ADMIN` must equal the deployer for this bootstrap script because the
+same broadcast wires roles and applies safe liquidation defaults. Do not hand
+off admin roles to timelock/multisig until after configure, export, and
+old-stack retirement have passed.
 
 ## Broadcast Gate
 
@@ -102,10 +107,10 @@ CONTRACT_ADDRESSES_JSON='{"5042002":{"FxPerpClearinghouse":"0x...","FxMarginAcco
 
 ## Configure Before Publishing
 
-The generic deploy script only deploys and wires roles. It intentionally does
-not invent market, funding, liquidation, or liquidity params. For redeploys,
-the configure broadcast is mandatory before any backend, keeper, dashboard, or
-integrator address cutover.
+The generic deploy script deploys, wires roles, and applies only the shared
+safe liquidation defaults. It intentionally does not invent market, funding, or
+liquidity params. For redeploys, the configure broadcast is mandatory before
+any backend, keeper, dashboard, or integrator address cutover.
 
 Fuji:
 
@@ -147,15 +152,44 @@ readiness scripts to prove and export the live state.
 
 ```bash
 # Arc
+ARC_PERP_CLEARINGHOUSE=0x... \
+ARC_PERP_MARGIN=0x... \
+ARC_PERP_FUNDING=0x... \
+ARC_PERP_HEALTH=0x... \
+ARC_PERP_LIQUIDATION=0x... \
+ARC_PERP_SETTLEMENT=0x... \
 bun run perps:arc:config:verify
+
+ARC_PERP_CLEARINGHOUSE=0x... \
+ARC_PERP_MARGIN=0x... \
+ARC_PERP_FUNDING=0x... \
+ARC_PERP_HEALTH=0x... \
+ARC_PERP_LIQUIDATION=0x... \
+ARC_PERP_SETTLEMENT=0x... \
 bun run perps:arc:config:export
 
 # Fuji
+FUJI_PERP_CLEARINGHOUSE=0x... \
+FUJI_PERP_MARGIN=0x... \
+FUJI_PERP_FUNDING=0x... \
+FUJI_PERP_HEALTH=0x... \
+FUJI_PERP_LIQUIDATION=0x... \
+FUJI_PERP_SETTLEMENT=0x... \
 forge script contracts/script/FujiPerpConfigReadiness.s.sol:VerifyFujiPerpConfig \
   --root contracts --rpc-url "$FUJI_RPC_URL" -vv
+
+FUJI_PERP_CLEARINGHOUSE=0x... \
+FUJI_PERP_MARGIN=0x... \
+FUJI_PERP_FUNDING=0x... \
+FUJI_PERP_HEALTH=0x... \
+FUJI_PERP_LIQUIDATION=0x... \
+FUJI_PERP_SETTLEMENT=0x... \
 forge script contracts/script/FujiPerpConfigReadiness.s.sol:ExportFujiPerpConfig \
   --root contracts --rpc-url "$FUJI_RPC_URL" -q
 ```
+
+The configure/readiness scripts require explicit fresh-stack addresses. They do
+not default to the old live 0x2201/0xED58 Fuji stack or 0x6A26/0xD384 Arc stack.
 
 `VerifyArcPerpConfig` and `VerifyFujiPerpConfig` revert if any expected
 address, role, pointer, market param, funding param, liquidation param, or
