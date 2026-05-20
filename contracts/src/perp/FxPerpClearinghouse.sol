@@ -7,6 +7,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
+import {ProxyConnector} from "@redstone-finance/evm-connector/core/ProxyConnector.sol";
+
 import {IFxOracle} from "../interfaces/IFxOracle.sol";
 import {IFxFundingEngine} from "./interfaces/IFxFundingEngine.sol";
 import {IFxMarginAccount} from "./interfaces/IFxMarginAccount.sol";
@@ -22,7 +24,7 @@ import {FxPerpMath} from "./FxPerpMath.sol";
 ///        initial-margin pattern.
 ///      - The oracle-version accumulator model is intentionally isolated in
 ///        `FxFundingEngine`, following Perennial v2's version-keyed pattern.
-contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, ReentrancyGuard {
+contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, ReentrancyGuard, ProxyConnector {
     using Math for uint256;
     using SafeCast for uint256;
 
@@ -423,8 +425,30 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         return _priceViewVerified(config);
     }
 
+    /// @dev Codex sprint-1 round 1 HIGH: a normal `ORACLE.getMidVerified` call
+    ///      DROPS the RedStone payload that the keeper appended to the outermost
+    ///      tx calldata, because Solidity ABI-encodes a fresh calldata for each
+    ///      external call. `proxyCalldataView` is the RedStone pattern for
+    ///      forwarding the payload: it re-appends the bytes from THIS contract's
+    ///      msg.data tail onto the encoded sub-call. Routed through the virtual
+    ///      hook `_oracleGetMidVerified` so test harnesses can short-circuit
+    ///      the forward and call the mock oracle directly without constructing
+    ///      a synthetic RedStone payload.
     function _priceViewVerified(MarketConfig memory config) internal view returns (uint256 priceE18) {
-        (priceE18,) = ORACLE.getMidVerified(config.baseToken, USDC);
+        (priceE18,) = _oracleGetMidVerified(config.baseToken, USDC);
+    }
+
+    function _oracleGetMidVerified(address base, address quote)
+        internal
+        view
+        virtual
+        returns (uint256 midE18, uint256 publishedAt)
+    {
+        bytes memory ret = proxyCalldataView(
+            address(ORACLE),
+            abi.encodeCall(IFxOracle.getMidVerified, (base, quote))
+        );
+        (midE18, publishedAt) = abi.decode(ret, (uint256, uint256));
     }
 
     function _validateMarketConfig(bytes32 marketId, MarketConfig calldata config) internal pure {

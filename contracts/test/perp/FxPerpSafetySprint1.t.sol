@@ -8,9 +8,69 @@ import {FxHealthChecker} from "../../src/perp/FxHealthChecker.sol";
 import {FxLiquidationEngine} from "../../src/perp/FxLiquidationEngine.sol";
 import {FxMarginAccount} from "../../src/perp/FxMarginAccount.sol";
 import {FxPerpClearinghouse} from "../../src/perp/FxPerpClearinghouse.sol";
+import {IFxHealthChecker} from "../../src/perp/interfaces/IFxHealthChecker.sol";
 import {IFxOracle} from "../../src/interfaces/IFxOracle.sol";
 import {IFxPerpClearinghouse} from "../../src/perp/interfaces/IFxPerpClearinghouse.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
+
+/// @notice Sprint-1 round-1 HIGH (codex): the production verified-oracle
+/// path uses RedStone's `ProxyConnector` to forward the signed payload
+/// across contract hops. Building a synthetic payload for unit tests is
+/// impractical, so each contract exposes a `virtual` hook (mirror of
+/// `FxOracle._redstoneFetch`) that the harness subclasses below override
+/// to call the mock oracle / clearinghouse / health checker directly.
+contract FxPerpClearinghouseTestHarness is FxPerpClearinghouse {
+    constructor(address usdc, address oracle, address marginAccount, address admin)
+        FxPerpClearinghouse(usdc, oracle, marginAccount, admin)
+    {}
+
+    function _oracleGetMidVerified(address base, address quote)
+        internal
+        view
+        override
+        returns (uint256 midE18, uint256 publishedAt)
+    {
+        return ORACLE.getMidVerified(base, quote);
+    }
+}
+
+contract FxHealthCheckerTestHarness is FxHealthChecker {
+    constructor(address clearinghouse, address marginAccount, address admin)
+        FxHealthChecker(clearinghouse, marginAccount, admin)
+    {}
+
+    function _clearinghouseUnrealizedPnlVerified(bytes32 marketId, address trader)
+        internal
+        view
+        override
+        returns (int256 pnl)
+    {
+        return CLEARINGHOUSE.unrealizedPnlVerified(marketId, trader);
+    }
+}
+
+contract FxLiquidationEngineTestHarness is FxLiquidationEngine {
+    constructor(address health, address clearinghouse, address marginAccount, address admin)
+        FxLiquidationEngine(health, clearinghouse, marginAccount, admin)
+    {}
+
+    function _healthIsLiquidatableVerified(bytes32 marketId, address trader)
+        internal
+        view
+        override
+        returns (bool liquidatable)
+    {
+        return HEALTH.isLiquidatableVerified(marketId, trader);
+    }
+
+    function _clearinghouseLiquidatePosition(bytes32 marketId, address trader, uint256 maxSizeToCloseAbsE18)
+        internal
+        override
+        returns (uint256 marginReleased, int256 pnl, uint256 badDebt)
+    {
+        return CLEARINGHOUSE.liquidatePosition(marketId, trader, maxSizeToCloseAbsE18);
+    }
+}
 
 /// @notice Mock oracle where `getMid` and `getMidVerified` can diverge.
 /// Lets us prove that the liquidation / flag / rescind paths read the
@@ -101,10 +161,10 @@ contract FxPerpSafetySprint1Test is Test {
 
         vm.startPrank(ADMIN);
         margin = new FxMarginAccount(address(usdc), ADMIN);
-        clearinghouse = new FxPerpClearinghouse(address(usdc), address(oracle), address(margin), ADMIN);
+        clearinghouse = new FxPerpClearinghouseTestHarness(address(usdc), address(oracle), address(margin), ADMIN);
         funding = new FxFundingEngine(address(clearinghouse), address(margin), ADMIN);
-        health = new FxHealthChecker(address(clearinghouse), address(margin), ADMIN);
-        liquidation = new FxLiquidationEngine(address(health), address(clearinghouse), address(margin), ADMIN);
+        health = new FxHealthCheckerTestHarness(address(clearinghouse), address(margin), ADMIN);
+        liquidation = new FxLiquidationEngineTestHarness(address(health), address(clearinghouse), address(margin), ADMIN);
 
         clearinghouse.setFundingEngine(address(funding));
         margin.setFundingSettlementHook(address(clearinghouse));

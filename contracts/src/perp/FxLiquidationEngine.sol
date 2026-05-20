@@ -7,6 +7,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
+import {ProxyConnector} from "@redstone-finance/evm-connector/core/ProxyConnector.sol";
+
 import {IFxHealthChecker} from "./interfaces/IFxHealthChecker.sol";
 import {IFxLiquidationEngine} from "./interfaces/IFxLiquidationEngine.sol";
 import {IFxMarginAccount} from "./interfaces/IFxMarginAccount.sol";
@@ -17,7 +19,7 @@ import {IFxPerpClearinghouse} from "./interfaces/IFxPerpClearinghouse.sol";
 /// @dev References:
 ///      - Synthetix v3 BFP `LiquidationModule.flagPosition` / `liquidatePosition`.
 ///      - GMX Synthetics `LiquidationUtils` keeper-reward cap pattern.
-contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, ReentrancyGuard {
+contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, ReentrancyGuard, ProxyConnector {
     using Math for uint256;
     using SafeCast for uint256;
 
@@ -90,7 +92,11 @@ contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, R
         // disagrees) can't pre-arm a flag against a healthy account.
         // Caller (flagger) MUST wrap the tx with the RedStone SDK so the
         // signed price payload lands in calldata tail.
-        if (!HEALTH.isLiquidatableVerified(marketId, trader)) revert AccountHealthy(marketId, trader);
+        // Sprint-1 round 1 HIGH: the call below MUST forward that payload
+        // through THIS contract's `proxyCalldataView` hook so it reaches
+        // FxOracle three hops away — a plain Solidity external call
+        // would strip the calldata tail.
+        if (!_healthIsLiquidatableVerified(marketId, trader)) revert AccountHealthy(marketId, trader);
         flaggedAt[marketId][trader] = block.timestamp;
         emit AccountFlagged(marketId, trader, msg.sender);
     }
@@ -111,7 +117,7 @@ contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, R
     ///         recovers, so step 4 requires a fresh flag + delay.
     function rescindFlag(bytes32 marketId, address trader) external whenNotPaused {
         if (flaggedAt[marketId][trader] == 0) revert AccountNotFlagged(marketId, trader);
-        if (HEALTH.isLiquidatableVerified(marketId, trader)) {
+        if (_healthIsLiquidatableVerified(marketId, trader)) {
             revert AccountStillLiquidatable(marketId, trader);
         }
         delete flaggedAt[marketId][trader];
@@ -138,7 +144,7 @@ contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, R
         // unwind the `delete` and leave the flag spendable, which is
         // exactly the bug we're fixing. The keeper gets zero reward —
         // they wasted gas trying to liquidate a healthy account.
-        if (!HEALTH.isLiquidatableVerified(marketId, trader)) {
+        if (!_healthIsLiquidatableVerified(marketId, trader)) {
             if (flaggedAt[marketId][trader] != 0) {
                 delete flaggedAt[marketId][trader];
                 emit AccountFlagRescinded(marketId, trader, msg.sender, true);
@@ -151,7 +157,7 @@ contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, R
         uint256 readyAt = flagTs + liquidationConfig.flagDelay;
         if (block.timestamp < readyAt) revert FlagDelayPending(readyAt, block.timestamp);
 
-        (,, uint256 badDebt) = CLEARINGHOUSE.liquidatePosition(marketId, trader, maxSizeToCloseAbsE18);
+        (,, uint256 badDebt) = _clearinghouseLiquidatePosition(marketId, trader, maxSizeToCloseAbsE18);
         delete flaggedAt[marketId][trader];
 
         uint256 remainingMargin = MARGIN.marginOf(trader);
@@ -170,5 +176,46 @@ contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, R
 
     function unpause() external onlyRole(OPERATIONS_ROLE) {
         _unpause();
+    }
+
+    /// @dev Codex sprint-1 round 1 HIGH: RedStone payload forwarding.
+    ///      `proxyCalldataView` reads the RedStone payload byte size from
+    ///      THIS contract's msg.data tail (set by the keeper's outer call)
+    ///      and re-appends those bytes onto the encoded sub-call so that
+    ///      FxHealthChecker — and the FxPerpClearinghouse / FxOracle calls
+    ///      it makes downstream — see the payload at their own msg.data
+    ///      tail. Without this hop, RedStone's `getOracleNumericValuesFromTxMsg`
+    ///      reverts because the payload is gone.
+    ///
+    ///      Marked `virtual` so test harnesses can override and call the
+    ///      mock health checker directly without constructing a synthetic
+    ///      RedStone payload. Same pattern as `FxOracle._redstoneFetch`.
+    function _healthIsLiquidatableVerified(bytes32 marketId, address trader)
+        internal
+        view
+        virtual
+        returns (bool liquidatable)
+    {
+        bytes memory ret = proxyCalldataView(
+            address(HEALTH),
+            abi.encodeCall(IFxHealthChecker.isLiquidatableVerified, (marketId, trader))
+        );
+        liquidatable = abi.decode(ret, (bool));
+    }
+
+    /// @dev Mirror of {_healthIsLiquidatableVerified} for the state-changing
+    ///      clearinghouse liquidation path. Uses `proxyCalldata` (not
+    ///      `proxyCalldataView`) because `liquidatePosition` mutates.
+    function _clearinghouseLiquidatePosition(bytes32 marketId, address trader, uint256 maxSizeToCloseAbsE18)
+        internal
+        virtual
+        returns (uint256 marginReleased, int256 pnl, uint256 badDebt)
+    {
+        bytes memory ret = proxyCalldata(
+            address(CLEARINGHOUSE),
+            abi.encodeCall(IFxPerpClearinghouse.liquidatePosition, (marketId, trader, maxSizeToCloseAbsE18)),
+            false
+        );
+        (marginReleased, pnl, badDebt) = abi.decode(ret, (uint256, int256, uint256));
     }
 }

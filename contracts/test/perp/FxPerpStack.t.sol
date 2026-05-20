@@ -14,6 +14,11 @@ import {FxPerpClearinghouse} from "../../src/perp/FxPerpClearinghouse.sol";
 import {IFxOracle} from "../../src/interfaces/IFxOracle.sol";
 import {IFxOrderSettlement} from "../../src/perp/interfaces/IFxOrderSettlement.sol";
 import {IFxPerpClearinghouse} from "../../src/perp/interfaces/IFxPerpClearinghouse.sol";
+import {
+    FxPerpClearinghouseTestHarness,
+    FxHealthCheckerTestHarness,
+    FxLiquidationEngineTestHarness
+} from "./FxPerpSafetySprint1.t.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 
 contract MockPerpOracle is IFxOracle {
@@ -86,10 +91,11 @@ contract FxPerpStackTest is Test {
 
         vm.startPrank(ADMIN);
         margin = new FxMarginAccount(address(usdc), ADMIN);
-        clearinghouse = new FxPerpClearinghouse(address(usdc), address(oracle), address(margin), ADMIN);
+        clearinghouse = new FxPerpClearinghouseTestHarness(address(usdc), address(oracle), address(margin), ADMIN);
         funding = new FxFundingEngine(address(clearinghouse), address(margin), ADMIN);
-        health = new FxHealthChecker(address(clearinghouse), address(margin), ADMIN);
-        liquidation = new FxLiquidationEngine(address(health), address(clearinghouse), address(margin), ADMIN);
+        health = new FxHealthCheckerTestHarness(address(clearinghouse), address(margin), ADMIN);
+        liquidation =
+            new FxLiquidationEngineTestHarness(address(health), address(clearinghouse), address(margin), ADMIN);
         settlement = new FxOrderSettlement(address(clearinghouse), ADMIN);
 
         clearinghouse.setFundingEngine(address(funding));
