@@ -124,6 +124,19 @@ export const FxLiquidationEngineAbi = [
   },
   {
     "type": "function",
+    "name": "extractTimestampsAndAssertAllAreEqual",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "extractedTimestamp",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
     "name": "flagAccount",
     "inputs": [
       {
@@ -322,6 +335,24 @@ export const FxLiquidationEngineAbi = [
   },
   {
     "type": "function",
+    "name": "rescindFlag",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "trader",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "revokeRole",
     "inputs": [
       {
@@ -363,6 +394,37 @@ export const FxLiquidationEngineAbi = [
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "AccountFlagRescinded",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "trader",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "caller",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "auto_",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -612,6 +674,57 @@ export const FxLiquidationEngineAbi = [
   },
   {
     "type": "error",
+    "name": "AccountStillLiquidatable",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "trader",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "CalldataMustHaveValidPayload",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CalldataOverOrUnderFlow",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DataPackageTimestampMustNotBeZero",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DataPackageTimestampsMustBeEqual",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DataTimestampCannotBeZero",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "EachSignerMustProvideTheSameValue",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "EmptyCalldataPointersArr",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "EnforcedPause",
     "inputs": []
   },
@@ -638,12 +751,70 @@ export const FxLiquidationEngineAbi = [
   },
   {
     "type": "error",
+    "name": "IncorrectUnsignedMetadataSize",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InsufficientNumberOfUniqueSigners",
+    "inputs": [
+      {
+        "name": "receivedSignersCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "requiredSignersCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "Int256Overflow",
     "inputs": []
   },
   {
     "type": "error",
+    "name": "InvalidCalldataPointer",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidConfig",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProxyCalldataFailedWithCustomError",
+    "inputs": [
+      {
+        "name": "result",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ProxyCalldataFailedWithStringMessage",
+    "inputs": [
+      {
+        "name": "message",
+        "type": "string",
+        "internalType": "string"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ProxyCalldataFailedWithoutErrMsg",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RedstonePayloadMustHaveAtLeastOneDataPackage",
     "inputs": []
   },
   {
@@ -657,6 +828,33 @@ export const FxLiquidationEngineAbi = [
     "inputs": [
       {
         "name": "value",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "SignerNotAuthorised",
+    "inputs": [
+      {
+        "name": "receivedSigner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TimestampsMustBeEqual",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TooLargeValueByteSize",
+    "inputs": [
+      {
+        "name": "valueByteSize",
         "type": "uint256",
         "internalType": "uint256"
       }

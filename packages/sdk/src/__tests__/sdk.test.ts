@@ -891,11 +891,22 @@ describe("ABI exports", () => {
     const healthFunctions = FxHealthCheckerAbi.filter((x) => x.type === "function").map((x) => x.name);
     expect(healthFunctions).toContain("healthFactor");
     expect(healthFunctions).toContain("isLiquidatable");
+    // Sprint-1 codex r0 P1 #1: strict-oracle counterparts MUST appear on
+    // the surface so integrators can route through the verified path.
+    expect(healthFunctions).toContain("healthFactorVerified");
+    expect(healthFunctions).toContain("isLiquidatableVerified");
 
     const liquidationFunctions = FxLiquidationEngineAbi.filter((x) => x.type === "function").map((x) => x.name);
     expect(liquidationFunctions).toContain("configureLiquidation");
     expect(liquidationFunctions).toContain("flagAccount");
     expect(liquidationFunctions).toContain("liquidate");
+    // Sprint-1 codex r0 P1 #5: rescindFlag is the anti-flag-bomb surface.
+    // Sprint-1 codex r1 LOW: third-party indexers need AccountFlagRescinded
+    // exported so they don't classify auto-rescind as an unknown event.
+    expect(liquidationFunctions).toContain("rescindFlag");
+    const liquidationEvents = FxLiquidationEngineAbi.filter((x) => x.type === "event").map((x) => x.name);
+    expect(liquidationEvents).toContain("AccountFlagRescinded");
+    expect(liquidationEvents).toContain("AccountLiquidated");
 
     const settlementFunctions = FxOrderSettlementAbi.filter((x) => x.type === "function").map((x) => x.name);
     expect(settlementFunctions).toContain("hashOrder");
