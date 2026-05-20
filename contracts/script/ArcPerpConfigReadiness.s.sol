@@ -45,7 +45,8 @@ abstract contract ArcPerpConfigReadinessBase is Script {
     uint256 internal constant FUNDING_VELOCITY_BPS = 1;
     uint16 internal constant LIQUIDATION_BOUNTY_BPS = 500;
     uint256 internal constant LIQUIDATION_BOUNTY_CAP = 5e6;
-    uint256 internal constant LIQUIDATION_FLAG_DELAY = 0;
+    uint256 internal constant MIN_LIQUIDATION_FLAG_DELAY = 60;
+    uint256 internal constant LIQUIDATION_FLAG_DELAY = 120;
 
     struct Stack {
         FxPerpClearinghouse clearinghouse;
@@ -74,6 +75,7 @@ abstract contract ArcPerpConfigReadinessBase is Script {
     error BoolMismatch(string label, bool actual, bool expected);
     error UintMismatch(string label, uint256 actual, uint256 expected);
     error ProtocolLiquidityBelowTarget(uint256 actual, uint256 minimum);
+    error UnsafeLiquidationFlagDelay(uint256 delay);
 
     function _readStack() internal view returns (Stack memory stack) {
         stack = Stack({
@@ -173,10 +175,12 @@ abstract contract ArcPerpConfigReadinessBase is Script {
         _verifyMarket(stack, _marketSpec("TMXNB_USDC", "tMXNB", TMXNB, TEST_FIAT_OI_CAP));
         _verifyMarket(stack, _marketSpec("TCHFC_USDC", "tCHFC", TCHFC, TEST_FIAT_OI_CAP));
 
+        _validateLiquidationDelay();
         (uint16 bountyBps, uint256 bountyCap, uint256 flagDelay) = stack.liquidation.liquidationConfig();
         _expectUint("liquidation.bountyBps", bountyBps, LIQUIDATION_BOUNTY_BPS);
         _expectUint("liquidation.bountyCap", bountyCap, LIQUIDATION_BOUNTY_CAP);
         _expectUint("liquidation.flagDelay", flagDelay, LIQUIDATION_FLAG_DELAY);
+        if (flagDelay < MIN_LIQUIDATION_FLAG_DELAY) revert UnsafeLiquidationFlagDelay(flagDelay);
 
         uint256 protocolLiquidity = stack.margin.protocolLiquidity();
         if (protocolLiquidity < stack.minProtocolLiquidity) {
@@ -333,6 +337,12 @@ abstract contract ArcPerpConfigReadinessBase is Script {
 
     function _expectUint(string memory label, uint256 actual, uint256 expected) internal pure {
         if (actual != expected) revert UintMismatch(label, actual, expected);
+    }
+
+    function _validateLiquidationDelay() internal pure {
+        if (LIQUIDATION_FLAG_DELAY < MIN_LIQUIDATION_FLAG_DELAY) {
+            revert UnsafeLiquidationFlagDelay(LIQUIDATION_FLAG_DELAY);
+        }
     }
 
     function _contractAddressesJson(Stack memory stack) internal view returns (string memory) {

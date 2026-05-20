@@ -43,9 +43,11 @@ contract ConfigureArcPerpMarkets is Script {
     uint256 internal constant FUNDING_VELOCITY_BPS = 1;
     uint16 internal constant LIQUIDATION_BOUNTY_BPS = 500;
     uint256 internal constant LIQUIDATION_BOUNTY_CAP = 5e6;
-    uint256 internal constant LIQUIDATION_FLAG_DELAY = 0;
+    uint256 internal constant MIN_LIQUIDATION_FLAG_DELAY = 60;
+    uint256 internal constant LIQUIDATION_FLAG_DELAY = 120;
 
     error WrongChain(uint256 chainId);
+    error UnsafeLiquidationFlagDelay(uint256 delay);
 
     function run() external {
         if (block.chainid != ARC_CHAIN_ID) revert WrongChain(block.chainid);
@@ -85,6 +87,7 @@ contract ConfigureArcPerpMarkets is Script {
         _configureMarket(clearinghouse, funding, "tMXNB", TMXNB, TEST_FIAT_OI_CAP);
         _configureMarket(clearinghouse, funding, "tCHFC", TCHFC, TEST_FIAT_OI_CAP);
 
+        _validateLiquidationDelay();
         liquidation.configureLiquidation(
             FxLiquidationEngine.LiquidationConfig({
                 bountyBps: LIQUIDATION_BOUNTY_BPS, bountyCap: LIQUIDATION_BOUNTY_CAP, flagDelay: LIQUIDATION_FLAG_DELAY
@@ -107,7 +110,14 @@ contract ConfigureArcPerpMarkets is Script {
         _logMarket("tCHFC");
         console2.log("liquidation bounty bps     ", LIQUIDATION_BOUNTY_BPS);
         console2.log("liquidation bounty cap     ", LIQUIDATION_BOUNTY_CAP);
+        console2.log("liquidation flag delay     ", LIQUIDATION_FLAG_DELAY);
         console2.log("protocol liquidity         ", margin.protocolLiquidity());
+    }
+
+    function _validateLiquidationDelay() internal pure {
+        if (LIQUIDATION_FLAG_DELAY < MIN_LIQUIDATION_FLAG_DELAY) {
+            revert UnsafeLiquidationFlagDelay(LIQUIDATION_FLAG_DELAY);
+        }
     }
 
     function _configureMarket(

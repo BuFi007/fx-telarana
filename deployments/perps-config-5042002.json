@@ -71,7 +71,7 @@
   "keeper": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
   "liquidation_bountyBps": 500,
   "liquidation_bountyCap": 5000000,
-  "liquidation_flagDelay": 0,
+  "liquidation_flagDelay": 120,
   "marginUsdcBalance": 100700000,
   "margin_fundingSettlementHook": "0x6A265045D9A3291D2881d77DDC62e2781A2418c5",
   "minProtocolLiquidity": 100000000,
