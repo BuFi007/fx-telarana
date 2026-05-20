@@ -12,25 +12,23 @@ import {FxOrderSettlement} from "../src/perp/FxOrderSettlement.sol";
 import {FxPerpClearinghouse} from "../src/perp/FxPerpClearinghouse.sol";
 import {IFxPerpClearinghouse} from "../src/perp/interfaces/IFxPerpClearinghouse.sol";
 
-/// @notice Shared Arc Phase B-E perp deployment-readiness checks. These scripts
-///         are read-only and intentionally never broadcast transactions.
-abstract contract ArcPerpConfigReadinessBase is Script {
-    uint256 internal constant ARC_CHAIN_ID = 5_042_002;
+/// @notice Shared Fuji Phase B-E perp deployment-readiness checks. These
+///         scripts are read-only and intentionally never broadcast txs.
+abstract contract FujiPerpConfigReadinessBase is Script {
+    uint256 internal constant FUJI_CHAIN_ID = 43_113;
 
     address internal constant DEFAULT_ADMIN = 0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69;
-    address internal constant DEFAULT_USDC = 0x3600000000000000000000000000000000000000;
+    address internal constant DEFAULT_USDC = 0x5425890298aed601595a70AB815c96711a31Bc65;
 
-    address internal constant EURC = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
-    address internal constant TJPYC = 0xB176f6E0c8ecc2be208F72Ad34c54e5F10F1882a;
-    address internal constant TMXNB = 0xe8F76f90553F50E76731afbeF1ac83a9152fFBEb;
-    address internal constant TCHFC = 0x249DBFd4ac17247Cf10098F6C3937F90570b5750;
+    address internal constant EURC = 0x5E44db7996c682E92a960b65AC713a54AD815c6B;
+    address internal constant MXNB = 0xAB99d44185af87AeB08361588F00F59B0CE85eBb;
 
     uint16 internal constant INITIAL_MARGIN_BPS = 500;
     uint16 internal constant MAINTENANCE_MARGIN_BPS = 300;
     uint16 internal constant TRADING_FEE_BPS = 5;
     uint32 internal constant MAX_LEVERAGE_BPS = 200_000;
     uint256 internal constant EURC_OI_CAP = 1_000e6;
-    uint256 internal constant TEST_FIAT_OI_CAP = 500e6;
+    uint256 internal constant MXNB_OI_CAP = 500e6;
     uint256 internal constant DEFAULT_MIN_PROTOCOL_LIQUIDITY = 100e6;
 
     uint256 internal constant MAX_FUNDING_RATE_BPS_PER_SECOND = 1;
@@ -51,11 +49,14 @@ abstract contract ArcPerpConfigReadinessBase is Script {
         address keeper;
         address usdc;
         address oracle;
+        address eurc;
+        address mxnb;
         uint256 minProtocolLiquidity;
     }
 
     struct MarketSpec {
         string key;
+        string symbol;
         bytes32 marketId;
         address baseToken;
         uint256 oiCap;
@@ -71,22 +72,24 @@ abstract contract ArcPerpConfigReadinessBase is Script {
 
     function _readStack() internal view returns (Stack memory stack) {
         stack = Stack({
-            clearinghouse: FxPerpClearinghouse(vm.envAddress("ARC_PERP_CLEARINGHOUSE")),
-            margin: FxMarginAccount(vm.envAddress("ARC_PERP_MARGIN")),
-            funding: FxFundingEngine(vm.envAddress("ARC_PERP_FUNDING")),
-            health: FxHealthChecker(vm.envAddress("ARC_PERP_HEALTH")),
-            liquidation: FxLiquidationEngine(vm.envAddress("ARC_PERP_LIQUIDATION")),
-            settlement: FxOrderSettlement(vm.envAddress("ARC_PERP_SETTLEMENT")),
+            clearinghouse: FxPerpClearinghouse(vm.envAddress("FUJI_PERP_CLEARINGHOUSE")),
+            margin: FxMarginAccount(vm.envAddress("FUJI_PERP_MARGIN")),
+            funding: FxFundingEngine(vm.envAddress("FUJI_PERP_FUNDING")),
+            health: FxHealthChecker(vm.envAddress("FUJI_PERP_HEALTH")),
+            liquidation: FxLiquidationEngine(vm.envAddress("FUJI_PERP_LIQUIDATION")),
+            settlement: FxOrderSettlement(vm.envAddress("FUJI_PERP_SETTLEMENT")),
             admin: vm.envOr("INITIAL_ADMIN", DEFAULT_ADMIN),
             keeper: vm.envOr("KEEPER", DEFAULT_ADMIN),
-            usdc: vm.envOr("ARC_USDC", DEFAULT_USDC),
-            oracle: vm.envAddress("ARC_FX_ORACLE"),
-            minProtocolLiquidity: vm.envOr("ARC_PERP_MIN_PROTOCOL_LIQUIDITY", DEFAULT_MIN_PROTOCOL_LIQUIDITY)
+            usdc: vm.envOr("FUJI_USDC", DEFAULT_USDC),
+            oracle: vm.envAddress("FUJI_FX_ORACLE"),
+            eurc: vm.envOr("FUJI_EURC", EURC),
+            mxnb: vm.envOr("FUJI_MXNB", MXNB),
+            minProtocolLiquidity: vm.envOr("FUJI_PERP_MIN_PROTOCOL_LIQUIDITY", DEFAULT_MIN_PROTOCOL_LIQUIDITY)
         });
     }
 
     function _verify(Stack memory stack) internal view {
-        if (block.chainid != ARC_CHAIN_ID) revert WrongChain(block.chainid);
+        if (block.chainid != FUJI_CHAIN_ID) revert WrongChain(block.chainid);
 
         _expectCode("FxPerpClearinghouse", address(stack.clearinghouse));
         _expectCode("FxMarginAccount", address(stack.margin));
@@ -162,10 +165,8 @@ abstract contract ArcPerpConfigReadinessBase is Script {
             "settlement.settler.keeper", stack.settlement.hasRole(stack.settlement.SETTLER_ROLE(), stack.keeper), true
         );
 
-        _verifyMarket(stack, _marketSpec("EURC_USDC", "EURC", EURC, EURC_OI_CAP));
-        _verifyMarket(stack, _marketSpec("TJPYC_USDC", "tJPYC", TJPYC, TEST_FIAT_OI_CAP));
-        _verifyMarket(stack, _marketSpec("TMXNB_USDC", "tMXNB", TMXNB, TEST_FIAT_OI_CAP));
-        _verifyMarket(stack, _marketSpec("TCHFC_USDC", "tCHFC", TCHFC, TEST_FIAT_OI_CAP));
+        _verifyMarket(stack, _marketSpec("EURC_USDC", "EURC", stack.eurc, EURC_OI_CAP));
+        _verifyMarket(stack, _marketSpec("MXNB_USDC", "MXNB", stack.mxnb, MXNB_OI_CAP));
 
         _validateLiquidationDelay();
         (uint16 bountyBps, uint256 bountyCap, uint256 flagDelay) = stack.liquidation.liquidationConfig();
@@ -200,7 +201,7 @@ abstract contract ArcPerpConfigReadinessBase is Script {
     }
 
     function _writeManifest(string memory path, Stack memory stack) internal {
-        string memory root = "arcPerpConfig";
+        string memory root = "fujiPerpConfig";
         vm.serializeUint(root, "chainId", block.chainid);
         vm.serializeUint(root, "exportedBlockNumber", block.number);
         vm.serializeUint(root, "exportedBlockTimestamp", block.timestamp);
@@ -221,10 +222,8 @@ abstract contract ArcPerpConfigReadinessBase is Script {
         vm.serializeUint(root, "marginUsdcBalance", IERC20(stack.usdc).balanceOf(address(stack.margin)));
         vm.serializeUint(root, "minProtocolLiquidity", stack.minProtocolLiquidity);
 
-        _serializeMarket(root, stack, _marketSpec("EURC_USDC", "EURC", EURC, EURC_OI_CAP));
-        _serializeMarket(root, stack, _marketSpec("TJPYC_USDC", "tJPYC", TJPYC, TEST_FIAT_OI_CAP));
-        _serializeMarket(root, stack, _marketSpec("TMXNB_USDC", "tMXNB", TMXNB, TEST_FIAT_OI_CAP));
-        _serializeMarket(root, stack, _marketSpec("TCHFC_USDC", "tCHFC", TCHFC, TEST_FIAT_OI_CAP));
+        _serializeMarket(root, stack, _marketSpec("EURC_USDC", "EURC", stack.eurc, EURC_OI_CAP));
+        _serializeMarket(root, stack, _marketSpec("MXNB_USDC", "MXNB", stack.mxnb, MXNB_OI_CAP));
 
         (uint16 bountyBps, uint256 bountyCap, uint256 flagDelay) = stack.liquidation.liquidationConfig();
         vm.serializeUint(root, "liquidation_bountyBps", bountyBps);
@@ -309,6 +308,7 @@ abstract contract ArcPerpConfigReadinessBase is Script {
     {
         spec = MarketSpec({
             key: key,
+            symbol: symbol,
             marketId: keccak256(bytes(string.concat("FX-PERP:", symbol, "/USDC"))),
             baseToken: baseToken,
             oiCap: oiCap
@@ -358,27 +358,27 @@ abstract contract ArcPerpConfigReadinessBase is Script {
     }
 }
 
-contract VerifyArcPerpConfig is ArcPerpConfigReadinessBase {
+contract VerifyFujiPerpConfig is FujiPerpConfigReadinessBase {
     function run() external view {
         Stack memory stack = _readStack();
         _verify(stack);
-        console2.log("Arc Phase B-E perp config verified");
+        console2.log("Fuji Phase B-E perp config verified");
         console2.log("chainId              ", block.chainid);
         console2.log("protocolLiquidity    ", stack.margin.protocolLiquidity());
         console2.log("margin USDC balance  ", IERC20(stack.usdc).balanceOf(address(stack.margin)));
     }
 }
 
-contract ExportArcPerpConfig is ArcPerpConfigReadinessBase {
+contract ExportFujiPerpConfig is FujiPerpConfigReadinessBase {
     function run() external {
         Stack memory stack = _readStack();
         _verify(stack);
 
         string memory defaultPath = string.concat("../deployments/perps-config-", vm.toString(block.chainid), ".json");
-        string memory path = vm.envOr("ARC_PERP_CONFIG_PATH", defaultPath);
+        string memory path = vm.envOr("FUJI_PERP_CONFIG_PATH", defaultPath);
         _writeManifest(path, stack);
 
-        console2.log("Arc Phase B-E perp config exported");
+        console2.log("Fuji Phase B-E perp config exported");
         console2.log("path                 ", path);
         console2.log("protocolLiquidity    ", stack.margin.protocolLiquidity());
         console2.log("margin USDC balance  ", IERC20(stack.usdc).balanceOf(address(stack.margin)));

@@ -164,7 +164,7 @@ contract FxPerpStackInvariantTest is StdInvariant, Test {
             FxFundingEngine.FundingConfig({enabled: true, maxFundingRateBpsPerSecond: 1, fundingVelocityBps: 1_000})
         );
         liquidation.configureLiquidation(
-            FxLiquidationEngine.LiquidationConfig({bountyBps: 1_000, bountyCap: 50e6, flagDelay: 0})
+            FxLiquidationEngine.LiquidationConfig({bountyBps: 1_000, bountyCap: 50e6, flagDelay: 60})
         );
         clearinghouse.configureMarket(
             MARKET_ID,

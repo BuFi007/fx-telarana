@@ -2,10 +2,12 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import {
+  concatHex,
   createPublicClient,
   createWalletClient,
   decodeEventLog,
   defineChain,
+  encodeFunctionData,
   http,
   isAddress,
   isHex,
@@ -14,6 +16,7 @@ import {
   parseAbiItem,
   parseEventLogs,
   stringToHex,
+  type Abi,
   type Address,
   type Hex,
   type PublicClient,
@@ -23,6 +26,7 @@ import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 
 import { ChainId, getAddresses } from "./addresses/index.js";
 import {
+  ALL_FX_PERP_MARKET_KEYS,
   FX_PERP_MARKET_KEYS,
   getFxPerpMarket,
   type FxPerpConfigManifest,
@@ -166,6 +170,7 @@ export interface FxPerpLiquidationResult {
   status:
     | "healthy"
     | "flagged"
+    | "rescinded"
     | "liquidated"
     | "auto_rescinded"
     | "waiting_flag_delay"
@@ -203,6 +208,7 @@ const clearinghouseAbi = parseAbi([
 
 const oracleAbi = parseAbi([
   "function getMidWithUpdatePyth(address base, address quote, bytes[] pythUpdate) payable returns (uint256 midE18,uint256 publishedAt)",
+  "function redstoneFeedOf(address token) view returns (bytes32)",
 ]);
 
 const pythAbi = parseAbi([
@@ -252,6 +258,35 @@ const positionDecreasedEvent = parseAbiItem(
   "event PositionDecreased(bytes32 indexed marketId,address indexed trader,int256 sizeDeltaE18,int256 resultingSizeE18,uint256 priceE18,uint256 marginReleased,int256 pnl,uint256 badDebt)",
 );
 const positionEventsAbi = [positionIncreasedEvent, positionDecreasedEvent] as const;
+const REDSTONE_DATA_SERVICE_ID = "redstone-primary-prod";
+const REDSTONE_UNIQUE_SIGNERS_COUNT = 3;
+const REDSTONE_EVM_CONNECTOR_PACKAGE = "@redstone-finance/evm-connector";
+const REDSTONE_SDK_PACKAGE = "@redstone-finance/sdk";
+const PRIMARY_PROD_SIGNERS = [
+  "0x8BB8F32Df04c8b654987DAaeD53D6B6091e3B774",
+  "0xdEB22f54738d54976C4c0fe5ce6d408E40d88499",
+  "0x51Ce04Be4b3E32572C4Ec9135221d0691Ba7d202",
+  "0xDD682daEC5A90dD295d14DA4b0bec9281017b5bE",
+  "0x9c5AE89C4Af6aA32cE58588DBaF90d18a855B6de",
+] as const;
+
+export interface RedstoneWriteContractInput {
+  address: Address;
+  abi: Abi;
+  functionName: string;
+  args?: readonly unknown[];
+}
+
+type RedstoneDataServiceWrapper = {
+  getBytesDataForAppending(): Promise<unknown>;
+};
+
+type RedstoneDataServiceWrapperConstructor = new (input: {
+  dataServiceId: string;
+  dataPackagesIds: readonly string[];
+  uniqueSignersCount: number;
+  authorizedSigners: readonly string[];
+}) => RedstoneDataServiceWrapper;
 
 export function createJsonLogger(component: string, sink: (line: string) => void = console.log): FxPerpJsonLogger {
   const write = (level: FxPerpLogLevel, event: string, fields: Record<string, unknown> = {}) => {
@@ -270,6 +305,20 @@ export function createJsonLogger(component: string, sink: (line: string) => void
     warn: (event, fields) => write("warn", event, fields),
     error: (event, fields) => write("error", event, fields),
   };
+}
+
+export async function writeWithRedstone(
+  wallet: WalletClient,
+  input: RedstoneWriteContractInput,
+  feeds: readonly string[],
+): Promise<Hex> {
+  const encode = encodeFunctionData as (parameters: RedstoneWriteContractInput) => Hex;
+  const data = encode(input);
+  const payload = await fetchRedstonePayloadForFeeds(feeds);
+  return (wallet as unknown as { sendTransaction(input: { to: Address; data: Hex }): Promise<Hex> }).sendTransaction({
+    to: input.address,
+    data: concatHex([data, payload]),
+  });
 }
 
 export function keeperComponentsFromString(value: string | undefined): FxPerpKeeperComponent[] {
@@ -492,7 +541,7 @@ export async function pokeDueFundingMarkets(
   const nowTs = latestBlock.timestamp;
   const results: FxPerpFundingPokeResult[] = [];
 
-  for (const marketKey of FX_PERP_MARKET_KEYS) {
+  for (const marketKey of context.manifest.marketKeys) {
     const market = getFxPerpMarket(context.manifest, marketKey);
     const state = await readFundingState(context, market.marketId);
     const elapsed = nowTs > state.lastUpdate ? nowTs - state.lastUpdate : 0n;
@@ -562,7 +611,7 @@ export async function runLiquidationScanner(
   const results: FxPerpLiquidationResult[] = [];
   const latestBlock = await context.publicClient.getBlock();
 
-  for (const marketKey of FX_PERP_MARKET_KEYS) {
+  for (const marketKey of context.manifest.marketKeys) {
     const market = getFxPerpMarket(context.manifest, marketKey);
     for (const trader of uniqueAddresses(candidates[marketKey] ?? [])) {
       const position = await readPosition(context, market.marketId, trader);
@@ -582,9 +631,30 @@ export async function runLiquidationScanner(
         trader,
       ]);
       if (!liquidatable) {
-        const healthy = { marketKey, marketId: market.marketId, trader, status: "healthy" as const, healthFactor };
-        results.push(healthy);
-        context.logger.info("liquidation_candidate_healthy", healthy);
+        const flaggedAt = await readBigint(
+          context.publicClient,
+          context.manifest.addresses.liquidationEngine,
+          liquidationAbi,
+          "flaggedAt",
+          [market.marketId, trader],
+        );
+        if (flaggedAt !== 0n && !context.dryRun) {
+          const redstoneFeeds = await redstoneFeedsForMarket(context, market);
+          const rescindHash = await writeWithRedstone(wallet, {
+            address: context.manifest.addresses.liquidationEngine,
+            abi: liquidationAbi,
+            functionName: "rescindFlag",
+            args: [market.marketId, trader],
+          }, redstoneFeeds);
+          await waitForSuccess(context, "liquidation_rescind_flag", rescindHash);
+          const rescinded = { marketKey, marketId: market.marketId, trader, status: "rescinded" as const, healthFactor, flaggedAt: 0n, txHash: rescindHash };
+          results.push(rescinded);
+          context.logger.info("liquidation_flag_rescinded", { marketKey, marketId: market.marketId, trader, txHash: rescindHash });
+        } else {
+          const healthy = { marketKey, marketId: market.marketId, trader, status: "healthy" as const, healthFactor, flaggedAt };
+          results.push(healthy);
+          context.logger.info("liquidation_candidate_healthy", healthy);
+        }
         continue;
       }
 
@@ -598,12 +668,13 @@ export async function runLiquidationScanner(
       if (flaggedAt === 0n) {
         context.logger.warn("liquidation_candidate_flag_ready", { marketKey, marketId: market.marketId, trader, healthFactor });
         if (!context.dryRun) {
-          const flagHash = await write(wallet, {
+          const redstoneFeeds = await redstoneFeedsForMarket(context, market);
+          const flagHash = await writeWithRedstone(wallet, {
             address: context.manifest.addresses.liquidationEngine,
             abi: liquidationAbi,
             functionName: "flagAccount",
             args: [market.marketId, trader],
-          });
+          }, redstoneFeeds);
           await waitForSuccess(context, "liquidation_flag", flagHash);
           flaggedAt = latestBlock.timestamp;
           results.push({ marketKey, marketId: market.marketId, trader, status: "flagged", healthFactor, flaggedAt, txHash: flagHash });
@@ -625,12 +696,13 @@ export async function runLiquidationScanner(
         results.push({ marketKey, marketId: market.marketId, trader, status: "waiting_flag_delay", healthFactor, flaggedAt });
         continue;
       }
-      const liquidationHash = await write(wallet, {
+      const redstoneFeeds = await redstoneFeedsForMarket(context, market);
+      const liquidationHash = await writeWithRedstone(wallet, {
         address: context.manifest.addresses.liquidationEngine,
         abi: liquidationAbi,
         functionName: "liquidate",
         args: [market.marketId, trader, maxClose],
-      });
+      }, redstoneFeeds);
       const receipt = await waitForSuccess(context, "liquidation_execute", liquidationHash);
       // Codex sprint-1 round 1 LOW: the contract may auto-rescind a stale
       // flag instead of liquidating when the strict verified-oracle path
@@ -797,11 +869,11 @@ export function parseLiquidationCandidates(raw: string | undefined): FxPerpCandi
   if (!raw?.trim()) return {};
   const parsed = JSON.parse(raw) as unknown;
   if (Array.isArray(parsed)) {
-    return Object.fromEntries(FX_PERP_MARKET_KEYS.map((key) => [key, addressArray(parsed, key)]));
+    return Object.fromEntries(ALL_FX_PERP_MARKET_KEYS.map((key) => [key, addressArray(parsed, key)]));
   }
   const source = objectInput(parsed, "PERP_LIQUIDATION_CANDIDATES");
   const candidates: FxPerpCandidateSet = {};
-  for (const key of FX_PERP_MARKET_KEYS) {
+  for (const key of ALL_FX_PERP_MARKET_KEYS) {
     const value = source[key];
     if (value !== undefined) candidates[key] = addressArray(value, key);
   }
@@ -886,7 +958,7 @@ async function fetchPythUpdate(feedIds: readonly Hex[]): Promise<Hex[]> {
 function pythFeedForMarket(arc: ReturnType<typeof getAddresses>, marketKey: FxPerpMarketKey): Hex | undefined {
   if (marketKey === "EURC_USDC") return arc.pythFeedEURC;
   if (marketKey === "TJPYC_USDC") return arc.stablecoinBasket?.jpyc.pythFeedId;
-  if (marketKey === "TMXNB_USDC") return arc.stablecoinBasket?.mxnb.pythFeedId;
+  if (marketKey === "TMXNB_USDC" || marketKey === "MXNB_USDC") return arc.stablecoinBasket?.mxnb.pythFeedId;
   return arc.stablecoinBasket?.zchf.pythFeedId;
 }
 
@@ -1004,7 +1076,7 @@ function buildMatchId(
 
 function mergeCandidateSets(a: FxPerpCandidateSet, b: FxPerpCandidateSet): FxPerpCandidateSet {
   const merged: FxPerpCandidateSet = {};
-  for (const key of FX_PERP_MARKET_KEYS) {
+  for (const key of ALL_FX_PERP_MARKET_KEYS) {
     merged[key] = uniqueAddresses([...(a[key] ?? []), ...(b[key] ?? [])]);
   }
   return merged;
@@ -1023,7 +1095,31 @@ function uniqueAddresses(addresses: readonly Address[]): Address[] {
 }
 
 function marketKeyFromId(manifest: FxPerpConfigManifest, marketId: Hex): FxPerpMarketKey | undefined {
-  return FX_PERP_MARKET_KEYS.find((key) => manifest.markets[key].marketId.toLowerCase() === marketId.toLowerCase());
+  return manifest.marketKeys.find((key) => getFxPerpMarket(manifest, key).marketId.toLowerCase() === marketId.toLowerCase());
+}
+
+function redstoneFeedIdFromBytes32(feedId: Hex): string {
+  const hex = strip0x(feedId);
+  const chars: string[] = [];
+  for (let i = 0; i < hex.length; i += 2) {
+    const byte = hex.slice(i, i + 2);
+    if (byte === "00") break;
+    chars.push(String.fromCharCode(Number.parseInt(byte, 16)));
+  }
+  const feed = chars.join("");
+  if (!feed) throw new Error(`FxOracle returned empty RedStone feed id ${feedId}`);
+  return feed;
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    if (seen.has(value)) continue;
+    seen.add(value);
+    result.push(value);
+  }
+  return result;
 }
 
 function requireWallet(context: FxPerpKeeperContext, component: string): WalletClient {
@@ -1042,6 +1138,77 @@ async function waitForSuccess(
   if (receipt.status !== "success") throw new Error(`${label} reverted: ${hash}`);
   context.logger.info("tx_confirmed", { label, txHash: hash, blockNumber: receipt.blockNumber });
   return receipt;
+}
+
+export async function redstoneFeedsForMarket(
+  context: Pick<FxPerpKeeperContext, "publicClient" | "manifest">,
+  market: Pick<FxPerpMarketManifestLike, "baseToken">,
+): Promise<string[]> {
+  const baseFeed = await readHex(context.publicClient, context.manifest.fxOracle, oracleAbi, "redstoneFeedOf", [
+    market.baseToken,
+  ]);
+  const quoteFeed = await readHex(context.publicClient, context.manifest.fxOracle, oracleAbi, "redstoneFeedOf", [
+    context.manifest.usdc,
+  ]);
+  return uniqueStrings([redstoneFeedIdFromBytes32(baseFeed), redstoneFeedIdFromBytes32(quoteFeed)]);
+}
+
+export async function fetchRedstonePayloadForFeeds(feeds: readonly string[]): Promise<Hex> {
+  const dataPackagesIds = uniqueStrings(feeds.map((feed) => feed.trim()).filter(Boolean));
+  if (dataPackagesIds.length === 0) throw new Error("RedStone payload requires at least one feed");
+
+  const dataServiceId = process.env.REDSTONE_DATA_SERVICE_ID ?? REDSTONE_DATA_SERVICE_ID;
+  const uniqueSignersCount = parseOptionalNumber(process.env.REDSTONE_UNIQUE_SIGNERS_COUNT) ?? REDSTONE_UNIQUE_SIGNERS_COUNT;
+  const authorizedSigners = await redstoneAuthorizedSigners(dataServiceId);
+
+  const connector = await importRedstoneModule(REDSTONE_EVM_CONNECTOR_PACKAGE);
+  const wrapperConstructor = connector.DataServiceWrapper;
+  if (typeof wrapperConstructor !== "function") {
+    throw new Error("@redstone-finance/evm-connector does not export DataServiceWrapper");
+  }
+
+  const DataServiceWrapper = wrapperConstructor as RedstoneDataServiceWrapperConstructor;
+  const wrapper = new DataServiceWrapper({
+    dataServiceId,
+    dataPackagesIds,
+    uniqueSignersCount,
+    authorizedSigners,
+  });
+  const payload = await wrapper.getBytesDataForAppending();
+  if (typeof payload !== "string") throw new Error("RedStone SDK returned a non-string payload");
+  return hexInput(payload, "RedStone payload");
+}
+
+async function redstoneAuthorizedSigners(dataServiceId: string): Promise<string[]> {
+  const fromEnv = process.env.REDSTONE_AUTHORIZED_SIGNERS;
+  if (fromEnv?.trim()) {
+    return fromEnv.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  try {
+    const sdk = await importRedstoneModule(REDSTONE_SDK_PACKAGE);
+    const getSignersForDataServiceId = sdk.getSignersForDataServiceId;
+    if (typeof getSignersForDataServiceId === "function") {
+      return getSignersForDataServiceId(dataServiceId);
+    }
+  } catch (error) {
+    if (dataServiceId !== REDSTONE_DATA_SERVICE_ID) throw error;
+  }
+  if (dataServiceId === REDSTONE_DATA_SERVICE_ID) return [...PRIMARY_PROD_SIGNERS];
+  throw new Error(`RedStone SDK missing signer registry for ${dataServiceId}`);
+}
+
+async function importRedstoneModule(packageName: string): Promise<Record<string, unknown>> {
+  try {
+    return await import(packageName);
+  } catch (error) {
+    throw new Error(
+      `Unable to import ${packageName}; install @redstone-finance/evm-connector and @redstone-finance/sdk for RedStone-wrapped keeper writes: ${errorSummary(error)}`,
+    );
+  }
+}
+
+interface FxPerpMarketManifestLike {
+  baseToken: Address;
 }
 
 async function readBigint(
@@ -1065,6 +1232,20 @@ async function readBool(
   const value = await read(client, address, abi, functionName, args);
   if (typeof value !== "boolean") throw new Error(`${functionName} returned non-bool ${String(value)}`);
   return value;
+}
+
+async function readHex(
+  client: PublicClient,
+  address: Address,
+  abi: ReturnType<typeof parseAbi>,
+  functionName: string,
+  args: readonly unknown[] = [],
+): Promise<Hex> {
+  const value = await read(client, address, abi, functionName, args);
+  if (typeof value !== "string" || !isHex(value, { strict: true })) {
+    throw new Error(`${functionName} returned non-hex ${String(value)}`);
+  }
+  return value as Hex;
 }
 
 async function readTuple(
@@ -1190,7 +1371,7 @@ function isFxPerpKeeperComponent(value: string): value is FxPerpKeeperComponent 
 }
 
 function isFxPerpMarketKey(value: string): value is FxPerpMarketKey {
-  return (FX_PERP_MARKET_KEYS as readonly string[]).includes(value);
+  return (ALL_FX_PERP_MARKET_KEYS as readonly string[]).includes(value);
 }
 
 function abs(value: bigint): bigint {

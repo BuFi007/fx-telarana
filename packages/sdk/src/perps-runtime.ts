@@ -5,7 +5,8 @@ import { parseAbi, type Address, type Hex, type PublicClient } from "viem";
 
 import { ChainId, type FxPerpsAddresses } from "./addresses/index.js";
 import {
-  FX_PERP_MARKET_KEYS,
+  getFxPerpMarket,
+  MIN_LIQUIDATION_FLAG_DELAY,
   type FxPerpConfigManifest,
   assertFxPerpConfigReady,
   fxPerpsAddressesFromConfigManifest,
@@ -182,7 +183,7 @@ export async function assertFxPerpLiveReadiness(
     ? runtimeOrManifest.manifest
     : runtimeOrManifest;
   if (!manifest) {
-    throw new Error("Live perps readiness requires deployments/perps-config-5042002.json; CONTRACT_ADDRESSES_JSON is address-only");
+    throw new Error("Live perps readiness requires a perps config manifest; CONTRACT_ADDRESSES_JSON is address-only");
   }
   assertFxPerpConfigReady(manifest);
 
@@ -283,7 +284,7 @@ export async function assertFxPerpLiveReadiness(
   return {
     chainId,
     checkedContracts,
-    checkedMarkets: [...FX_PERP_MARKET_KEYS],
+    checkedMarkets: [...manifest.marketKeys],
     protocolLiquidity,
     totalAccountMargin,
     marginUsdcBalance,
@@ -331,8 +332,8 @@ async function verifyRoles(client: PublicClient, manifest: FxPerpConfigManifest)
 }
 
 async function verifyMarketsAndFunding(client: PublicClient, manifest: FxPerpConfigManifest): Promise<void> {
-  for (const key of FX_PERP_MARKET_KEYS) {
-    const expected = manifest.markets[key];
+  for (const key of manifest.marketKeys) {
+    const expected = getFxPerpMarket(manifest, key);
     const market = await read(client, manifest.addresses.clearinghouse, clearinghouseAbi, "marketConfig", [expected.marketId]);
     expectTupleAddress(`${key}.baseToken`, market, "baseToken", 0, expected.baseToken);
     expectTupleBool(`${key}.enabled`, market, "enabled", 1, expected.enabled);
@@ -361,6 +362,10 @@ async function verifyLiquidation(client: PublicClient, manifest: FxPerpConfigMan
   expectTupleBigint("liquidation.bountyBps", liquidation, "bountyBps", 0, BigInt(manifest.liquidation.bountyBps));
   expectTupleBigint("liquidation.bountyCap", liquidation, "bountyCap", 1, manifest.liquidation.bountyCap);
   expectTupleBigint("liquidation.flagDelay", liquidation, "flagDelay", 2, manifest.liquidation.flagDelay);
+  const flagDelay = integerToBigint(tupleField(liquidation, "flagDelay", 2));
+  if (flagDelay < MIN_LIQUIDATION_FLAG_DELAY) {
+    throw new Error(`Perps live liquidation flagDelay ${flagDelay} below minimum ${MIN_LIQUIDATION_FLAG_DELAY}`);
+  }
 }
 
 async function expectRole(

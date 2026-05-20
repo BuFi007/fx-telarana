@@ -3,14 +3,29 @@ import { isAddress, isHex, type Address, type Hex } from "viem";
 
 import { ChainId, type ChainIdValue, type FxPerpsAddresses } from "./addresses/index.js";
 
-export const FX_PERP_MARKET_KEYS = [
+export const ARC_FX_PERP_MARKET_KEYS = [
   "EURC_USDC",
   "TJPYC_USDC",
   "TMXNB_USDC",
   "TCHFC_USDC",
 ] as const;
 
-export type FxPerpMarketKey = (typeof FX_PERP_MARKET_KEYS)[number];
+export const FUJI_FX_PERP_MARKET_KEYS = [
+  "EURC_USDC",
+  "MXNB_USDC",
+] as const;
+
+export const FX_PERP_MARKET_KEYS = ARC_FX_PERP_MARKET_KEYS;
+
+export const ALL_FX_PERP_MARKET_KEYS = [
+  "EURC_USDC",
+  "TJPYC_USDC",
+  "TMXNB_USDC",
+  "TCHFC_USDC",
+  "MXNB_USDC",
+] as const;
+
+export type FxPerpMarketKey = (typeof ALL_FX_PERP_MARKET_KEYS)[number];
 
 export const FX_PERP_ROLE_KEYS = [
   "role_clearinghouse_admin",
@@ -30,6 +45,8 @@ export const FX_PERP_ROLE_KEYS = [
 ] as const;
 
 export type FxPerpRoleKey = (typeof FX_PERP_ROLE_KEYS)[number];
+
+export const MIN_LIQUIDATION_FLAG_DELAY = 60n;
 
 export interface FxPerpMarketManifest {
   key: FxPerpMarketKey;
@@ -71,20 +88,25 @@ export interface FxPerpConfigManifest {
     bountyCap: bigint;
     flagDelay: bigint;
   };
-  markets: Record<FxPerpMarketKey, FxPerpMarketManifest>;
+  marketKeys: readonly FxPerpMarketKey[];
+  markets: Partial<Record<FxPerpMarketKey, FxPerpMarketManifest>>;
   roles: Record<FxPerpRoleKey, boolean>;
 }
 
 export function parseFxPerpConfigManifest(input: unknown): FxPerpConfigManifest {
   const source = objectField(input, "manifest");
   const chainId = numberField(source, "chainId");
-  if (chainId !== ChainId.ArcTestnet) {
-    throw new Error(`Unsupported perps config chainId ${chainId}; expected Arc testnet ${ChainId.ArcTestnet}`);
+  const marketKeys = marketKeysForChain(chainId);
+  if (!marketKeys) {
+    throw new Error(
+      `Unsupported perps config chainId ${chainId}; expected ${ChainId.ArcTestnet} or ${ChainId.AvalancheFuji}`,
+    );
   }
 
   const keeper = addressField(source, "keeper");
+  const liquidationFlagDelay = bigintField(source, "liquidation_flagDelay");
   const manifest: FxPerpConfigManifest = {
-    chainId,
+    chainId: chainId as ChainIdValue,
     exportedBlockNumber: bigintField(source, "exportedBlockNumber"),
     exportedBlockTimestamp: bigintField(source, "exportedBlockTimestamp"),
     admin: addressField(source, "admin"),
@@ -108,27 +130,25 @@ export function parseFxPerpConfigManifest(input: unknown): FxPerpConfigManifest 
     liquidation: {
       bountyBps: numberField(source, "liquidation_bountyBps"),
       bountyCap: bigintField(source, "liquidation_bountyCap"),
-      flagDelay: bigintField(source, "liquidation_flagDelay"),
+      flagDelay: liquidationFlagDelay,
     },
-    markets: {
-      EURC_USDC: marketField(source, "EURC_USDC"),
-      TJPYC_USDC: marketField(source, "TJPYC_USDC"),
-      TMXNB_USDC: marketField(source, "TMXNB_USDC"),
-      TCHFC_USDC: marketField(source, "TCHFC_USDC"),
-    },
+    marketKeys,
+    markets: Object.fromEntries(marketKeys.map((key) => [key, marketField(source, key)])),
     roles: roleFields(source),
   };
 
+  validateLiquidationFlagDelay(manifest.liquidation.flagDelay);
   return manifest;
 }
 
 export function assertFxPerpConfigReady(manifest: FxPerpConfigManifest): void {
+  validateLiquidationFlagDelay(manifest.liquidation.flagDelay);
   const missingRoles = FX_PERP_ROLE_KEYS.filter((key) => !manifest.roles[key]);
   if (missingRoles.length !== 0) {
     throw new Error(`Perps config manifest has failing role checks: ${missingRoles.join(", ")}`);
   }
-  const disabledMarkets = FX_PERP_MARKET_KEYS.filter((key) => {
-    const market = manifest.markets[key];
+  const disabledMarkets = manifest.marketKeys.filter((key) => {
+    const market = getFxPerpMarket(manifest, key);
     return !market.enabled || !market.fundingEnabled;
   });
   if (disabledMarkets.length !== 0) {
@@ -176,7 +196,21 @@ export function getFxPerpMarket(
   manifest: FxPerpConfigManifest,
   marketKey: FxPerpMarketKey,
 ): FxPerpMarketManifest {
-  return manifest.markets[marketKey];
+  const market = manifest.markets[marketKey];
+  if (!market) throw new Error(`Perps config manifest missing market ${marketKey}`);
+  return market;
+}
+
+function marketKeysForChain(chainId: number): readonly FxPerpMarketKey[] | undefined {
+  if (chainId === ChainId.ArcTestnet) return ARC_FX_PERP_MARKET_KEYS;
+  if (chainId === ChainId.AvalancheFuji) return FUJI_FX_PERP_MARKET_KEYS;
+  return undefined;
+}
+
+function validateLiquidationFlagDelay(flagDelay: bigint): void {
+  if (flagDelay < MIN_LIQUIDATION_FLAG_DELAY) {
+    throw new Error(`Perps liquidation flagDelay ${flagDelay} below minimum ${MIN_LIQUIDATION_FLAG_DELAY}`);
+  }
 }
 
 function marketField(source: Record<string, unknown>, key: FxPerpMarketKey): FxPerpMarketManifest {

@@ -11,27 +11,24 @@ import {FxMarginAccount} from "../src/perp/FxMarginAccount.sol";
 import {FxPerpClearinghouse} from "../src/perp/FxPerpClearinghouse.sol";
 import {IFxPerpClearinghouse} from "../src/perp/interfaces/IFxPerpClearinghouse.sol";
 
-/// @notice Arc-only Phase B-E market bootstrap. This configures the live
-///         testnet perp markets and tops protocol liquidity up to a target.
-///         It intentionally does not touch Fuji because trading execution
-///         is on Arc.
-contract ConfigureArcPerpMarkets is Script {
+/// @notice Fuji Phase B-E market bootstrap. This configures the Fuji perp
+///         markets that have live Fuji testnet assets and tops protocol
+///         liquidity up to a target.
+contract ConfigureFujiPerpMarkets is Script {
     using SafeERC20 for IERC20;
 
-    uint256 internal constant ARC_CHAIN_ID = 5_042_002;
+    uint256 internal constant FUJI_CHAIN_ID = 43_113;
 
-    address internal constant DEFAULT_USDC = 0x3600000000000000000000000000000000000000;
-    address internal constant EURC = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
-    address internal constant TJPYC = 0xB176f6E0c8ecc2be208F72Ad34c54e5F10F1882a;
-    address internal constant TMXNB = 0xe8F76f90553F50E76731afbeF1ac83a9152fFBEb;
-    address internal constant TCHFC = 0x249DBFd4ac17247Cf10098F6C3937F90570b5750;
+    address internal constant DEFAULT_USDC = 0x5425890298aed601595a70AB815c96711a31Bc65;
+    address internal constant EURC = 0x5E44db7996c682E92a960b65AC713a54AD815c6B;
+    address internal constant MXNB = 0xAB99d44185af87AeB08361588F00F59B0CE85eBb;
 
     uint16 internal constant INITIAL_MARGIN_BPS = 500;
     uint16 internal constant MAINTENANCE_MARGIN_BPS = 300;
     uint16 internal constant TRADING_FEE_BPS = 5;
     uint32 internal constant MAX_LEVERAGE_BPS = 200_000;
     uint256 internal constant EURC_OI_CAP = 1_000e6;
-    uint256 internal constant TEST_FIAT_OI_CAP = 500e6;
+    uint256 internal constant MXNB_OI_CAP = 500e6;
     uint256 internal constant DEFAULT_PROTOCOL_LIQUIDITY_TARGET = 100e6;
 
     uint256 internal constant MAX_FUNDING_RATE_BPS_PER_SECOND = 1;
@@ -45,20 +42,22 @@ contract ConfigureArcPerpMarkets is Script {
     error UnsafeLiquidationFlagDelay(uint256 delay);
 
     function run() external {
-        if (block.chainid != ARC_CHAIN_ID) revert WrongChain(block.chainid);
+        if (block.chainid != FUJI_CHAIN_ID) revert WrongChain(block.chainid);
 
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(pk);
-        address usdc = vm.envOr("ARC_USDC", DEFAULT_USDC);
-        FxPerpClearinghouse clearinghouse = FxPerpClearinghouse(vm.envAddress("ARC_PERP_CLEARINGHOUSE"));
-        FxMarginAccount margin = FxMarginAccount(vm.envAddress("ARC_PERP_MARGIN"));
-        FxFundingEngine funding = FxFundingEngine(vm.envAddress("ARC_PERP_FUNDING"));
-        FxLiquidationEngine liquidation = FxLiquidationEngine(vm.envAddress("ARC_PERP_LIQUIDATION"));
+        address usdc = vm.envOr("FUJI_USDC", DEFAULT_USDC);
+        FxPerpClearinghouse clearinghouse = FxPerpClearinghouse(vm.envAddress("FUJI_PERP_CLEARINGHOUSE"));
+        FxMarginAccount margin = FxMarginAccount(vm.envAddress("FUJI_PERP_MARGIN"));
+        FxFundingEngine funding = FxFundingEngine(vm.envAddress("FUJI_PERP_FUNDING"));
+        FxLiquidationEngine liquidation = FxLiquidationEngine(vm.envAddress("FUJI_PERP_LIQUIDATION"));
+        address eurc = vm.envOr("FUJI_EURC", EURC);
+        address mxnb = vm.envOr("FUJI_MXNB", MXNB);
         uint256 protocolLiquidityTarget =
-            vm.envOr("ARC_PERP_PROTOCOL_LIQUIDITY_TARGET", DEFAULT_PROTOCOL_LIQUIDITY_TARGET);
+            vm.envOr("FUJI_PERP_PROTOCOL_LIQUIDITY_TARGET", DEFAULT_PROTOCOL_LIQUIDITY_TARGET);
 
         console2.log("============================================");
-        console2.log("Configuring Arc Phase B-E perp markets");
+        console2.log("Configuring Fuji Phase B-E perp markets");
         console2.log("============================================");
         console2.log("chainId                    ", block.chainid);
         console2.log("deployer                   ", deployer);
@@ -66,6 +65,8 @@ contract ConfigureArcPerpMarkets is Script {
         console2.log("margin                     ", address(margin));
         console2.log("funding                    ", address(funding));
         console2.log("liquidation                ", address(liquidation));
+        console2.log("EURC                       ", eurc);
+        console2.log("MXNB                       ", mxnb);
         console2.log("protocol liquidity target  ", protocolLiquidityTarget);
 
         vm.startBroadcast(pk);
@@ -76,10 +77,8 @@ contract ConfigureArcPerpMarkets is Script {
             margin.setFundingSettlementHook(address(clearinghouse));
         }
 
-        _configureMarket(clearinghouse, funding, "EURC", EURC, EURC_OI_CAP);
-        _configureMarket(clearinghouse, funding, "tJPYC", TJPYC, TEST_FIAT_OI_CAP);
-        _configureMarket(clearinghouse, funding, "tMXNB", TMXNB, TEST_FIAT_OI_CAP);
-        _configureMarket(clearinghouse, funding, "tCHFC", TCHFC, TEST_FIAT_OI_CAP);
+        _configureMarket(clearinghouse, funding, "EURC", eurc, EURC_OI_CAP);
+        _configureMarket(clearinghouse, funding, "MXNB", mxnb, MXNB_OI_CAP);
 
         _validateLiquidationDelay();
         liquidation.configureLiquidation(
@@ -99,9 +98,7 @@ contract ConfigureArcPerpMarkets is Script {
         console2.log("============================================");
         console2.log("Configured markets:");
         _logMarket("EURC");
-        _logMarket("tJPYC");
-        _logMarket("tMXNB");
-        _logMarket("tCHFC");
+        _logMarket("MXNB");
         console2.log("liquidation bounty bps     ", LIQUIDATION_BOUNTY_BPS);
         console2.log("liquidation bounty cap     ", LIQUIDATION_BOUNTY_CAP);
         console2.log("liquidation flag delay     ", LIQUIDATION_FLAG_DELAY);

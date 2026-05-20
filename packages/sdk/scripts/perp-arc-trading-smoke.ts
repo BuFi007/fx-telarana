@@ -26,6 +26,7 @@ import {
   assertFxPerpLiveReadiness,
   loadFxPerpRuntimeConfig,
 } from "../src/perps-runtime.js";
+import { writeWithRedstone } from "../src/perps-keeper.js";
 
 const ARC_RPC_URL = process.env.ARC_RPC_URL ?? "https://rpc.testnet.arc.network";
 const DEPLOYER_PRIVATE_KEY = normalizePrivateKey(process.env.DEPLOYER_PRIVATE_KEY);
@@ -87,6 +88,7 @@ const pythAbi = parseAbi([
 const oracleAbi = parseAbi([
   "function getMidWithUpdatePyth(address base, address quote, bytes[] pythUpdate) payable returns (uint256,uint256)",
   "function getMid(address base, address quote) view returns (uint256,uint256)",
+  "function redstoneFeedOf(address token) view returns (bytes32)",
 ]);
 
 const marginAbi = parseAbi([
@@ -380,23 +382,40 @@ async function liquidateVictimPass(label: string) {
   const position = await readPosition(victim.address);
   const maxClose = abs(position.sizeE18);
   if (maxClose === 0n) return;
+  const redstoneFeeds = await redstoneFeedsForEurcMarket();
 
-  const flagHash = await walletClient.writeContract({
+  const flagHash = await writeWithRedstone(walletClient, {
     address: ADDR.liquidation,
     abi: liquidationAbi,
     functionName: "flagAccount",
     args: [MARKET_ID, victim.address],
-  });
+  }, redstoneFeeds);
   await wait(`${label} flagAccount`, flagHash);
 
   await refreshPyth();
-  const liquidationHash = await walletClient.writeContract({
+  const liquidationHash = await writeWithRedstone(walletClient, {
     address: ADDR.liquidation,
     abi: liquidationAbi,
     functionName: "liquidate",
     args: [MARKET_ID, victim.address, maxClose],
-  });
+  }, redstoneFeeds);
   await wait(label, liquidationHash);
+}
+
+async function redstoneFeedsForEurcMarket(): Promise<string[]> {
+  const baseFeed = await publicClient.readContract({
+    address: ADDR.oracle,
+    abi: oracleAbi,
+    functionName: "redstoneFeedOf",
+    args: [ADDR.eurc],
+  });
+  const quoteFeed = await publicClient.readContract({
+    address: ADDR.oracle,
+    abi: oracleAbi,
+    functionName: "redstoneFeedOf",
+    args: [ADDR.usdc],
+  });
+  return uniqueStrings([redstoneFeedIdFromBytes32(baseFeed), redstoneFeedIdFromBytes32(quoteFeed)]);
 }
 
 async function readPosition(trader: Address) {
@@ -506,6 +525,30 @@ function requireAddress(value: Address | undefined, label: string): Address {
 function requireHex(value: Hex | undefined, label: string): Hex {
   if (!value) throw new Error(`${label} missing from SDK address registry`);
   return value;
+}
+
+function redstoneFeedIdFromBytes32(feedId: Hex): string {
+  const hex = strip0x(feedId);
+  const chars: string[] = [];
+  for (let i = 0; i < hex.length; i += 2) {
+    const byte = hex.slice(i, i + 2);
+    if (byte === "00") break;
+    chars.push(String.fromCharCode(Number.parseInt(byte, 16)));
+  }
+  const feed = chars.join("");
+  if (!feed) throw new Error(`FxOracle returned empty RedStone feed id ${feedId}`);
+  return feed;
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    if (seen.has(value)) continue;
+    seen.add(value);
+    result.push(value);
+  }
+  return result;
 }
 
 function strip0x(value: Hex): string {

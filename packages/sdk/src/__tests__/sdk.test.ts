@@ -13,6 +13,7 @@ import {
   FxRouteMode,
   FxHyperlaneAction,
   FX_PERP_MARKET_KEYS,
+  MIN_LIQUIDATION_FLAG_DELAY,
   FxHyperlaneHubReceiverAbi,
   FxGhostCommitmentRegistryAbi,
   FxGhostKycHookAbi,
@@ -131,6 +132,7 @@ describe("address registry", () => {
     assertFxPerpConfigReady(manifest);
 
     expect(manifest.chainId).toBe(ChainId.ArcTestnet);
+    expect(manifest.liquidation.flagDelay).toBeGreaterThanOrEqual(MIN_LIQUIDATION_FLAG_DELAY);
     expect(manifest.usdc).toBe("0x3600000000000000000000000000000000000000");
     expect(fxPerpsAddressesFromConfigManifest(manifest)).toEqual(getAddresses(ChainId.ArcTestnet).fxPerps);
     expect(FX_PERP_MARKET_KEYS.map((key) => getFxPerpMarket(manifest, key).enabled)).toEqual([
@@ -146,6 +148,37 @@ describe("address registry", () => {
     });
     expect(manifest.protocolLiquidity).toBeGreaterThanOrEqual(manifest.minProtocolLiquidity);
     expect(fxPerpContractAddressesJson(manifest)).toContain("FxPerpClearinghouse");
+  });
+
+  test("perps manifest rejects unsafe liquidation flag delays", () => {
+    const manifestPath = resolve(REPO_ROOT, "deployments/perps-config-5042002.json");
+    const raw = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
+    expect(() => parseFxPerpConfigManifest({ ...raw, liquidation_flagDelay: 0 })).toThrow(
+      /flagDelay 0 below minimum 60/,
+    );
+
+    const manifest = parseFxPerpConfigManifest(raw);
+    expect(() =>
+      assertFxPerpConfigReady({
+        ...manifest,
+        liquidation: { ...manifest.liquidation, flagDelay: MIN_LIQUIDATION_FLAG_DELAY - 1n },
+      }),
+    ).toThrow(/flagDelay 59 below minimum 60/);
+  });
+
+  test("Fuji perps manifest parses with safe liquidation delay", () => {
+    const manifestPath = resolve(REPO_ROOT, "deployments/perps-config-43113.json");
+    const manifest = parseFxPerpConfigManifest(JSON.parse(readFileSync(manifestPath, "utf8")) as unknown);
+    assertFxPerpConfigReady(manifest);
+
+    expect(manifest.chainId).toBe(ChainId.AvalancheFuji);
+    expect(manifest.marketKeys).toEqual(["EURC_USDC", "MXNB_USDC"]);
+    expect(manifest.liquidation.flagDelay).toBeGreaterThanOrEqual(MIN_LIQUIDATION_FLAG_DELAY);
+    expect(getFxPerpMarket(manifest, "MXNB_USDC")).toMatchObject({
+      marketId: "0x7930040de904501a480cb2993edef814f14199d00fa1b9888e1aad6de76281be",
+      baseToken: "0xAB99d44185af87AeB08361588F00F59B0CE85eBb",
+      tradingFeeBps: 5,
+    });
   });
 
   test("Arc perps runtime loader gates manifest and CONTRACT_ADDRESSES_JSON parity", () => {
