@@ -30,7 +30,7 @@ interface ISprint1FxOracle {
 ///   INITIAL_ADMIN — defaults to deployer and must equal deployer for this
 ///                   bootstrap script. Handoff happens after configure/export.
 ///   KEEPER        — defaults to deployer; receives keeper execution roles
-///   PERP_DEPLOYMENT_PATH — defaults to deployments/perps-<chainid>.json
+///   PERP_DEPLOYMENT_PATH — defaults to ../deployments/perps-<chainid>.json
 ///
 /// Post-deploy wiring:
 ///   1. Configure market params with FxPerpClearinghouse.configureMarket.
@@ -62,7 +62,7 @@ contract DeployFxPerpStack is Script {
         address initialAdmin = vm.envOr("INITIAL_ADMIN", deployer);
         address keeper = vm.envOr("KEEPER", deployer);
 
-        string memory defaultPath = string.concat("deployments/perps-", vm.toString(block.chainid), ".json");
+        string memory defaultPath = string.concat("../deployments/perps-", vm.toString(block.chainid), ".json");
         string memory path = vm.envOr("PERP_DEPLOYMENT_PATH", defaultPath);
 
         console2.log("============================================");

@@ -28,6 +28,12 @@ Do not publish new perp addresses to integrators until all of these are true:
 
 ## Contracts
 
+`DeployPerpOracle.s.sol` deploys the sprint-1 `FxOracle` required by the perps
+stack and wires the chain-specific perps feeds:
+
+- Fuji: USDC, EURC, MXNB.
+- Arc: USDC, EURC, tJPYC, tMXNB, tCHFC.
+
 `DeployFxPerpStack.s.sol` deploys and wires:
 
 - `FxMarginAccount` - USDC margin custody, reserved margin, protocol liquidity,
@@ -45,12 +51,38 @@ reference shapes.
 
 ## Dry Run
 
+Deploy a fresh sprint-1 perps oracle first. The currently deployed historical
+hub oracles on Fuji and Arc must not be reused for sprint-1 perps unless the
+selector readback below proves they expose the hard-cap selectors.
+
+Fuji oracle dry-run:
+
+```bash
+DEPLOYER_PRIVATE_KEY="$DEPLOYER_PRIVATE_KEY" \
+PERP_ORACLE_DEPLOYMENT_PATH=../deployments/perp-oracle-43113.json \
+forge script contracts/script/DeployPerpOracle.s.sol:DeployPerpOracle \
+  --root contracts \
+  --rpc-url "$FUJI_RPC_URL" \
+  -vvvv
+```
+
+Arc oracle dry-run:
+
+```bash
+DEPLOYER_PRIVATE_KEY="$DEPLOYER_PRIVATE_KEY" \
+PERP_ORACLE_DEPLOYMENT_PATH=../deployments/perp-oracle-5042002.json \
+forge script contracts/script/DeployPerpOracle.s.sol:DeployPerpOracle \
+  --root contracts \
+  --rpc-url "$ARC_RPC_URL" \
+  -vvvv
+```
+
 Arc testnet dry-run:
 
 ```bash
 DEPLOYER_PRIVATE_KEY="$DEPLOYER_PRIVATE_KEY" \
 USDC=0x3600000000000000000000000000000000000000 \
-FX_ORACLE=0x77b3A3B420dB98B01085b8C46a753Ed9879e2865 \
+FX_ORACLE="$(jq -r .FxOracle deployments/perp-oracle-5042002.json)" \
 INITIAL_ADMIN="$(cast wallet address --private-key "$DEPLOYER_PRIVATE_KEY")" \
 KEEPER=0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69 \
 forge script contracts/script/DeployFxPerpStack.s.sol:DeployFxPerpStack \
@@ -67,10 +99,10 @@ Fuji dry-run is the same generic deploy script with Fuji env:
 ```bash
 DEPLOYER_PRIVATE_KEY="$DEPLOYER_PRIVATE_KEY" \
 USDC=0x5425890298aed601595a70AB815c96711a31Bc65 \
-FX_ORACLE="$FUJI_FX_ORACLE" \
+FX_ORACLE="$(jq -r .FxOracle deployments/perp-oracle-43113.json)" \
 INITIAL_ADMIN="$(cast wallet address --private-key "$DEPLOYER_PRIVATE_KEY")" \
 KEEPER=0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69 \
-PERP_DEPLOYMENT_PATH=deployments/perps-43113.json \
+PERP_DEPLOYMENT_PATH=../deployments/perps-43113.json \
 forge script contracts/script/DeployFxPerpStack.s.sol:DeployFxPerpStack \
   --root contracts \
   --rpc-url "$FUJI_RPC_URL" \
@@ -88,9 +120,16 @@ old-stack retirement have passed.
 
 ## Broadcast Gate
 
-Only after explicit approval, run the same command with `--broadcast`:
+Only after explicit approval, run the same commands with `--broadcast`. Oracle
+broadcast comes first, then the perps stack:
 
 ```bash
+forge script contracts/script/DeployPerpOracle.s.sol:DeployPerpOracle \
+  --root contracts \
+  --rpc-url "$ARC_RPC_URL" \
+  --broadcast \
+  -vvvv
+
 forge script contracts/script/DeployFxPerpStack.s.sol:DeployFxPerpStack \
   --root contracts \
   --rpc-url "$ARC_RPC_URL" \
@@ -158,6 +197,7 @@ ARC_PERP_FUNDING=0x... \
 ARC_PERP_HEALTH=0x... \
 ARC_PERP_LIQUIDATION=0x... \
 ARC_PERP_SETTLEMENT=0x... \
+ARC_FX_ORACLE=0x... \
 bun run perps:arc:config:verify
 
 ARC_PERP_CLEARINGHOUSE=0x... \
@@ -166,6 +206,7 @@ ARC_PERP_FUNDING=0x... \
 ARC_PERP_HEALTH=0x... \
 ARC_PERP_LIQUIDATION=0x... \
 ARC_PERP_SETTLEMENT=0x... \
+ARC_FX_ORACLE=0x... \
 bun run perps:arc:config:export
 
 # Fuji
@@ -175,6 +216,7 @@ FUJI_PERP_FUNDING=0x... \
 FUJI_PERP_HEALTH=0x... \
 FUJI_PERP_LIQUIDATION=0x... \
 FUJI_PERP_SETTLEMENT=0x... \
+FUJI_FX_ORACLE=0x... \
 forge script contracts/script/FujiPerpConfigReadiness.s.sol:VerifyFujiPerpConfig \
   --root contracts --rpc-url "$FUJI_RPC_URL" -vv
 
@@ -184,12 +226,15 @@ FUJI_PERP_FUNDING=0x... \
 FUJI_PERP_HEALTH=0x... \
 FUJI_PERP_LIQUIDATION=0x... \
 FUJI_PERP_SETTLEMENT=0x... \
+FUJI_FX_ORACLE=0x... \
 forge script contracts/script/FujiPerpConfigReadiness.s.sol:ExportFujiPerpConfig \
   --root contracts --rpc-url "$FUJI_RPC_URL" -q
 ```
 
 The configure/readiness scripts require explicit fresh-stack addresses. They do
 not default to the old live 0x2201/0xED58 Fuji stack or 0x6A26/0xD384 Arc stack.
+Readiness also requires an explicit fresh `FUJI_FX_ORACLE` / `ARC_FX_ORACLE` so
+stale historical hub oracles cannot pass by omission.
 
 `VerifyArcPerpConfig` and `VerifyFujiPerpConfig` revert if any expected
 address, role, pointer, market param, funding param, liquidation param, or

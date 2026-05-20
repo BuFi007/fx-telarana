@@ -19,7 +19,6 @@ abstract contract FujiPerpConfigReadinessBase is Script {
 
     address internal constant DEFAULT_ADMIN = 0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69;
     address internal constant DEFAULT_USDC = 0x5425890298aed601595a70AB815c96711a31Bc65;
-    address internal constant DEFAULT_ORACLE = 0xf7fcDCA3f9c92418A980A31df7f87De7E1a1a04b;
 
     address internal constant EURC = 0x5E44db7996c682E92a960b65AC713a54AD815c6B;
     address internal constant MXNB = 0xAB99d44185af87AeB08361588F00F59B0CE85eBb;
@@ -82,7 +81,7 @@ abstract contract FujiPerpConfigReadinessBase is Script {
             admin: vm.envOr("INITIAL_ADMIN", DEFAULT_ADMIN),
             keeper: vm.envOr("KEEPER", DEFAULT_ADMIN),
             usdc: vm.envOr("FUJI_USDC", DEFAULT_USDC),
-            oracle: vm.envOr("FUJI_FX_ORACLE", DEFAULT_ORACLE),
+            oracle: vm.envAddress("FUJI_FX_ORACLE"),
             eurc: vm.envOr("FUJI_EURC", EURC),
             mxnb: vm.envOr("FUJI_MXNB", MXNB),
             minProtocolLiquidity: vm.envOr("FUJI_PERP_MIN_PROTOCOL_LIQUIDITY", DEFAULT_MIN_PROTOCOL_LIQUIDITY)

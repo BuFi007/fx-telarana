@@ -23,6 +23,7 @@ Freshly deploy and verify on each target chain:
 
 Broadcast/readiness scripts to run around the deploy:
 
+- `DeployPerpOracle.s.sol`
 - `DeployFxPerpStack.s.sol`
 - `ConfigureArcPerpMarkets.s.sol`
 - `ConfigureFujiPerpMarkets.s.sol`
@@ -115,27 +116,39 @@ Treat `deployments/perps-config-5042002.json` and
 `deployments/perps-config-43113.json` as readiness targets until the fresh stack
 is broadcast and the exporters rewrite them from live state. Pass the freshly
 deployed stack addresses explicitly; the scripts intentionally do not default to
-old live perp contracts.
+old live perp contracts. Pass the freshly deployed sprint-1 `FxOracle`
+explicitly too; historical hub oracles that lack hard-cap selectors are a ship
+blocker.
 
 ```bash
+forge script contracts/script/DeployPerpOracle.s.sol:DeployPerpOracle \
+  --root contracts --rpc-url "$ARC_RPC_URL" --broadcast -vvvv
+
+forge script contracts/script/DeployPerpOracle.s.sol:DeployPerpOracle \
+  --root contracts --rpc-url "$FUJI_RPC_URL" --broadcast -vvvv
+
 ARC_PERP_CLEARINGHOUSE=0x... ARC_PERP_MARGIN=0x... \
 ARC_PERP_FUNDING=0x... ARC_PERP_HEALTH=0x... \
 ARC_PERP_LIQUIDATION=0x... ARC_PERP_SETTLEMENT=0x... \
+ARC_FX_ORACLE=0x... \
 bun run perps:arc:config:verify
 
 ARC_PERP_CLEARINGHOUSE=0x... ARC_PERP_MARGIN=0x... \
 ARC_PERP_FUNDING=0x... ARC_PERP_HEALTH=0x... \
 ARC_PERP_LIQUIDATION=0x... ARC_PERP_SETTLEMENT=0x... \
+ARC_FX_ORACLE=0x... \
 bun run perps:arc:config:export
 
 FUJI_PERP_CLEARINGHOUSE=0x... FUJI_PERP_MARGIN=0x... \
 FUJI_PERP_FUNDING=0x... FUJI_PERP_HEALTH=0x... \
 FUJI_PERP_LIQUIDATION=0x... FUJI_PERP_SETTLEMENT=0x... \
+FUJI_FX_ORACLE=0x... \
 bun run perps:fuji:config:verify
 
 FUJI_PERP_CLEARINGHOUSE=0x... FUJI_PERP_MARGIN=0x... \
 FUJI_PERP_FUNDING=0x... FUJI_PERP_HEALTH=0x... \
 FUJI_PERP_LIQUIDATION=0x... FUJI_PERP_SETTLEMENT=0x... \
+FUJI_FX_ORACLE=0x... \
 bun run perps:fuji:config:export
 ```
 

@@ -19,7 +19,6 @@ abstract contract ArcPerpConfigReadinessBase is Script {
 
     address internal constant DEFAULT_ADMIN = 0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69;
     address internal constant DEFAULT_USDC = 0x3600000000000000000000000000000000000000;
-    address internal constant DEFAULT_ORACLE = 0x77b3A3B420dB98B01085b8C46a753Ed9879e2865;
 
     address internal constant EURC = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
     address internal constant TJPYC = 0xB176f6E0c8ecc2be208F72Ad34c54e5F10F1882a;
@@ -81,7 +80,7 @@ abstract contract ArcPerpConfigReadinessBase is Script {
             admin: vm.envOr("INITIAL_ADMIN", DEFAULT_ADMIN),
             keeper: vm.envOr("KEEPER", DEFAULT_ADMIN),
             usdc: vm.envOr("ARC_USDC", DEFAULT_USDC),
-            oracle: vm.envOr("ARC_FX_ORACLE", DEFAULT_ORACLE),
+            oracle: vm.envAddress("ARC_FX_ORACLE"),
             minProtocolLiquidity: vm.envOr("ARC_PERP_MIN_PROTOCOL_LIQUIDITY", DEFAULT_MIN_PROTOCOL_LIQUIDITY)
         });
     }
