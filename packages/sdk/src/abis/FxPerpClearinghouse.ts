@@ -261,6 +261,19 @@ export const FxPerpClearinghouseAbi = [
   },
   {
     "type": "function",
+    "name": "extractTimestampsAndAssertAllAreEqual",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "extractedTimestamp",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
     "name": "fundingEngine",
     "inputs": [],
     "outputs": [
@@ -788,6 +801,30 @@ export const FxPerpClearinghouseAbi = [
     "stateMutability": "view"
   },
   {
+    "type": "function",
+    "name": "unrealizedPnlVerified",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "trader",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "pnlAmount",
+        "type": "int256",
+        "internalType": "int256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
     "type": "event",
     "name": "BadDebtSocialized",
     "inputs": [
@@ -1114,6 +1151,41 @@ export const FxPerpClearinghouseAbi = [
   },
   {
     "type": "error",
+    "name": "CalldataMustHaveValidPayload",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CalldataOverOrUnderFlow",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DataPackageTimestampMustNotBeZero",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DataPackageTimestampsMustBeEqual",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DataTimestampCannotBeZero",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "EachSignerMustProvideTheSameValue",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "EmptyCalldataPointersArr",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "EnforcedPause",
     "inputs": []
   },
@@ -1129,12 +1201,38 @@ export const FxPerpClearinghouseAbi = [
   },
   {
     "type": "error",
+    "name": "IncorrectUnsignedMetadataSize",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InsufficientNumberOfUniqueSigners",
+    "inputs": [
+      {
+        "name": "receivedSignersCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "requiredSignersCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "Int256Overflow",
     "inputs": []
   },
   {
     "type": "error",
     "name": "Int256Overflow",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidCalldataPointer",
     "inputs": []
   },
   {
@@ -1225,6 +1323,38 @@ export const FxPerpClearinghouseAbi = [
   },
   {
     "type": "error",
+    "name": "ProxyCalldataFailedWithCustomError",
+    "inputs": [
+      {
+        "name": "result",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ProxyCalldataFailedWithStringMessage",
+    "inputs": [
+      {
+        "name": "message",
+        "type": "string",
+        "internalType": "string"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ProxyCalldataFailedWithoutErrMsg",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RedstonePayloadMustHaveAtLeastOneDataPackage",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "ReentrancyGuardReentrantCall",
     "inputs": []
   },
@@ -1236,6 +1366,17 @@ export const FxPerpClearinghouseAbi = [
         "name": "value",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "SignerNotAuthorised",
+    "inputs": [
+      {
+        "name": "receivedSigner",
+        "type": "address",
+        "internalType": "address"
       }
     ]
   },
@@ -1271,6 +1412,22 @@ export const FxPerpClearinghouseAbi = [
       },
       {
         "name": "maxFee",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TimestampsMustBeEqual",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TooLargeValueByteSize",
+    "inputs": [
+      {
+        "name": "valueByteSize",
         "type": "uint256",
         "internalType": "uint256"
       }

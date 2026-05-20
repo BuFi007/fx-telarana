@@ -4,6 +4,8 @@ pragma solidity ^0.8.26;
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
+import {ProxyConnector} from "@redstone-finance/evm-connector/core/ProxyConnector.sol";
+
 import {IFxHealthChecker} from "./interfaces/IFxHealthChecker.sol";
 import {IFxMarginAccount} from "./interfaces/IFxMarginAccount.sol";
 import {IFxPerpClearinghouse} from "./interfaces/IFxPerpClearinghouse.sol";
@@ -14,7 +16,7 @@ import {FxPerpMath} from "./FxPerpMath.sol";
 /// @dev Mirrors the Synthetix v3 BFP `LiquidationModule.isMarginLiquidatable`
 ///      shape: compare account equity against maintenance margin, where
 ///      maintenance margin is notional times the market risk ratio.
-contract FxHealthChecker is IFxHealthChecker, AccessControl {
+contract FxHealthChecker is IFxHealthChecker, AccessControl, ProxyConnector {
     using Math for uint256;
 
     IFxPerpClearinghouse public immutable CLEARINGHOUSE;
@@ -46,6 +48,21 @@ contract FxHealthChecker is IFxHealthChecker, AccessControl {
         return _equity(marketId, trader) < maint;
     }
 
+    /// @inheritdoc IFxHealthChecker
+    function healthFactorVerified(bytes32 marketId, address trader) external view returns (uint256 ratioBps) {
+        uint256 maint = maintenanceMargin(marketId, trader);
+        if (maint == 0) return type(uint256).max;
+        uint256 equity = _equityVerified(marketId, trader);
+        return equity.mulDiv(10_000, maint);
+    }
+
+    /// @inheritdoc IFxHealthChecker
+    function isLiquidatableVerified(bytes32 marketId, address trader) external view returns (bool) {
+        uint256 maint = maintenanceMargin(marketId, trader);
+        if (maint == 0) return false;
+        return _equityVerified(marketId, trader) < maint;
+    }
+
     function maintenanceMargin(bytes32 marketId, address trader) public view returns (uint256) {
         IFxPerpClearinghouse.Position memory p = CLEARINGHOUSE.position(marketId, trader);
         if (p.sizeE18 == 0) return 0;
@@ -60,5 +77,37 @@ contract FxHealthChecker is IFxHealthChecker, AccessControl {
         if (pnl >= 0) return margin + FxPerpMath.abs(pnl);
         uint256 loss = FxPerpMath.abs(pnl);
         return loss >= margin ? 0 : margin - loss;
+    }
+
+    /// Strict-oracle counterpart of {_equity}. Codex contract review
+    /// P1 #1: any health gate that controls liquidation must read the
+    /// verified oracle path so a Pyth flicker can't flip the gate.
+    /// Sprint-1 round 1 HIGH: the inner CLEARINGHOUSE call must forward
+    /// the RedStone payload from THIS contract's calldata tail so that
+    /// the oracle, two hops down, can read the signed bytes.
+    function _equityVerified(bytes32 marketId, address trader) internal view returns (uint256) {
+        uint256 margin = MARGIN.marginOf(trader);
+        int256 pnl = _clearinghouseUnrealizedPnlVerified(marketId, trader);
+        if (pnl >= 0) return margin + FxPerpMath.abs(pnl);
+        uint256 loss = FxPerpMath.abs(pnl);
+        return loss >= margin ? 0 : margin - loss;
+    }
+
+    /// @dev Test-overridable hook. Production uses `proxyCalldataView` to
+    ///      re-append the RedStone payload onto the sub-call. Test
+    ///      harnesses can override this to call the mock directly without
+    ///      synthesizing a RedStone payload (same pattern as
+    ///      `FxOracle._redstoneFetch`).
+    function _clearinghouseUnrealizedPnlVerified(bytes32 marketId, address trader)
+        internal
+        view
+        virtual
+        returns (int256 pnl)
+    {
+        bytes memory ret = proxyCalldataView(
+            address(CLEARINGHOUSE),
+            abi.encodeCall(IFxPerpClearinghouse.unrealizedPnlVerified, (marketId, trader))
+        );
+        pnl = abi.decode(ret, (int256));
     }
 }

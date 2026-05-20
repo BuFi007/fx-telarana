@@ -37,6 +37,15 @@ interface IFxPerpClearinghouse {
         view
         returns (uint256 fee, uint256 priceE18);
     function unrealizedPnl(bytes32 marketId, address trader) external view returns (int256 pnl);
+
+    /// @notice Same as {unrealizedPnl}, but uses the strict deviation-gated
+    ///         oracle path (`IFxOracle.getMidVerified`). Caller MUST wrap
+    ///         the tx with the RedStone SDK so the signed price payload
+    ///         is in calldata tail. Used by the liquidation engine and the
+    ///         verified-health surface in `FxHealthChecker`.
+    ///         Codex contract review P1 #1: lenient oracle in liquidation
+    ///         path lets a Pyth flicker liquidate a healthy position.
+    function unrealizedPnlVerified(bytes32 marketId, address trader) external view returns (int256 pnl);
     function position(bytes32 marketId, address trader) external view returns (Position memory);
     function marketConfig(bytes32 marketId) external view returns (MarketConfig memory);
     function openInterestLong(bytes32 marketId) external view returns (uint256);

@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import {
   createPublicClient,
   createWalletClient,
+  decodeEventLog,
   defineChain,
   http,
   isAddress,
@@ -156,7 +157,19 @@ export interface FxPerpLiquidationResult {
   marketKey: FxPerpMarketKey;
   marketId: Hex;
   trader: Address;
-  status: "healthy" | "flagged" | "liquidated" | "waiting_flag_delay" | "empty";
+  /// `auto_rescinded` is the codex-r1 LOW path: keeper read lenient health,
+  /// fired liquidate(), but the on-chain strict verified path said the
+  /// position recovered. The contract emits `AccountFlagRescinded(auto_=true)`
+  /// and returns early without liquidating. Ops dashboards MUST treat this
+  /// as a non-liquidation (no bounty paid, no socialized loss) instead of
+  /// classifying it as a successful liquidation.
+  status:
+    | "healthy"
+    | "flagged"
+    | "liquidated"
+    | "auto_rescinded"
+    | "waiting_flag_delay"
+    | "empty";
   healthFactor?: bigint;
   flaggedAt?: bigint;
   txHash?: Hex;
@@ -213,9 +226,24 @@ const healthAbi = parseAbi([
 
 const liquidationAbi = parseAbi([
   "function flagAccount(bytes32 marketId, address trader)",
+  "function rescindFlag(bytes32 marketId, address trader)",
   "function flaggedAt(bytes32 marketId, address trader) view returns (uint256)",
   "function liquidate(bytes32 marketId, address trader, uint256 maxSizeToCloseAbsE18) returns (uint256 liquidatorReward,int256 socializedLoss)",
+  "event AccountLiquidated(bytes32 indexed marketId, address indexed trader, address indexed liquidator, uint256 reward, int256 socializedLoss)",
+  "event AccountFlagRescinded(bytes32 indexed marketId, address indexed trader, address indexed caller, bool auto_)",
 ]);
+
+/// Selector strings used to classify a liquidate() receipt. The contract
+/// emits AccountFlagRescinded(auto_=true) when the strict verified-oracle
+/// path showed the position recovered between flag and trigger — the call
+/// returns (0, 0) and does NOT revert, so we MUST inspect the logs rather
+/// than treat tx success as a liquidation. Codex sprint-1 round 1 LOW.
+const accountLiquidatedEvent = parseAbiItem(
+  "event AccountLiquidated(bytes32 indexed marketId, address indexed trader, address indexed liquidator, uint256 reward, int256 socializedLoss)",
+);
+const accountFlagRescindedEvent = parseAbiItem(
+  "event AccountFlagRescinded(bytes32 indexed marketId, address indexed trader, address indexed caller, bool auto_)",
+);
 
 const positionIncreasedEvent = parseAbiItem(
   "event PositionIncreased(bytes32 indexed marketId,address indexed trader,int256 sizeDeltaE18,int256 resultingSizeE18,uint256 entryPriceE18,uint256 marginReserved,uint256 fee)",
@@ -603,7 +631,54 @@ export async function runLiquidationScanner(
         functionName: "liquidate",
         args: [market.marketId, trader, maxClose],
       });
-      await waitForSuccess(context, "liquidation_execute", liquidationHash);
+      const receipt = await waitForSuccess(context, "liquidation_execute", liquidationHash);
+      // Codex sprint-1 round 1 LOW: the contract may auto-rescind a stale
+      // flag instead of liquidating when the strict verified-oracle path
+      // shows the position recovered. tx still succeeds, but no funds
+      // moved. Classify by which event fired.
+      const liquidationEngine = context.manifest.addresses.liquidationEngine.toLowerCase();
+      const matchingLogs = receipt.logs.filter(
+        (log) => log.address.toLowerCase() === liquidationEngine,
+      );
+      let autoRescinded = false;
+      let trulyLiquidated = false;
+      for (const log of matchingLogs) {
+        try {
+          const decoded = decodeEventLog({
+            abi: [accountLiquidatedEvent, accountFlagRescindedEvent],
+            data: log.data,
+            topics: log.topics,
+          });
+          if (decoded.eventName === "AccountLiquidated") {
+            trulyLiquidated = true;
+          } else if (decoded.eventName === "AccountFlagRescinded" && decoded.args.auto_ === true) {
+            autoRescinded = true;
+          }
+        } catch {
+          // unrelated log on the engine address — skip silently.
+        }
+      }
+
+      if (autoRescinded && !trulyLiquidated) {
+        const rescinded = {
+          marketKey,
+          marketId: market.marketId,
+          trader,
+          status: "auto_rescinded" as const,
+          healthFactor,
+          flaggedAt: 0n, // contract cleared the flag in-tx
+          txHash: liquidationHash,
+        };
+        results.push(rescinded);
+        context.logger.warn("liquidation_auto_rescinded", rescinded);
+        continue;
+      }
+      if (!trulyLiquidated) {
+        // tx succeeded, neither event fired — abnormal. Surface loudly.
+        throw new Error(
+          `liquidate tx ${liquidationHash} succeeded without AccountLiquidated or AccountFlagRescinded`,
+        );
+      }
       const liquidated = {
         marketKey,
         marketId: market.marketId,
@@ -958,10 +1033,15 @@ function requireWallet(context: FxPerpKeeperContext, component: string): WalletC
   return context.walletClient;
 }
 
-async function waitForSuccess(context: FxPerpKeeperContext, label: string, hash: Hex): Promise<void> {
+async function waitForSuccess(
+  context: FxPerpKeeperContext,
+  label: string,
+  hash: Hex,
+): Promise<Awaited<ReturnType<PublicClient["waitForTransactionReceipt"]>>> {
   const receipt = await context.publicClient.waitForTransactionReceipt({ hash });
   if (receipt.status !== "success") throw new Error(`${label} reverted: ${hash}`);
   context.logger.info("tx_confirmed", { label, txHash: hash, blockNumber: receipt.blockNumber });
+  return receipt;
 }
 
 async function readBigint(
