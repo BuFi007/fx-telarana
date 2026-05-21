@@ -115,13 +115,15 @@ describe("address registry", () => {
       interchainGasPaymaster: "0x0000000000000000000000000000000000000000",
       interchainAccountRouter: "0x113A539625D208b5EcC59f300Be14b9b3508E559",
     });
+    // Arc sprint-1 perp stack redeploy 2026-05-21. Old contracts paused
+    // + role-revoked via RetireOldPerpStack.
     expect(a.fxPerps).toMatchObject({
-      clearinghouse: "0x6A265045D9A3291D2881d77DDC62e2781A2418c5",
-      marginAccount: "0x35c7cD02cFa0c2889547482B71c1a5114d8439C6",
-      fundingEngine: "0x88B70872759E1aA24858746779Cb15ca9F2cdcf3",
-      healthChecker: "0x272305e821D810eC5741761F98DbDC273efD47E6",
-      liquidationEngine: "0xD384560E5f8CE969BF4C1BDfAFACc5304AFbe8f2",
-      orderSettlement: "0x0F62FCdA2de63d905Cb167301C00251A9bB6dAa1",
+      clearinghouse: "0x39dc43E2133CF860c1d17d4DB75Ef4204eebD46A",
+      marginAccount: "0x4EB6018F988301417B93cb2b8899D74D42273e96",
+      fundingEngine: "0x859bA11A3693895f8B03C31C6AE3b8F04992115B",
+      healthChecker: "0xA00Be167609c02F3879138dA8530BC31527c02b8",
+      liquidationEngine: "0xF579e265EF1D5E67EfDbb1F20863465E94a9d3eA",
+      orderSettlement: "0x93C3d831D6F0657479d7Fb6Cf0D06e75aA05E4CC",
       keeperAdmin: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
     });
   });
@@ -413,7 +415,14 @@ describe("address registry", () => {
     expect(a.fxReceiptUSDC).toBe("0xdd22365Bba7330BE537c9BC26da9b1b4Db9aC431");
     expect(a.fxReceiptEURC).toBe("0xF829f57Db8530fa93FCD6e13b00193cbe8cE1493");
     expect(a.fxLiquidator).toBe("0xa50f7D4D4a1A0D3CF418515973545b80E037B379");
-    expect(a.morphoBlue).toBe("0x3c9b95C6E7B23f094f066733E7797C8680760830");
+    // Arc Morpho stack migrated 2026-05-21 from the self-deployed
+    // 0x3c9b95C6… to Morpho Labs canonical 0x65f435eB….
+    expect(a.morphoBlue).toBe("0x65f435eB4FF05f1481618694bC1ff7Ee4680c0A4");
+    expect(a.adaptiveCurveIrm).toBe("0xBD583cc9807980f9e41f7c8250f594fB6173abE3");
+    expect(a.morphoChainlinkOracleV2Factory).toBe("0xEBef760B0CA0d1Fa9578f47001A184Ee53EaE839");
+    expect(a.morphoVaultV2Factory).toBe("0x6b7F638B64539F83810A1f6ea81C703b561C3Be6");
+    expect(a.morphoMarketV1AdapterV2Factory).toBe("0x9372EbEDF2C64344817c67dAeD99512F4b9DC434");
+    expect(a.morphoRegistryList).toBe("0xcba6be0EF65176CE7D440A4a93657fb2dd84200c");
     // Arc-resident spoke routing TO Fuji is the primary user entry from Arc.
     expect(a.fxSpoke).toBe("0x13c8463589d460db6f21235eedfd678c22a1ea25");
     // Arc-resident spoke routing TO local Arc hub (self-loop).
