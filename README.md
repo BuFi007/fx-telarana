@@ -98,12 +98,14 @@ Full manifest: [`deployments/avalanche-fuji.json`](deployments/avalanche-fuji.js
 
 Full manifest: [`deployments/arc-testnet.json`](deployments/arc-testnet.json) + [`deployments/hub-config-arc.json`](deployments/hub-config-arc.json).
 
-Morpho Labs' Arc testnet contracts are now verified for the next fresh hub
-broadcast: MorphoBlue `0x65f435eB4FF05f1481618694bC1ff7Ee4680c0A4`,
-AdaptiveCurveIrm `0xBD583cc9807980f9e41f7c8250f594fB6173abE3`. See
-[`deployments/morpho-arc-testnet.json`](deployments/morpho-arc-testnet.json).
-The live Stage 6 hub above remains bound to the self-deployed Morpho until it is
-redeployed.
+Fresh Morpho Labs-backed Arc hub broadcast (2026-05-21) is live for tomorrow's
+rewire rehearsal. It uses MorphoBlue
+`0x65f435eB4FF05f1481618694bC1ff7Ee4680c0A4`, AdaptiveCurveIrm
+`0xBD583cc9807980f9e41f7c8250f594fB6173abE3`, and registers both `EURC/USDC`
+and `cirBTC/USDC` market directions before timelock handoff. Keep the Stage 6
+route above as SDK/default until Circle SCP, spokes, and Gateway wiring are
+intentionally switched. Fresh manifest:
+[`deployments/arc-testnet-morpho-labs-cirbtc-5042002.json`](deployments/arc-testnet-morpho-labs-cirbtc-5042002.json).
 
 #### Arc Phase B-E perps stack
 
@@ -124,10 +126,11 @@ Supporting Arc addresses:
 |---|---|
 | USDC | `0x3600000000000000000000000000000000000000` |
 | EURC | `0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a` |
+| cirBTC test collateral (`fCirBTC`) | `0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761` |
 | FxOracle | `0x77b3A3B420dB98B01085b8C46a753Ed9879e2865` |
 | Keeper / admin | `0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69` |
 
-Perps manifest: [`deployments/perps-5042002.json`](deployments/perps-5042002.json). Config manifest: [`deployments/perps-config-5042002.json`](deployments/perps-config-5042002.json). Trading smoke report: [`reports/SMOKE_ARC_PHASE_B_E_TRADING.md`](reports/SMOKE_ARC_PHASE_B_E_TRADING.md).
+Perps manifest: [`deployments/perps-5042002.json`](deployments/perps-5042002.json). Config manifest: [`deployments/perps-config-5042002.json`](deployments/perps-config-5042002.json), now including `CIRBTC_USDC`. Trading smoke report: [`reports/SMOKE_ARC_PHASE_B_E_TRADING.md`](reports/SMOKE_ARC_PHASE_B_E_TRADING.md).
 
 ### Spokes — 16 total, dual-routed per chain
 

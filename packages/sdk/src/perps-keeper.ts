@@ -959,6 +959,7 @@ function pythFeedForMarket(arc: ReturnType<typeof getAddresses>, marketKey: FxPe
   if (marketKey === "EURC_USDC") return arc.pythFeedEURC;
   if (marketKey === "TJPYC_USDC") return arc.stablecoinBasket?.jpyc.pythFeedId;
   if (marketKey === "TMXNB_USDC" || marketKey === "MXNB_USDC") return arc.stablecoinBasket?.mxnb.pythFeedId;
+  if (marketKey === "CIRBTC_USDC") return arc.stablecoinBasket?.cirbtc.pythFeedId;
   return arc.stablecoinBasket?.zchf.pythFeedId;
 }
 
