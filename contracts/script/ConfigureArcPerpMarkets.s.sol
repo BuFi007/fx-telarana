@@ -11,6 +11,15 @@ import {FxMarginAccount} from "../src/perp/FxMarginAccount.sol";
 import {FxPerpClearinghouse} from "../src/perp/FxPerpClearinghouse.sol";
 import {IFxPerpClearinghouse} from "../src/perp/interfaces/IFxPerpClearinghouse.sol";
 
+interface IPerpOracleFeedAdmin {
+    function setPythFeedConfig(address token, bytes32 pythFeedId, bool inverted) external;
+    function setRedstoneFeed(address token, bytes32 redstoneFeedId) external;
+}
+
+interface ILegacyPerpOracleFeedAdmin {
+    function setFeed(address token, bytes32 pythFeedId) external;
+}
+
 /// @notice Arc-only Phase B-E market bootstrap. This configures the live
 ///         testnet perp markets and tops protocol liquidity up to a target.
 ///         It intentionally does not touch Fuji because trading execution
@@ -21,10 +30,15 @@ contract ConfigureArcPerpMarkets is Script {
     uint256 internal constant ARC_CHAIN_ID = 5_042_002;
 
     address internal constant DEFAULT_USDC = 0x3600000000000000000000000000000000000000;
+    address internal constant DEFAULT_ARC_PERP_ORACLE = 0x77b3A3B420dB98B01085b8C46a753Ed9879e2865;
     address internal constant EURC = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
     address internal constant TJPYC = 0xB176f6E0c8ecc2be208F72Ad34c54e5F10F1882a;
     address internal constant TMXNB = 0xe8F76f90553F50E76731afbeF1ac83a9152fFBEb;
     address internal constant TCHFC = 0x249DBFd4ac17247Cf10098F6C3937F90570b5750;
+    address internal constant CIRBTC = 0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761;
+
+    bytes32 internal constant PYTH_BTC_USD = 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43;
+    bytes32 internal constant REDSTONE_BTC = "BTC";
 
     uint16 internal constant INITIAL_MARGIN_BPS = 500;
     uint16 internal constant MAINTENANCE_MARGIN_BPS = 300;
@@ -32,6 +46,7 @@ contract ConfigureArcPerpMarkets is Script {
     uint32 internal constant MAX_LEVERAGE_BPS = 200_000;
     uint256 internal constant EURC_OI_CAP = 1_000e6;
     uint256 internal constant TEST_FIAT_OI_CAP = 500e6;
+    uint256 internal constant TEST_CRYPTO_OI_CAP = 250e6;
     uint256 internal constant DEFAULT_PROTOCOL_LIQUIDITY_TARGET = 100e6;
 
     uint256 internal constant MAX_FUNDING_RATE_BPS_PER_SECOND = 1;
@@ -42,6 +57,8 @@ contract ConfigureArcPerpMarkets is Script {
     uint256 internal constant LIQUIDATION_FLAG_DELAY = 120;
 
     error WrongChain(uint256 chainId);
+    error OraclePythFeedConfigFailed(address oracle, address token);
+    error OracleRedstoneFeedConfigFailed(address oracle, address token);
     error UnsafeLiquidationFlagDelay(uint256 delay);
 
     function run() external {
@@ -50,10 +67,13 @@ contract ConfigureArcPerpMarkets is Script {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(pk);
         address usdc = vm.envOr("ARC_USDC", DEFAULT_USDC);
+        address oracle = vm.envOr("ARC_FX_ORACLE", DEFAULT_ARC_PERP_ORACLE);
+        address cirbtc = vm.envOr("ARC_CIRBTC", CIRBTC);
         FxPerpClearinghouse clearinghouse = FxPerpClearinghouse(vm.envAddress("ARC_PERP_CLEARINGHOUSE"));
         FxMarginAccount margin = FxMarginAccount(vm.envAddress("ARC_PERP_MARGIN"));
         FxFundingEngine funding = FxFundingEngine(vm.envAddress("ARC_PERP_FUNDING"));
         FxLiquidationEngine liquidation = FxLiquidationEngine(vm.envAddress("ARC_PERP_LIQUIDATION"));
+        bool oracleSupportsPythFeedConfig = _oracleSupportsPythFeedConfig(oracle, cirbtc);
         uint256 protocolLiquidityTarget =
             vm.envOr("ARC_PERP_PROTOCOL_LIQUIDITY_TARGET", DEFAULT_PROTOCOL_LIQUIDITY_TARGET);
 
@@ -66,6 +86,9 @@ contract ConfigureArcPerpMarkets is Script {
         console2.log("margin                     ", address(margin));
         console2.log("funding                    ", address(funding));
         console2.log("liquidation                ", address(liquidation));
+        console2.log("oracle                     ", oracle);
+        console2.log("cirBTC                     ", cirbtc);
+        console2.log("oracle supports setPythFeedConfig", oracleSupportsPythFeedConfig);
         console2.log("protocol liquidity target  ", protocolLiquidityTarget);
 
         vm.startBroadcast(pk);
@@ -76,10 +99,12 @@ contract ConfigureArcPerpMarkets is Script {
             margin.setFundingSettlementHook(address(clearinghouse));
         }
 
+        _configureCirBtcOracle(oracle, cirbtc, oracleSupportsPythFeedConfig);
         _configureMarket(clearinghouse, funding, "EURC", EURC, EURC_OI_CAP);
         _configureMarket(clearinghouse, funding, "tJPYC", TJPYC, TEST_FIAT_OI_CAP);
         _configureMarket(clearinghouse, funding, "tMXNB", TMXNB, TEST_FIAT_OI_CAP);
         _configureMarket(clearinghouse, funding, "tCHFC", TCHFC, TEST_FIAT_OI_CAP);
+        _configureMarket(clearinghouse, funding, "cirBTC", cirbtc, TEST_CRYPTO_OI_CAP);
 
         _validateLiquidationDelay();
         liquidation.configureLiquidation(
@@ -102,6 +127,7 @@ contract ConfigureArcPerpMarkets is Script {
         _logMarket("tJPYC");
         _logMarket("tMXNB");
         _logMarket("tCHFC");
+        _logMarket("cirBTC");
         console2.log("liquidation bounty bps     ", LIQUIDATION_BOUNTY_BPS);
         console2.log("liquidation bounty cap     ", LIQUIDATION_BOUNTY_CAP);
         console2.log("liquidation flag delay     ", LIQUIDATION_FLAG_DELAY);
@@ -143,6 +169,27 @@ contract ConfigureArcPerpMarkets is Script {
                 fundingVelocityBps: FUNDING_VELOCITY_BPS
             })
         );
+    }
+
+    function _configureCirBtcOracle(address oracle, address cirbtc, bool supportsPythFeedConfig) internal {
+        if (supportsPythFeedConfig) {
+            IPerpOracleFeedAdmin(oracle).setPythFeedConfig(cirbtc, PYTH_BTC_USD, false);
+        } else {
+            // The live Arc perp oracle predates inverted-feed support and only
+            // exposes setFeed(address,bytes32). BTC/USD does not need inversion.
+            (bool pythOk,) =
+                oracle.call(abi.encodeWithSelector(ILegacyPerpOracleFeedAdmin.setFeed.selector, cirbtc, PYTH_BTC_USD));
+            if (!pythOk) revert OraclePythFeedConfigFailed(oracle, cirbtc);
+        }
+
+        (bool redstoneOk,) =
+            oracle.call(abi.encodeWithSelector(IPerpOracleFeedAdmin.setRedstoneFeed.selector, cirbtc, REDSTONE_BTC));
+        if (!redstoneOk) revert OracleRedstoneFeedConfigFailed(oracle, cirbtc);
+    }
+
+    function _oracleSupportsPythFeedConfig(address oracle, address token) internal view returns (bool) {
+        (bool ok, bytes memory data) = oracle.staticcall(abi.encodeWithSignature("pythFeedInvertedOf(address)", token));
+        return ok && data.length >= 32;
     }
 
     function _marketId(string memory symbol) internal pure returns (bytes32) {
