@@ -27,6 +27,18 @@
     "./privacy": {
       "types": "./dist/privacy/index.d.ts",
       "default": "./dist/privacy/index.js"
+    },
+    "./perps": {
+      "types": "./dist/perps.d.ts",
+      "default": "./dist/perps.js"
+    },
+    "./perps-keeper": {
+      "types": "./dist/perps-keeper.d.ts",
+      "default": "./dist/perps-keeper.js"
+    },
+    "./perps-runtime": {
+      "types": "./dist/perps-runtime.d.ts",
+      "default": "./dist/perps-runtime.js"
     }
   },
   "files": [
@@ -42,6 +54,13 @@
     "tenderly:label": "bun scripts/tenderly-label.ts",
     "tenderly:verify:hub": "sh scripts/tenderly-verify.sh",
     "tenderly:verify:spoke": "sh scripts/tenderly-verify-spoke.sh",
+    "perps:arc:readiness": "bun scripts/perp-arc-readiness-gate.ts",
+    "perps:arc:keeper": "bun scripts/perp-arc-keeper-loop.ts",
+    "perps:arc:matcher": "bun scripts/perp-arc-matcher-loop.ts",
+    "perps:arc:funding": "bun scripts/perp-arc-funding-loop.ts",
+    "perps:arc:liquidations": "bun scripts/perp-arc-liquidation-loop.ts",
+    "perps:arc:canary": "bun scripts/perp-arc-canary-loop.ts",
+    "perps:arc:redstone-smoke": "bun scripts/perp-redstone-smoke.ts",
     "sim:spoke-deposit": "bun scripts/simulator/run-spoke-deposit.ts",
     "sim:matrix": "bun scripts/simulator/run-matrix.ts"
   },
@@ -58,6 +77,8 @@
     "viem": "^2.21.0"
   },
   "optionalDependencies": {
-    "@circle-fin/smart-contract-platform": "^10.3.1"
+    "@circle-fin/smart-contract-platform": "^10.3.1",
+    "@redstone-finance/evm-connector": "^0.9.0",
+    "@redstone-finance/sdk": "^0.9.0"
   }
 }

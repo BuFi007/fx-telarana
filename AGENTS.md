@@ -6,7 +6,7 @@ Per-repo guidance for Codex agents working in this codebase.
 
 - **Live on real Base Sepolia** (chainId 84532, deployer `0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69`). All 8 contracts deployed + both Morpho markets created on the real Morpho Blue singleton + registered with Circle SCP. Addresses: `deployments/base-sepolia.json` and `packages/sdk/src/addresses/index.ts` (`ChainId.BaseSepolia`).
 - **Live on Tenderly vnet**: parallel deployment for fast iteration. Addresses in `deployments/tenderly-base-sepolia.json`. Vnet RPC + dashboard URL in `.env.local` (gitignored).
-- **Production target**: Arc testnet (chainId 5042002). Deploy script at `contracts/script/DeployArcTestnet.s.sol`. Still blocked on Morpho Blue Arc address — or we self-deploy Morpho there next.
+- **Production target**: Arc testnet (chainId 5042002). Deploy script at `contracts/script/DeployArcTestnet.s.sol`. Morpho Labs Arc testnet contracts are now verified in `deployments/morpho-arc-testnet.json`; fresh Arc hub broadcasts default to those. Existing live Arc hub manifests still point at the earlier self-deployed Morpho stack and must not be rewritten without a fresh deploy.
 - **Branch**: `tcxcx/fx-onchain-hub-arc`. Don't rename without explicit instruction.
 
 ## Testing

@@ -53,8 +53,9 @@ Source: official Circle/Arc docs, last verified 2026-05-14.
 | AUDF | Not deployed | **Deploy MockAUDF (6 dec)** on Arc testnet. |
 | ZCHF | Not deployed | **Deploy MockZCHF (18 dec)** on Arc testnet. |
 | KRW1 | Not deployed on Arc; Avalanche-native at `0x25a8…0318` | Deploy MockKRW1 at 0 decimals; Avalanche `decimals()` probe completed 2026-05-14. |
-| Morpho Blue | Not deployed | Confirmed blocker. Either wait for Morpho Labs or self-deploy (immutable singleton, ~3KB). |
-| AdaptiveCurveIRM | Not deployed | Same — co-deploy with Morpho self-deploy if going that route. |
+| cirBTC | Test collateral on Arc | Morpho Labs dummy-market collateral `0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761` (`FakeCirBTC`, 18 dec). Treat as Circle Wrapped Bitcoin test collateral until canonical issuance is published. |
+| Morpho Blue | Deployed on Arc testnet | Morpho Labs deployment verified: `0x65f435eB4FF05f1481618694bC1ff7Ee4680c0A4`. Fresh hub manifest with `EURC/USDC` + `cirBTC/USDC` markets: `deployments/arc-testnet-morpho-labs-cirbtc-5042002.json`. |
+| AdaptiveCurveIRM | Deployed on Arc testnet | Verified and enabled: `0xBD583cc9807980f9e41f7c8250f594fB6173abE3`; `0.86e18` LLTV is enabled. |
 | Pyth | Confirm per pair | `0x2880aB155794e7179c9eE2e38200202908C17B43` per current SDK. Feed IDs confirmed for Phase 3 FX basket; inverse feeds use `FxOracle.setPythFeedConfig(..., true)`. |
 | RedStone | Confirm signer set | Feed symbols confirmed (`AUD`, `JPY`, `MXN`, `KRW`, `CHF`); verify production signer payload path on Arc during broadcast rehearsal. |
 
@@ -333,19 +334,21 @@ This is the immediate work. Mainnet waits on §6 checklist completion.
 4. ⏳ Log addresses to `deployments/arc-testnet-mocks.json`.
 5. ⏳ Update `packages/sdk/src/addresses/index.ts` `ChainId.ArcTestnet` token map.
 
-### 7.2 Hub deploy on Arc testnet (once Morpho available)
+### 7.2 Hub deploy on Arc testnet
 
-1. Resolve Morpho Blue Arc testnet (await Morpho Labs OR self-deploy via vendored singleton).
-2. Run existing `DeployArcTestnet.s.sol` with env pointing to:
+1. Run `VerifyArcMorphoTestnet.s.sol` against Arc RPC and require a clean readback from `deployments/morpho-arc-testnet.json`.
+2. Run `DeployArcTestnet.s.sol`; Morpho Blue + AdaptiveCurveIrm default to the verified Morpho Labs Arc testnet contracts, and the current script registers `EURC/USDC` plus `cirBTC/USDC` markets before timelock handoff. Broadcast output is captured in `deployments/arc-testnet-morpho-labs-cirbtc-5042002.json`.
+3. Pass/confirm:
    - Real USDC (`0x3600…0000`)
    - Real EURC (`0x89B5…D72a`)
+   - cirBTC test collateral (`0x44cE…2761`)
    - Mock JPYC / MXNB / AUDF / KRW1 / ZCHF addresses (from `deployments/arc-testnet-mocks.json`)
    - Real Pyth + RedStone (if feeds confirmed)
    - Real CCTP V2 (Domain 26)
    - Real Permit2 (canonical)
-3. Per pair, run the §3.2 onboarding playbook from `SPEC_PHASE_3_MULTI_STABLECOIN.md`.
-4. Smoke-test each pair end-to-end via Tenderly vnet forked from Arc testnet.
-5. 14-day clean monitoring window.
+4. Per pair, run the §3.2 onboarding playbook from `SPEC_PHASE_3_MULTI_STABLECOIN.md`.
+5. Smoke-test each pair end-to-end on live Arc RPC; Tenderly still does not index chain `5042002`.
+6. 14-day clean monitoring window.
 
 ### 7.3 Faucet setup
 

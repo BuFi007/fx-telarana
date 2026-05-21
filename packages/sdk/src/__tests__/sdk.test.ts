@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "bun:test";
 import { encodeFunctionData } from "viem";
 
@@ -9,12 +12,20 @@ import {
   EligibilityReason,
   FxRouteMode,
   FxHyperlaneAction,
+  FX_PERP_MARKET_KEYS,
+  MIN_LIQUIDATION_FLAG_DELAY,
   FxHyperlaneHubReceiverAbi,
   FxGhostCommitmentRegistryAbi,
   FxGhostKycHookAbi,
   FxGhostSpokeRouterAbi,
   FxMarketRegistryAbi,
   FxOracleAbi,
+  FxFundingEngineAbi,
+  FxHealthCheckerAbi,
+  FxLiquidationEngineAbi,
+  FxMarginAccountAbi,
+  FxOrderSettlementAbi,
+  FxPerpClearinghouseAbi,
   FxSpokeAbi,
   FxSpokeIntentRouterAbi,
   FxSwapHookAbi,
@@ -42,9 +53,14 @@ import {
   buildGatewayBurnIntent,
   encodeGatewayMintCalldata,
   evmAddressToGatewayBytes32,
+  assertFxPerpConfigReady,
+  fxPerpContractAddressesJson,
+  fxPerpsAddressesFromConfigManifest,
   gatewayBurnIntentToJson,
+  getFxPerpMarket,
   getAddresses,
   hyperlaneAddressToBytes32,
+  parseFxPerpConfigManifest,
   resolveRouteMode,
   planExecuteHyperlaneIntent,
   planExecuteRoutedHyperlaneIntent,
@@ -58,6 +74,17 @@ import {
   planSupplyCollateral,
   planWithdraw,
 } from "../index.js";
+import {
+  loadFxPerpRuntimeConfig,
+  parseFxPerpContractAddressesJson,
+} from "../perps-runtime.js";
+import {
+  createJsonLogger,
+  keeperComponentsFromString,
+  marketKeysFromString,
+  parseLiquidationCandidates,
+  parseMatchIntent,
+} from "../perps-keeper.js";
 
 const USDC = "0x036cbd53842c5426634e7929541ec2318f3dcf7e" as const;
 const EURC = "0x000000000000000000000000000000000000eefc" as const;
@@ -65,6 +92,7 @@ const ALICE = "0x000000000000000000000000000000000000a11c" as const;
 const ROUTE = "0x000000000000000000000000000000000000a0df" as const;
 const INTENT_ID = "0x1111111111111111111111111111111111111111111111111111111111111111" as const;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
 describe("address registry", () => {
   test("Base Sepolia includes Morpho + Pyth + USDC", () => {
@@ -86,6 +114,170 @@ describe("address registry", () => {
       mailbox: "0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9",
       interchainGasPaymaster: "0x0000000000000000000000000000000000000000",
       interchainAccountRouter: "0x113A539625D208b5EcC59f300Be14b9b3508E559",
+    });
+    expect(a.fxPerps).toMatchObject({
+      clearinghouse: "0x6A265045D9A3291D2881d77DDC62e2781A2418c5",
+      marginAccount: "0x35c7cD02cFa0c2889547482B71c1a5114d8439C6",
+      fundingEngine: "0x88B70872759E1aA24858746779Cb15ca9F2cdcf3",
+      healthChecker: "0x272305e821D810eC5741761F98DbDC273efD47E6",
+      liquidationEngine: "0xD384560E5f8CE969BF4C1BDfAFACc5304AFbe8f2",
+      orderSettlement: "0x0F62FCdA2de63d905Cb167301C00251A9bB6dAa1",
+      keeperAdmin: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    });
+  });
+
+  test("Arc perps manifest parses and matches SDK address registry", () => {
+    const manifestPath = resolve(REPO_ROOT, "deployments/perps-config-5042002.json");
+    const manifest = parseFxPerpConfigManifest(JSON.parse(readFileSync(manifestPath, "utf8")) as unknown);
+    assertFxPerpConfigReady(manifest);
+
+    expect(manifest.chainId).toBe(ChainId.ArcTestnet);
+    expect(manifest.liquidation.flagDelay).toBeGreaterThanOrEqual(MIN_LIQUIDATION_FLAG_DELAY);
+    expect(manifest.usdc).toBe("0x3600000000000000000000000000000000000000");
+    expect(fxPerpsAddressesFromConfigManifest(manifest)).toEqual(getAddresses(ChainId.ArcTestnet).fxPerps);
+    expect(FX_PERP_MARKET_KEYS.map((key) => getFxPerpMarket(manifest, key).enabled)).toEqual([
+      true,
+      true,
+      true,
+      true,
+      true,
+    ]);
+    expect(getFxPerpMarket(manifest, "EURC_USDC")).toMatchObject({
+      marketId: "0x565a6e2fab61800aa18813603b5b485af5bed7dea1aa0845bdaa61502063cab8",
+      baseToken: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+      tradingFeeBps: 5,
+    });
+    expect(manifest.protocolLiquidity).toBeGreaterThanOrEqual(manifest.minProtocolLiquidity);
+    expect(fxPerpContractAddressesJson(manifest)).toContain("FxPerpClearinghouse");
+  });
+
+  test("perps manifest rejects unsafe liquidation flag delays", () => {
+    const manifestPath = resolve(REPO_ROOT, "deployments/perps-config-5042002.json");
+    const raw = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
+    expect(() => parseFxPerpConfigManifest({ ...raw, liquidation_flagDelay: 0 })).toThrow(
+      /flagDelay 0 below minimum 60/,
+    );
+
+    const manifest = parseFxPerpConfigManifest(raw);
+    expect(() =>
+      assertFxPerpConfigReady({
+        ...manifest,
+        liquidation: { ...manifest.liquidation, flagDelay: MIN_LIQUIDATION_FLAG_DELAY - 1n },
+      }),
+    ).toThrow(/flagDelay 59 below minimum 60/);
+  });
+
+  test("Fuji perps manifest parses with safe liquidation delay", () => {
+    const manifestPath = resolve(REPO_ROOT, "deployments/perps-config-43113.json");
+    const manifest = parseFxPerpConfigManifest(JSON.parse(readFileSync(manifestPath, "utf8")) as unknown);
+    assertFxPerpConfigReady(manifest);
+
+    expect(manifest.chainId).toBe(ChainId.AvalancheFuji);
+    expect(manifest.marketKeys).toEqual(["EURC_USDC", "MXNB_USDC"]);
+    expect(manifest.liquidation.flagDelay).toBeGreaterThanOrEqual(MIN_LIQUIDATION_FLAG_DELAY);
+    expect(getFxPerpMarket(manifest, "MXNB_USDC")).toMatchObject({
+      marketId: "0x7930040de904501a480cb2993edef814f14199d00fa1b9888e1aad6de76281be",
+      baseToken: "0xAB99d44185af87AeB08361588F00F59B0CE85eBb",
+      tradingFeeBps: 5,
+    });
+  });
+
+  test("Arc perps runtime loader gates manifest and CONTRACT_ADDRESSES_JSON parity", () => {
+    const manifestPath = resolve(REPO_ROOT, "deployments/perps-config-5042002.json");
+    const manifest = parseFxPerpConfigManifest(JSON.parse(readFileSync(manifestPath, "utf8")) as unknown);
+    const contractAddressesJson = fxPerpContractAddressesJson(manifest);
+    const runtime = loadFxPerpRuntimeConfig({
+      configPath: manifestPath,
+      contractAddressesJson,
+      env: {},
+    });
+
+    expect(runtime.source).toBe("manifest");
+    expect(runtime.manifest?.chainId).toBe(ChainId.ArcTestnet);
+    expect(runtime.addresses).toEqual(fxPerpsAddressesFromConfigManifest(manifest));
+    expect(loadFxPerpRuntimeConfig({ cwd: resolve(REPO_ROOT, "packages/sdk"), env: {} }).configPath).toBe(
+      manifestPath,
+    );
+    expect(parseFxPerpContractAddressesJson(contractAddressesJson)).toMatchObject({
+      clearinghouse: manifest.addresses.clearinghouse,
+      orderSettlement: manifest.addresses.orderSettlement,
+    });
+
+    const mismatchedJson = contractAddressesJson.replace(
+      manifest.addresses.clearinghouse,
+      "0x0000000000000000000000000000000000000001",
+    );
+    expect(() =>
+      loadFxPerpRuntimeConfig({
+        configPath: manifestPath,
+        contractAddressesJson: mismatchedJson,
+        env: {},
+      }),
+    ).toThrow(/does not match manifest/);
+  });
+
+  test("Arc perps keeper helpers parse components, matches, candidates, and JSON logs", () => {
+    expect(keeperComponentsFromString("matcher,funding")).toEqual(["matcher", "funding"]);
+    expect(keeperComponentsFromString("all")).toEqual(["matcher", "funding", "liquidation", "canary"]);
+    expect(() => keeperComponentsFromString("unknown")).toThrow(/Unknown keeper component/);
+    expect(marketKeysFromString(undefined, ["EURC_USDC"])).toEqual(["EURC_USDC"]);
+    expect(marketKeysFromString("all", ["EURC_USDC"])).toEqual([
+      "EURC_USDC",
+      "TJPYC_USDC",
+      "TMXNB_USDC",
+      "TCHFC_USDC",
+      "CIRBTC_USDC",
+    ]);
+
+    const marketId = "0x565a6e2fab61800aa18813603b5b485af5bed7dea1aa0845bdaa61502063cab8" as const;
+    const maker = {
+      order: {
+        trader: "0x0000000000000000000000000000000000000a11",
+        marketId,
+        sizeDeltaE18: "10000000000000000",
+        priceE18: "1160000000000000000",
+        maxFee: "1000",
+        orderType: 1,
+        flags: 2,
+        nonce: "1",
+        deadline: "9999999999",
+      },
+      signature: `0x${"11".repeat(65)}`,
+    };
+    const taker = {
+      order: {
+        ...maker.order,
+        trader: "0x0000000000000000000000000000000000000b0b",
+        sizeDeltaE18: "-10000000000000000",
+        flags: 0,
+        nonce: "2",
+      },
+      signature: `0x${"22".repeat(65)}`,
+    };
+    const match = parseMatchIntent({
+      maker,
+      taker,
+      fillSizeE18: "10000000000000000",
+      fillPriceE18: "1160000000000000000",
+    });
+    expect(match.id).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(match.maker.order.nonce).toBe(1n);
+    expect(match.taker.order.sizeDeltaE18).toBe(-10000000000000000n);
+
+    expect(
+      parseLiquidationCandidates(
+        JSON.stringify({
+          EURC_USDC: ["0x0000000000000000000000000000000000000a11"],
+        }),
+      ),
+    ).toEqual({ EURC_USDC: ["0x0000000000000000000000000000000000000a11"] });
+
+    const lines: string[] = [];
+    createJsonLogger("test", (line) => lines.push(line)).info("bigint_ok", { component: "ignored", value: 7n });
+    expect(JSON.parse(lines[0] ?? "{}")).toMatchObject({
+      component: "test",
+      event: "bigint_ok",
+      value: "7",
     });
   });
 
@@ -124,6 +316,15 @@ describe("address registry", () => {
       decimals: 18,
       pythFeedInverted: true,
       redstoneFeedId: "CHF",
+      source: "mock",
+    });
+    expect(a.stablecoinBasket?.cirbtc).toMatchObject({
+      symbol: "cirBTC",
+      address: "0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761",
+      decimals: 18,
+      pythFeedId: "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
+      pythFeedInverted: false,
+      redstoneFeedId: "BTC",
       source: "mock",
     });
     expect(a.stablecoinBasket?.brla.source).toBe("excluded");
@@ -709,6 +910,51 @@ describe("ABI exports", () => {
     expect(fnNames).toContain("receiveGatewayMint");
     expect(fnNames).toContain("markGatewayAtomicFxSwapSettled");
     expect(fnNames).toContain("gatewayReceipt");
+  });
+
+  test("Phase B-E perp ABI exports expose trading and risk surfaces", () => {
+    const clearinghouseFunctions = FxPerpClearinghouseAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(clearinghouseFunctions).toContain("configureMarket");
+    expect(clearinghouseFunctions).toContain("quoteFee");
+    expect(clearinghouseFunctions).toContain("openOrIncrease");
+    expect(clearinghouseFunctions).toContain("applyOrderFill");
+    expect(clearinghouseFunctions).toContain("liquidatePosition");
+    expect(clearinghouseFunctions).toContain("setFundingEngine");
+    expect(clearinghouseFunctions).toContain("settleTraderFunding");
+
+    const marginFunctions = FxMarginAccountAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(marginFunctions).toContain("depositMargin");
+    expect(marginFunctions).toContain("depositProtocolLiquidity");
+    expect(marginFunctions).toContain("setFundingSettlementHook");
+
+    const fundingFunctions = FxFundingEngineAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(fundingFunctions).toContain("configureFunding");
+    expect(fundingFunctions).toContain("pokeFundingRate");
+    expect(fundingFunctions).toContain("settleFunding");
+
+    const healthFunctions = FxHealthCheckerAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(healthFunctions).toContain("healthFactor");
+    expect(healthFunctions).toContain("isLiquidatable");
+    // Sprint-1 codex r0 P1 #1: strict-oracle counterparts MUST appear on
+    // the surface so integrators can route through the verified path.
+    expect(healthFunctions).toContain("healthFactorVerified");
+    expect(healthFunctions).toContain("isLiquidatableVerified");
+
+    const liquidationFunctions = FxLiquidationEngineAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(liquidationFunctions).toContain("configureLiquidation");
+    expect(liquidationFunctions).toContain("flagAccount");
+    expect(liquidationFunctions).toContain("liquidate");
+    // Sprint-1 codex r0 P1 #5: rescindFlag is the anti-flag-bomb surface.
+    // Sprint-1 codex r1 LOW: third-party indexers need AccountFlagRescinded
+    // exported so they don't classify auto-rescind as an unknown event.
+    expect(liquidationFunctions).toContain("rescindFlag");
+    const liquidationEvents = FxLiquidationEngineAbi.filter((x) => x.type === "event").map((x) => x.name);
+    expect(liquidationEvents).toContain("AccountFlagRescinded");
+    expect(liquidationEvents).toContain("AccountLiquidated");
+
+    const settlementFunctions = FxOrderSettlementAbi.filter((x) => x.type === "function").map((x) => x.name);
+    expect(settlementFunctions).toContain("hashOrder");
+    expect(settlementFunctions).toContain("settleMatch");
   });
 
   test("Bufi pass ABI exposes the Ghost Mode verifier surface", () => {

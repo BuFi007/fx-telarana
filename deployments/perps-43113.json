@@ -1,0 +1,11 @@
+{
+  "FxFundingEngine": "0x3a4459dBa18806e700423aAbEA1df1fefc928C6a",
+  "FxHealthChecker": "0x7Ff02e5F618a051acad9BbF9b1295E423062BB56",
+  "FxLiquidationEngine": "0xED58C176E9a37Cda2854AC0Ade409cfb3687cA7d",
+  "FxMarginAccount": "0x21bB1Bb922b04CbCFD1AD7Bd6788F5251917acb2",
+  "FxOrderSettlement": "0x955AAEE698aaA03d5bc32F16434cef78b8Ee1fc7",
+  "FxPerpClearinghouse": "0x22013f712190034D8Ee43F3894461c27709E74AC",
+  "chainId": 43113,
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "keeper": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69"
+}

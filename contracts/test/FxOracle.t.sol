@@ -270,6 +270,52 @@ contract FxOracleTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
+            P2 #7 — hard caps on oracle config (codex contract review)
+    //////////////////////////////////////////////////////////////*/
+
+    function test_setConfig_rejectsAgeAboveHardCap() public {
+        vm.prank(owner);
+        vm.expectRevert(FxOracle.InvalidConfig.selector);
+        oracle.setConfig(31 minutes, 50, 30);
+    }
+
+    function test_setConfig_rejectsDeviationAboveHardCap() public {
+        vm.prank(owner);
+        vm.expectRevert(FxOracle.InvalidConfig.selector);
+        oracle.setConfig(60, 501, 30);
+    }
+
+    function test_setConfig_rejectsConfidenceAboveHardCap() public {
+        vm.prank(owner);
+        vm.expectRevert(FxOracle.InvalidConfig.selector);
+        oracle.setConfig(60, 50, 501);
+    }
+
+    function test_setConfig_acceptsAtHardCap() public {
+        vm.prank(owner);
+        oracle.setConfig(30 minutes, 500, 500);
+        (uint256 a, uint256 d, uint256 c) = oracle.config();
+        assertEq(a, 30 minutes);
+        assertEq(d, 500);
+        assertEq(c, 500);
+    }
+
+    function test_constructor_rejectsAgeAboveHardCap() public {
+        vm.expectRevert(FxOracle.InvalidConfig.selector);
+        new FxOracle(address(pyth), owner, 31 minutes, 50, 30);
+    }
+
+    function test_constructor_rejectsDeviationAboveHardCap() public {
+        vm.expectRevert(FxOracle.InvalidConfig.selector);
+        new FxOracle(address(pyth), owner, 60, 501, 30);
+    }
+
+    function test_constructor_rejectsConfidenceAboveHardCap() public {
+        vm.expectRevert(FxOracle.InvalidConfig.selector);
+        new FxOracle(address(pyth), owner, 60, 50, 501);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                                   HELPERS
     //////////////////////////////////////////////////////////////*/
 

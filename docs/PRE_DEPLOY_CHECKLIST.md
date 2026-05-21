@@ -2,14 +2,19 @@
 
 Run through this before invoking `forge script script/DeployArcTestnet.s.sol --broadcast`.
 
-## External dependencies — blocking
+## External dependencies
 
-- [ ] **Morpho Blue address on Arc testnet** — required, no Phase 0 path without it. Either:
-  - (a) Wait for Morpho Labs to publish their Arc deployment
-  - (b) Self-deploy Morpho Blue (it's immutable + permissionless; ~3KB bytecode; we deploy with our deployer as `owner`, then call `enableIrm` + `enableLltv` ourselves)
-- [ ] **AdaptiveCurveIrm address on Arc testnet** — same as above, either canonical or self-deploy.
+- [x] **Morpho Blue address on Arc testnet** — Morpho Labs deployment verified on-chain: `0x65f435eB4FF05f1481618694bC1ff7Ee4680c0A4`.
+- [x] **AdaptiveCurveIrm address on Arc testnet** — verified on-chain and enabled in Morpho: `0xBD583cc9807980f9e41f7c8250f594fB6173abE3`.
+- [x] **LLTV 86% enabled on Arc Morpho** — `isLltvEnabled(860000000000000000) == true`.
+- [x] **Run the Morpho dependency gate before broadcast** — `forge script contracts/script/VerifyArcMorphoTestnet.s.sol:VerifyArcMorphoTestnet --root contracts --rpc-url "$ARC_TESTNET_RPC_URL" -vv`.
+- [x] **Confirm cirBTC test collateral** — Arc token `0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761` reads `FakeCirBTC` / `fCirBTC` / 18 decimals.
 - [ ] **Confirm Pyth feed coverage on Arc** — `getUpdateFee` returns native-gas amount. Verify EUR/USD, USDC/USD, EURC/USD all publish on Arc with confidence < 30 bps.
 - [ ] **Confirm RedStone signer set** — production uses `PrimaryProdDataServiceConsumerBase` (5 signers, threshold 3). Verify they're signing Arc-targeted payloads.
+
+Morpho Labs cautioned that the Arc testnet Morpho configuration and dummy vault
+do not reflect mainnet. Use the deployment for Arc wiring, not for production-like
+liquidity assumptions. Source of truth: `deployments/morpho-arc-testnet.json`.
 
 ## Arc-specific behavior (encoded in `DeployArcTestnet.s.sol`)
 

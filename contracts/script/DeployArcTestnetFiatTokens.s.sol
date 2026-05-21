@@ -14,8 +14,8 @@ import {TestnetFiatToken} from "../src/testnet/TestnetFiatToken.sol";
 ///           * MINTER_ROLE-gated mint (initial admin only)
 ///           * Public `burn()` / `burnFrom()` (self / allowance-gated;
 ///             cannot burn anyone else's balance)
-///           * 6 decimals so they pass FxSpotExecutor's `setTokenEnabled`
-///             decimals guard.
+///           * 6 decimals to mirror current Circle-style fiat rails. The
+///             v0.2 executor also supports non-6-dec tokenOut assets.
 contract DeployArcTestnetFiatTokens is Script {
     function run() external {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
@@ -35,14 +35,14 @@ contract DeployArcTestnetFiatTokens is Script {
         vm.stopBroadcast();
 
         console2.log("=========================================");
-        console2.log("Testnet fiat-stable tokens (Phase A v0.1, Arc):");
+        console2.log("Testnet fiat-stable tokens (Phase A v0.2, Arc):");
         console2.log("=========================================");
         console2.log("tJPYC", address(jpyc));
         console2.log("tMXNB", address(mxnb));
         console2.log("tCHFC", address(chfc));
         console2.log("");
         console2.log("Next steps:");
-        console2.log("  1. setTokenEnabled(<each>) on FxSpotExecutor v0.1");
+        console2.log("  1. setTokenEnabled(<each>) on FxSpotExecutor v0.2");
         console2.log("  2. approve + addLiquidity(<each>, seed)");
         console2.log("  3. Update BUFX SDK testnet-deployments + smoke");
     }

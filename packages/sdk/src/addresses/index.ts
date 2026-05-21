@@ -36,6 +36,7 @@ export interface FxAddresses {
   fxSpokeAlt?: Address;
   fxGatewayHook?: Address;
   fxSwapHook?: Address;
+  fxPerps?: FxPerpsAddresses;
 
   /// External dependencies
   morphoBlue: Address;
@@ -58,20 +59,32 @@ export interface FxAddresses {
   pythFeedEURUSD: `0x${string}`;
 }
 
+export interface FxPerpsAddresses {
+  clearinghouse: Address;
+  marginAccount: Address;
+  fundingEngine: Address;
+  healthChecker: Address;
+  liquidationEngine: Address;
+  orderSettlement: Address;
+  keeperAdmin: Address;
+}
+
 export interface StablecoinBasketToken {
-  symbol: "AUDF" | "BRLA" | "JPYC" | "KRW1" | "MXNB" | "PHPC" | "ZCHF";
+  symbol: "AUDF" | "BRLA" | "cirBTC" | "JPYC" | "KRW1" | "MXNB" | "PHPC" | "ZCHF";
   address?: Address;
   decimals?: number;
   pythFeedId?: `0x${string}`;
   pythFeedInverted?: boolean;
-  redstoneFeedId?: "AUD" | "BRL" | "JPY" | "KRW" | "MXN" | "PHP" | "CHF";
+  redstoneFeedId?: "AUD" | "BRL" | "BTC" | "JPY" | "KRW" | "MXN" | "PHP" | "CHF";
   source: "issuer" | "mock" | "blocked" | "excluded";
   blockedReason?: string;
+  notes?: string;
 }
 
 export interface StablecoinBasketAddresses {
   audf: StablecoinBasketToken;
   brla: StablecoinBasketToken;
+  cirbtc: StablecoinBasketToken;
   jpyc: StablecoinBasketToken;
   krw1: StablecoinBasketToken;
   mxnb: StablecoinBasketToken;
@@ -112,6 +125,7 @@ const PYTH_FEED_USD_JPY  = "0xef2c98c804ba503c6a707e38be4dfbb16683775f195b091252
 const PYTH_FEED_USD_KRW  = "0xe539120487c29b4defdf9a53d337316ea022a2688978a468f9efd847201be7e3" as const;
 const PYTH_FEED_USD_MXN  = "0xe13b1c1ffb32f34e1be9545583f01ef385fde7f42ee66049d30570dc866b77ca" as const;
 const PYTH_FEED_USD_CHF  = "0x0b1e3297e69f162877b577b0d6a47a0d63b2392bc8499e6540da4187a63e28f8" as const;
+const PYTH_FEED_BTC_USD  = "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43" as const;
 
 const ZERO = "0x0000000000000000000000000000000000000000" as const;
 
@@ -251,6 +265,26 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
+    // MXNB on Fuji is the LIVE Bitso testnet deployment (real issuer
+    // token, not a mock). Add via `DeployFujiMxnbMarkets.s.sol`.
+    stablecoinBasket: {
+      audf: { symbol: "AUDF", source: "blocked", blockedReason: "Not deployed on Fuji testnet." },
+      brla: { symbol: "BRLA", source: "blocked", blockedReason: "Not deployed on Fuji testnet." },
+      cirbtc: { symbol: "cirBTC", source: "blocked", blockedReason: "Not deployed on Fuji testnet." },
+      jpyc: { symbol: "JPYC", source: "blocked", blockedReason: "Not deployed on Fuji testnet." },
+      krw1: { symbol: "KRW1", source: "blocked", blockedReason: "Not deployed on Fuji testnet." },
+      mxnb: {
+        symbol: "MXNB",
+        address: "0xAB99d44185af87AeB08361588F00F59B0CE85eBb",
+        decimals: 6,
+        pythFeedId: PYTH_FEED_USD_MXN,
+        pythFeedInverted: true,
+        redstoneFeedId: "MXN",
+        source: "issuer",
+      },
+      phpc: { symbol: "PHPC", source: "blocked", blockedReason: "Not deployed on Fuji testnet." },
+      zchf: { symbol: "ZCHF", source: "blocked", blockedReason: "Not deployed on Fuji testnet." },
+    },
   },
   [ChainId.ArcTestnet]: {
     // Arc = TRADING-EXECUTION HUB (Stage 6 live, 2026-05-15). Receives USDC
@@ -260,6 +294,11 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     // V1 spoke (0x47c76D…) is deprecated; do NOT route new deposits to it.
     // Source of truth: deployments/arc-testnet.json + hub-config-arc.json.
     // Tenderly does NOT yet index chain 5042002 — on-chain verification only.
+    // This live Stage 6 stack is bound to the earlier self-deployed Morpho.
+    // Fresh Morpho Labs-backed Arc hub is deployed in
+    // deployments/arc-testnet-morpho-labs-cirbtc-5042002.json. Keep this
+    // Stage 6 block as the SDK/default route until Circle SCP, spokes, and
+    // Gateway wiring are intentionally switched.
     fxOracle: "0x77b3A3B420dB98B01085b8C46a753Ed9879e2865",
     fxMarketRegistry: "0x813232259c9b922e7571F15220617C80581f1464",
     fxLiquidator: "0xa50f7D4D4a1A0D3CF418515973545b80E037B379",
@@ -267,6 +306,15 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     fxReceiptUSDC: "0xdd22365Bba7330BE537c9BC26da9b1b4Db9aC431",
     fxHubMessageReceiver: "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
     fxGatewayHook: "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1",
+    fxPerps: {
+      clearinghouse: "0x6A265045D9A3291D2881d77DDC62e2781A2418c5",
+      marginAccount: "0x35c7cD02cFa0c2889547482B71c1a5114d8439C6",
+      fundingEngine: "0x88B70872759E1aA24858746779Cb15ca9F2cdcf3",
+      healthChecker: "0x272305e821D810eC5741761F98DbDC273efD47E6",
+      liquidationEngine: "0xD384560E5f8CE969BF4C1BDfAFACc5304AFbe8f2",
+      orderSettlement: "0x0F62FCdA2de63d905Cb167301C00251A9bB6dAa1",
+      keeperAdmin: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    },
     morphoBlue: "0x3c9b95C6E7B23f094f066733E7797C8680760830",
     // Arc-resident spoke that routes to the FUJI hub (sends users back).
     fxSpoke: "0x13c8463589d460db6f21235eedfd678c22a1ea25",
@@ -295,6 +343,17 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
         symbol: "BRLA",
         source: "excluded",
         blockedReason: "Excluded from Phase 3 until Avenia deploys BRLA natively on Avalanche.",
+      },
+      cirbtc: {
+        symbol: "cirBTC",
+        address: "0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761",
+        decimals: 18,
+        pythFeedId: PYTH_FEED_BTC_USD,
+        pythFeedInverted: false,
+        redstoneFeedId: "BTC",
+        source: "mock",
+        notes:
+          "Arc testnet FakeCirBTC token from Morpho Labs' dummy market; treat as Circle Wrapped Bitcoin test collateral only until canonical cirBTC issuance is published.",
       },
       jpyc: {
         symbol: "JPYC",
@@ -334,7 +393,9 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
         source: "mock",
       },
     },
-    // morphoBlue + adaptiveCurveIrm: TBD on Arc
+    // Do not set adaptiveCurveIrm here until morphoBlue is updated to the fresh
+    // Morpho Labs-backed Arc hub stack; mixing it with the old self-deployed
+    // Morpho address would create invalid market params for SDK callers.
   },
   [ChainId.AvalancheMainnet]: {
     usdc: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
@@ -410,6 +471,11 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
         source: "excluded",
         blockedReason: "Polygon-only in Phase 3 research; not natively live on Avalanche.",
       },
+      cirbtc: {
+        symbol: "cirBTC",
+        source: "excluded",
+        blockedReason: "cirBTC mainnet issuance is planned for Ethereum + Arc first; no Avalanche mainnet address is published.",
+      },
       jpyc: {
         symbol: "JPYC",
         address: "0x431D5dfF03120AFA4bDf332c61A6e1766eF37BDB",
@@ -479,6 +545,25 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
+    // MXNB on Ethereum Sepolia is the LIVE Bitso testnet deployment.
+    stablecoinBasket: {
+      audf: { symbol: "AUDF", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
+      brla: { symbol: "BRLA", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
+      cirbtc: { symbol: "cirBTC", source: "blocked", blockedReason: "No Ethereum Sepolia cirBTC test token configured." },
+      jpyc: { symbol: "JPYC", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
+      krw1: { symbol: "KRW1", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
+      mxnb: {
+        symbol: "MXNB",
+        address: "0x34D4CeBB03Af55b99B68342Ac4bD78e598D9A9fC",
+        decimals: 6,
+        pythFeedId: PYTH_FEED_USD_MXN,
+        pythFeedInverted: true,
+        redstoneFeedId: "MXN",
+        source: "issuer",
+      },
+      phpc: { symbol: "PHPC", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
+      zchf: { symbol: "ZCHF", source: "blocked", blockedReason: "Not deployed on Ethereum Sepolia." },
+    },
   },
   [ChainId.OpSepolia]: {
     // Stage 6 spokes. Synced from deployments/op-sepolia.json.
@@ -507,6 +592,26 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
+    // MXNB on Arbitrum Sepolia is the LIVE Bitso testnet deployment.
+    // (We already hold 10k MXNB on this chain for protocol-bootstrap LPing.)
+    stablecoinBasket: {
+      audf: { symbol: "AUDF", source: "blocked", blockedReason: "Not deployed on Arbitrum Sepolia." },
+      brla: { symbol: "BRLA", source: "blocked", blockedReason: "Not deployed on Arbitrum Sepolia." },
+      cirbtc: { symbol: "cirBTC", source: "blocked", blockedReason: "No Arbitrum Sepolia cirBTC test token configured." },
+      jpyc: { symbol: "JPYC", source: "blocked", blockedReason: "Not deployed on Arbitrum Sepolia." },
+      krw1: { symbol: "KRW1", source: "blocked", blockedReason: "Not deployed on Arbitrum Sepolia." },
+      mxnb: {
+        symbol: "MXNB",
+        address: "0xb56E3E3769EfB85214Cb4fA42eBA198E9FDA92bf",
+        decimals: 6,
+        pythFeedId: PYTH_FEED_USD_MXN,
+        pythFeedInverted: true,
+        redstoneFeedId: "MXN",
+        source: "issuer",
+      },
+      phpc: { symbol: "PHPC", source: "blocked", blockedReason: "Not deployed on Arbitrum Sepolia." },
+      zchf: { symbol: "ZCHF", source: "blocked", blockedReason: "Not deployed on Arbitrum Sepolia." },
+    },
   },
   [ChainId.PolygonAmoy]: {
     // Stage 6 spokes. Synced from deployments/polygon-amoy.json.
