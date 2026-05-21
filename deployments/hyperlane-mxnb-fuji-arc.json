@@ -1,0 +1,67 @@
+{
+  "date": "2026-05-21",
+  "wave": "M2 (retry)",
+  "purpose": "Hyperlane warp route for MXNB between Avalanche Fuji and Arc Testnet. Substitutes the real Bitso MXNB on Fuji (no public-mint faucet, keeper is not a minter) with a we-control TestnetFiatToken clone so the warp lane can be exercised end-to-end pre-Bitso handoff.",
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "owner": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "warpConfig": "hyperlane/warp/mxnb-fuji-arc.yaml",
+  "warpRegistry": "hyperlane/registry/deployments/warp_routes/tMXNB/mxnb-fuji-arc-config.yaml",
+  "cliVersion": "@hyperlane-xyz/cli@24",
+  "fuji": {
+    "chainName": "fuji",
+    "chainId": 43113,
+    "hyperlaneDomain": 43113,
+    "mailbox": "0x5b6CFf85442B851A8e6eaBd2A4E4507B5135B3B0",
+    "token": "0xBA3C09A0E506B3eE25849FC48b13f45F796826eB",
+    "tokenStandard": "TestnetFiatToken (ERC20 + ERC20Burnable + AccessControl, MINTER_ROLE-gated mint)",
+    "tokenDeployTx": "0x249a2b1516e87317cef6ba50e5e0a5cc1116545c893d8235e5800b121588d210",
+    "tokenInitialMintTx": "0xa965c3e0b9d89f92f107c895f62c465c37d17c400c1e53b64fde90e150171d4c",
+    "tokenInitialSupplyRaw": "1000000000000",
+    "tokenInitialSupplyHuman": "1000000 tMXNB",
+    "router": "0x23AB8992585Ff2E40833198f661374a070398876",
+    "routerStandard": "EvmHypCollateral",
+    "approveTxHash": "0x9acfd0f9ab29cdb2719a948ec97953bc2184c84b32b8f77a5b12d1c5dc1b282b",
+    "dispatchTxHash": "0x7d2d26f9dfac0443611e3ed6137c2571c6326617f0bf7d0ccc28f0cd140c6c07",
+    "blockNumber": 55613571,
+    "collateralLockedRaw": "1000000"
+  },
+  "arc": {
+    "chainName": "arctestnet",
+    "chainId": 5042002,
+    "hyperlaneDomain": 5042002,
+    "mailbox": "0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9",
+    "synthetic": "0xE0659b200352Be519e8A77561a5FdfcAa6f81308",
+    "syntheticStandard": "EvmHypSynthetic",
+    "syntheticName": "MXNB",
+    "syntheticSymbol": "MXNB",
+    "syntheticDecimals": 6,
+    "deliveryTxHash": "0xc323f7fac30690f0732769fc8ca53dc6454186dee7d173a6fcaa2a406e64b225",
+    "deliveryRelayer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69 (keeper self-relayed; trustedRelayerIsm permits keeper, public Hyperlane relayer not whitelisted)",
+    "blockNumber": 43378342,
+    "syntheticTotalSupplyAfter": "1000000",
+    "syntheticBalanceKeeperAfter": "1000000"
+  },
+  "enrollment": {
+    "fujiRouterRoutesForArcDomain": "0x000000000000000000000000e0659b200352be519e8a77561a5fdfcaa6f81308",
+    "arcRouterRoutesForFujiDomain": "0x00000000000000000000000023ab8992585ff2e40833198f661374a070398876",
+    "verifiedAt": "2026-05-21"
+  },
+  "amountRaw": "1000000",
+  "amountHuman": "1 MXNB",
+  "messageId": "0x4f3d31f2db361eb9da410b96bfed0488bf86dcb9c08017fba916a332dca2b118",
+  "explorerUrl": "https://explorer.hyperlane.xyz/message/0x4f3d31f2db361eb9da410b96bfed0488bf86dcb9c08017fba916a332dca2b118",
+  "gasUsed": {
+    "fujiAvaxConsumed": "~0.000000023540 AVAX across deploy+mint+approve+dispatch",
+    "arcUsdcConsumed": "~0.105 USDC across warp deploy + mailbox.process(self-relay)",
+    "preFlightFujiBalance": "2.134988122552 AVAX",
+    "postFlightFujiBalance": "2.134988122528 AVAX",
+    "preFlightArcBalance": "1.716375334795 USDC",
+    "postFlightArcBalance": "1.611781345357 USDC"
+  },
+  "notes": [
+    "Fuji token is a we-control TestnetFiatToken clone mirroring the Arc tMXNB at 0xe8F76f90553F50E76731afbeF1ac83a9152fFBEb (same Solidity, same name/symbol/decimals).",
+    "Production targets the real Bitso MXNB at 0xAB99d44185af87AeB08361588F00F59B0CE85eBb on Fuji. That token has no public-mint faucet and the keeper is not a minter, so the M2 lane uses the clone until Bitso onboards.",
+    "DEFAULT_ADMIN_ROLE + MINTER_ROLE on the Fuji clone are held by the keeper (0x0646...eC69) — same admin posture as the Arc tMXNB. Pending Bitso handoff: rotate admin to a Bitso-controlled multisig.",
+    "The Arc mailbox uses a trustedRelayerIsm whose relayer is the keeper. The public Hyperlane relayer therefore cannot deliver to Arc; the keeper self-relays via mailbox.process(metadata=0x, message). Same pattern is used for all current fx-telarana cross-chain delivery on Arc."
+  ]
+}

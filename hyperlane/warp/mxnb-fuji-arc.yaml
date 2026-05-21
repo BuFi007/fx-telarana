@@ -1,0 +1,26 @@
+# Wave M2 (retry): Hyperlane warp route for MXNB between Avalanche Fuji
+# and Arc Testnet.
+#
+# Fuji side  : collateral lock on the we-control TestnetFiatToken clone
+#              at 0xBA3C09A0E506B3eE25849FC48b13f45F796826eB (mirrors the
+#              Arc tMXNB; deployed because the real Bitso MXNB on Fuji
+#              has no public-mint faucet and the keeper is not a minter).
+# Arc side   : freshly-minted synthetic ERC-20, named "MXNB" / symbol
+#              "MXNB" / 6 decimals to match.
+#
+# Both sides owned by keeper 0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69
+# until a Bitso multisig handoff.
+
+fuji:
+  type: collateral
+  token: "0xBA3C09A0E506B3eE25849FC48b13f45F796826eB"
+  mailbox: "0x5b6CFf85442B851A8e6eaBd2A4E4507B5135B3B0"
+  owner: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69"
+
+arctestnet:
+  type: synthetic
+  name: MXNB
+  symbol: MXNB
+  decimals: 6
+  mailbox: "0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9"
+  owner: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69"
