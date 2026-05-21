@@ -17,7 +17,40 @@
     "FxLiquidator": "0xa50f7D4D4a1A0D3CF418515973545b80E037B379",
     "MorphoBlue": "0x3c9b95C6E7B23f094f066733E7797C8680760830",
     "IrmMock": "0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1",
-    "FxSpokeToArc": "0x5d10d2c3b9951054845534b2f60a68ebc0898cd3"
+    "FxSpokeToArc": "0x5d10d2c3b9951054845534b2f60a68ebc0898cd3",
+    "FxSwapHook": {
+      "address": "0xC6F894f30d0D28972C876B4af58C02A4E88A0aC8",
+      "deployTxHash": "0x016e2d483852c19e5dab5eb0338b80d73f7321ad3ee2593ee49876ee3332edb7",
+      "deployedAt": "2026-05-21T12:23Z",
+      "salt": "0x0000000000000000000000000000000000000000000000000000000000000122",
+      "create2Factory": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+      "constructorArgs": {
+        "poolManager": "0x3FA22b7Aeda9ebBe34732ea394f1711887363B34",
+        "oracle": "0x77b3A3B420dB98B01085b8C46a753Ed9879e2865",
+        "registry": "0x813232259c9b922e7571F15220617C80581f1464",
+        "hookOwner": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+        "token0": "0x3600000000000000000000000000000000000000",
+        "token1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+        "morpho": "0x3c9b95C6E7B23f094f066733E7797C8680760830"
+      },
+      "permissionFlagsLow14Bits": "0xAC8",
+      "permissionFlagsHuman": "beforeAddLiquidity | beforeRemoveLiquidity | beforeSwap | afterSwap | beforeSwapReturnDelta"
+    },
+    "TelaranaGatewayHubHook": {
+      "address": "0xe895CB461AFF6E98167a7FA0Db252ba906714088",
+      "deployTxHash": "0x53eca2cddbc9618941038a37166799da8d666db3cc10d42fd4b4bf9ed0601bde",
+      "deployedAt": "2026-05-21T12:20Z",
+      "salt": "0x00000000000000000000000000000000000000000000000000000000000001a6",
+      "create2Factory": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+      "constructorArgs": {
+        "usdc": "0x3600000000000000000000000000000000000000",
+        "gatewayMinter": "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
+        "poolManager": "0x3FA22b7Aeda9ebBe34732ea394f1711887363B34",
+        "initialAdmin": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69"
+      },
+      "permissionFlagsLow14Bits": "0x88",
+      "permissionFlagsHuman": "beforeSwap | beforeSwapReturnDelta"
+    }
   },
   "waveN6": {
     "broadcastAt": "2026-05-22",
@@ -94,6 +127,33 @@
     "FxGatewayHook": "0x9ecfc1300151e5d4d7b99721ffc29582d31a3cdb066421c444b014512af69510",
     "setGatewayHook": "0x72fead7a69b6b8f9a273f4e2c535cb82d088feecf31f5cb409e4787981285f33",
     "FxSpokeToArc": "0xf54e379970084b02c88a0533b6f9e2676db7dbef720511f245570965f7c30f1c"
+  },
+  "waveM1": {
+    "deployedAt": "2026-05-21",
+    "branch": "feat/wave-m1-deploy-arc-hooks",
+    "pr": "https://github.com/BuFi007/fx-telarana/pull/34",
+    "hooks": {
+      "FxSwapHook": {
+        "address": "0xC6F894f30d0D28972C876B4af58C02A4E88A0aC8",
+        "deployTxHash": "0x016e2d483852c19e5dab5eb0338b80d73f7321ad3ee2593ee49876ee3332edb7",
+        "salt": "0x0000000000000000000000000000000000000000000000000000000000000122"
+      },
+      "TelaranaGatewayHubHook": {
+        "address": "0xe895CB461AFF6E98167a7FA0Db252ba906714088",
+        "deployTxHash": "0x53eca2cddbc9618941038a37166799da8d666db3cc10d42fd4b4bf9ed0601bde",
+        "salt": "0x00000000000000000000000000000000000000000000000000000000000001a6"
+      }
+    },
+    "balanceBefore": "1614438918229403730",
+    "balanceAfter": "1442130723250403730",
+    "spentWei": "172308194979000000",
+    "spentUsdc": "0.172",
+    "verification": {
+      "FxSwapHook.POOL_MANAGER()": "0x3FA22b7Aeda9ebBe34732ea394f1711887363B34",
+      "FxSwapHook.getHookPermissions()": "(false,false,true,false,true,false,true,true,false,false,true,false,false,false)",
+      "TelaranaGatewayHubHook.POOL_MANAGER()": "0x3FA22b7Aeda9ebBe34732ea394f1711887363B34",
+      "TelaranaGatewayHubHook.getHookPermissions()": "(false,false,false,false,false,false,true,false,false,false,true,false,false,false)"
+    }
   },
   "stage6E2E": {
     "relayMintFromRemote": "0xe430d026e691147f4e96a87aff558332e0a94ff9abe8144fe8059c75439e9aaa",
