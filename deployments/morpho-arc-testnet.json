@@ -1,0 +1,47 @@
+{
+  "network": "arc-testnet",
+  "chainId": 5042002,
+  "source": "Morpho Labs email received 2026-05-21; on-chain readback verified via Arc testnet RPC.",
+  "caveat": "Morpho Labs stated these testnet contracts and the dummy vault are not configured like mainnet and are not encouraged for production-like liquidity testing. Use them for Arc wiring only.",
+  "contracts": {
+    "MorphoBlue": "0x65f435eB4FF05f1481618694bC1ff7Ee4680c0A4",
+    "AdaptiveCurveIrm": "0xBD583cc9807980f9e41f7c8250f594fB6173abE3",
+    "MorphoChainlinkOracleV2Factory": "0xEBef760B0CA0d1Fa9578f47001A184Ee53EaE839",
+    "VaultV2Factory": "0x6b7F638B64539F83810A1f6ea81C703b561C3Be6",
+    "MorphoMarketV1AdapterV2Factory": "0x9372EbEDF2C64344817c67dAeD99512F4b9DC434",
+    "RegistryList": "0xcba6be0EF65176CE7D440A4a93657fb2dd84200c"
+  },
+  "dummyVault": {
+    "vault": "0xAabbeF1D3971c710276ed41eC791BbE14CdB8E88",
+    "asset": "0x3600000000000000000000000000000000000000",
+    "marketId": "0xdd8df39474d60473f49ccc92b363ff4784a09b29e423b4516d18bf8b6ef60d3d",
+    "emailReportedCollateral": "0xaabbef1d3971c710276ed41ec791bbe14cdb8e88",
+    "readback": {
+      "loanToken": "0x3600000000000000000000000000000000000000",
+      "collateralToken": "0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761",
+      "collateralSymbol": "fCirBTC",
+      "oracle": "0xCef3019D0eb50162f16c80B3165384c05c266F7a",
+      "irm": "0xBD583cc9807980f9e41f7c8250f594fB6173abE3",
+      "lltv": "860000000000000000"
+    },
+    "note": "Live idToMarketParams readback shows collateralToken 0x44cEe9..., not the email-reported vault address. Use readback values for tests."
+  },
+  "verification": {
+    "checkedAt": "2026-05-21",
+    "morphoOwner": "0x000000000000000000000000000000000000dEaD",
+    "adaptiveCurveIrmEnabled": true,
+    "lltv860000000000000000Enabled": true,
+    "codePresent": {
+      "MorphoBlue": true,
+      "AdaptiveCurveIrm": true,
+      "DummyVault": true,
+      "DummyVaultToken": true,
+      "DummyMarketCollateral": true,
+      "DummyMarketOracle": true,
+      "MorphoChainlinkOracleV2Factory": true,
+      "VaultV2Factory": true,
+      "MorphoMarketV1AdapterV2Factory": true,
+      "RegistryList": true
+    }
+  }
+}

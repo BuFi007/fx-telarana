@@ -290,6 +290,10 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     // V1 spoke (0x47c76D…) is deprecated; do NOT route new deposits to it.
     // Source of truth: deployments/arc-testnet.json + hub-config-arc.json.
     // Tenderly does NOT yet index chain 5042002 — on-chain verification only.
+    // This live Stage 6 stack is bound to the earlier self-deployed Morpho.
+    // Fresh Arc hub broadcasts default to Morpho Labs' verified Arc testnet
+    // contracts in deployments/morpho-arc-testnet.json; update this block only
+    // after that fresh stack is actually deployed.
     fxOracle: "0x77b3A3B420dB98B01085b8C46a753Ed9879e2865",
     fxMarketRegistry: "0x813232259c9b922e7571F15220617C80581f1464",
     fxLiquidator: "0xa50f7D4D4a1A0D3CF418515973545b80E037B379",
@@ -373,7 +377,9 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
         source: "mock",
       },
     },
-    // morphoBlue + adaptiveCurveIrm: TBD on Arc
+    // Do not set adaptiveCurveIrm here until morphoBlue is updated to the fresh
+    // Morpho Labs-backed Arc hub stack; mixing it with the old self-deployed
+    // Morpho address would create invalid market params for SDK callers.
   },
   [ChainId.AvalancheMainnet]: {
     usdc: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
