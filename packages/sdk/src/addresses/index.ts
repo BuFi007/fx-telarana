@@ -70,12 +70,12 @@ export interface FxPerpsAddresses {
 }
 
 export interface StablecoinBasketToken {
-  symbol: "AUDF" | "BRLA" | "cirBTC" | "JPYC" | "KRW1" | "MXNB" | "PHPC" | "ZCHF";
+  symbol: "AUDF" | "BRLA" | "cirBTC" | "JPYC" | "KRW1" | "MXNB" | "PHPC" | "QCAD" | "ZCHF";
   address?: Address;
   decimals?: number;
   pythFeedId?: `0x${string}`;
   pythFeedInverted?: boolean;
-  redstoneFeedId?: "AUD" | "BRL" | "BTC" | "JPY" | "KRW" | "MXN" | "PHP" | "CHF";
+  redstoneFeedId?: "AUD" | "BRL" | "BTC" | "CAD" | "JPY" | "KRW" | "MXN" | "PHP" | "CHF";
   source: "issuer" | "mock" | "blocked" | "excluded";
   blockedReason?: string;
   notes?: string;
@@ -89,6 +89,7 @@ export interface StablecoinBasketAddresses {
   krw1: StablecoinBasketToken;
   mxnb: StablecoinBasketToken;
   phpc: StablecoinBasketToken;
+  qcad?: StablecoinBasketToken;
   zchf: StablecoinBasketToken;
 }
 
@@ -125,6 +126,9 @@ const PYTH_FEED_USD_JPY  = "0xef2c98c804ba503c6a707e38be4dfbb16683775f195b091252
 const PYTH_FEED_USD_KRW  = "0xe539120487c29b4defdf9a53d337316ea022a2688978a468f9efd847201be7e3" as const;
 const PYTH_FEED_USD_MXN  = "0xe13b1c1ffb32f34e1be9545583f01ef385fde7f42ee66049d30570dc866b77ca" as const;
 const PYTH_FEED_USD_CHF  = "0x0b1e3297e69f162877b577b0d6a47a0d63b2392bc8499e6540da4187a63e28f8" as const;
+// Pyth USD/CAD price feed id. Verify against the Pyth catalog before
+// production use; QCAD is currently used only for the Arc testnet listing.
+const PYTH_FEED_USD_CAD  = "0x3f3f306cd6c0e6e09a8ce6878fcdb1862c3bbac1d3e3aedebfde4e7e7a73f2c1" as const;
 const PYTH_FEED_BTC_USD  = "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43" as const;
 
 const ZERO = "0x0000000000000000000000000000000000000000" as const;
@@ -346,14 +350,14 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
       },
       cirbtc: {
         symbol: "cirBTC",
-        address: "0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761",
+        address: "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF",
         decimals: 18,
         pythFeedId: PYTH_FEED_BTC_USD,
         pythFeedInverted: false,
         redstoneFeedId: "BTC",
-        source: "mock",
+        source: "issuer",
         notes:
-          "Arc testnet FakeCirBTC token from Morpho Labs' dummy market; treat as Circle Wrapped Bitcoin test collateral only until canonical cirBTC issuance is published.",
+          "Arc testnet cirBTC issuance dropped 2026-05-21. Replaces the prior Morpho Labs FakeCirBTC at 0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761.",
       },
       jpyc: {
         symbol: "JPYC",
@@ -373,11 +377,23 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
       },
       mxnb: {
         symbol: "MXNB",
+        address: "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
         decimals: 6,
         pythFeedId: PYTH_FEED_USD_MXN,
         pythFeedInverted: true,
         redstoneFeedId: "MXN",
-        source: "mock",
+        source: "issuer",
+        notes: "Arc testnet MXNB issuance dropped 2026-05-21.",
+      },
+      qcad: {
+        symbol: "QCAD",
+        address: "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+        decimals: 6,
+        pythFeedId: PYTH_FEED_USD_CAD,
+        pythFeedInverted: true,
+        redstoneFeedId: "CAD",
+        source: "issuer",
+        notes: "Arc testnet QCAD issuance dropped 2026-05-21.",
       },
       phpc: {
         symbol: "PHPC",

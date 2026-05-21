@@ -140,7 +140,6 @@ describe("address registry", () => {
       true,
       true,
       true,
-      true,
     ]);
     expect(getFxPerpMarket(manifest, "EURC_USDC")).toMatchObject({
       marketId: "0x565a6e2fab61800aa18813603b5b485af5bed7dea1aa0845bdaa61502063cab8",
@@ -225,7 +224,6 @@ describe("address registry", () => {
       "EURC_USDC",
       "TJPYC_USDC",
       "TMXNB_USDC",
-      "TCHFC_USDC",
       "CIRBTC_USDC",
     ]);
 
@@ -297,12 +295,14 @@ describe("address registry", () => {
       redstoneFeedId: "JPY",
       source: "mock",
     });
+    // MXNB on Arc testnet upgraded to issuer-backed 2026-05-21.
     expect(a.stablecoinBasket?.mxnb).toMatchObject({
       symbol: "MXNB",
+      address: "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
       decimals: 6,
       pythFeedInverted: true,
       redstoneFeedId: "MXN",
-      source: "mock",
+      source: "issuer",
     });
     expect(a.stablecoinBasket?.krw1).toMatchObject({
       symbol: "KRW1",
@@ -318,14 +318,25 @@ describe("address registry", () => {
       redstoneFeedId: "CHF",
       source: "mock",
     });
+    // cirBTC on Arc testnet upgraded to issuer-backed 2026-05-21
+    // (replacing the prior Morpho Labs FakeCirBTC at 0x44cEe9…).
     expect(a.stablecoinBasket?.cirbtc).toMatchObject({
       symbol: "cirBTC",
-      address: "0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761",
+      address: "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF",
       decimals: 18,
       pythFeedId: "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
       pythFeedInverted: false,
       redstoneFeedId: "BTC",
-      source: "mock",
+      source: "issuer",
+    });
+    // QCAD on Arc testnet dropped 2026-05-21.
+    expect(a.stablecoinBasket?.qcad).toMatchObject({
+      symbol: "QCAD",
+      address: "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+      decimals: 6,
+      pythFeedInverted: true,
+      redstoneFeedId: "CAD",
+      source: "issuer",
     });
     expect(a.stablecoinBasket?.brla.source).toBe("excluded");
     expect(a.stablecoinBasket?.phpc.source).toBe("excluded");

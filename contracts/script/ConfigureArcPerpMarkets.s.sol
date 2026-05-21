@@ -34,7 +34,11 @@ contract ConfigureArcPerpMarkets is Script {
     address internal constant EURC = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
     address internal constant TJPYC = 0xB176f6E0c8ecc2be208F72Ad34c54e5F10F1882a;
     address internal constant TMXNB = 0xe8F76f90553F50E76731afbeF1ac83a9152fFBEb;
-    address internal constant TCHFC = 0x249DBFd4ac17247Cf10098F6C3937F90570b5750;
+    // tCHFC market intentionally removed — the on-chain entry at
+    // marketId(tCHFC) was configured by an earlier broadcast but is no
+    // longer listed by configure / readiness / SDK manifests. The
+    // clearinghouse has no on-chain disable path (configureMarket rejects
+    // `enabled: false`), so the artifact stays but is unsurfaced.
     address internal constant CIRBTC = 0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761;
 
     bytes32 internal constant PYTH_BTC_USD = 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43;
@@ -103,7 +107,6 @@ contract ConfigureArcPerpMarkets is Script {
         _configureMarket(clearinghouse, funding, "EURC", EURC, EURC_OI_CAP);
         _configureMarket(clearinghouse, funding, "tJPYC", TJPYC, TEST_FIAT_OI_CAP);
         _configureMarket(clearinghouse, funding, "tMXNB", TMXNB, TEST_FIAT_OI_CAP);
-        _configureMarket(clearinghouse, funding, "tCHFC", TCHFC, TEST_FIAT_OI_CAP);
         _configureMarket(clearinghouse, funding, "cirBTC", cirbtc, TEST_CRYPTO_OI_CAP);
 
         _validateLiquidationDelay();
@@ -126,7 +129,6 @@ contract ConfigureArcPerpMarkets is Script {
         _logMarket("EURC");
         _logMarket("tJPYC");
         _logMarket("tMXNB");
-        _logMarket("tCHFC");
         _logMarket("cirBTC");
         console2.log("liquidation bounty bps     ", LIQUIDATION_BOUNTY_BPS);
         console2.log("liquidation bounty cap     ", LIQUIDATION_BOUNTY_CAP);

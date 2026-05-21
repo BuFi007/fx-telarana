@@ -1,0 +1,9 @@
+{
+  "FxOracle": "0xf9b0356A31BC7125e2eD0DADf8b5957860d42c78",
+  "chainId": 5042002,
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "maxConfidenceBps": 30,
+  "maxDeviationBps": 50,
+  "maxOracleAge": 300,
+  "pyth": "0x2880aB155794e7179c9eE2e38200202908C17B43"
+}
