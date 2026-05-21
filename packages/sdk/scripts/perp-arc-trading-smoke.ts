@@ -123,6 +123,7 @@ const healthAbi = parseAbi([
 const liquidationAbi = parseAbi([
   "function flagAccount(bytes32 marketId, address trader)",
   "function liquidate(bytes32 marketId, address trader, uint256 maxSizeToCloseAbsE18) returns (uint256 liquidatorReward,int256 socializedLoss)",
+  "function liquidationConfig() view returns (uint16 bountyBps, uint256 bountyCap, uint256 flagDelay)",
 ]);
 
 const signedOrderTypes = {
@@ -391,6 +392,21 @@ async function liquidateVictimPass(label: string) {
     args: [MARKET_ID, victim.address],
   }, redstoneFeeds);
   await wait(`${label} flagAccount`, flagHash);
+
+  // Sprint-1 sets flagDelay >= 60s. Wait the configured delay (with a small
+  // buffer) before issuing the liquidate, otherwise the engine reverts
+  // FlagDelayPending. Reads the live config so it tracks future tunings.
+  const liquidationConfig = (await publicClient.readContract({
+    address: ADDR.liquidation,
+    abi: liquidationAbi,
+    functionName: "liquidationConfig",
+  })) as readonly [number, bigint, bigint];
+  const flagDelaySec = Number(liquidationConfig[2]);
+  if (flagDelaySec > 0) {
+    const waitMs = (flagDelaySec + 5) * 1000;
+    console.log(`waiting ${waitMs / 1000}s for flagDelay to mature before liquidate`);
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+  }
 
   await refreshPyth();
   const liquidationHash = await writeWithRedstone(walletClient, {
