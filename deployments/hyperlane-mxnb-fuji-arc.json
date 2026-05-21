@@ -1,0 +1,30 @@
+{
+  "date": "2026-05-21",
+  "ranAt": null,
+  "status": "blocker",
+  "mode": "dispatch-only",
+  "blocker": "MXNB has no Hyperlane warp route deployed: HypERC20Collateral on Fuji + HypERC20 on Arc Testnet are both missing. MXNB is also not deployed on Arc Testnet at all (confirmed against deployments/arc-testnet.json + defi-web-app/packages/location/src/deployments.ts — Arc carries USDC, EURC, AUDF only). Running scripts/hyperlane-bridge-mxnb.ts in default dispatch-only mode will append a Fuji-side dispatch tx hash + messageId here and flip status to \"scaffold-dispatch-only\"; --full mode (after warp router deployment) will additionally fill in the Arc delivery tx.",
+  "amount": { "human": "1.0", "raw": "1000000", "decimals": 6 },
+  "token": {
+    "fuji": "0xAB99d44185af87AeB08361588F00F59B0CE85eBb",
+    "arc": null
+  },
+  "recipient": null,
+  "hyperlane": {
+    "fujiDomain": 43113,
+    "arcDomain": 5042002,
+    "fujiMailbox": "0x5b6CFf85442B851A8e6eaBd2A4E4507B5135B3B0",
+    "arcMailbox": "0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9",
+    "arcRecipient": "0x144bf6521C4B843091BC35E98d80F6Ce402d20f9",
+    "fujiWarpRouter": null,
+    "arcWarpRouter": null
+  },
+  "fuji": { "txHash": null, "blockNumber": null, "messageId": null },
+  "arc": { "txHash": null, "blockNumber": null, "messageId": null },
+  "notes": [
+    "PR-H3 / Wave L1: This file is the deployment artefact for the Hyperlane MXNB Fuji → Arc bridge. The accompanying scripts/hyperlane-bridge-mxnb.ts overwrites this file on every run with the latest dispatch + delivery tx hashes.",
+    "Hyperlane lane is HOT: the hyperlane:fuji:test-message script in package.json has been smoke-tested Fuji → Arc end-to-end (see deployments/hyperlane-arc-testnet.json → smokeTests.fujiToArcSelfRelay: messageId 0xb5987...52ca, dispatch 0x547f...9dc1, relay 0x33ea...09be).",
+    "The HypERC20 / HypERC20Collateral warp-route contracts ship with @hyperlane-xyz/core; the Hyperlane CLI's `warp deploy` command consumes a small YAML and deploys both sides + cross-enrolls. That is the recommended next step to unblock this artefact.",
+    "Run `bun scripts/hyperlane-bridge-mxnb.ts` (dispatch-only, no warp routers needed) to overwrite this file with a real Fuji-side dispatch tx + canonical-shape HypERC20 warp body, proving the Hyperlane lane carries an MXNB-shaped intent today. Then run `bun scripts/hyperlane-bridge-mxnb.ts --full` after warp deployment to record the Arc-side mint."
+  ]
+}

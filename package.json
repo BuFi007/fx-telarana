@@ -29,6 +29,11 @@
     "hyperlane:fuji:deploy-arc-ism": "npx @hyperlane-xyz/cli ism deploy --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --chain fuji --config ./hyperlane/fuji/arc-testnet-trusted-relayer-ism.yaml --out ./hyperlane/fuji/arc-testnet-trusted-relayer-ism-address.json --yes",
     "hyperlane:arc:agent-config": "npx @hyperlane-xyz/cli registry agent-config --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --chains arctestnet fuji --out ./hyperlane/arc-testnet/agent-config.json --yes",
     "hyperlane:arc:test-dispatch": "npx @hyperlane-xyz/cli send message --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --origin arctestnet --destination fuji --body fx-telarana-arc-hyperlane-dispatch --quick --yes",
-    "hyperlane:fuji:test-message": "npx @hyperlane-xyz/cli send message --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --origin fuji --destination arctestnet --body fx-telarana-fuji-to-arc-smoke --relay --yes"
+    "hyperlane:fuji:test-message": "npx @hyperlane-xyz/cli send message --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --origin fuji --destination arctestnet --body fx-telarana-fuji-to-arc-smoke --relay --yes",
+    "hyperlane:bridge:mxnb": "bun scripts/hyperlane-bridge-mxnb.ts",
+    "hyperlane:bridge:mxnb:full": "bun scripts/hyperlane-bridge-mxnb.ts --full"
+  },
+  "devDependencies": {
+    "viem": "^2.21.0"
   }
 }
