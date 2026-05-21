@@ -149,5 +149,98 @@
       },
       "purpose": "High-frequency FX trading + perp execution on Arc. Also runs Morpho markets (borrow/lend works here too)."
     }
+  },
+  "waveM4": {
+    "ranAt": "2026-05-21T12:35Z",
+    "agent": "Wave M4 \u2014 live demo broadcasts",
+    "keeper": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+    "phaseA_tghAdmin": {
+      "note": "TelaranaGatewayHubHook post-deploy admin. EXECUTOR_ROLE was already granted to keeper at construction (initialAdmin); only setGatewayRoute + setGatewayContextProofMode needed.",
+      "setGatewayRoute": {
+        "routeId": "0xf78147c98547731be048740d9d9089e6258e5e712e0c66f7b9d9d57d6af3a968",
+        "routeName": "fujiToArcMintToHubUsdc (LIVE_ROUTE_IDS)",
+        "route": {
+          "sourceDomain": 1,
+          "destinationDomain": 26,
+          "sourceUsdc": "0x5425890298aed601595a70AB815c96711a31Bc65",
+          "destinationUsdc": "0x3600000000000000000000000000000000000000",
+          "sourceGatewayWallet": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+          "destinationGatewayMinter": "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
+          "destinationHub": "0xe895CB461AFF6E98167a7FA0Db252ba906714088",
+          "whitelistedCaller": "0x0000000000000000000000000000000000000000",
+          "signerMode": 0,
+          "enabled": true,
+          "metadataRef": "0x0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "txHash": "0x992fb6194ce3a0d70f34fe7d428cc0578cf1616335cd62e05dfd488eccc75d70"
+      },
+      "setGatewayContextProofMode": {
+        "routeId": "0xf78147c98547731be048740d9d9089e6258e5e712e0c66f7b9d9d57d6af3a968",
+        "mode": 3,
+        "modeName": "SIGNED_INTENT_OR_HYPERLANE",
+        "txHash": "0x84f37814f1dcf077e99e150561c2b969ddfee7870c7230558f5ad4a60bfeacf6"
+      },
+      "grantExecutorRole": {
+        "role": "EXECUTOR_ROLE",
+        "account": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+        "txHash": null,
+        "note": "Already granted at construction (initialAdmin gets DEFAULT_ADMIN_ROLE + OPERATIONS_ROLE + EXECUTOR_ROLE). Verified hasRole returns true."
+      }
+    },
+    "phaseB_v4PoolInit": {
+      "note": "Uniswap v4 PoolManager.initialize for USDC/EURC corridor with FxSwapHook attached.",
+      "poolManager": "0x3FA22b7Aeda9ebBe34732ea394f1711887363B34",
+      "poolKey": {
+        "currency0": "0x3600000000000000000000000000000000000000",
+        "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+        "fee": 100,
+        "tickSpacing": 1,
+        "hooks": "0xC6F894f30d0D28972C876B4af58C02A4E88A0aC8"
+      },
+      "sqrtPriceX96": "75868981088120501468594700288",
+      "sqrtPriceX96Hex": "0xf52559aa0006380000000000",
+      "priceTarget": "0.917 EURC per USDC (~EUR/USD 1.09)",
+      "poolId": "0xd5e4a30d113d293ff50273c0aa3626e66c3a1cb8b6ba2bf22f2420ed4f92a1ef",
+      "tick": -867,
+      "txHash": "0xf86f5d37dc9f842c3874077321ad001d0ecd992263bc0c9b82d946ded9f6463e"
+    },
+    "phaseC_liquiditySeed": {
+      "note": "FxSwapHook.deposit(amount0, amount1) \u2014 owner-gated first deposit. Hook uses Morpho rehypothecation by default (hotReservePct=2000=20%) but Morpho markets for USDC/EURC are not yet wired to this hook, so we set hotReservePct=10000 (100% hot, no Morpho).",
+      "setHotReservePct": {
+        "newValue": 10000,
+        "txHash": "0x16ada1bdbfb95b8f1741625e375a394238073a7cd544d6245cda520dec0d92b5"
+      },
+      "approveUsdc": {
+        "spender": "0xC6F894f30d0D28972C876B4af58C02A4E88A0aC8",
+        "amount": "1000000 (1.0 USDC, 6-dec)",
+        "txHash": "0xae2605026d312e5a282ca47bd045563ee195929172d2d76465872831d6b33eb4"
+      },
+      "approveEurc": {
+        "spender": "0xC6F894f30d0D28972C876B4af58C02A4E88A0aC8",
+        "amount": "900000 (0.9 EURC, 6-dec)",
+        "txHash": "0x258cb49f4a674ddf447fc1fd3424c15bddec627e72127856ecb3cff3e3558e27"
+      },
+      "deposit": {
+        "amount0": "1000000 (1.0 USDC)",
+        "amount1": "900000 (0.9 EURC)",
+        "sharesMinted": "1898488 (1.9 USDC-equiv minus MINIMUM_LIQUIDITY)",
+        "totalShares": "1900000",
+        "txHash": "0xf69fccaff9a734ad6675380ffde628a41e00ea8a07cbedc769387a2b6fed5f02"
+      }
+    },
+    "phaseD_demoBroadcasts": {
+      "note": "Phase D (live CCTP + Gateway demo broadcasts) is BLOCKED on two unmet prerequisites:",
+      "cctpDemoStatus": "blocked",
+      "cctpDemoBlocker": "V4_SWAP_TEST_ROUTER not deployed on Arc Testnet (Wave M3 router pin has not landed). PoolManager.unlock re-enters IUnlockCallback on msg.sender; an EOA cannot satisfy this contract interface. The L4 demo script (defi-web-app/scripts/v4-swap-pool-demo-cctp.ts) is broadcast-ready end-to-end up to the unlock step, but the unlock leg will status=blocked without a deployed v4 router contract.",
+      "gatewayDemoStatus": "blocked",
+      "gatewayDemoBlocker": "No Circle Gateway attestation available. V4_SWAP_GATEWAY_ATTESTATION + V4_SWAP_GATEWAY_SIGNATURE env vars are not set; getting a real attestation requires (a) operator deposits USDC into Gateway Wallet on Fuji, (b) signs a BurnIntent, (c) POSTs to https://gateway-api-testnet.circle.com/v1/burnIntents to fetch attestation + signature. The keeper-spot service that would run this loop is not running yet.",
+      "fxSwapHookLiveSwapStatus": "blocked-pending-oracle-refresh",
+      "fxSwapHookLiveSwapBlocker": "FxOracle.getMid for USDC/EURC reverts StalePrice() (0x19abf40e). Live swap path needs a fresh Pyth price update inside the same tx (FxOracle.getMidWithUpdatePyth) OR a pre-broadcast cron that refreshes the on-chain feed. The deployed pool + seeded liquidity are otherwise ready; a swap through PoolManager.unlock would revert in beforeSwap before consuming reserves."
+    },
+    "gasConsumed": {
+      "keeperBalanceBefore": "1442130723250403730 (1.44 USDC native gas, 18-dec form)",
+      "keeperBalanceAfter": "429094931493403730 (0.43 USDC)",
+      "consumed": "1013035791757000000 wei (~1.01 USDC across Phase A + B + C broadcasts)"
+    }
   }
 }
