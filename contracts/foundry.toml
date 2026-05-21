@@ -30,6 +30,7 @@ fs_permissions = [
   { access = "read-write", path = "./deployments" },
   { access = "read-write", path = "../deployments" },
   { access = "read", path = "./out" },
+  { access = "read", path = "./script/poseidon" },
 ]
 
 remappings = [
@@ -43,6 +44,12 @@ remappings = [
   "@uniswap/v4-periphery/=lib/v4-periphery/",
   "cctp-v2/=lib/evm-cctp-contracts/src/v2/",
   "dodo-pmm/=lib/dodo-pmm-08/",
+  "privacy-pools/=lib/privacy-pools/",
+  "interfaces/=lib/privacy-pools/interfaces/",
+  "@oz/=lib/openzeppelin-contracts/contracts/",
+  "@oz-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+  "poseidon/=lib/poseidon-solidity/",
+  "lean-imt/=lib/lean-imt/",
 ]
 
 [profile.default.fuzz]
@@ -58,3 +65,21 @@ base = "${BASE_RPC}"
 
 [etherscan]
 arc_testnet = { key = "${ARCSCAN_KEY}", url = "${ARCSCAN_URL}" }
+
+# PSE poseidon-solidity canonical addresses for deploys.
+#
+# The .sol sources under `lib/poseidon-solidity/` recompile to ~29-32 KB
+# (over EIP-170), so we never call `new PoseidonT3()` directly. Instead
+# script/DeployPoseidonFuji.s.sol sends PSE's pre-compiled init code to
+# the Arachnid CREATE2 deployer; the resulting addresses are deterministic
+# and shared with Semaphore / 0xbow / Tornado tooling.
+#
+# These entries live under a dedicated `[profile.deploy]` so that tests
+# (default profile) keep auto-linking-and-deploying Poseidon in-memory.
+# Activate at script time:
+#   FOUNDRY_PROFILE=deploy forge script ... --broadcast
+[profile.deploy]
+libraries = [
+  "lib/poseidon-solidity/PoseidonT3.sol:PoseidonT3:0x3333333C0A88F9BE4fd23ed0536F9B6c427e3B93",
+  "lib/poseidon-solidity/PoseidonT4.sol:PoseidonT4:0x4443338EF595F44e0121df4C21102677B142ECF0",
+]

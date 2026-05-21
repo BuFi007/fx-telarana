@@ -33,6 +33,13 @@ const REQUIRED: Array<{ sourceDir: string; name: string }> = [
   { sourceDir: "FxSpokeIntentRouter.sol",   name: "FxSpokeIntentRouter" },
   { sourceDir: "FxHyperlaneHubReceiver.sol", name: "FxHyperlaneHubReceiver" },
   { sourceDir: "TelaranaGatewayHubHook.sol", name: "TelaranaGatewayHubHook" },
+  { sourceDir: "FxPrivacyPool.sol",          name: "FxPrivacyPool" },
+  { sourceDir: "FxPrivacyEntrypoint.sol",    name: "FxPrivacyEntrypoint" },
+  // Groth16 verifiers (WithdrawalVerifier, CommitmentVerifier) live in
+  // lib/privacy-pools/contracts/verifiers/. Auto-generated, ~3 KB each
+  // (well below EIP-170). They only enter the build graph once the deploy
+  // script imports them, so the slice-1 size guard skips them; the deploy
+  // smoke test asserts their size in-script.
 ];
 
 let exitCode = 0;

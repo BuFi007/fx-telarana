@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "./dist",
+    // NB: no `rootDir` in the dev tsconfig — the path-mapping to
+    // ../sdk/src/privacy pulls SDK sources into the program for
+    // type-checking. tsconfig.build.json sets rootDir and clears the
+    // path map so emit stays self-contained.
+    "noEmit": true,
+    "types": ["bun"],
+    "paths": {
+      "@bu/fx-engine/privacy": ["../sdk/src/privacy/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

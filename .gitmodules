@@ -22,6 +22,9 @@
 [submodule "contracts/lib/v4-periphery"]
 	path = contracts/lib/v4-periphery
 	url = https://github.com/Uniswap/v4-periphery
+[submodule "contracts/lib/openzeppelin-contracts-upgradeable"]
+	path = contracts/lib/openzeppelin-contracts-upgradeable
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable
 [submodule "contracts/lib/perennial-v2"]
 	path = contracts/lib/perennial-v2
 	url = https://github.com/equilibria-xyz/perennial-v2

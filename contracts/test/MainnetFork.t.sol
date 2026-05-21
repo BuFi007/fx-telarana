@@ -14,9 +14,22 @@ import {FxMarketRegistry} from "../src/hub/FxMarketRegistry.sol";
 import {FxReceipt} from "../src/hub/FxReceipt.sol";
 import {FxLiquidator} from "../src/hub/FxLiquidator.sol";
 import {FxSwapHook} from "../src/hub/FxSwapHook.sol";
+import {FxPrivacyPool} from "../src/hub/FxPrivacyPool.sol";
 import {MorphoOracleAdapter} from "../src/hub/MorphoOracleAdapter.sol";
 import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
+import {IVerifier} from "privacy-pools/interfaces/IVerifier.sol";
+import {Constants as PpConstants} from "privacy-pools/contracts/lib/Constants.sol";
 import {MockPyth} from "./mocks/MockPyth.sol";
+
+/// @notice Always-true Groth16 stub for fork tests — proof verification is
+///         the SDK's responsibility (slice 4); fork tests exercise the
+///         rehypothecation pattern against real Morpho Blue.
+contract ForkMockVerifier is IVerifier {
+    function verifyProof(uint256[2] memory, uint256[2][2] memory, uint256[2] memory, uint256[8] memory)
+        external pure returns (bool) { return true; }
+    function verifyProof(uint256[2] memory, uint256[2][2] memory, uint256[2] memory, uint256[4] memory)
+        external pure returns (bool) { return true; }
+}
 
 /// @notice Fork-test the FxMarketRegistry + FxReceipt + FxLiquidator stack against
 ///         the real Morpho Blue deployment on Ethereum mainnet. Skipped unless
@@ -432,6 +445,75 @@ contract MainnetForkTest is Test {
     /// `_decimalsOffset()=6`, the attacker's required donation to round the
     /// victim to zero is multiplied by 1e6, making the steal negative-EV.
     /// Asserts the victim recovers ≥99% of deposit after redeem.
+    /*//////////////////////////////////////////////////////////////
+                    FX PRIVACY POOL (slice 2 rehyp)
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Deposit splits into hot reserve + Morpho supply at the
+    ///         configured ratio against the real Morpho Blue protocol.
+    function test_fork_privacyPool_depositRehypothecates() public whenFork {
+        ForkMockVerifier wv = new ForkMockVerifier();
+        ForkMockVerifier rv = new ForkMockVerifier();
+        // Entrypoint = test (`address(this)`) so we can call deposit directly.
+        FxPrivacyPool pool = new FxPrivacyPool(
+            address(this), address(wv), address(rv), USDC, owner,
+            MORPHO, address(registry), EURC
+        );
+
+        // hotReservePct default = 2000 (20%). Lender supplies 10k USDC.
+        uint256 amount = 10_000e6;
+        deal(USDC, address(this), amount);
+        IERC20(USDC).approve(address(pool), amount);
+        uint256 commitment = pool.deposit(lender, amount, _fakePrecommitment(0xA));
+
+        assertGt(commitment, 0, "no commitment minted");
+        assertApproxEqRel(pool.hotBalance(),         2_000e6, 0.005e18, "~20% hot");
+        assertApproxEqRel(pool.morphoSupplyAssets(), 8_000e6, 0.005e18, "~80% in Morpho");
+        assertApproxEqRel(pool.totalAssets(),        amount,  0.001e18, "total reconciles");
+        assertGt(pool.morphoShares(), 0, "no Morpho shares");
+    }
+
+    /// @notice JIT-withdraw on `_push` pulls from Morpho when hot < amount.
+    ///         Simulates the post-withdrawal flow: pool calls `_push` to
+    ///         `recipient` via the Entrypoint, requiring more than hot.
+    ///         We exercise it via a second deposit followed by manual wind-out.
+    function test_fork_privacyPool_supplyAndWithdrawRoundtrip() public whenFork {
+        ForkMockVerifier wv = new ForkMockVerifier();
+        ForkMockVerifier rv = new ForkMockVerifier();
+        FxPrivacyPool pool = new FxPrivacyPool(
+            address(this), address(wv), address(rv), USDC, owner,
+            MORPHO, address(registry), EURC
+        );
+
+        // Deposit 10k USDC → 2k hot, 8k Morpho
+        uint256 amount = 10_000e6;
+        deal(USDC, address(this), amount);
+        IERC20(USDC).approve(address(pool), amount);
+        pool.deposit(lender, amount, _fakePrecommitment(0xB));
+
+        uint256 hotBefore     = pool.hotBalance();
+        uint256 morphoBefore  = pool.morphoSupplyAssets();
+        uint256 totalBefore   = pool.totalAssets();
+        assertApproxEqRel(totalBefore, amount, 0.001e18, "total assets before");
+
+        // Owner re-tightens to 100% hot → forces a withdraw from Morpho.
+        // (Same code path slice 4's _push will hit on a real withdraw.)
+        vm.prank(owner);
+        pool.setHotReservePct(10_000);
+
+        assertApproxEqRel(pool.hotBalance(), amount, 0.001e18, "after rebalance: all hot");
+        assertLt(pool.morphoSupplyAssets(),  morphoBefore, "morpho supply decreased");
+        assertApproxEqRel(pool.totalAssets(), totalBefore, 0.001e18, "no loss on round-trip");
+        // shares should be ~0 after full unwind (allow rounding)
+        assertLe(pool.morphoShares(), 1e3, "shares fully burned (modulo dust)");
+        hotBefore; // silence unused
+    }
+
+    function _fakePrecommitment(uint256 salt) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encode("fork-precommitment", salt))) %
+               PpConstants.SNARK_SCALAR_FIELD;
+    }
+
     function test_fork_r1_morphoSideDonationDefended() public whenFork {
         address attacker = address(0x4774CE);
         address victim = address(0x71C71E);

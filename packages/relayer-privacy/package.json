@@ -1,0 +1,25 @@
+{
+  "name": "@bu/relayer-privacy",
+  "version": "0.0.1",
+  "description": "Bun service: permissive ASP postman + cross-currency relayer for the fx-Telarana Privacy Hook. Testnet only.",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "asp-postman": "bun run src/asp-postman.ts",
+    "relayer-api":  "bun run src/relayer-api.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@bu/fx-engine": "workspace:*",
+    "@zk-kit/lean-imt": "^2.2.4",
+    "hono": "^4.6.0",
+    "maci-crypto": "^2.5.0",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.5.0"
+  }
+}

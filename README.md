@@ -154,9 +154,31 @@ Each chain manifest has a `routes:` block describing both. See e.g. [`deployment
 - `GatewayWallet`  `0x0077777d7EBA4688BDeF3E311b846F25870A19B9`
 - `GatewayMinter`  `0x0022222ABE238Cc2C7Bb1f21003F0a260052475B`
 
+### Privacy Hook (Ghost Mode) — shielded USDC pools, live on both hubs
+
+0xbow privacy-pools-core ported into fx-Telaraña: per-currency shielded pools with Morpho yield rehypothecation. v1 scope is **USDC-only**, no cross-currency relay wired yet (`relayCrossCurrency` reverts `SwapAdapterNotSet`). Cross-ccy unlocks when a concrete `IFxRouterSwapAdapter` ships against `FxSwapHook`.
+
+| Contract | Fuji | Arc Testnet |
+|---|---|---|
+| **FxPrivacyEntrypoint** (UUPS proxy) | `0x6d5e3d5be0be2b29d48eda2fa35fa8d787d3c953` | `0xd11cddd1f04e850d3810a71608a49907c80f2736` |
+| **FxPrivacyPool (USDC)** | `0xc490be46d2b87b92f146ab4dd907784d9658ec7f` | `0xc11c216c9c7a36848b1d4276d223160c8b51988f` |
+| FxPrivacyEntrypoint impl | `0xcd04c6e2277a50c93368da77a28ba917083c205a` | `0x4506441df7960b2cb2b600b0d37dfd3ea79fa92a` |
+| WithdrawalVerifier | `0x18bd44dd57661ed746e127b378bf1d8e2ae64bf1` | `0x7f0326cea0796e31ed38f01b1e8660faad7bb6ee` |
+| CommitmentVerifier (ragequit) | `0x4c4e1ec5dae12a8cbac7ff4187e2c3e5719ac71b` | `0x9056facd889a94e4acba8cbc4c8a81ed47ba8ea0` |
+| Collateral leg (Morpho rehyp) | MockEURC `0x50c4ba39…4992` | **real Circle EURC** `0x89b50855…d72a` |
+
+PSE Poseidon (deterministic across chains, deployed via Arachnid CREATE2):
+
+- `PoseidonT3` — `0x3333333C0A88F9BE4fd23ed0536F9B6c427e3B93`
+- `PoseidonT4` — `0x4443338EF595F44e0121df4C21102677B142ECF0`
+
+Full manifests: [`deployments/privacy-hook-fuji.json`](deployments/privacy-hook-fuji.json) + [`deployments/privacy-hook-arc.json`](deployments/privacy-hook-arc.json). Deploy scripts: `contracts/script/DeployPoseidon.s.sol`, `DeployPrivacyHookFuji.s.sol`, `DeployPrivacyHookArc.s.sol`. Run with `FOUNDRY_PROFILE=deploy` so the library linker hits the canonical Poseidon addresses.
+
 ### Authority
 
 Deployer EOA `0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69` signs BurnIntents off-chain and owns both hubs until Circle's EIP-1271 support lands (Corey's mid-July 2026 ETA). At that point authority rotates to the local `FxHubMessageReceiver` via `setAuthority(...)` and signing becomes fully contract-bound. See [`CLAUDE.md`](CLAUDE.md) for the rotation plan.
+
+Privacy hub: deployer also holds `OWNER_ROLE` + `ASP_POSTMAN` on both FxPrivacyEntrypoint proxies. The single-writer ASP_POSTMAN role rotates to the relayer EOA once the relayer service has a stable key (see `packages/relayer-privacy/README.md` for the rotation runbook).
 
 ---
 
