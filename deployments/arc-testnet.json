@@ -102,7 +102,11 @@
     "Pyth": "0x2880aB155794e7179c9eE2e38200202908C17B43",
     "GatewayWallet": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
     "GatewayMinter": "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
-    "GatewayLocalDomain": 26
+    "GatewayLocalDomain": 26,
+    "PoolSwapTest": "0x60004B08372Ea953762fCD5cb4D0c723F32311fa",
+    "PoolSwapTestDeployTx": "0xfcc77cb2085aaded899b8d0a7c8c822eb49b3f8fdd0ab9c2eee34b6f94e3d39f",
+    "PoolSwapTestDeployedAt": "2026-05-21T18:05:00Z",
+    "PoolSwapTestNote": "Canonical Uniswap v4 PoolSwapTest from lib/v4-core/src/test/. EOA → PoolManager.unlock router (satisfies IUnlockCallback). Wave N2a closes the M4 Phase-D CCTP demo blocker."
   },
   "marketIds": {
     "M1_EURC_USDC": "0xf6fac2b9b801a7ae3deeccfa95a7f1e768b4873a22f0def0d93f7f0172cc2da2",
