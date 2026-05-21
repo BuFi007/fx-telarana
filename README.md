@@ -98,6 +98,13 @@ Full manifest: [`deployments/avalanche-fuji.json`](deployments/avalanche-fuji.js
 
 Full manifest: [`deployments/arc-testnet.json`](deployments/arc-testnet.json) + [`deployments/hub-config-arc.json`](deployments/hub-config-arc.json).
 
+Morpho Labs' Arc testnet contracts are now verified for the next fresh hub
+broadcast: MorphoBlue `0x65f435eB4FF05f1481618694bC1ff7Ee4680c0A4`,
+AdaptiveCurveIrm `0xBD583cc9807980f9e41f7c8250f594fB6173abE3`. See
+[`deployments/morpho-arc-testnet.json`](deployments/morpho-arc-testnet.json).
+The live Stage 6 hub above remains bound to the self-deployed Morpho until it is
+redeployed.
+
 #### Arc Phase B-E perps stack
 
 Trading is Arc-only for this stack. These contracts were deployed on Arc Testnet and smoke-tested through market config, funding config, liquidation config, protocol liquidity seed, quote, EIP-712 signed order settlement, funding poke, liquidation scan, flag, and liquidation.

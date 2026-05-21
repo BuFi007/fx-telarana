@@ -1,7 +1,7 @@
 # fx-Telaraña — TODOs from /plan-eng-review (2026-05-13)
 
 ## Blocking before Phase 0 starts
-- [ ] **Verify Morpho Blue on Arc testnet.** Check Morpho Labs deployment registry. If absent, decide on self-deploy (Morpho Blue is permissionless + immutable).
+- [x] **Verify Morpho Blue on Arc testnet.** Morpho Labs deployment verified on-chain; source of truth is `deployments/morpho-arc-testnet.json`.
 - [ ] **Verify Uniswap v4 PoolManager on Arc.** Phase 2 +2 weeks if self-deploy is needed.
 - [x] **Bufi Wallet KYC/KYB pass verifier interface.** Minimal `IBufiKycPass` interface and revocation semantics defined for Ghost Mode. Concrete RO-KYC verifier remains offchain/Pasillo-owned.
 - [ ] **Verify Pyth + RedStone feed availability on Arc** for EUR/USD, USDC/USD, EURC/USD. List feed ids in `@bu/fx-engine/addresses/`.
@@ -30,8 +30,8 @@
 - [x] Deploy scripts: `DeployFxHub.s.sol`, `DeployFxSpoke.s.sol`
 
 **Still TODO before Arc testnet ship**
-- [ ] Confirm Morpho Blue address on Arc (or self-deploy — it's permissionless + immutable)
-- [ ] Confirm AdaptiveCurveIrm address on Arc (or self-deploy)
+- [x] Confirm Morpho Blue address on Arc: `0x65f435eB4FF05f1481618694bC1ff7Ee4680c0A4`
+- [x] Confirm AdaptiveCurveIrm address on Arc: `0xBD583cc9807980f9e41f7c8250f594fB6173abE3`
 - [x] Phase 0.5: RedStone consumer wiring (`getMidVerified` reads signed payload from msg.data; deviation gate live)
 - [ ] `@bu/fx-engine` TypeScript SDK (lives in desk-v1)
 - [ ] Pasillo `/fx/*` routes (lives in desk-v1)

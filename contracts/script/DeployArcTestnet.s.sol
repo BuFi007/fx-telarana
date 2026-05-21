@@ -33,18 +33,19 @@ import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
 /// Required env (set these before running):
 ///   ARC_TESTNET_RPC_URL              — defaults to https://rpc.testnet.arc.network
 ///   DEPLOYER_PRIVATE_KEY             — funded via faucet.circle.com
-///   ARC_MORPHO_BLUE                  — Morpho Blue address on Arc (when published)
-///   ARC_MORPHO_ADAPTIVE_IRM          — AdaptiveCurveIrm address on Arc (when published)
 ///
 /// Pre-set defaults (verified Arc testnet addresses):
-///   USDC, EURC, Pyth, CCTP V2 TokenMessenger, CCTP V2 MessageTransmitter
+///   USDC, EURC, Pyth, CCTP V2 TokenMessenger, CCTP V2 MessageTransmitter,
+///   Morpho Blue, AdaptiveCurveIrm
 contract DeployArcTestnet is Script {
     // ── Verified Arc testnet defaults (chainId 5042002, CCTP domain 26) ────
-    address constant DEFAULT_USDC                = 0x3600000000000000000000000000000000000000;
-    address constant DEFAULT_EURC                = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
-    address constant DEFAULT_PYTH                = 0x2880aB155794e7179c9eE2e38200202908C17B43;
-    address constant DEFAULT_CCTP_TOKEN_MESSENGER     = 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA;
+    address constant DEFAULT_USDC = 0x3600000000000000000000000000000000000000;
+    address constant DEFAULT_EURC = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
+    address constant DEFAULT_PYTH = 0x2880aB155794e7179c9eE2e38200202908C17B43;
+    address constant DEFAULT_CCTP_TOKEN_MESSENGER = 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA;
     address constant DEFAULT_CCTP_MESSAGE_TRANSMITTER = 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275;
+    address constant DEFAULT_MORPHO_BLUE = 0x65f435eB4FF05f1481618694bC1ff7Ee4680c0A4;
+    address constant DEFAULT_ADAPTIVE_IRM = 0xBD583cc9807980f9e41f7c8250f594fB6173abE3;
 
     bytes32 constant PYTH_USDC_USD = 0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a;
     bytes32 constant PYTH_EURC_USD = 0x76fa85158bf14ede77087fe3ae472f66213f6ea2f5b411cb2de472794990fa5c;
@@ -52,23 +53,23 @@ contract DeployArcTestnet is Script {
     bytes32 constant REDSTONE_USDC = bytes32("USDC");
     bytes32 constant REDSTONE_EURC = bytes32("EURC");
 
-    error MissingArcMorphoAddress();
-    error MissingArcIrmAddress();
+    error ArcDependencyHasNoCode(string label, address target);
+    error ArcMorphoIrmNotEnabled(address morpho, address irm);
+    error ArcMorphoLltvNotEnabled(address morpho, uint256 lltv);
 
     function run() external {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(pk);
 
-        address usdc                = vm.envOr("ARC_USDC", DEFAULT_USDC);
-        address eurc                = vm.envOr("ARC_EURC", DEFAULT_EURC);
-        address pyth                = vm.envOr("ARC_PYTH", DEFAULT_PYTH);
-        address messageTransmitter  = vm.envOr("ARC_CCTP_MESSAGE_TRANSMITTER", DEFAULT_CCTP_MESSAGE_TRANSMITTER);
-        address morpho              = vm.envAddress("ARC_MORPHO_BLUE");
-        address irm                 = vm.envAddress("ARC_MORPHO_ADAPTIVE_IRM");
-        uint256 lltv                = vm.envOr("FX_HUB_LLTV", uint256(860000000000000000));
+        address usdc = vm.envOr("ARC_USDC", DEFAULT_USDC);
+        address eurc = vm.envOr("ARC_EURC", DEFAULT_EURC);
+        address pyth = vm.envOr("ARC_PYTH", DEFAULT_PYTH);
+        address messageTransmitter = vm.envOr("ARC_CCTP_MESSAGE_TRANSMITTER", DEFAULT_CCTP_MESSAGE_TRANSMITTER);
+        address morpho = vm.envOr("ARC_MORPHO_BLUE", DEFAULT_MORPHO_BLUE);
+        address irm = vm.envOr("ARC_MORPHO_ADAPTIVE_IRM", DEFAULT_ADAPTIVE_IRM);
+        uint256 lltv = vm.envOr("FX_HUB_LLTV", uint256(860000000000000000));
 
-        if (morpho == address(0)) revert MissingArcMorphoAddress();
-        if (irm == address(0)) revert MissingArcIrmAddress();
+        _assertArcMorphoDependency(morpho, irm, lltv);
 
         console2.log("======== fx-Telarana Arc Testnet Deploy ========");
         console2.log("deployer", deployer);
@@ -155,7 +156,7 @@ contract DeployArcTestnet is Script {
         console2.log("     Migrate OPERATIONS_ROLE from deployer to a 3-of-5 multisig op-level");
         console2.log("  3. Register all 8 contracts with Circle SCP (bun run sdk:circle:register)");
         console2.log("  4. Deploy FxSpoke on Ethereum/Base/etc with ARC_HUB_RECEIVER = above");
-        console2.log("  5. Smoke-test: USDC supply -> withdraw round-trip via Tenderly TestNet");
+        console2.log("  5. Smoke-test: USDC supply -> withdraw round-trip on live Arc RPC");
     }
 
     function _deployTimelockAndHandoff(
@@ -178,6 +179,14 @@ contract DeployArcTestnet is Script {
         liquidator.renounceRole(liquidator.DEFAULT_ADMIN_ROLE(), deployer);
     }
 
+    function _assertArcMorphoDependency(address morpho, address irm, uint256 lltv) internal view {
+        if (morpho.code.length == 0) revert ArcDependencyHasNoCode("MorphoBlue", morpho);
+        if (irm.code.length == 0) revert ArcDependencyHasNoCode("AdaptiveCurveIrm", irm);
+        IMorpho morphoBlue = IMorpho(morpho);
+        if (!morphoBlue.isIrmEnabled(irm)) revert ArcMorphoIrmNotEnabled(morpho, irm);
+        if (!morphoBlue.isLltvEnabled(lltv)) revert ArcMorphoLltvNotEnabled(morpho, lltv);
+    }
+
     function _assertHandoff(
         address timelock,
         address deployer,
@@ -185,11 +194,11 @@ contract DeployArcTestnet is Script {
         FxMarketRegistry registry,
         FxLiquidator liquidator
     ) internal view {
-        require(oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), timelock),         "handoff: oracle admin != timelock");
-        require(!oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), deployer),        "handoff: deployer still oracle admin");
-        require(registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), timelock),     "handoff: registry admin != timelock");
-        require(!registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), deployer),    "handoff: deployer still registry admin");
+        require(oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), timelock), "handoff: oracle admin != timelock");
+        require(!oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), deployer), "handoff: deployer still oracle admin");
+        require(registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), timelock), "handoff: registry admin != timelock");
+        require(!registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), deployer), "handoff: deployer still registry admin");
         require(liquidator.hasRole(liquidator.DEFAULT_ADMIN_ROLE(), timelock), "handoff: liq admin != timelock");
-        require(!liquidator.hasRole(liquidator.DEFAULT_ADMIN_ROLE(), deployer),"handoff: deployer still liq admin");
+        require(!liquidator.hasRole(liquidator.DEFAULT_ADMIN_ROLE(), deployer), "handoff: deployer still liq admin");
     }
 }

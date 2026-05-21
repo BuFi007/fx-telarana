@@ -392,7 +392,7 @@ Current engineering context:
 - Base Sepolia deployment is live with fx-Telarana contracts, Morpho markets, and Circle Smart Contract Platform registration.
 - Avalanche Fuji is the active test hub path in the integration docs.
 - Avalanche C-Chain is the Phase 3 mainnet hub target for the multi-stablecoin basket.
-- Arc Testnet remains a production target for testnet deployment, with Morpho Blue availability still the key dependency unless fx-Telarana self-deploys Morpho there.
+- Arc Testnet remains a production target for testnet deployment. Morpho Labs' Arc testnet Morpho Blue and AdaptiveCurveIrm are now verified for fresh wiring; the existing live Arc hub still uses the earlier self-deployed Morpho stack until redeployed.
 - CCTP V2 is used only for Circle assets such as USDC and EURC.
 - Hyperlane is the planned route for selected non-Circle asset spokes after route-specific risk classification.
 

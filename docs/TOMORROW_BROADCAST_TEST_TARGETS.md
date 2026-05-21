@@ -95,6 +95,18 @@ Privacy checks:
 
 ## Stablecoin And Morpho Basket
 
+Arc Morpho dependency gate:
+
+```bash
+forge script contracts/script/VerifyArcMorphoTestnet.s.sol:VerifyArcMorphoTestnet \
+  --root contracts --rpc-url "$ARC_TESTNET_RPC_URL" -vv
+```
+
+Use `deployments/morpho-arc-testnet.json` as the source of truth for the fresh
+Arc hub broadcast. The existing live Arc hub still points at the earlier
+self-deployed Morpho; do not rewrite live manifests until the fresh stack is
+broadcast.
+
 Use the local stablecoin lifecycle matrix before broadcast rehearsal:
 
 ```bash
