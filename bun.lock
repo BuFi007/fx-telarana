@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "fx-telarana",
+      "devDependencies": {
+        "viem": "^2.21.0",
+      },
     },
     "packages/privacy-prover": {
       "name": "@bu/privacy-prover",
