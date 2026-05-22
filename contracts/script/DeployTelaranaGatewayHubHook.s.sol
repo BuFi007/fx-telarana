@@ -3,6 +3,8 @@ pragma solidity ^0.8.26;
 
 import {Script, console2} from "forge-std/Script.sol";
 import {TelaranaGatewayHubHook} from "../src/hub/TelaranaGatewayHubHook.sol";
+import {HookMiner} from "../src/libraries/HookMiner.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 
 /// @notice Per-chain deploy of `TelaranaGatewayHubHook`. This is the
 ///         spot-FX-aware destination wrapper for Circle Gateway mints; it
@@ -37,6 +39,63 @@ import {TelaranaGatewayHubHook} from "../src/hub/TelaranaGatewayHubHook.sol";
 ///   setPoolGatewayRoute(poolId, routeId) for each v4 pool that should pull
 ///   Gateway-routed intra-hook liquidity inside beforeSwap (PR-H8)
 contract DeployTelaranaGatewayHubHook is Script {
+    address constant FACTORY = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
+
+    /// @notice Wave M1 — mine a CREATE2 salt + deploy TelaranaGatewayHubHook
+    ///         at an address whose low 14 bits encode getHookPermissions()
+    ///         (BEFORE_SWAP_FLAG | BEFORE_SWAP_RETURNS_DELTA_FLAG = 0x88).
+    ///
+    /// Required env:
+    ///   DEPLOYER_PRIVATE_KEY
+    ///   GATEWAY_MINTER
+    ///   USDC
+    ///   POOL_MANAGER
+    ///
+    /// Optional env:
+    ///   INITIAL_ADMIN — defaults to the deployer
+    function runCreate2() external {
+        uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        address deployer = vm.addr(pk);
+
+        address gatewayMinter = vm.envAddress("GATEWAY_MINTER");
+        address usdc = vm.envAddress("USDC");
+        address poolManager = vm.envAddress("POOL_MANAGER");
+        address initialAdmin = vm.envOr("INITIAL_ADMIN", deployer);
+
+        bytes memory creationCode = abi.encodePacked(
+            type(TelaranaGatewayHubHook).creationCode,
+            abi.encode(usdc, gatewayMinter, poolManager, initialAdmin)
+        );
+
+        uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG);
+        (address expected, bytes32 salt) = HookMiner.find(FACTORY, flags, creationCode, 200_000);
+
+        console2.log("============================================");
+        console2.log("Deploying TelaranaGatewayHubHook via CREATE2");
+        console2.log("============================================");
+        console2.log("deployer       ", deployer);
+        console2.log("usdc           ", usdc);
+        console2.log("gatewayMinter  ", gatewayMinter);
+        console2.log("poolManager    ", poolManager);
+        console2.log("initialAdmin   ", initialAdmin);
+        console2.log("mined address  ", expected);
+        console2.log("salt           ");
+        console2.logBytes32(salt);
+
+        vm.startBroadcast(pk);
+        (bool ok, bytes memory ret) = FACTORY.call(abi.encodePacked(salt, creationCode));
+        require(ok, "CREATE2 deploy failed");
+        vm.stopBroadcast();
+
+        address actual;
+        assembly { actual := mload(add(ret, 20)) }
+        require(actual == expected, "deployed address != mined address");
+
+        console2.log("============================================");
+        console2.log("TelaranaGatewayHubHook (CREATE2)", actual);
+        console2.log("============================================");
+    }
+
     function run() external {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(pk);
