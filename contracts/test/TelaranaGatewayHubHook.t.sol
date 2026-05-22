@@ -59,7 +59,13 @@ contract TelaranaGatewayHubHookTest is Test {
         usdc = new MockERC20("USD Coin", "USDC", 6);
         jpyc = new MockERC20("JPYC", "JPYC", 18);
         minter = new MockCircleGatewayMinter(address(usdc));
-        hook = new TelaranaGatewayHubHook(address(usdc), address(minter), admin);
+        // PR-H8: TelaranaGatewayHubHook now also implements Uniswap v4 IHooks.
+        // The constructor takes the PoolManager address so the IHooks surface
+        // can verify `msg.sender == POOL_MANAGER` on every callback. For the
+        // legacy executor-only tests in this file we never invoke the IHooks
+        // path, so a sentinel non-zero address is sufficient.
+        address poolManagerSentinel = address(uint160(0xBEEF));
+        hook = new TelaranaGatewayHubHook(address(usdc), address(minter), poolManagerSentinel, admin);
 
         hook.grantRole(hook.EXECUTOR_ROLE(), executor);
         hook.setGatewayRoute(ROUTE_ID, _route(true, executor));
