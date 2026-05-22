@@ -68,10 +68,14 @@
     "GatewayWallet": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
     "GatewayMinter": "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
     "GatewayLocalDomain": 26,
-    "PoolSwapTest": "0x60004B08372Ea953762fCD5cb4D0c723F32311fa",
-    "PoolSwapTestDeployTx": "0xfcc77cb2085aaded899b8d0a7c8c822eb49b3f8fdd0ab9c2eee34b6f94e3d39f",
-    "PoolSwapTestDeployedAt": "2026-05-21T18:05:00Z",
-    "PoolSwapTestNote": "Canonical Uniswap v4 PoolSwapTest from lib/v4-core/src/test/. EOA → PoolManager.unlock router (satisfies IUnlockCallback). Wave N2a closes the M4 Phase-D CCTP demo blocker."
+    "FxV4RouterHarness": "0x7cfc449B9A6777F740b2F8F7BA87351B15A4B3b6",
+    "FxV4RouterHarnessDeployTx": "0xedf26e793f8117482f01df92273204864b6bf0fa86e37b9e02dc177df3e417c4",
+    "FxV4RouterHarnessDeployedAt": "2026-05-22T13:55:00Z",
+    "FxV4RouterHarnessNote": "PMM-aware exact-input v4 router (contracts/test/utils/FxV4RouterHarness.sol). Settles user input BEFORE manager.swap — required for FxSwapHook's PMM shape, which pulls the specified input out of PoolManager inside beforeSwap via inputCurrency.take(POOL_MANAGER, hook, amountIn) (FxSwapHook.sol L731). PoolSwapTest (N2a, see PoolSwapTest_deprecated below) settles AFTER manager.swap and is therefore incompatible with FxSwapHook — verified by the N3 reverted swap artefact 0xde83acb726a6e33c670b1a17f9ce54f22ab72616c063c076bc769458647a62f6. Wave N4 closes M4 Phase-D blocker M4-BLOCK-1 (router) by pinning this harness as the V4SwapRouter in defi-web-app instead.",
+    "PoolSwapTest_deprecated": "0x60004B08372Ea953762fCD5cb4D0c723F32311fa",
+    "PoolSwapTest_deprecatedDeployTx": "0xfcc77cb2085aaded899b8d0a7c8c822eb49b3f8fdd0ab9c2eee34b6f94e3d39f",
+    "PoolSwapTest_deprecatedDeployedAt": "2026-05-21T18:05:00Z",
+    "PoolSwapTest_deprecatedNote": "DEPRECATED for FxSwapHook PMM use. Canonical Uniswap v4 PoolSwapTest from lib/v4-core/src/test/ — settles input AFTER manager.swap, which breaks FxSwapHook.beforeSwap (see FxV4RouterHarnessNote). Left on-chain — it remains a valid periphery for v4-LP-shape pools (no PMM custom-accounting); anyone testing such pools later can still resolve this address."
   },
   "marketIds": {
     "M1_EURC_USDC": "0xf6fac2b9b801a7ae3deeccfa95a7f1e768b4873a22f0def0d93f7f0172cc2da2",
