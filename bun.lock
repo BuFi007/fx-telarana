@@ -8,6 +8,19 @@
         "viem": "^2.21.0",
       },
     },
+    "apps/api": {
+      "name": "@bu/fx-telarana-api",
+      "version": "0.1.0",
+      "dependencies": {
+        "@bu/fx-engine": "*",
+        "hono": "^4.7.0",
+        "zod": "^3.23.8",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5.4.0",
+      },
+    },
     "packages/privacy-prover": {
       "name": "@bu/privacy-prover",
       "version": "0.0.1",
@@ -63,6 +76,8 @@
     "@adraffy/ens-normalize": ["@adraffy/ens-normalize@1.11.1", "", {}, "sha512-nhCBV3quEgesuf7c7KYfperqSS14T8bYuvJ8PcLJp6znkZpFc0AuW4qBtr8eKVyPPe/8RSr7sglCWPU5eaxwKQ=="],
 
     "@bu/fx-engine": ["@bu/fx-engine@workspace:packages/sdk"],
+
+    "@bu/fx-telarana-api": ["@bu/fx-telarana-api@workspace:apps/api"],
 
     "@bu/privacy-prover": ["@bu/privacy-prover@workspace:packages/privacy-prover"],
 

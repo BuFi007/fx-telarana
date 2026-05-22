@@ -4,7 +4,7 @@
   "description": "Forex Telaraña Protocol — decentralized cross-currency money market and FX engine on Arc",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": ["packages/*", "apps/*"],
   "scripts": {
     "sdk:build": "cd packages/sdk && bun run build",
     "sdk:test": "cd packages/sdk && bun test",
@@ -30,6 +30,8 @@
     "perps:arc:canary": "cd packages/sdk && bun run perps:arc:canary",
     "perps:arc:redstone-smoke": "cd packages/sdk && bun run perps:arc:redstone-smoke",
     "sdk:circle:register": "cd packages/sdk && bun scripts/register-contracts.ts",
+    "api:dev": "cd apps/api && bun --hot run src/index.ts",
+    "api:build": "cd apps/api && bun build src/index.ts --target=bun --outdir=dist",
     "hyperlane:arc:deploy-core": "npx @hyperlane-xyz/cli core deploy --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --chain arctestnet --config ./hyperlane/arc-testnet/core-config.yaml --yes",
     "hyperlane:fuji:deploy-arc-ism": "npx @hyperlane-xyz/cli ism deploy --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --chain fuji --config ./hyperlane/fuji/arc-testnet-trusted-relayer-ism.yaml --out ./hyperlane/fuji/arc-testnet-trusted-relayer-ism-address.json --yes",
     "hyperlane:arc:agent-config": "npx @hyperlane-xyz/cli registry agent-config --registry https://github.com/hyperlane-xyz/hyperlane-registry --registry ./hyperlane/registry --chains arctestnet fuji --out ./hyperlane/arc-testnet/agent-config.json --yes",

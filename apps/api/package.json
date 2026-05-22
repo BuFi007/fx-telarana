@@ -1,0 +1,23 @@
+{
+  "name": "@bu/fx-telarana-api",
+  "version": "0.1.0",
+  "description": "HTTP gateway in front of @bu/fx-engine — exposes Telarana lend/borrow/enter-hub calldata builders + market metadata for downstream services (fx-pasillo, BUFX, etc.).",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "bun --hot run src/index.ts",
+    "start": "bun run src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@bu/fx-engine": "*",
+    "hono": "^4.7.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.4.0"
+  }
+}
