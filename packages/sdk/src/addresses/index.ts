@@ -41,6 +41,14 @@ export interface FxAddresses {
   /// External dependencies
   morphoBlue: Address;
   adaptiveCurveIrm?: Address;
+  /// Morpho ecosystem v2 contracts. Present on chains where Morpho Labs has
+  /// shipped the post-Blue infra (oracle factory + vault V2 + market V1
+  /// adapter V2 + registry). Use these instead of self-deploying the dummy
+  /// vault when real Morpho-pattern vaults are needed.
+  morphoChainlinkOracleV2Factory?: Address;
+  morphoVaultV2Factory?: Address;
+  morphoMarketV1AdapterV2Factory?: Address;
+  morphoRegistryList?: Address;
   pyth: Address;
   cctpTokenMessengerV2?: Address;
   cctpMessageTransmitterV2?: Address;
@@ -70,12 +78,12 @@ export interface FxPerpsAddresses {
 }
 
 export interface StablecoinBasketToken {
-  symbol: "AUDF" | "BRLA" | "cirBTC" | "JPYC" | "KRW1" | "MXNB" | "PHPC" | "ZCHF";
+  symbol: "AUDF" | "BRLA" | "cirBTC" | "JPYC" | "KRW1" | "MXNB" | "PHPC" | "QCAD" | "ZCHF";
   address?: Address;
   decimals?: number;
   pythFeedId?: `0x${string}`;
   pythFeedInverted?: boolean;
-  redstoneFeedId?: "AUD" | "BRL" | "BTC" | "JPY" | "KRW" | "MXN" | "PHP" | "CHF";
+  redstoneFeedId?: "AUD" | "BRL" | "BTC" | "CAD" | "JPY" | "KRW" | "MXN" | "PHP" | "CHF";
   source: "issuer" | "mock" | "blocked" | "excluded";
   blockedReason?: string;
   notes?: string;
@@ -89,6 +97,7 @@ export interface StablecoinBasketAddresses {
   krw1: StablecoinBasketToken;
   mxnb: StablecoinBasketToken;
   phpc: StablecoinBasketToken;
+  qcad?: StablecoinBasketToken;
   zchf: StablecoinBasketToken;
 }
 
@@ -125,6 +134,9 @@ const PYTH_FEED_USD_JPY  = "0xef2c98c804ba503c6a707e38be4dfbb16683775f195b091252
 const PYTH_FEED_USD_KRW  = "0xe539120487c29b4defdf9a53d337316ea022a2688978a468f9efd847201be7e3" as const;
 const PYTH_FEED_USD_MXN  = "0xe13b1c1ffb32f34e1be9545583f01ef385fde7f42ee66049d30570dc866b77ca" as const;
 const PYTH_FEED_USD_CHF  = "0x0b1e3297e69f162877b577b0d6a47a0d63b2392bc8499e6540da4187a63e28f8" as const;
+// Pyth USD/CAD price feed id. Verify against the Pyth catalog before
+// production use; QCAD is currently used only for the Arc testnet listing.
+const PYTH_FEED_USD_CAD  = "0x3f3f306cd6c0e6e09a8ce6878fcdb1862c3bbac1d3e3aedebfde4e7e7a73f2c1" as const;
 const PYTH_FEED_BTC_USD  = "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43" as const;
 
 const ZERO = "0x0000000000000000000000000000000000000000" as const;
@@ -306,16 +318,29 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     fxReceiptUSDC: "0xdd22365Bba7330BE537c9BC26da9b1b4Db9aC431",
     fxHubMessageReceiver: "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
     fxGatewayHook: "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1",
+    // Arc sprint-1 perp stack 2026-05-21 redeploy. Old contracts
+    // (clearinghouse 0x6A265045…, LE 0xD384560E…) paused + role-revoked
+    // via RetireOldPerpStack and superseded by these.
     fxPerps: {
-      clearinghouse: "0x6A265045D9A3291D2881d77DDC62e2781A2418c5",
-      marginAccount: "0x35c7cD02cFa0c2889547482B71c1a5114d8439C6",
-      fundingEngine: "0x88B70872759E1aA24858746779Cb15ca9F2cdcf3",
-      healthChecker: "0x272305e821D810eC5741761F98DbDC273efD47E6",
-      liquidationEngine: "0xD384560E5f8CE969BF4C1BDfAFACc5304AFbe8f2",
-      orderSettlement: "0x0F62FCdA2de63d905Cb167301C00251A9bB6dAa1",
+      clearinghouse: "0x39dc43E2133CF860c1d17d4DB75Ef4204eebD46A",
+      marginAccount: "0x4EB6018F988301417B93cb2b8899D74D42273e96",
+      fundingEngine: "0x859bA11A3693895f8B03C31C6AE3b8F04992115B",
+      healthChecker: "0xA00Be167609c02F3879138dA8530BC31527c02b8",
+      liquidationEngine: "0xF579e265EF1D5E67EfDbb1F20863465E94a9d3eA",
+      orderSettlement: "0x93C3d831D6F0657479d7Fb6Cf0D06e75aA05E4CC",
       keeperAdmin: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
     },
-    morphoBlue: "0x3c9b95C6E7B23f094f066733E7797C8680760830",
+    // Arc Morpho stack 2026-05-21: switched from the self-deployed
+    // 0x3c9b95C6E7B23f094f066733E7797C8680760830 to Morpho Labs' canonical
+    // testnet deployment, confirmed via their 2026-05-21 email and verified
+    // on-chain (see deployments/morpho-arc-testnet.json).
+    morphoBlue: "0x65f435eB4FF05f1481618694bC1ff7Ee4680c0A4",
+    adaptiveCurveIrm: "0xBD583cc9807980f9e41f7c8250f594fB6173abE3",
+    morphoChainlinkOracleV2Factory: "0xEBef760B0CA0d1Fa9578f47001A184Ee53EaE839",
+    morphoVaultV2Factory: "0x6b7F638B64539F83810A1f6ea81C703b561C3Be6",
+    // Linkage verified on-chain: morpho() = canonical MorphoBlue 0x65f435…
+    morphoMarketV1AdapterV2Factory: "0x9372EbEDF2C64344817c67dAeD99512F4b9DC434",
+    morphoRegistryList: "0xcba6be0EF65176CE7D440A4a93657fb2dd84200c",
     // Arc-resident spoke that routes to the FUJI hub (sends users back).
     fxSpoke: "0x13c8463589d460db6f21235eedfd678c22a1ea25",
     // Arc-resident spoke that routes to the LOCAL Arc hub (self-loop CCTP V2).
@@ -346,14 +371,14 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
       },
       cirbtc: {
         symbol: "cirBTC",
-        address: "0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761",
+        address: "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF",
         decimals: 18,
         pythFeedId: PYTH_FEED_BTC_USD,
         pythFeedInverted: false,
         redstoneFeedId: "BTC",
-        source: "mock",
+        source: "issuer",
         notes:
-          "Arc testnet FakeCirBTC token from Morpho Labs' dummy market; treat as Circle Wrapped Bitcoin test collateral only until canonical cirBTC issuance is published.",
+          "Arc testnet cirBTC issuance dropped 2026-05-21. Replaces the prior Morpho Labs FakeCirBTC at 0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761.",
       },
       jpyc: {
         symbol: "JPYC",
@@ -373,11 +398,23 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
       },
       mxnb: {
         symbol: "MXNB",
+        address: "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
         decimals: 6,
         pythFeedId: PYTH_FEED_USD_MXN,
         pythFeedInverted: true,
         redstoneFeedId: "MXN",
-        source: "mock",
+        source: "issuer",
+        notes: "Arc testnet MXNB issuance dropped 2026-05-21.",
+      },
+      qcad: {
+        symbol: "QCAD",
+        address: "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+        decimals: 6,
+        pythFeedId: PYTH_FEED_USD_CAD,
+        pythFeedInverted: true,
+        redstoneFeedId: "CAD",
+        source: "issuer",
+        notes: "Arc testnet QCAD issuance dropped 2026-05-21.",
       },
       phpc: {
         symbol: "PHPC",
@@ -393,9 +430,8 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
         source: "mock",
       },
     },
-    // Do not set adaptiveCurveIrm here until morphoBlue is updated to the fresh
-    // Morpho Labs-backed Arc hub stack; mixing it with the old self-deployed
-    // Morpho address would create invalid market params for SDK callers.
+    // adaptiveCurveIrm is now wired (above) — Arc testnet is on the Morpho
+    // Labs-canonical stack and no longer self-deploys.
   },
   [ChainId.AvalancheMainnet]: {
     usdc: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",

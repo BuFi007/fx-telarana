@@ -1,0 +1,14 @@
+{
+  "FxFundingEngine": "0xB3142418EacEc98dCD33f722603043c830DED376",
+  "FxHealthChecker": "0x80c6CA073b7e22ebff0E2e49b717E5902C5bC6C7",
+  "FxLiquidationEngine": "0x6690b4B9Cb9B97B5752F86c6354A55D3eF55876C",
+  "FxMarginAccount": "0x2EacaCDAEf6a7ec82C168aFbdDd1B0E7D7993E69",
+  "FxOrderSettlement": "0x01A3186ffb7c0c4b8f7A352Dbb8F8A5EA4649F5D",
+  "FxPerpClearinghouse": "0x5fe82aFd87bdEE8911FfED1427c2bF653Bca4AcA",
+  "chainId": 43113,
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "keeper": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "liquidation_bountyBps": 500,
+  "liquidation_bountyCap": 5000000,
+  "liquidation_flagDelay": 120
+}

@@ -3,11 +3,13 @@ import { isAddress, isHex, type Address, type Hex } from "viem";
 
 import { ChainId, type ChainIdValue, type FxPerpsAddresses } from "./addresses/index.js";
 
+// TCHFC removed 2026-05-21 — the on-chain market entry stays as an
+// artifact (clearinghouse has no on-chain disable path), but it's
+// unlisted from configure / readiness / SDK manifests.
 export const ARC_FX_PERP_MARKET_KEYS = [
   "EURC_USDC",
   "TJPYC_USDC",
   "TMXNB_USDC",
-  "TCHFC_USDC",
   "CIRBTC_USDC",
 ] as const;
 
@@ -22,7 +24,6 @@ export const ALL_FX_PERP_MARKET_KEYS = [
   "EURC_USDC",
   "TJPYC_USDC",
   "TMXNB_USDC",
-  "TCHFC_USDC",
   "CIRBTC_USDC",
   "MXNB_USDC",
 ] as const;

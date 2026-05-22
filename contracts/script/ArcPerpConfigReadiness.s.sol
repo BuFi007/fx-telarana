@@ -23,8 +23,9 @@ abstract contract ArcPerpConfigReadinessBase is Script {
     address internal constant EURC = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
     address internal constant TJPYC = 0xB176f6E0c8ecc2be208F72Ad34c54e5F10F1882a;
     address internal constant TMXNB = 0xe8F76f90553F50E76731afbeF1ac83a9152fFBEb;
-    address internal constant TCHFC = 0x249DBFd4ac17247Cf10098F6C3937F90570b5750;
-    address internal constant CIRBTC = 0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761;
+    // tCHFC removed from the listed surface — see ConfigureArcPerpMarkets
+    // for the on-chain artifact note.
+    address internal constant CIRBTC = 0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF;
 
     uint16 internal constant INITIAL_MARGIN_BPS = 500;
     uint16 internal constant MAINTENANCE_MARGIN_BPS = 300;
@@ -167,7 +168,6 @@ abstract contract ArcPerpConfigReadinessBase is Script {
         _verifyMarket(stack, _marketSpec("EURC_USDC", "EURC", EURC, EURC_OI_CAP));
         _verifyMarket(stack, _marketSpec("TJPYC_USDC", "tJPYC", TJPYC, TEST_FIAT_OI_CAP));
         _verifyMarket(stack, _marketSpec("TMXNB_USDC", "tMXNB", TMXNB, TEST_FIAT_OI_CAP));
-        _verifyMarket(stack, _marketSpec("TCHFC_USDC", "tCHFC", TCHFC, TEST_FIAT_OI_CAP));
         _verifyMarket(stack, _marketSpec("CIRBTC_USDC", "cirBTC", CIRBTC, TEST_CRYPTO_OI_CAP));
 
         _validateLiquidationDelay();
@@ -227,7 +227,6 @@ abstract contract ArcPerpConfigReadinessBase is Script {
         _serializeMarket(root, stack, _marketSpec("EURC_USDC", "EURC", EURC, EURC_OI_CAP));
         _serializeMarket(root, stack, _marketSpec("TJPYC_USDC", "tJPYC", TJPYC, TEST_FIAT_OI_CAP));
         _serializeMarket(root, stack, _marketSpec("TMXNB_USDC", "tMXNB", TMXNB, TEST_FIAT_OI_CAP));
-        _serializeMarket(root, stack, _marketSpec("TCHFC_USDC", "tCHFC", TCHFC, TEST_FIAT_OI_CAP));
         _serializeMarket(root, stack, _marketSpec("CIRBTC_USDC", "cirBTC", CIRBTC, TEST_CRYPTO_OI_CAP));
 
         (uint16 bountyBps, uint256 bountyCap, uint256 flagDelay) = stack.liquidation.liquidationConfig();
