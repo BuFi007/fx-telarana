@@ -10,8 +10,11 @@
     "FxGatewayHook": "0x7dA191bfB85D9F14069228cf618519BFb41f371E",
     "FxMarketRegistry": "0x7ba745b979e027992ECFa51207666e3F5B46cF0a",
     "FxOracle": "0xf7fcdca3f9c92418a980a31df7f87de7e1a1a04b",
+    "FxOracleMxnb": "0x4D915a43320FfDd0e2FD8b50F3Df8838900859a8",
     "MorphoOracleAdapterM1": "0xda4c3e315fffd0790c9d8a1730c2ba56330cb2ec",
     "MorphoOracleAdapterM2": "0xf0cdaa9cf9e8d52060dcb41a045e3a6d618a9f65",
+    "MorphoOracleAdapterM3": "0x384880459CB2E924dFE8310abaD3650C5078f5cB",
+    "MorphoOracleAdapterM4": "0xeaCBcBB84D86E307ea560a26Aed6E47B27C3170e",
     "FxReceiptEURC": "0xefd7cf5ad5a2db9a3c23e2807f2279de92c730d2",
     "FxReceiptUSDC": "0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e",
     "FxLiquidator": "0x2900599ff0e6dd057493d62fac856e5a8f93c6eb",
@@ -41,7 +44,13 @@
   },
   "marketIds": {
     "M1_EURC_USDC": "0x7d99088a9fe61331c49a92eb16fa3794b0bc2862b211f5a70f31a64cef25029e",
-    "M2_USDC_EURC": "0x1700104cf29eceb113e01a1bcdc913e5e10d3d37314cee235752aa88bf153197"
+    "M2_USDC_EURC": "0x1700104cf29eceb113e01a1bcdc913e5e10d3d37314cee235752aa88bf153197",
+    "M3_MXNB_USDC": "0x0a19c08b12d4cdb37ea4574886cb392ff5f4c7c2149bf5f7edb80d46dc03a617",
+    "M4_USDC_MXNB": "0xfcd8ba3b7a6eca50f0936b7a640369e07956815d4828e22105a0af1532d82dcd"
+  },
+  "marketIdsBroadcastTx": {
+    "_note": "Broadcast 2026-05-18 via contracts/script/DeployFujiMxnbMarkets.s.sol. M3+M4 share a fresh FxOracle (FxOracleMxnb above) configured for USDC + MXNB; M1/M2 continue to use the original FxOracle (EURC + USDC) which is owned by FxTimelock and was not retrofitted. See contracts/broadcast/DeployFujiMxnbMarkets.s.sol/43113/run-latest.json for tx hashes.",
+    "_pyth": "Oracle pulls Pyth USD/MXN feed 0xe13b1c1ffb32f34e1be9545583f01ef385fde7f42ee66049d30570dc866b77ca with inverted=true (Pyth reports MXN per USD ≈ 17; protocol needs USD per MXNB ≈ 0.058)."
   },
   "hub": {
     "network": "avalanche-fuji",
