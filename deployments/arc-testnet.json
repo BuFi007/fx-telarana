@@ -19,6 +19,31 @@
     "IrmMock": "0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1",
     "FxSpokeToArc": "0x5d10d2c3b9951054845534b2f60a68ebc0898cd3"
   },
+  "waveN6": {
+    "broadcastAt": "2026-05-22",
+    "agent": "Wave N6 — Demo B broadcast (Real-Time FX Swap Pool Using Gateway)",
+    "telaranaGatewayHubHook": "0xe895CB461AFF6E98167a7FA0Db252ba906714088",
+    "fxV4RouterHarnessGateway": "0x72180a231245E06db12b6A77390Ce919fF041f04",
+    "fxV4RouterHarnessGatewayDeployTx": "0x0d615d950cb1ec4d35a1a6a28bffda7e5a566c87f668cbc72d9b1b0de1413ca5",
+    "newGatewayPool": {
+      "poolId": "0xf6b13fe5ae3115d159b3a844a56588d1549293fb6725040f01c54ba31827f711",
+      "poolKey": {
+        "currency0": "0x3600000000000000000000000000000000000000",
+        "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+        "fee": 100,
+        "tickSpacing": 1,
+        "hooks": "0xe895CB461AFF6E98167a7FA0Db252ba906714088"
+      },
+      "initTx": "0x91f605e7556c5aec98fd2a93ea00777321b55cdaf501a371404b708d01ce2921",
+      "bindGatewayRouteTx": "0x1b885470b6a0c862fd31d06ace2a433c5c6912154bf96f38e076383bcb9533a5",
+      "sqrtPriceX96Init": "0xf52559aa0006380000000000",
+      "note": "Pool initialized with TGH as the v4 hook (different pool than M4's FxSwapHook pool 0xd5e4a30d…). NO LIQUIDITY yet — relies on TGH.beforeSwap returning BeforeSwapDelta(0, -amountReceived) to supply USDC output. Production demo should seed LP."
+    },
+    "demoBSwapTx": "0x66dc22ae835884c9b50641d062a53f8a80e3191a89a9a6337e81c95f2cf9bc09",
+    "demoBSwapBlockNumber": 43521137,
+    "demoBSwapGasUsed": 21349297,
+    "differentiator": "Real-Time FX Swap Pool Using Gateway: TGH.beforeSwap pulls Circle Gateway USDC inline (gatewayMint + USDC.transfer to PoolManager + settle) inside a single tx, returning BeforeSwapDelta(0, -amountReceived) — no CCTP attestation polling. Events GatewayHubMintAttested + GatewayHubLiquidityReceived + GatewayRoutedSwap all emit in the one tx."
+  },
   "deprecated": {
     "V1FxHubMessageReceiver": "0x07db64fb19C6c4a1eBB1B7bfdaFd4676b43Cf276",
     "V1FxGatewayHook": "0x004cfa0305c365b1d9b2365f85acf216c96b0e13",
