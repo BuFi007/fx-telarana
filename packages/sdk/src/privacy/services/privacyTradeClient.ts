@@ -87,8 +87,11 @@ export interface PrivacyChainConfig {
  *  `deployments/privacy-hook-{fuji,arc}.json`. The intent is that this
  *  table moves with each deploy: new chain, new pool — extend here. */
 export const PRIVACY_CHAIN_CONFIGS: Record<number, PrivacyChainConfig> = {
-  // Arc Testnet (chainId 5042002) — both USDC + EURC pools live, plus
-  // the FxFixedRateSwapAdapter wired for cross-currency relay.
+  // Arc Testnet (chainId 5042002) — full basket coverage. USDC + EURC
+  // live since 2026-05-18 and are wired into the FxFixedRateSwapAdapter
+  // for cross-currency relay. MXNB / QCAD / cirBTC / AUDF added 2026-05-23
+  // in 100%-hot mode (no Morpho rehyp); cross-currency is NOT enabled for
+  // them yet (adapter only supports USDC<->EURC).
   5042002: {
     chainId: 5042002,
     entrypoint: "0xD11cDdd1f04e850d3810a71608A49907c80f2736",
@@ -102,6 +105,26 @@ export const PRIVACY_CHAIN_CONFIGS: Record<number, PrivacyChainConfig> = {
         asset: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
         pool:  "0x7B4582CDE65c8cC00fE24B16dBA60472242d234c",
         scope: 10011405322814872543637273959896594613590433782049698944750253296575874394014n,
+      },
+      MXNB: {
+        asset: "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
+        pool:  "0x441723FD6212EF7C95D0e04F59b2Eeb59838d4E7",
+        scope: 19082200711307219786160463487585799598365985092556548077701513221375148309833n,
+      },
+      QCAD: {
+        asset: "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+        pool:  "0xF3bd84bDdaD66a3b1F94dF7de0aD34AB158f2De4",
+        scope: 2833937364226619149263932593876876180846337820162150412800511306923375587947n,
+      },
+      cirBTC: {
+        asset: "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF",
+        pool:  "0x2465806A9293A588867DD94b9A6aB5d47531E928",
+        scope: 6276843509593961256836015041214352259502184653889560733447054109664793570801n,
+      },
+      AUDF: {
+        asset: "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+        pool:  "0x5BC0e0795D5ea842601220bd1f855e60Fad7E3D1",
+        scope: 4135949679101190338014741781710175778566755255405416231883747053685152243258n,
       },
     },
     poolDeployBlock: 43028000n,

@@ -1,0 +1,23 @@
+{
+  "AUDF_asset": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+  "AUDF_minimumDeposit": 1000000,
+  "AUDF_pool": "0x5BC0e0795D5ea842601220bd1f855e60Fad7E3D1",
+  "FxPrivacyEntrypoint": "0xD11cDdd1f04e850d3810a71608A49907c80f2736",
+  "MXNB_asset": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
+  "MXNB_minimumDeposit": 1000000,
+  "MXNB_pool": "0x441723FD6212EF7C95D0e04F59b2Eeb59838d4E7",
+  "QCAD_asset": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+  "QCAD_minimumDeposit": 1000000,
+  "QCAD_pool": "0xF3bd84bDdaD66a3b1F94dF7de0aD34AB158f2De4",
+  "chainId": 5042002,
+  "cirBTC_asset": "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF",
+  "cirBTC_minimumDeposit": 1000000000000000,
+  "cirBTC_pool": "0x2465806A9293A588867DD94b9A6aB5d47531E928",
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "exportedBlockNumber": 43740063,
+  "exportedBlockTimestamp": 1779577227,
+  "hotReservePct": 10000,
+  "maxRelayFeeBPS": 500,
+  "source": "AddArcBasketPrivacyPools.s.sol -- pools deployed in 100%-hot mode (no Morpho rehyp)",
+  "vettingFeeBPS": 0
+}

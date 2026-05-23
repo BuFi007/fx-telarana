@@ -92,6 +92,7 @@
     "MXNB": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
     "QCAD": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
     "cirBTC": "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF",
+    "AUDF": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
     "FxEscrowCircle": "0x4A3c9ede465dE9AEb185aEBF841B325e0C808661",
     "MorphoBlue": "0x65f435eB4FF05f1481618694bC1ff7Ee4680c0A4",
     "AdaptiveCurveIrm": "0xBD583cc9807980f9e41f7c8250f594fB6173abE3",
@@ -285,5 +286,23 @@
       "keeperBalanceAfter": "429094931493403730 (0.43 USDC)",
       "consumed": "1013035791757000000 wei (~1.01 USDC across Phase A + B + C broadcasts)"
     }
+  },
+  "privacy": {
+    "summary": "Shielded pools for all 6 Arc basket assets. USDC + EURC are the original v1 ship (2026-05-18); MXNB + QCAD + cirBTC + AUDF added 2026-05-23 in 100%-hot mode (no Morpho rehyp). Full detail in deployments/privacy-hook-arc.json.",
+    "entrypoint": "0xD11cDdd1f04e850d3810a71608A49907c80f2736",
+    "swapAdapter": "0x3Fa1AcC89DFd52f6692F20b7E49cD58A306C27f2",
+    "pools": {
+      "USDC": "0xc11c216c9c7a36848b1d4276d223160c8b51988f",
+      "EURC": "0x7B4582CDE65c8cC00fE24B16dBA60472242d234c",
+      "MXNB": "0x441723FD6212EF7C95D0e04F59b2Eeb59838d4E7",
+      "QCAD": "0xF3bd84bDdaD66a3b1F94dF7de0aD34AB158f2De4",
+      "cirBTC": "0x2465806A9293A588867DD94b9A6aB5d47531E928",
+      "AUDF": "0x5BC0e0795D5ea842601220bd1f855e60Fad7E3D1"
+    },
+    "crossCurrencyRoutes": [
+      { "from": "USDC", "to": "EURC", "rate": "920000000000000000", "rateHumanReadable": "1 USDC -> 0.92 EURC" },
+      { "from": "EURC", "to": "USDC", "rate": "1080000000000000000", "rateHumanReadable": "1 EURC -> 1.08 USDC" }
+    ],
+    "manifest": "deployments/privacy-hook-arc.json"
   }
 }
