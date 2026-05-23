@@ -65,6 +65,13 @@ export interface FxAddresses {
   pythFeedUSDC: `0x${string}`;
   pythFeedEURC: `0x${string}`;
   pythFeedEURUSD: `0x${string}`;
+
+  /// Shielded privacy hook surface. Present where FxPrivacyEntrypoint + at
+  /// least one FxPrivacyPool are deployed. `pools` keys are token symbols
+  /// (e.g. "USDC", "EURC", "MXNB"). `swapAdapter` is the cross-currency
+  /// relay adapter (currently only Arc has one — Fuji's adapter slot is
+  /// reserved for when MockEURC is replaced with a user-acquirable EURC).
+  privacy?: PrivacyHookAddresses;
 }
 
 export interface FxPerpsAddresses {
@@ -87,6 +94,12 @@ export interface StablecoinBasketToken {
   source: "issuer" | "mock" | "blocked" | "excluded";
   blockedReason?: string;
   notes?: string;
+}
+
+export interface PrivacyHookAddresses {
+  entrypoint: Address;
+  swapAdapter?: Address;
+  pools: Partial<Record<"USDC" | "EURC" | StablecoinBasketToken["symbol"], Address>>;
 }
 
 export interface StablecoinBasketAddresses {
@@ -355,6 +368,23 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     pythFeedUSDC: PYTH_FEED_USDC_USD,
     pythFeedEURC: PYTH_FEED_EURC_USD,
     pythFeedEURUSD: PYTH_FEED_EUR_USD,
+    // Shielded pools — full basket coverage on Arc as of 2026-05-23. USDC +
+    // EURC are the v1 ship (2026-05-18); MXNB / QCAD / cirBTC / AUDF were
+    // added in 100%-hot mode (hotReservePct=10000 disables Morpho rehyp).
+    // Full deploy manifest: deployments/privacy-hook-arc.json. Pool tree
+    // configs (asset, scope) live in privacyTradeClient.ts.
+    privacy: {
+      entrypoint: "0xD11cDdd1f04e850d3810a71608A49907c80f2736",
+      swapAdapter: "0x3Fa1AcC89DFd52f6692F20b7E49cD58A306C27f2",
+      pools: {
+        USDC: "0xC11C216C9C7A36848b1d4276d223160C8b51988f",
+        EURC: "0x7B4582CDE65c8cC00fE24B16dBA60472242d234c",
+        MXNB: "0x441723FD6212EF7C95D0e04F59b2Eeb59838d4E7",
+        QCAD: "0xF3bd84bDdaD66a3b1F94dF7de0aD34AB158f2De4",
+        cirBTC: "0x2465806A9293A588867DD94b9A6aB5d47531E928",
+        AUDF: "0x5BC0e0795D5ea842601220bd1f855e60Fad7E3D1",
+      },
+    },
     stablecoinBasket: {
       audf: {
         symbol: "AUDF",

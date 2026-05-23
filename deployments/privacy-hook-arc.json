@@ -3,7 +3,8 @@
   "chainId": 5042002,
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
   "deployedAt": "2026-05-18",
-  "scope": "Privacy Hook v1 — shielded USDC + EURC pools live + Track B fixed-rate swap adapter wired for atomic cross-currency relay. `FxPrivacyEntrypoint.relayCrossCurrency()` is fully operational on Arc; shield USDC, withdraw EURC to a fresh address (or vice versa) in a single tx.",
+  "lastBasketExpansionAt": "2026-05-23",
+  "scope": "Privacy Hook v1 — shielded USDC + EURC pools live + Track B fixed-rate swap adapter wired for atomic cross-currency relay. `FxPrivacyEntrypoint.relayCrossCurrency()` is fully operational on Arc; shield USDC, withdraw EURC to a fresh address (or vice versa) in a single tx. 2026-05-23 expansion: MXNB / QCAD / cirBTC / AUDF shielded pools added in 100%-hot mode (no Morpho rehyp — canonical Morpho markets are USDC-loan, not asset-loan).",
   "contracts": {
     "WithdrawalVerifier": "0x7f0326cea0796e31ed38f01b1e8660faad7bb6ee",
     "CommitmentVerifier": "0x9056facd889a94e4acba8cbc4c8a81ed47ba8ea0",
@@ -11,6 +12,10 @@
     "FxPrivacyEntrypoint": "0xd11cddd1f04e850d3810a71608a49907c80f2736",
     "FxPrivacyPoolUSDC": "0xc11c216c9c7a36848b1d4276d223160c8b51988f",
     "FxPrivacyPoolEURC": "0x7B4582CDE65c8cC00fE24B16dBA60472242d234c",
+    "FxPrivacyPoolMXNB": "0x441723FD6212EF7C95D0e04F59b2Eeb59838d4E7",
+    "FxPrivacyPoolQCAD": "0xF3bd84bDdaD66a3b1F94dF7de0aD34AB158f2De4",
+    "FxPrivacyPoolCIRBTC": "0x2465806A9293A588867DD94b9A6aB5d47531E928",
+    "FxPrivacyPoolAUDF": "0x5BC0e0795D5ea842601220bd1f855e60Fad7E3D1",
     "FxFixedRateSwapAdapter": "0x3Fa1AcC89DFd52f6692F20b7E49cD58A306C27f2"
   },
   "deprecated": {
@@ -40,6 +45,10 @@
   "external": {
     "USDC": "0x3600000000000000000000000000000000000000",
     "EURC": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+    "MXNB": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
+    "QCAD": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+    "CIRBTC": "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF",
+    "AUDF": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
     "MorphoBlue": "0x3c9b95C6E7B23f094f066733E7797C8680760830",
     "FxMarketRegistry": "0x813232259c9b922e7571F15220617C80581f1464",
     "CollateralForRehyp": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
@@ -60,6 +69,50 @@
       "minimumDepositHumanReadable": "1 EURC",
       "vettingFeeBPS": "0",
       "maxRelayFeeBPS": "500"
+    },
+    {
+      "asset": "MXNB",
+      "assetAddress": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
+      "pool": "0x441723FD6212EF7C95D0e04F59b2Eeb59838d4E7",
+      "minimumDeposit": "1000000",
+      "minimumDepositHumanReadable": "1 MXNB",
+      "vettingFeeBPS": "0",
+      "maxRelayFeeBPS": "500",
+      "hotReservePct": 10000,
+      "rehyp": false
+    },
+    {
+      "asset": "QCAD",
+      "assetAddress": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+      "pool": "0xF3bd84bDdaD66a3b1F94dF7de0aD34AB158f2De4",
+      "minimumDeposit": "1000000",
+      "minimumDepositHumanReadable": "1 QCAD",
+      "vettingFeeBPS": "0",
+      "maxRelayFeeBPS": "500",
+      "hotReservePct": 10000,
+      "rehyp": false
+    },
+    {
+      "asset": "cirBTC",
+      "assetAddress": "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF",
+      "pool": "0x2465806A9293A588867DD94b9A6aB5d47531E928",
+      "minimumDeposit": "1000000000000000",
+      "minimumDepositHumanReadable": "0.001 cirBTC",
+      "vettingFeeBPS": "0",
+      "maxRelayFeeBPS": "500",
+      "hotReservePct": 10000,
+      "rehyp": false
+    },
+    {
+      "asset": "AUDF",
+      "assetAddress": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+      "pool": "0x5BC0e0795D5ea842601220bd1f855e60Fad7E3D1",
+      "minimumDeposit": "1000000",
+      "minimumDepositHumanReadable": "1 AUDF",
+      "vettingFeeBPS": "0",
+      "maxRelayFeeBPS": "500",
+      "hotReservePct": 10000,
+      "rehyp": false
     }
   ],
   "roles": {
@@ -75,6 +128,15 @@
     "FxPrivacyPoolUSDC": "0xd6317748603eeecd2c8b2c3eb180feecfc0fc787c20afbae526287f9179d3c2d",
     "registerPoolUSDC": "0xc7332ef7cba5d96ace950a8aa48732428bf23a422e4b89ea69f2d91ff59a69f6",
     "FxPrivacyPoolEURC": "see contracts/broadcast/AddArcEurcPool.s.sol/5042002/run-latest.json",
+    "FxPrivacyPoolMXNB": "0x33c4f1b09a631930c33f1c5214df25147e0ec85dfd32c48ef53c2324015ce700",
+    "registerPoolMXNB": "0x54db551fcdadbe594f274ca2bece460466dec3cbe680a3b1a25dff47ce3c5a75",
+    "FxPrivacyPoolQCAD": "0xbd12e3bbd6b7ae02fd9e07199419c9ae3b93ed16eb3e74e27c2c4604b982f6e8",
+    "registerPoolQCAD": "0x33e4abed2ca6b646a2704b2facb3051a131b4e412abeb1f5d2fc85a59e37ba5e",
+    "FxPrivacyPoolCIRBTC": "0xceb92f4dd7f48b184f67bd9b313fe6f047b145e21b7ab2a7ff3c49c1aabe248b",
+    "registerPoolCIRBTC": "0x862c5ce86faa7da0ba2e3e2813215cc12c4814dd91b6bf83c1195b637dbfa70d",
+    "FxPrivacyPoolAUDF": "0xdc1ca52d7c9a188849d781ed3eec27377db3fa083351ea22748fe71016bb40e8",
+    "registerPoolAUDF": "0xd0657ff96c4d9e8eee0fb5842b983d6a8e79fafa0f53d661a3f44ebb46dc6246",
+    "basketBroadcast": "see contracts/broadcast/AddArcBasketPrivacyPools.s.sol/5042002/run-latest.json",
     "Poseidon": "see contracts/broadcast/DeployPoseidon.s.sol/5042002/run-latest.json"
   },
   "verification": {
@@ -83,5 +145,5 @@
     "asset": "0x3600000000000000000000000000000000000000",
     "dead": false
   },
-  "notes": "Arc Testnet v1 privacy ship — mirrors Fuji shape but uses real Circle EURC as collateral leg (Arc's M1/M2 markets pair USDC<->real EURC, not MockEURC). Self-deployed Morpho Blue at 0x3c9b... (Arc has no canonical Morpho). UUPS proxy ASP_POSTMAN role currently held by deployer; rotate to relayer EOA after the relayer service has a stable key."
+  "notes": "Arc Testnet v1 privacy ship — mirrors Fuji shape but uses real Circle EURC as collateral leg (Arc's M1/M2 markets pair USDC<->real EURC, not MockEURC). Self-deployed Morpho Blue at 0x3c9b... (Arc has no canonical Morpho). UUPS proxy ASP_POSTMAN role currently held by deployer; rotate to relayer EOA after the relayer service has a stable key. 2026-05-23 basket expansion: MXNB / QCAD / cirBTC / AUDF pools deployed in 100%-hot mode via AddArcBasketPrivacyPools.s.sol — `hotReservePct = 10000` so `_rebalance` early-returns and the Morpho rehyp path is never touched (canonical Arc Morpho markets are USDC-loan, not basket-asset-loan, so registry.paramsOf would have reverted). USDC is passed as a dummy collateral constructor arg purely to satisfy the non-zero / != asset checks; it is never read at runtime."
 }

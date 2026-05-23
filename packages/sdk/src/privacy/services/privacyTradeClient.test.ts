@@ -34,6 +34,30 @@ describe("PRIVACY_CHAIN_CONFIGS", () => {
     );
   });
 
+  test("Arc Testnet basket pools (MXNB/QCAD/cirBTC/AUDF) match live deploy", () => {
+    const cfg = PRIVACY_CHAIN_CONFIGS[ARC_CHAIN_ID]!;
+    expect(cfg.pools.MXNB?.pool).toBe("0x441723FD6212EF7C95D0e04F59b2Eeb59838d4E7");
+    expect(cfg.pools.MXNB?.asset).toBe("0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461");
+    expect(cfg.pools.MXNB?.scope).toBe(
+      19082200711307219786160463487585799598365985092556548077701513221375148309833n,
+    );
+    expect(cfg.pools.QCAD?.pool).toBe("0xF3bd84bDdaD66a3b1F94dF7de0aD34AB158f2De4");
+    expect(cfg.pools.QCAD?.asset).toBe("0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d");
+    expect(cfg.pools.QCAD?.scope).toBe(
+      2833937364226619149263932593876876180846337820162150412800511306923375587947n,
+    );
+    expect(cfg.pools.cirBTC?.pool).toBe("0x2465806A9293A588867DD94b9A6aB5d47531E928");
+    expect(cfg.pools.cirBTC?.asset).toBe("0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF");
+    expect(cfg.pools.cirBTC?.scope).toBe(
+      6276843509593961256836015041214352259502184653889560733447054109664793570801n,
+    );
+    expect(cfg.pools.AUDF?.pool).toBe("0x5BC0e0795D5ea842601220bd1f855e60Fad7E3D1");
+    expect(cfg.pools.AUDF?.asset).toBe("0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b");
+    expect(cfg.pools.AUDF?.scope).toBe(
+      4135949679101190338014741781710175778566755255405416231883747053685152243258n,
+    );
+  });
+
   test("Fuji entry has the USDC pool only (no cross-ccy yet)", () => {
     const cfg = PRIVACY_CHAIN_CONFIGS[FUJI_CHAIN_ID]!;
     expect(cfg.entrypoint).toBe("0x6d5e3D5bE0Be2B29D48EDa2FA35Fa8d787D3C953");
