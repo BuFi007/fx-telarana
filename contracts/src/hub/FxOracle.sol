@@ -182,7 +182,7 @@ contract FxOracle is IFxOracle, PrimaryProdDataServiceConsumerBase, AccessContro
     ///
     ///         For STRICTLY-BOTH-AGREE semantics (liquidation safety), use
     ///         `getMidVerified` which enforces deviation between the two.
-    function getMid(address base, address quote) public view returns (uint256 midE18, uint256 publishedAt) {
+    function getMid(address base, address quote) public view virtual returns (uint256 midE18, uint256 publishedAt) {
         // Try Pyth path. View-function try/catch requires an external self-call.
         try this.getMidFromPyth(base, quote) returns (uint256 m, uint256 t) {
             return (m, t);
