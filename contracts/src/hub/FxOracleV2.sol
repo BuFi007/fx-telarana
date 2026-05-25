@@ -55,7 +55,11 @@ contract FxOracleV2 is FxOracle {
         emit ChainlinkMaxAgeSet(maxAge);
     }
 
-    /// @notice Pyth → RedStone → Chainlink fallback chain.
+    /// @notice Pyth → RedStone (or Chainlink when configured).
+    ///         When Chainlink feeds exist for both tokens, uses the
+    ///         three-way fallback: Pyth → RedStone → Chainlink.
+    ///         Otherwise preserves the original Pyth → RedStone behavior
+    ///         so existing Redstone-dependent markets keep working.
     function getMid(address base, address quote)
         public
         view
@@ -67,13 +71,21 @@ contract FxOracleV2 is FxOracle {
             return (m, t);
         } catch {}
 
-        // 2. RedStone (pull-based, signed payload in calldata)
-        try this._getMidFromRedstoneExternal(base, quote) returns (uint256 m, uint256 t) {
-            return (m, t);
-        } catch {}
+        // 2. If Chainlink is configured for both tokens, try RedStone
+        //    with catch and fall through to Chainlink on failure.
+        bool hasChainlink = chainlinkFeedOf[base] != address(0)
+            && chainlinkFeedOf[quote] != address(0);
 
-        // 3. Chainlink (push-based, on-chain aggregator)
-        return _getMidFromChainlink(base, quote);
+        if (hasChainlink) {
+            try this._getMidFromRedstoneExternal(base, quote) returns (uint256 m, uint256 t) {
+                return (m, t);
+            } catch {}
+            return _getMidFromChainlink(base, quote);
+        }
+
+        // 3. No Chainlink — propagate RedStone directly (original behavior).
+        //    This lets the clearinghouse's Redstone-wrapped calls work.
+        return _getMidFromRedstone(base, quote);
     }
 
     /// @dev External wrapper for _getMidFromRedstone so getMid can
