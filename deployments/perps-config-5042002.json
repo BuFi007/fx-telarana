@@ -90,5 +90,19 @@
   "role_margin_liquidation": true,
   "role_settlement_admin": true,
   "role_settlement_settlerKeeper": true,
-  "totalAccountMargin": 0
+  "totalAccountMargin": 0,
+  "AUDF_USDC_baseToken": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+  "AUDF_USDC_enabled": true,
+  "AUDF_USDC_fundingEnabled": true,
+  "AUDF_USDC_fundingVelocityBps": 1,
+  "AUDF_USDC_initialMarginBps": 500,
+  "AUDF_USDC_maintenanceMarginBps": 300,
+  "AUDF_USDC_marketId": "0x921b564f97b14b7d73c12a72af4b7847fb5e3414f98cbe5fb5f1d8a3168c0a00",
+  "AUDF_USDC_maxFundingRateBpsPerSecond": 1,
+  "AUDF_USDC_maxLeverageBps": 200000,
+  "AUDF_USDC_maxOpenInterestUsd": 500000000000000000000,
+  "AUDF_USDC_maxSkewUsd": 500000000000000000000,
+  "AUDF_USDC_openInterestLong": 0,
+  "AUDF_USDC_openInterestShort": 0,
+  "AUDF_USDC_tradingFeeBps": 5
 }
