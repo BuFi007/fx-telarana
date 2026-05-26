@@ -117,12 +117,12 @@ describe("address registry", () => {
     });
     // Arc hookathon yield-engine perp stack.
     expect(a.fxPerps).toMatchObject({
-      clearinghouse: "0xCE3401BD53be4c0a8c7CCb0376b313925f99b8d2",
-      marginAccount: "0x766b96971F484E7287E41130E9a5b248CDE44ca9",
-      fundingEngine: "0x8b3b63D2031da48e3114871a49CD02B923E388e1",
-      healthChecker: "0x12d18BC4b2295834Bb7A08aF5Bc2b40E40c7F53B",
-      liquidationEngine: "0xA70aA9B3bCD3BB829B2E8aF29d8A48f5e09f50E5",
-      orderSettlement: "0x904bb24A910c54A84341E157B894d11B474A2e1F",
+      clearinghouse: "0x7707d108F6Ce3d95ceA38D3965448F00C21CaFdC",
+      marginAccount: "0x77BBAef17257AD4800BE12A5D36AF87f3a49FBb7",
+      fundingEngine: "0xE08a146B9081A8dd32203fC5e7B5988352489518",
+      healthChecker: "0x234E06a0761cde322E4Fc5065A8256247669F362",
+      liquidationEngine: "0x18DEA7845c36d45AaDbcCeC04aC6cFc103748D80",
+      orderSettlement: "0xCeae7846c8ED2Dd9E6f541798a657875305EA0d8",
       keeperAdmin: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
     });
   });

@@ -10,8 +10,8 @@ import {FxFundingEngine} from "../src/perp/FxFundingEngine.sol";
 ///         Uses the EXACT Sprint-1 market IDs (keccak256 of FX-PERP:symbol/USDC)
 ///         so the SDK, matcher, and UI remain compatible.
 contract ConfigureAllMarketsV2 is Script {
-    address internal constant CLEARINGHOUSE = 0xCE3401BD53be4c0a8c7CCb0376b313925f99b8d2;
-    address internal constant FUNDING = 0x8b3b63D2031da48e3114871a49CD02B923E388e1;
+    address internal constant CLEARINGHOUSE = 0x7707d108F6Ce3d95ceA38D3965448F00C21CaFdC;
+    address internal constant FUNDING = 0xE08a146B9081A8dd32203fC5e7B5988352489518;
 
     uint256 internal constant FIAT_OI_CAP = 500_000_000 * 1_000_000_000_000;
     uint256 internal constant BTC_OI_CAP = 250_000_000 * 1_000_000_000_000;
@@ -23,26 +23,29 @@ contract ConfigureAllMarketsV2 is Script {
 
     // Canonical market IDs. The hash includes the FX-PERP: prefix and /USDC suffix.
     // JPYC moved from Sprint-1 tJPYC to the official JPYC token for the yield engine.
-    bytes32 internal constant EURC_ID   = keccak256("FX-PERP:EURC/USDC");    // 0x565a...
-    bytes32 internal constant JPYC_ID   = keccak256("FX-PERP:JPYC/USDC");    // 0x848d...
-    bytes32 internal constant MXNB_ID   = keccak256("FX-PERP:tMXNB/USDC");   // 0xb698...
-    bytes32 internal constant CIRBTC_ID = keccak256("FX-PERP:cirBTC/USDC");  // 0x238a...
-    bytes32 internal constant AUDF_ID   = keccak256("AUDF");                  // 0x921b...
+    bytes32 internal constant EURC_ID = keccak256("FX-PERP:EURC/USDC"); // 0x565a...
+    bytes32 internal constant JPYC_ID = keccak256("FX-PERP:JPYC/USDC"); // 0x848d...
+    bytes32 internal constant MXNB_ID = keccak256("FX-PERP:tMXNB/USDC"); // 0xb698...
+    bytes32 internal constant CIRBTC_ID = keccak256("FX-PERP:cirBTC/USDC"); // 0x238a...
+    bytes32 internal constant AUDF_ID = keccak256("AUDF"); // 0x921b...
 
     function run() external {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         FxPerpClearinghouse ch = FxPerpClearinghouse(CLEARINGHOUSE);
         FxFundingEngine fund = FxFundingEngine(FUNDING);
 
-        FxFundingEngine.FundingConfig memory fc = FxFundingEngine.FundingConfig({
-            enabled: true, maxFundingRateBpsPerSecond: 1, fundingVelocityBps: 1
-        });
+        FxFundingEngine.FundingConfig memory fc =
+            FxFundingEngine.FundingConfig({enabled: true, maxFundingRateBpsPerSecond: 1, fundingVelocityBps: 1});
 
         IFxPerpClearinghouse.MarketConfig memory fiatCfg = IFxPerpClearinghouse.MarketConfig({
-            baseToken: address(0), enabled: true,
-            initialMarginBps: INIT_MARGIN, maintenanceMarginBps: MAINT_MARGIN,
-            tradingFeeBps: TRADING_FEE, maxLeverageBps: MAX_LEV,
-            maxOpenInterestUsd: FIAT_OI_CAP, maxSkewUsd: FIAT_OI_CAP
+            baseToken: address(0),
+            enabled: true,
+            initialMarginBps: INIT_MARGIN,
+            maintenanceMarginBps: MAINT_MARGIN,
+            tradingFeeBps: TRADING_FEE,
+            maxLeverageBps: MAX_LEV,
+            maxOpenInterestUsd: FIAT_OI_CAP,
+            maxSkewUsd: FIAT_OI_CAP
         });
 
         vm.startBroadcast(pk);

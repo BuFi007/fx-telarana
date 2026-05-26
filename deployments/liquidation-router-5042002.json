@@ -1,10 +1,9 @@
 {
-  "FxLiquidationEngine": "0xA70aA9B3bCD3BB829B2E8aF29d8A48f5e09f50E5",
-  "LiquidationRouter": "0x6349658AB89bB13a608b50835230d4b85Eb4734f",
-  "LiquidationRouterDeployTx": "0xb4e3315ce3e6a1ca8cf290c81ab80fd8ae8e3c4eb9b90d30f48fbd1333319cd9",
+  "FxLiquidationEngine": "0x18DEA7845c36d45AaDbcCeC04aC6cFc103748D80",
+  "LiquidationRouter": "0xc98c0DAAe36F8755933051419c6919bFC038152d",
   "chainId": 5042002,
-  "deployedBlockNumber": 44170104,
-  "deployedBlockTimestamp": 1779827639,
+  "deployedBlockNumber": 44185515,
+  "deployedBlockTimestamp": 1779835792,
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
   "rewardToken": "0x3600000000000000000000000000000000000000"
 }

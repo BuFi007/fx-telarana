@@ -40,7 +40,7 @@ The previous session merged BUFX PR #3 + Telarana PR #14 (Codex CRITICAL
 | `FxHubMessageReceiver` V2 | `0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C` | Cross-hub relay surface | LIVE |
 | `FxGatewayHook` V2 | `0x2931C50745334d6DFf9eC4E3106fE05b49717DF1` | Circle Gateway adapter (mint-to-hub) | LIVE |
 | `TelaranaGatewayHubHook` (TGH) | `0x74E894aFf25c89d707873347cd2554d30E0541fa` | Spot-FX-aware destination wrapper | LIVE |
-| **`FxSpotExecutor` v0.1** | **`0x37ccDa89628Fd3Cc1f8ef5e45D8725c4e3a59542`** | **Oracle-anchored spot swap pool (current)** | **LIVE** |
+| **`FxSpotExecutor` v0.2** | **`0x4e7372108529C0e7cb3aa0fF92B1c52e06e9e72f`** | **Oracle-anchored spot swap pool (current)** | **LIVE** |
 | `FxSpotExecutor` v0 | `0x23AB8992585Ff2E40833198f661374a070398876` | Deprecated; EXECUTOR_ROLE revoked from TGH | DEPRECATED |
 | `FxOracle` | `0x77b3A3B420dB98B01085b8C46a753Ed9879e2865` | Pyth + optional RedStone | LIVE |
 | `FxMarketRegistry` | `0x813232259c9b922e7571F15220617C80581f1464` | Morpho-Blue lend/borrow surface | LIVE |
@@ -92,7 +92,9 @@ The previous session merged BUFX PR #3 + Telarana PR #14 (Codex CRITICAL
 | Fuji → Arc | SPOT_FX | MXNB (live = tMXNB) | `0x4e26b194dd0f03e769ec58a34bcd4bbbe88f27d2aa1c502eb50dc20d4569512c` |
 | Fuji → Arc | SPOT_FX | CHFC (live = tCHFC) | `0x84d69f49ece767181be6ee9d8706e5007bc8dda02fed481bb21446760d3c3e4f` |
 
-All 4 SPOT_FX TGH routes have `destinationHub = FxSpotExecutor v0.1`.
+All 4 SPOT_FX TGH routes have `destinationHub = FxSpotExecutor v0.2`
+(`0x4e7372108529C0e7cb3aa0fF92B1c52e06e9e72f`). Repointed on Arc at
+block `44186984`.
 
 ### Circle Gateway (deterministic, same on every testnet)
 

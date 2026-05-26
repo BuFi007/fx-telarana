@@ -22,12 +22,11 @@ contract ConfigureOfficialJpycPerpMarket is Script {
 
     address internal constant DEFAULT_JPYC = 0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29;
     address internal constant DEFAULT_FX_ORACLE = 0xF181caF51bD2450211CB9e72d5Cc853d3789698B;
-    address internal constant DEFAULT_CLEARINGHOUSE = 0xCE3401BD53be4c0a8c7CCb0376b313925f99b8d2;
-    address internal constant DEFAULT_FUNDING = 0x8b3b63D2031da48e3114871a49CD02B923E388e1;
+    address internal constant DEFAULT_CLEARINGHOUSE = 0x7707d108F6Ce3d95ceA38D3965448F00C21CaFdC;
+    address internal constant DEFAULT_FUNDING = 0xE08a146B9081A8dd32203fC5e7B5988352489518;
 
     bytes32 internal constant JPYC_MARKET_ID = keccak256("FX-PERP:JPYC/USDC");
-    bytes32 internal constant PYTH_JPY_USD =
-        0xef2c98c804ba503c6a707e38be4dfbb16683775f195b091252bf24693042fd52;
+    bytes32 internal constant PYTH_JPY_USD = 0xef2c98c804ba503c6a707e38be4dfbb16683775f195b091252bf24693042fd52;
     bytes32 internal constant REDSTONE_JPY = "JPY";
 
     uint16 internal constant INITIAL_MARGIN_BPS = 500;

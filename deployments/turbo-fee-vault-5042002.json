@@ -1,6 +1,6 @@
 {
-  "FxPerpClearinghouse": "0x0000000000000000000000000000000000000000",
-  "FxSpotExecutor": "0x0000000000000000000000000000000000000000",
+  "FxPerpClearinghouse": "0x7707d108F6Ce3d95ceA38D3965448F00C21CaFdC",
+  "FxSpotExecutor": "0x4e7372108529C0e7cb3aa0fF92B1c52e06e9e72f",
   "TurboFeeVault": "0x929e222CBbC154f8e75a8DEF951288886Df70531",
   "USDC": "0x3600000000000000000000000000000000000000",
   "chainId": 5042002,
@@ -8,5 +8,17 @@
   "deployedBlockTimestamp": 1779828004,
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
   "insuranceAdmin": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
-  "protocolTreasury": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69"
+  "protocolTreasury": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "wiredBlockNumber": 44185670,
+  "wiredBlockTimestamp": 1779835876,
+  "spotRoutesDestinationHub": "0x4e7372108529C0e7cb3aa0fF92B1c52e06e9e72f",
+  "spotRoutesRepointedBlockNumber": 44186984,
+  "spotRoutesRepointedBlockTimestamp": 1779836575,
+  "chfcTokenEnabledTxHash": "0x4138911fda12fd9684a96cc59489d6aa8fc08862f1b90c4b4a3200eb312ee582",
+  "spotRouteRepointTxHashes": {
+    "fujiToArcSpotFxEurc": "0xd4306b67dd441af772281a2aca053328739d880c0d3ec330d7184fe9999ed270",
+    "fujiToArcSpotFxJpyc": "0x7a3655bace49f069b3b5c21d9e2046f59dcc1e38abe0ce5c75639a079f286b19",
+    "fujiToArcSpotFxMxnb": "0xb0e88427ab6f3f8b8be39b2d9a34a153fa7027139e1b01a6d5c546c1c4ef53c5",
+    "fujiToArcSpotFxChfc": "0xc6b1eb488d5092f7f94d8ee30037b2fd12d91d55b0dd01aecfb57da66fcbc260"
+  }
 }

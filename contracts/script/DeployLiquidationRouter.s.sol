@@ -9,7 +9,7 @@ import {LiquidationRouter} from "../src/perp/LiquidationRouter.sol";
 contract DeployLiquidationRouter is Script {
     uint256 internal constant ARC_CHAIN_ID = 5_042_002;
 
-    address internal constant DEFAULT_ARC_LIQUIDATION_ENGINE = 0xA70aA9B3bCD3BB829B2E8aF29d8A48f5e09f50E5;
+    address internal constant DEFAULT_ARC_LIQUIDATION_ENGINE = 0x18DEA7845c36d45AaDbcCeC04aC6cFc103748D80;
     address internal constant DEFAULT_ARC_USDC = 0x3600000000000000000000000000000000000000;
 
     error WrongChain(uint256 chainId);
@@ -43,13 +43,9 @@ contract DeployLiquidationRouter is Script {
         console2.log("manifest", path);
     }
 
-    function _writeManifest(
-        string memory path,
-        address deployer,
-        address router,
-        address engine,
-        address rewardToken
-    ) internal {
+    function _writeManifest(string memory path, address deployer, address router, address engine, address rewardToken)
+        internal
+    {
         string memory root = "liquidationRouter";
         vm.serializeUint(root, "chainId", block.chainid);
         vm.serializeUint(root, "deployedBlockNumber", block.number);

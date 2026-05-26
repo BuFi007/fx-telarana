@@ -1,7 +1,7 @@
 {
-  "FxFundingEngine": "0x8b3b63D2031da48e3114871a49CD02B923E388e1",
+  "FxFundingEngine": "0xE08a146B9081A8dd32203fC5e7B5988352489518",
   "FxOracle": "0xF181caF51bD2450211CB9e72d5Cc853d3789698B",
-  "FxPerpClearinghouse": "0xCE3401BD53be4c0a8c7CCb0376b313925f99b8d2",
+  "FxPerpClearinghouse": "0x7707d108F6Ce3d95ceA38D3965448F00C21CaFdC",
   "JPYC": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
   "JPYC_USDC_initialMarginBps": 500,
   "JPYC_USDC_maintenanceMarginBps": 300,
@@ -14,10 +14,10 @@
   "JPYC_USDC_redstoneFeedId": "JPY",
   "JPYC_USDC_setRedstoneFeedTx": "0xa436f7eccf560c8fee25809a0c0b6740776324129285c149d01dc044925efa43",
   "JPYC_USDC_tradingFeeBps": 5,
-  "JPYC_USDC_configureMarketTx": "0x1feb25e3b22307abd3879ee1d0ca5f25d7c5213f7664e29ae6121978285ccf7b",
-  "JPYC_USDC_configureFundingTx": "0x6c91229d006aaf100dc998d28d27c80e3e29eb814c0d48442f012514a8acb066",
+  "JPYC_USDC_configureMarketTx": "0x0d4bb7d0e7840442176400c19e915770f468454cdf1f811e69664ee6d17df14f",
+  "JPYC_USDC_configureFundingTx": "0x57ab4aad40e5c31bf5934f091b20fe526a8655a396fcf590a325111cf1e9b0f4",
   "chainId": 5042002,
-  "configuredBlockNumber": 44169192,
-  "configuredBlockTimestamp": 1779827160,
+  "configuredBlockNumber": 44185428,
+  "configuredBlockTimestamp": 1779835746,
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69"
 }
