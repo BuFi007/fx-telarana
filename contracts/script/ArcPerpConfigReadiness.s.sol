@@ -21,8 +21,10 @@ abstract contract ArcPerpConfigReadinessBase is Script {
     address internal constant DEFAULT_USDC = 0x3600000000000000000000000000000000000000;
 
     address internal constant EURC = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
-    address internal constant TJPYC = 0xB176f6E0c8ecc2be208F72Ad34c54e5F10F1882a;
-    address internal constant TMXNB = 0xe8F76f90553F50E76731afbeF1ac83a9152fFBEb;
+    address internal constant JPYC = 0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29;
+    // Market id remains FX-PERP:tMXNB/USDC for SDK compatibility, but the
+    // base token is the issuer-backed Arc MXNB deployment.
+    address internal constant TMXNB = 0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461;
     // tCHFC removed from the listed surface — see ConfigureArcPerpMarkets
     // for the on-chain artifact note.
     address internal constant CIRBTC = 0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF;
@@ -31,9 +33,9 @@ abstract contract ArcPerpConfigReadinessBase is Script {
     uint16 internal constant MAINTENANCE_MARGIN_BPS = 300;
     uint16 internal constant TRADING_FEE_BPS = 5;
     uint32 internal constant MAX_LEVERAGE_BPS = 200_000;
-    uint256 internal constant EURC_OI_CAP = 1_000e6;
-    uint256 internal constant TEST_FIAT_OI_CAP = 500e6;
-    uint256 internal constant TEST_CRYPTO_OI_CAP = 250e6;
+    uint256 internal constant EURC_OI_CAP = 500_000_000 * 1_000_000_000_000;
+    uint256 internal constant TEST_FIAT_OI_CAP = 500_000_000 * 1_000_000_000_000;
+    uint256 internal constant TEST_CRYPTO_OI_CAP = 250_000_000 * 1_000_000_000_000;
     uint256 internal constant DEFAULT_MIN_PROTOCOL_LIQUIDITY = 100e6;
 
     uint256 internal constant MAX_FUNDING_RATE_BPS_PER_SECOND = 1;
@@ -166,7 +168,7 @@ abstract contract ArcPerpConfigReadinessBase is Script {
         );
 
         _verifyMarket(stack, _marketSpec("EURC_USDC", "EURC", EURC, EURC_OI_CAP));
-        _verifyMarket(stack, _marketSpec("TJPYC_USDC", "tJPYC", TJPYC, TEST_FIAT_OI_CAP));
+        _verifyMarket(stack, _marketSpec("JPYC_USDC", "JPYC", JPYC, TEST_FIAT_OI_CAP));
         _verifyMarket(stack, _marketSpec("TMXNB_USDC", "tMXNB", TMXNB, TEST_FIAT_OI_CAP));
         _verifyMarket(stack, _marketSpec("CIRBTC_USDC", "cirBTC", CIRBTC, TEST_CRYPTO_OI_CAP));
 
@@ -225,7 +227,7 @@ abstract contract ArcPerpConfigReadinessBase is Script {
         vm.serializeUint(root, "minProtocolLiquidity", stack.minProtocolLiquidity);
 
         _serializeMarket(root, stack, _marketSpec("EURC_USDC", "EURC", EURC, EURC_OI_CAP));
-        _serializeMarket(root, stack, _marketSpec("TJPYC_USDC", "tJPYC", TJPYC, TEST_FIAT_OI_CAP));
+        _serializeMarket(root, stack, _marketSpec("JPYC_USDC", "JPYC", JPYC, TEST_FIAT_OI_CAP));
         _serializeMarket(root, stack, _marketSpec("TMXNB_USDC", "tMXNB", TMXNB, TEST_FIAT_OI_CAP));
         _serializeMarket(root, stack, _marketSpec("CIRBTC_USDC", "cirBTC", CIRBTC, TEST_CRYPTO_OI_CAP));
 

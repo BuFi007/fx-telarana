@@ -33,7 +33,7 @@ contract DeployFxOracleV2 is Script {
     // All tokens that have Pyth feeds on the Sprint-1 oracle
     address internal constant USDC = 0x3600000000000000000000000000000000000000;
     address internal constant EURC = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
-    address internal constant JPYC = 0xB176f6E0c8ecc2be208F72Ad34c54e5F10F1882a;
+    address internal constant JPYC = 0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29;
     address internal constant MXNB = 0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461;
     address internal constant CIRBTC = 0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF;
     address internal constant AUDF = 0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b;

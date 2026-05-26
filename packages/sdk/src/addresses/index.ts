@@ -331,16 +331,15 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     fxReceiptUSDC: "0xdd22365Bba7330BE537c9BC26da9b1b4Db9aC431",
     fxHubMessageReceiver: "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
     fxGatewayHook: "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1",
-    // Arc sprint-1 perp stack 2026-05-21 redeploy. Old contracts
-    // (clearinghouse 0x6A265045…, LE 0xD384560E…) paused + role-revoked
-    // via RetireOldPerpStack and superseded by these.
+    // Arc hookathon yield-engine perp stack. Old sprint-1 contracts
+    // (clearinghouse 0x39dc43E2…) are superseded by these.
     fxPerps: {
-      clearinghouse: "0x39dc43E2133CF860c1d17d4DB75Ef4204eebD46A",
-      marginAccount: "0x4EB6018F988301417B93cb2b8899D74D42273e96",
-      fundingEngine: "0x859bA11A3693895f8B03C31C6AE3b8F04992115B",
-      healthChecker: "0xA00Be167609c02F3879138dA8530BC31527c02b8",
-      liquidationEngine: "0xF579e265EF1D5E67EfDbb1F20863465E94a9d3eA",
-      orderSettlement: "0x93C3d831D6F0657479d7Fb6Cf0D06e75aA05E4CC",
+      clearinghouse: "0xCE3401BD53be4c0a8c7CCb0376b313925f99b8d2",
+      marginAccount: "0x766b96971F484E7287E41130E9a5b248CDE44ca9",
+      fundingEngine: "0x8b3b63D2031da48e3114871a49CD02B923E388e1",
+      healthChecker: "0x12d18BC4b2295834Bb7A08aF5Bc2b40E40c7F53B",
+      liquidationEngine: "0xA70aA9B3bCD3BB829B2E8aF29d8A48f5e09f50E5",
+      orderSettlement: "0x904bb24A910c54A84341E157B894d11B474A2e1F",
       keeperAdmin: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
     },
     // Arc Morpho stack 2026-05-21: switched from the self-deployed
@@ -412,11 +411,13 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
       },
       jpyc: {
         symbol: "JPYC",
+        address: "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
         decimals: 18,
         pythFeedId: PYTH_FEED_USD_JPY,
-        pythFeedInverted: true,
+        pythFeedInverted: false,
         redstoneFeedId: "JPY",
-        source: "mock",
+        source: "issuer",
+        notes: "Official Arc testnet JPYC used by the hookathon yield engine.",
       },
       krw1: {
         symbol: "KRW1",

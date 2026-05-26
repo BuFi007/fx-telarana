@@ -41,7 +41,7 @@ contract DeployArcCirBtcMarkets is Script {
     address internal constant DEFAULT_REGISTRY = 0x813232259c9b922e7571F15220617C80581f1464;
     address internal constant DEFAULT_PYTH = 0x2880aB155794e7179c9eE2e38200202908C17B43;
     address internal constant DEFAULT_USDC = 0x3600000000000000000000000000000000000000;
-    address internal constant DEFAULT_CIRBTC = 0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761;
+    address internal constant DEFAULT_CIRBTC = 0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF;
 
     address internal constant LIVE_STAGE6_MORPHO = 0x3c9b95C6E7B23f094f066733E7797C8680760830;
     address internal constant LIVE_STAGE6_IRM = 0x8CC1B64D712eE2ff2891D56a5108eC4FDa73b9c1;

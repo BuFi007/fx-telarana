@@ -8,7 +8,7 @@ import { ChainId, type ChainIdValue, type FxPerpsAddresses } from "./addresses/i
 // unlisted from configure / readiness / SDK manifests.
 export const ARC_FX_PERP_MARKET_KEYS = [
   "EURC_USDC",
-  "TJPYC_USDC",
+  "JPYC_USDC",
   "TMXNB_USDC",
   "CIRBTC_USDC",
 ] as const;
@@ -22,7 +22,7 @@ export const FX_PERP_MARKET_KEYS = ARC_FX_PERP_MARKET_KEYS;
 
 export const ALL_FX_PERP_MARKET_KEYS = [
   "EURC_USDC",
-  "TJPYC_USDC",
+  "JPYC_USDC",
   "TMXNB_USDC",
   "CIRBTC_USDC",
   "MXNB_USDC",

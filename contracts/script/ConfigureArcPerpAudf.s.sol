@@ -16,7 +16,7 @@ interface ILegacyPerpOracleFeedAdmin {
 }
 
 /// @notice Adds AUDF/USDC as a new Arc Testnet perp market without
-///         touching the other already-configured markets (EURC, tJPYC,
+///         touching the other already-configured markets (EURC, JPYC,
 ///         tMXNB, cirBTC). Idempotent — configureMarket + configureFunding
 ///         overwrite the existing config for the AUDF marketId if it's
 ///         already been set.

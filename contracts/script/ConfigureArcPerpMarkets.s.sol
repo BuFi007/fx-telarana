@@ -30,27 +30,31 @@ contract ConfigureArcPerpMarkets is Script {
     uint256 internal constant ARC_CHAIN_ID = 5_042_002;
 
     address internal constant DEFAULT_USDC = 0x3600000000000000000000000000000000000000;
-    address internal constant DEFAULT_ARC_PERP_ORACLE = 0x77b3A3B420dB98B01085b8C46a753Ed9879e2865;
+    address internal constant DEFAULT_ARC_PERP_ORACLE = 0xF181caF51bD2450211CB9e72d5Cc853d3789698B;
     address internal constant EURC = 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a;
-    address internal constant TJPYC = 0xB176f6E0c8ecc2be208F72Ad34c54e5F10F1882a;
-    address internal constant TMXNB = 0xe8F76f90553F50E76731afbeF1ac83a9152fFBEb;
+    address internal constant JPYC = 0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29;
+    // Market id remains FX-PERP:tMXNB/USDC for SDK compatibility, but the
+    // base token is the issuer-backed Arc MXNB deployment.
+    address internal constant TMXNB = 0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461;
     // tCHFC market intentionally removed — the on-chain entry at
     // marketId(tCHFC) was configured by an earlier broadcast but is no
     // longer listed by configure / readiness / SDK manifests. The
     // clearinghouse has no on-chain disable path (configureMarket rejects
     // `enabled: false`), so the artifact stays but is unsurfaced.
-    address internal constant CIRBTC = 0x44cEe9E472C34b2f0d9710CD8aBd02dadb912761;
+    address internal constant CIRBTC = 0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF;
 
     bytes32 internal constant PYTH_BTC_USD = 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43;
+    bytes32 internal constant PYTH_JPY_USD = 0xef2c98c804ba503c6a707e38be4dfbb16683775f195b091252bf24693042fd52;
     bytes32 internal constant REDSTONE_BTC = "BTC";
+    bytes32 internal constant REDSTONE_JPY = "JPY";
 
     uint16 internal constant INITIAL_MARGIN_BPS = 500;
     uint16 internal constant MAINTENANCE_MARGIN_BPS = 300;
     uint16 internal constant TRADING_FEE_BPS = 5;
     uint32 internal constant MAX_LEVERAGE_BPS = 200_000;
-    uint256 internal constant EURC_OI_CAP = 1_000e6;
-    uint256 internal constant TEST_FIAT_OI_CAP = 500e6;
-    uint256 internal constant TEST_CRYPTO_OI_CAP = 250e6;
+    uint256 internal constant EURC_OI_CAP = 500_000_000 * 1_000_000_000_000;
+    uint256 internal constant TEST_FIAT_OI_CAP = 500_000_000 * 1_000_000_000_000;
+    uint256 internal constant TEST_CRYPTO_OI_CAP = 250_000_000 * 1_000_000_000_000;
     uint256 internal constant DEFAULT_PROTOCOL_LIQUIDITY_TARGET = 100e6;
 
     uint256 internal constant MAX_FUNDING_RATE_BPS_PER_SECOND = 1;
@@ -73,6 +77,7 @@ contract ConfigureArcPerpMarkets is Script {
         address usdc = vm.envOr("ARC_USDC", DEFAULT_USDC);
         address oracle = vm.envOr("ARC_FX_ORACLE", DEFAULT_ARC_PERP_ORACLE);
         address cirbtc = vm.envOr("ARC_CIRBTC", CIRBTC);
+        address jpyc = vm.envOr("ARC_JPYC", JPYC);
         FxPerpClearinghouse clearinghouse = FxPerpClearinghouse(vm.envAddress("ARC_PERP_CLEARINGHOUSE"));
         FxMarginAccount margin = FxMarginAccount(vm.envAddress("ARC_PERP_MARGIN"));
         FxFundingEngine funding = FxFundingEngine(vm.envAddress("ARC_PERP_FUNDING"));
@@ -92,6 +97,7 @@ contract ConfigureArcPerpMarkets is Script {
         console2.log("liquidation                ", address(liquidation));
         console2.log("oracle                     ", oracle);
         console2.log("cirBTC                     ", cirbtc);
+        console2.log("JPYC                       ", jpyc);
         console2.log("oracle supports setPythFeedConfig", oracleSupportsPythFeedConfig);
         console2.log("protocol liquidity target  ", protocolLiquidityTarget);
 
@@ -104,8 +110,9 @@ contract ConfigureArcPerpMarkets is Script {
         }
 
         _configureCirBtcOracle(oracle, cirbtc, oracleSupportsPythFeedConfig);
+        _configureJpycOracle(oracle, jpyc, oracleSupportsPythFeedConfig);
         _configureMarket(clearinghouse, funding, "EURC", EURC, EURC_OI_CAP);
-        _configureMarket(clearinghouse, funding, "tJPYC", TJPYC, TEST_FIAT_OI_CAP);
+        _configureMarket(clearinghouse, funding, "JPYC", jpyc, TEST_FIAT_OI_CAP);
         _configureMarket(clearinghouse, funding, "tMXNB", TMXNB, TEST_FIAT_OI_CAP);
         _configureMarket(clearinghouse, funding, "cirBTC", cirbtc, TEST_CRYPTO_OI_CAP);
 
@@ -127,7 +134,7 @@ contract ConfigureArcPerpMarkets is Script {
         console2.log("============================================");
         console2.log("Configured markets:");
         _logMarket("EURC");
-        _logMarket("tJPYC");
+        _logMarket("JPYC");
         _logMarket("tMXNB");
         _logMarket("cirBTC");
         console2.log("liquidation bounty bps     ", LIQUIDATION_BOUNTY_BPS);
@@ -187,6 +194,20 @@ contract ConfigureArcPerpMarkets is Script {
         (bool redstoneOk,) =
             oracle.call(abi.encodeWithSelector(IPerpOracleFeedAdmin.setRedstoneFeed.selector, cirbtc, REDSTONE_BTC));
         if (!redstoneOk) revert OracleRedstoneFeedConfigFailed(oracle, cirbtc);
+    }
+
+    function _configureJpycOracle(address oracle, address jpyc, bool supportsPythFeedConfig) internal {
+        if (supportsPythFeedConfig) {
+            IPerpOracleFeedAdmin(oracle).setPythFeedConfig(jpyc, PYTH_JPY_USD, false);
+        } else {
+            (bool pythOk,) =
+                oracle.call(abi.encodeWithSelector(ILegacyPerpOracleFeedAdmin.setFeed.selector, jpyc, PYTH_JPY_USD));
+            if (!pythOk) revert OraclePythFeedConfigFailed(oracle, jpyc);
+        }
+
+        (bool redstoneOk,) =
+            oracle.call(abi.encodeWithSelector(IPerpOracleFeedAdmin.setRedstoneFeed.selector, jpyc, REDSTONE_JPY));
+        if (!redstoneOk) revert OracleRedstoneFeedConfigFailed(oracle, jpyc);
     }
 
     function _oracleSupportsPythFeedConfig(address oracle, address token) internal view returns (bool) {

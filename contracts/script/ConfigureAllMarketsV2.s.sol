@@ -21,12 +21,10 @@ contract ConfigureAllMarketsV2 is Script {
     uint16 internal constant TRADING_FEE = 5;
     uint32 internal constant MAX_LEV = 200_000;
 
-    // Sprint-1 canonical market IDs. The hash includes the FX-PERP: prefix
-    // and /USDC suffix. tJPYC/tMXNB use "t" prefix from Sprint-1 testnet
-    // naming — these IDs are immutable on-chain identifiers regardless of
-    // the display symbol (JPYC, MXNB).
+    // Canonical market IDs. The hash includes the FX-PERP: prefix and /USDC suffix.
+    // JPYC moved from Sprint-1 tJPYC to the official JPYC token for the yield engine.
     bytes32 internal constant EURC_ID   = keccak256("FX-PERP:EURC/USDC");    // 0x565a...
-    bytes32 internal constant JPYC_ID   = keccak256("FX-PERP:tJPYC/USDC");   // 0x9cca...
+    bytes32 internal constant JPYC_ID   = keccak256("FX-PERP:JPYC/USDC");    // 0x848d...
     bytes32 internal constant MXNB_ID   = keccak256("FX-PERP:tMXNB/USDC");   // 0xb698...
     bytes32 internal constant CIRBTC_ID = keccak256("FX-PERP:cirBTC/USDC");  // 0x238a...
     bytes32 internal constant AUDF_ID   = keccak256("AUDF");                  // 0x921b...
@@ -55,11 +53,11 @@ contract ConfigureAllMarketsV2 is Script {
         fund.configureFunding(EURC_ID, fc);
         console2.log("EURC/USDC   ", uint256(EURC_ID));
 
-        // tJPYC/USDC (display: JPYC)
-        fiatCfg.baseToken = 0xB176f6E0c8ecc2be208F72Ad34c54e5F10F1882a;
+        // JPYC/USDC (official JPYC)
+        fiatCfg.baseToken = 0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29;
         ch.configureMarket(JPYC_ID, fiatCfg);
         fund.configureFunding(JPYC_ID, fc);
-        console2.log("tJPYC/USDC  ", uint256(JPYC_ID));
+        console2.log("JPYC/USDC   ", uint256(JPYC_ID));
 
         // tMXNB/USDC (display: MXNB)
         fiatCfg.baseToken = 0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461;

@@ -115,15 +115,14 @@ describe("address registry", () => {
       interchainGasPaymaster: "0x0000000000000000000000000000000000000000",
       interchainAccountRouter: "0x113A539625D208b5EcC59f300Be14b9b3508E559",
     });
-    // Arc sprint-1 perp stack redeploy 2026-05-21. Old contracts paused
-    // + role-revoked via RetireOldPerpStack.
+    // Arc hookathon yield-engine perp stack.
     expect(a.fxPerps).toMatchObject({
-      clearinghouse: "0x39dc43E2133CF860c1d17d4DB75Ef4204eebD46A",
-      marginAccount: "0x4EB6018F988301417B93cb2b8899D74D42273e96",
-      fundingEngine: "0x859bA11A3693895f8B03C31C6AE3b8F04992115B",
-      healthChecker: "0xA00Be167609c02F3879138dA8530BC31527c02b8",
-      liquidationEngine: "0xF579e265EF1D5E67EfDbb1F20863465E94a9d3eA",
-      orderSettlement: "0x93C3d831D6F0657479d7Fb6Cf0D06e75aA05E4CC",
+      clearinghouse: "0xCE3401BD53be4c0a8c7CCb0376b313925f99b8d2",
+      marginAccount: "0x766b96971F484E7287E41130E9a5b248CDE44ca9",
+      fundingEngine: "0x8b3b63D2031da48e3114871a49CD02B923E388e1",
+      healthChecker: "0x12d18BC4b2295834Bb7A08aF5Bc2b40E40c7F53B",
+      liquidationEngine: "0xA70aA9B3bCD3BB829B2E8aF29d8A48f5e09f50E5",
+      orderSettlement: "0x904bb24A910c54A84341E157B894d11B474A2e1F",
       keeperAdmin: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
     });
   });
@@ -224,7 +223,7 @@ describe("address registry", () => {
     expect(marketKeysFromString(undefined, ["EURC_USDC"])).toEqual(["EURC_USDC"]);
     expect(marketKeysFromString("all", ["EURC_USDC"])).toEqual([
       "EURC_USDC",
-      "TJPYC_USDC",
+      "JPYC_USDC",
       "TMXNB_USDC",
       "CIRBTC_USDC",
     ]);
@@ -281,7 +280,7 @@ describe("address registry", () => {
     });
   });
 
-  test("Arc testnet basket metadata follows Phase 3 mock scope", () => {
+  test("Arc testnet basket metadata follows live issuer migrations", () => {
     const a = getAddresses(ChainId.ArcTestnet);
     expect(a.stablecoinBasket?.audf).toMatchObject({
       symbol: "AUDF",
@@ -292,10 +291,11 @@ describe("address registry", () => {
     });
     expect(a.stablecoinBasket?.jpyc).toMatchObject({
       symbol: "JPYC",
+      address: "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
       decimals: 18,
-      pythFeedInverted: true,
+      pythFeedInverted: false,
       redstoneFeedId: "JPY",
-      source: "mock",
+      source: "issuer",
     });
     // MXNB on Arc testnet upgraded to issuer-backed 2026-05-21.
     expect(a.stablecoinBasket?.mxnb).toMatchObject({
