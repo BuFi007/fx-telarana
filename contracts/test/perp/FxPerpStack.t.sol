@@ -3,8 +3,10 @@ pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
+import {TurboFeeVault} from "../../src/hub/TurboFeeVault.sol";
 import {FxFundingEngine} from "../../src/perp/FxFundingEngine.sol";
 import {FxHealthChecker} from "../../src/perp/FxHealthChecker.sol";
 import {FxLiquidationEngine} from "../../src/perp/FxLiquidationEngine.sol";
@@ -135,6 +137,25 @@ contract FxPerpStackTest is Test {
         assertEq(margin.marginOf(TRADER), 99_994_500, "fee charged");
         assertEq(margin.protocolLiquidity(), 1_000e6 + 5_500, "fee to protocol bucket");
         assertEq(clearinghouse.openInterestLong(MARKET_ID), 11e6, "long OI");
+    }
+
+    function test_openIncreaseRoutesFeeToTurboFeeVaultWhenConfigured() public {
+        TurboFeeVault vault = new TurboFeeVault(IERC20(address(usdc)), ADMIN);
+        vault.grantRole(vault.FEE_DEPOSITOR_ROLE(), address(clearinghouse));
+        vm.prank(ADMIN);
+        clearinghouse.setFeeVault(address(vault));
+
+        _deposit(TRADER, 100e6);
+
+        vm.prank(KEEPER);
+        clearinghouse.openOrIncrease(MARKET_ID, TRADER, 10e18, 6_000);
+
+        assertEq(margin.marginOf(TRADER), 99_994_500, "fee charged");
+        assertEq(margin.protocolLiquidity(), 1_000e6, "fee bypasses protocol bucket");
+        assertEq(vault.totalFeesCollected(), 5_500, "vault fee total");
+        assertEq(usdc.balanceOf(ADMIN), 2_750, "protocol split");
+        assertEq(vault.insuranceBalance(), 2_750, "insurance plus no-LP yield");
+        assertEq(usdc.balanceOf(address(vault)), 2_750, "vault retained balance");
     }
 
     function test_increaseLongWeightedEntry() public {

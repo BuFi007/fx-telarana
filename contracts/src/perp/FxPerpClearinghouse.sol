@@ -6,10 +6,13 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {ProxyConnector} from "@redstone-finance/evm-connector/core/ProxyConnector.sol";
 
 import {IFxOracle} from "../interfaces/IFxOracle.sol";
+import {ITurboFeeVault} from "../interfaces/ITurboFeeVault.sol";
 import {IFxFundingEngine} from "./interfaces/IFxFundingEngine.sol";
 import {IFxMarginAccount} from "./interfaces/IFxMarginAccount.sol";
 import {IFxPerpClearinghouse} from "./interfaces/IFxPerpClearinghouse.sol";
@@ -27,6 +30,7 @@ import {FxPerpMath} from "./FxPerpMath.sol";
 contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, ReentrancyGuard, ProxyConnector {
     using Math for uint256;
     using SafeCast for uint256;
+    using SafeERC20 for IERC20;
 
     bytes32 public constant OPERATIONS_ROLE = keccak256("OPERATIONS_ROLE");
     bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
@@ -38,6 +42,7 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
     IFxMarginAccount private immutable MARGIN_ACCOUNT;
     uint8 public immutable MARGIN_DECIMALS;
     address public fundingEngine;
+    ITurboFeeVault public feeVault;
 
     mapping(bytes32 marketId => MarketConfig config) private _marketConfig;
     mapping(bytes32 marketId => bool configured) private _marketConfigured;
@@ -68,6 +73,8 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         uint256 badDebt
     );
     event BadDebtSocialized(bytes32 indexed marketId, address indexed trader, uint256 amount);
+    event FeeVaultSet(address indexed feeVault);
+    event TradingFeeRouted(bytes32 indexed marketId, address indexed trader, address indexed feeVault, uint256 amount);
 
     error ZeroAddress();
     error ZeroAmount();
@@ -81,6 +88,7 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
     error Int256Overflow();
     error FundingEngineNotSet();
     error InvalidFundingEngine(address fundingEngine);
+    error InvalidFeeVault(address feeVault);
 
     constructor(address usdc_, address oracle_, address marginAccount_, address initialAdmin) {
         if (usdc_ == address(0) || oracle_ == address(0) || marginAccount_ == address(0) || initialAdmin == address(0))
@@ -117,6 +125,12 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         }
         fundingEngine = fundingEngine_;
         emit FundingEngineSet(fundingEngine_);
+    }
+
+    function setFeeVault(address feeVault_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (feeVault_ != address(0) && feeVault_.code.length == 0) revert InvalidFeeVault(feeVault_);
+        feeVault = ITurboFeeVault(feeVault_);
+        emit FeeVaultSet(feeVault_);
     }
 
     function openOrIncrease(bytes32 marketId, address trader, int256 sizeDeltaE18, uint256 maxFee)
@@ -283,7 +297,7 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         _assertOiCaps(marketId, config, sizeDeltaE18, notional, true);
 
         if (feeAmount != 0) {
-            _realizeFee(trader, feeAmount);
+            _realizeFee(marketId, trader, feeAmount);
         }
         MARGIN_ACCOUNT.reserveMargin(trader, required);
 
@@ -366,9 +380,19 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         );
     }
 
-    function _realizeFee(address trader, uint256 feeAmount) internal {
+    function _realizeFee(bytes32 marketId, address trader, uint256 feeAmount) internal {
         if (feeAmount > uint256(type(int256).max)) revert Int256Overflow();
-        MARGIN_ACCOUNT.realizePnl(trader, -feeAmount.toInt256());
+        address vault = address(feeVault);
+        if (vault == address(0)) {
+            MARGIN_ACCOUNT.realizePnl(trader, -feeAmount.toInt256());
+            return;
+        }
+
+        uint256 paid = MARGIN_ACCOUNT.realizeFee(trader, address(this), feeAmount);
+        IERC20(USDC).forceApprove(vault, paid);
+        ITurboFeeVault(vault).depositFee(USDC, paid, marketId);
+        IERC20(USDC).forceApprove(vault, 0);
+        emit TradingFeeRouted(marketId, trader, vault, paid);
     }
 
     function _settleFunding(bytes32 marketId, address trader) internal returns (int256 fundingPaid) {

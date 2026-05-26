@@ -42,6 +42,7 @@ contract FxMarginAccount is IFxMarginAccount, AccessControl, Pausable, Reentranc
     event MarginReserved(address indexed trader, uint256 amount);
     event MarginReleased(address indexed trader, uint256 amount);
     event PnlRealized(address indexed trader, int256 pnl, uint256 badDebt);
+    event FeeRealized(address indexed trader, address indexed recipient, uint256 amount);
     event ProtocolLiquidityDeposited(address indexed payer, uint256 amount);
     event ProtocolLiquidityWithdrawn(address indexed to, uint256 amount);
     event LiquidatorRewardPaid(address indexed trader, address indexed liquidator, uint256 amount);
@@ -174,6 +175,29 @@ contract FxMarginAccount is IFxMarginAccount, AccessControl, Pausable, Reentranc
             badDebt = loss - paid;
         }
         emit PnlRealized(trader, pnl, badDebt);
+    }
+
+    /// @notice Debit trader free margin and pay an explicit fee recipient.
+    /// @dev Used by the clearinghouse to route trading fees to TurboFeeVault
+    ///      instead of increasing `protocolLiquidity`.
+    function realizeFee(address trader, address recipient, uint256 amount)
+        external
+        whenNotPaused
+        nonReentrant
+        onlyRole(CLEARINGHOUSE_ROLE)
+        returns (uint256 paid)
+    {
+        if (trader == address(0) || recipient == address(0)) revert ZeroAddress();
+        if (amount == 0) revert ZeroAmount();
+        uint256 free = freeMarginOf(trader);
+        if (amount > free) revert InsufficientFreeMargin(trader, amount, free);
+
+        _margin[trader] -= amount;
+        totalAccountMargin -= amount;
+        paid = amount;
+
+        USDC.safeTransfer(recipient, amount);
+        emit FeeRealized(trader, recipient, amount);
     }
 
     function payLiquidatorReward(address trader, address liquidator, uint256 amount)

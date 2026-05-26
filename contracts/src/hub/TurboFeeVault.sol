@@ -24,8 +24,8 @@ contract TurboFeeVault is ITurboFeeVault, AccessControl, ReentrancyGuard {
     IERC20 public immutable USDC;
 
     // --- Fee split (basis points, immutable) ---
-    uint256 public constant PROTOCOL_BPS = 5_000;  // 50%
-    uint256 public constant LP_BPS       = 4_000;  // 40%
+    uint256 public constant PROTOCOL_BPS = 5_000; // 50%
+    uint256 public constant LP_BPS = 4_000; // 40%
     uint256 public constant INSURANCE_BPS = 1_000; // 10%
     uint256 private constant BPS = 10_000;
 
@@ -50,6 +50,7 @@ contract TurboFeeVault is ITurboFeeVault, AccessControl, ReentrancyGuard {
     error ZeroAddress();
     error InsufficientShares(uint256 requested, uint256 available);
     error InsufficientInsurance(uint256 requested, uint256 available);
+    error UnsupportedFeeToken(address token);
 
     constructor(IERC20 _usdc, address _treasury) {
         if (address(_usdc) == address(0) || _treasury == address(0)) revert ZeroAddress();
@@ -66,10 +67,11 @@ contract TurboFeeVault is ITurboFeeVault, AccessControl, ReentrancyGuard {
         nonReentrant
     {
         if (amount == 0) revert ZeroAmount();
+        if (token != address(USDC)) revert UnsupportedFeeToken(token);
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
         uint256 protocolShare = (amount * PROTOCOL_BPS) / BPS;
-        uint256 lpShare       = (amount * LP_BPS) / BPS;
+        uint256 lpShare = (amount * LP_BPS) / BPS;
         uint256 insuranceShare = amount - protocolShare - lpShare;
 
         IERC20(token).safeTransfer(protocolTreasury, protocolShare);

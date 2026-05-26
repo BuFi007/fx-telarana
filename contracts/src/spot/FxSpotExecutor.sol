@@ -11,6 +11,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IFxOracle} from "../interfaces/IFxOracle.sol";
 import {ITelaranaGatewayHubHook} from "../interfaces/ITelaranaGatewayHubHook.sol";
+import {ITurboFeeVault} from "../interfaces/ITurboFeeVault.sol";
 
 /// @title FxSpotExecutor
 /// @notice Phase A v0.2 spot-FX executor for fx-Telaraña. Plugs into
@@ -117,6 +118,7 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
     uint8 public immutable USDC_DECIMALS;
     IFxOracle public immutable ORACLE;
     ITelaranaGatewayHubHook public immutable TELARANA_HUB_HOOK;
+    ITurboFeeVault public feeVault;
 
     /// @notice Per-request executed flag. Belt-and-braces over TGH's own
     /// `markGatewayAtomicFxSwapSettled` state machine.
@@ -153,6 +155,8 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
     event TokenAllowlistSet(address indexed token, bool enabled);
     event TokenDecimalsStored(address indexed token, uint8 decimals);
     event RequireVerifiedOracleSet(bool required);
+    event FeeVaultSet(address indexed feeVault);
+    event SpotFeeRouted(bytes32 indexed requestId, bytes32 indexed routeId, address indexed feeVault, uint256 amount);
 
     error ZeroAddress();
     error ZeroAmount();
@@ -166,6 +170,7 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
     error ReceiptNotMinted(bytes32 requestId, uint8 actualState);
     error TokenDecimalsTooLarge(address token, uint8 decimals);
     error EmptyReceipt(bytes32 requestId);
+    error InvalidFeeVault(address feeVault);
 
     constructor(
         address usdc_,
@@ -251,6 +256,7 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
         uint256 grossE18 = amountInE18.mulDiv(midE18, 1e18);
         uint256 gross = _scaleDecimals(grossE18, ORACLE_DECIMALS, outDecimals);
         amountOut = gross.mulDiv(10_000 - spreadBps, 10_000);
+        uint256 feeAmount = receipt.amount.mulDiv(spreadBps, 10_000);
 
         if (amountOut < receipt.minAmountOut) {
             revert SlippageExceeded(amountOut, receipt.minAmountOut);
@@ -263,6 +269,10 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
 
         // Effects before interactions.
         executed[requestId] = true;
+
+        if (feeAmount != 0) {
+            _routeSpotFee(requestId, receipt.routeId, feeAmount);
+        }
 
         // Pay the recipient named in the receipt (canonical).
         IERC20(receipt.tokenOut).safeTransfer(receipt.recipient, amountOut);
@@ -349,6 +359,12 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
         emit RequireVerifiedOracleSet(required);
     }
 
+    function setFeeVault(address feeVault_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (feeVault_ != address(0) && feeVault_.code.length == 0) revert InvalidFeeVault(feeVault_);
+        feeVault = ITurboFeeVault(feeVault_);
+        emit FeeVaultSet(feeVault_);
+    }
+
     function pause() external onlyRole(OPERATIONS_ROLE) {
         _pause();
     }
@@ -366,5 +382,15 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
             return amount.mulDiv(10 ** uint256(toDecimals - fromDecimals), 1);
         }
         return amount.mulDiv(1, 10 ** uint256(fromDecimals - toDecimals));
+    }
+
+    function _routeSpotFee(bytes32 requestId, bytes32 routeId, uint256 feeAmount) internal {
+        address vault = address(feeVault);
+        if (vault == address(0)) return;
+
+        USDC.forceApprove(vault, feeAmount);
+        ITurboFeeVault(vault).depositFee(address(USDC), feeAmount, routeId);
+        USDC.forceApprove(vault, 0);
+        emit SpotFeeRouted(requestId, routeId, vault, feeAmount);
     }
 }

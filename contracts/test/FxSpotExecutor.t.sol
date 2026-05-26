@@ -4,7 +4,9 @@ pragma solidity ^0.8.26;
 import {Test} from "forge-std/Test.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import {TurboFeeVault} from "../src/hub/TurboFeeVault.sol";
 import {FxSpotExecutor} from "../src/spot/FxSpotExecutor.sol";
 import {IFxOracle} from "../src/interfaces/IFxOracle.sol";
 import {ITelaranaGatewayHubHook} from "../src/interfaces/ITelaranaGatewayHubHook.sol";
@@ -205,6 +207,24 @@ contract FxSpotExecutorTest is Test {
         uint256 gross = uint256(1e6) * MID_USDC_TO_EURC_E18 / 1e18;
         uint256 expected = gross * (10_000 - 25) / 10_000;
         assertEq(amountOut, expected);
+    }
+
+    function test_executeSpotFx_routesUsdcSpreadToFeeVaultWhenConfigured() public {
+        TurboFeeVault vault = new TurboFeeVault(IERC20(address(usdc)), ADMIN);
+        vault.grantRole(vault.FEE_DEPOSITOR_ROLE(), address(executor));
+        vm.prank(ADMIN);
+        executor.setFeeVault(address(vault));
+
+        usdc.mint(address(executor), 1e6);
+        _setReceipt(REQUEST_ID, 1e6, address(eurc), 900_000, TRADER);
+
+        vm.prank(KEEPER);
+        executor.executeSpotFx(REQUEST_ID);
+
+        assertEq(vault.totalFeesCollected(), 500, "vault fee total");
+        assertEq(usdc.balanceOf(address(executor)), 999_500, "USDC net retained");
+        assertEq(usdc.balanceOf(ADMIN), 250, "protocol split");
+        assertEq(vault.insuranceBalance(), 250, "insurance plus no-LP yield");
     }
 
     /*//////////////////////////////////////////////////////////////
