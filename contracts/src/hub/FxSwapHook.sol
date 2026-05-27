@@ -24,6 +24,7 @@ import {PMMPricing} from "dodo-pmm/PMMPricing.sol";
 
 import {IFxOracle} from "../interfaces/IFxOracle.sol";
 import {IFxMarketRegistry} from "../interfaces/IFxMarketRegistry.sol";
+import {ITurboFeeVault} from "../interfaces/ITurboFeeVault.sol";
 
 /// @title FxSwapHook
 /// @notice Uniswap v4 hook for fx-Telarana FX swaps. Locked to a single
@@ -116,6 +117,10 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
 
     address public owner;
+
+    /// @notice Optional TurboFeeVault integration — when set, protocol fees
+    ///         can be routed to the vault via depositFee(). See TODO below.
+    ITurboFeeVault public feeVault;
 
     /// @notice PMM knobs (see _quote).
     uint16 public spreadBps;
@@ -220,6 +225,7 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
+    event FeeVaultSet(address indexed feeVault);
     event SpreadSet(uint16 oldBps, uint16 newBps);
     event KSet(uint16 oldBps, uint16 newBps);
     event HotReservePctSet(uint16 oldBps, uint16 newBps);
@@ -383,6 +389,19 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         emit TreasurySet(treasury, newTreasury);
         treasury = newTreasury;
     }
+
+    /// @notice Set the TurboFeeVault for routing swap fees.
+    ///         Pass address(0) to disable fee routing.
+    function setFeeVault(address feeVault_) external onlyOwner {
+        feeVault = ITurboFeeVault(feeVault_);
+        emit FeeVaultSet(feeVault_);
+    }
+
+    // TODO: Wire feeVault.depositFee() into the protocol fee accrual path.
+    // The swap fee is currently accrued to protocolFee0/protocolFee1 and
+    // claimed manually by the treasury via claimProtocolFees(). To route
+    // fees to TurboFeeVault, the claimProtocolFees path should optionally
+    // call feeVault.depositFee(token, amount, poolId) when feeVault != 0.
 
     /// @notice Treasury withdraws accumulated protocol fees. JIT-withdraws
     ///         from Morpho when hot reserves are insufficient.
