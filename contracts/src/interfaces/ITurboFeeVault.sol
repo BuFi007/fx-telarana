@@ -10,6 +10,7 @@ interface ITurboFeeVault {
 
     function pendingYield(address user) external view returns (uint256);
     function totalDeposits() external view returns (uint256);
+    function compositeApy() external view returns (uint256);
 
     event FeeDeposited(bytes32 indexed marketId, address token, uint256 amount, uint256 protocolShare, uint256 lpShare, uint256 insuranceShare);
     event Deposited(address indexed user, uint256 assets, uint256 shares);

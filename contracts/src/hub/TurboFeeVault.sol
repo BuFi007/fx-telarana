@@ -154,6 +154,14 @@ contract TurboFeeVault is ITurboFeeVault, AccessControl, ReentrancyGuard {
         return totalStaked;
     }
 
+    function compositeApy() external view returns (uint256) {
+        if (totalStaked == 0 || totalFeesCollected == 0) return 0;
+        // Simplified: annualize the LP share of fees collected so far
+        // Real APY requires time-weighted calculation; this is a best-effort view
+        uint256 lpFees = (totalFeesCollected * LP_BPS) / BPS;
+        return (lpFees * 365 * 1e18) / totalStaked;
+    }
+
     // ─── Admin ───────────────────────────────────────────────────
 
     function setTreasury(address newTreasury) external onlyRole(DEFAULT_ADMIN_ROLE) {
