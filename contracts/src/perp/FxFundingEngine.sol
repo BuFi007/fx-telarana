@@ -40,6 +40,10 @@ contract FxFundingEngine is IFxFundingEngine, AccessControl, Pausable {
     IFxMarginAccount public immutable MARGIN;
     uint8 public immutable MARGIN_DECIMALS;
 
+    /// @notice Global circuit breaker: absolute cap on the funding rate (E18 per second).
+    ///         Default 1e14 = 0.01% per second ~ 315% APR.
+    uint256 public maxAbsFundingRateE18 = 1e14;
+
     mapping(bytes32 marketId => FundingConfig config) public fundingConfig;
     mapping(bytes32 marketId => FundingState state) public fundingState;
     mapping(bytes32 marketId => mapping(uint64 version => int256 index)) public fundingIndex;
@@ -48,6 +52,8 @@ contract FxFundingEngine is IFxFundingEngine, AccessControl, Pausable {
     event FundingConfigured(bytes32 indexed marketId, FundingConfig config);
     event FundingPoked(bytes32 indexed marketId, uint64 version, int256 rateE18PerSecond, int256 cumulativeFundingE18);
     event FundingSettled(bytes32 indexed marketId, address indexed trader, int256 fundingPaid);
+    event FundingRateClamped(bytes32 indexed marketId, int256 rawRate, int256 clampedRate);
+    event MaxFundingRateSet(uint256 oldRate, uint256 newRate);
 
     error ZeroAddress();
     error MarketNotConfigured(bytes32 marketId);
@@ -96,7 +102,17 @@ contract FxFundingEngine is IFxFundingEngine, AccessControl, Pausable {
             rateBps = longOi > shortOi ? signedRateBps : -signedRateBps;
         }
 
-        s.currentRateE18PerSecond = rateBps * 1e14;
+        int256 rateE18 = rateBps * 1e14;
+
+        // Circuit breaker: clamp rate to [-maxAbsFundingRateE18, maxAbsFundingRateE18].
+        int256 rateCap = int256(maxAbsFundingRateE18);
+        if (rateE18 > rateCap || rateE18 < -rateCap) {
+            int256 clampedRate = rateE18 > rateCap ? rateCap : -rateCap;
+            emit FundingRateClamped(marketId, rateE18, clampedRate);
+            rateE18 = clampedRate;
+        }
+
+        s.currentRateE18PerSecond = rateE18;
         s.lastUpdate = block.timestamp;
         s.currentVersion += 1;
         fundingIndex[marketId][s.currentVersion] = s.cumulativeFundingE18;
@@ -125,6 +141,12 @@ contract FxFundingEngine is IFxFundingEngine, AccessControl, Pausable {
 
     function getFundingIndex(bytes32 marketId, uint64 version) external view returns (int256 cumulativeFundingE18) {
         return fundingIndex[marketId][version];
+    }
+
+    /// @notice Admin configures the global funding rate circuit breaker.
+    function setMaxFundingRate(uint256 newMaxAbsFundingRateE18) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        emit MaxFundingRateSet(maxAbsFundingRateE18, newMaxAbsFundingRateE18);
+        maxAbsFundingRateE18 = newMaxAbsFundingRateE18;
     }
 
     function pause() external onlyRole(OPERATIONS_ROLE) {
