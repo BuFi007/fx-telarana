@@ -252,6 +252,7 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     event TreasurySet(address indexed oldTreasury, address indexed newTreasury);
     event ProtocolFeeAccrued(address indexed token, uint256 amount, uint256 totalAccrued);
     event ProtocolFeeClaimed(address indexed token, address indexed to, uint256 amount, uint256 remaining);
+    event SwapFeeRouted(address indexed token, address indexed feeVault, uint256 amount, bytes32 poolId);
     event Swapped(
         address indexed sender,
         Currency indexed input,
@@ -397,19 +398,28 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         emit FeeVaultSet(feeVault_);
     }
 
-    // TODO: Wire feeVault.depositFee() into the protocol fee accrual path.
-    // The swap fee is currently accrued to protocolFee0/protocolFee1 and
-    // claimed manually by the treasury via claimProtocolFees(). To route
-    // fees to TurboFeeVault, the claimProtocolFees path should optionally
-    // call feeVault.depositFee(token, amount, poolId) when feeVault != 0.
-
-    /// @notice Treasury withdraws accumulated protocol fees. JIT-withdraws
-    ///         from Morpho when hot reserves are insufficient.
+    /// @notice Treasury withdraws accumulated protocol fees. When a
+    ///         `feeVault` is configured the fees are routed through
+    ///         `ITurboFeeVault.depositFee()` instead of transferred to `to`.
+    ///         JIT-withdraws from Morpho when hot reserves are insufficient.
     function claimProtocolFees(address token, address to, uint256 amount)
         external
         onlyTreasury
         nonReentrant
     {
+        return _claimProtocolFees(token, to, amount, bytes32(0));
+    }
+
+    /// @notice Variant that tags the fee-vault deposit with a specific pool id.
+    function claimProtocolFeesForPool(address token, address to, uint256 amount, bytes32 poolId)
+        external
+        onlyTreasury
+        nonReentrant
+    {
+        return _claimProtocolFees(token, to, amount, poolId);
+    }
+
+    function _claimProtocolFees(address token, address to, uint256 amount, bytes32 poolId) internal {
         if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
 
@@ -427,7 +437,16 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         }
 
         _ensureHotBalance(token, amount);
-        IERC20(token).safeTransfer(to, amount);
+
+        // Route through TurboFeeVault when configured; otherwise direct transfer.
+        if (amount != 0 && address(feeVault) != address(0)) {
+            IERC20(token).forceApprove(address(feeVault), amount);
+            feeVault.depositFee(token, amount, poolId);
+            IERC20(token).forceApprove(address(feeVault), 0);
+            emit SwapFeeRouted(token, address(feeVault), amount, poolId);
+        } else {
+            IERC20(token).safeTransfer(to, amount);
+        }
         emit ProtocolFeeClaimed(token, to, amount, available - amount);
     }
 
