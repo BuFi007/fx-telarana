@@ -29,6 +29,9 @@ contract FxHedgeHook is IHooks, AccessControl {
     IPoolManager public immutable POOL_MANAGER;
     uint256 public immutable defaultRebalanceThresholdE18;
 
+    /// @notice TWAP deviation threshold: 200 bps = 2%.
+    uint256 public constant TWAP_DEVIATION_BPS = 200;
+
     struct PoolHedgeConfig {
         bytes32 marketId;
         address hedgeToken;
@@ -41,6 +44,14 @@ contract FxHedgeHook is IHooks, AccessControl {
     mapping(bytes32 poolId => PoolHedgeConfig config) public poolConfigs;
     mapping(bytes32 poolId => int256 exposureE18) public poolExposureE18;
     mapping(bytes32 poolId => int256 hedgeSizeE18) public poolHedgeSizeE18;
+
+    /// @notice EMA TWAP price per pool, 1e18-scaled. Updated on each
+    ///         exposure change with alpha = 5% (twap = twap*95 + spot*5) / 100.
+    mapping(bytes32 poolId => uint256 twapPriceE18) public poolTwapPriceE18;
+
+    /// @notice When true, hedge rebalancing is paused for a pool due to TWAP
+    ///         deviation. Admin can unpause via `unpauseHedge`.
+    mapping(bytes32 poolId => bool paused) public hedgePaused;
 
     error NotPoolManager(address caller);
     error ZeroAddress();
@@ -77,6 +88,8 @@ contract FxHedgeHook is IHooks, AccessControl {
         int256 exposureE18,
         bytes32 pythFeedId
     );
+    event HedgePaused(bytes32 indexed poolId, int256 spotPrice, int256 twapPrice, uint256 deviationBps);
+    event HedgeUnpaused(bytes32 indexed poolId);
 
     constructor(IPoolManager poolManager_, address initialAdmin, uint256 defaultRebalanceThresholdE18_) {
         if (address(poolManager_) == address(0) || initialAdmin == address(0)) revert ZeroAddress();
@@ -147,6 +160,12 @@ contract FxHedgeHook is IHooks, AccessControl {
         });
 
         emit PoolConfigured(poolId, marketId, hedgeToken, hedgeTokenDecimals, pythFeedId, threshold, enabled);
+    }
+
+    /// @notice Admin unpauses hedging for a pool after a TWAP deviation event.
+    function unpauseHedge(bytes32 poolId) external onlyRole(POOL_CONFIGURATOR_ROLE) {
+        hedgePaused[poolId] = false;
+        emit HedgeUnpaused(poolId);
     }
 
     /// @notice Current pool delta after the off-chain hedge: exposure + hedge.
@@ -273,8 +292,32 @@ contract FxHedgeHook is IHooks, AccessControl {
 
         emit ExposureChanged(poolId, config.marketId, config.hedgeToken, oldExposure, newExposure, exposureDeltaE18);
 
+        // Implied spot price from the balance delta: |hedgeTokenDelta / otherTokenDelta|.
+        // Only meaningful when both sides of the delta are non-zero (swaps).
+        // For liquidity events (both sides are deposits/withdrawals) we skip the
+        // TWAP deviation check because no price is implied.
+        uint256 spotPriceE18 = _impliedSpotPrice(key, config.hedgeToken, config.hedgeTokenDecimals, delta);
+        if (spotPriceE18 != 0) {
+            _updateTwap(poolId, spotPriceE18);
+        }
+
         int256 oldHedge = poolHedgeSizeE18[poolId];
         if (_abs(newExposure + oldHedge) >= config.rebalanceThresholdE18) {
+            // TWAP deviation check: skip rebalance if spot deviates >2% from TWAP.
+            if (!hedgePaused[poolId] && spotPriceE18 != 0) {
+                uint256 twap = poolTwapPriceE18[poolId];
+                if (twap != 0) {
+                    uint256 deviation = spotPriceE18 > twap ? spotPriceE18 - twap : twap - spotPriceE18;
+                    uint256 deviationBps = (deviation * 10_000) / twap;
+                    if (deviationBps > TWAP_DEVIATION_BPS) {
+                        hedgePaused[poolId] = true;
+                        emit HedgePaused(poolId, int256(spotPriceE18), int256(twap), deviationBps);
+                        return; // skip rebalance
+                    }
+                }
+            }
+            if (hedgePaused[poolId]) return; // stay paused until admin unpauses
+
             int256 newHedge = -newExposure;
             poolHedgeSizeE18[poolId] = newHedge;
             emit HedgeRebalanced(
@@ -286,6 +329,61 @@ contract FxHedgeHook is IHooks, AccessControl {
                 newExposure,
                 config.pythFeedId
             );
+        }
+    }
+
+    /// @notice Derive an implied spot price from a balance delta. Returns 0
+    ///         for liquidity events where the ratio is not meaningful.
+    function _impliedSpotPrice(
+        PoolKey calldata key,
+        address hedgeToken,
+        uint8 hedgeTokenDecimals,
+        BalanceDelta delta
+    ) internal pure returns (uint256 spotPriceE18) {
+        int256 d0 = int256(delta.amount0());
+        int256 d1 = int256(delta.amount1());
+        // Price is only meaningful when both sides have non-zero deltas
+        // with opposite signs (i.e. a swap, not a liquidity add/remove).
+        if (d0 == 0 || d1 == 0) return 0;
+        if ((d0 > 0) == (d1 > 0)) return 0; // same sign → liquidity event
+
+        // Compute |hedgeDelta_e18| / |otherDelta_e18|.
+        // hedgeToken decimals are stored; other side is assumed 6 (USDC).
+        // For generality, normalize both sides to 1e18 from their native decimals.
+        uint256 absD0 = _abs(d0);
+        uint256 absD1 = _abs(d1);
+
+        bool hedgeIs0 = hedgeToken == Currency.unwrap(key.currency0);
+        uint8 otherDecimals = hedgeTokenDecimals; // placeholder
+        uint256 hedgeAbs;
+        uint256 otherAbs;
+        if (hedgeIs0) {
+            hedgeAbs = absD0;
+            otherAbs = absD1;
+            // Other is currency1. We don't know its decimals; estimate from
+            // the config. For this protective check, approximation is fine.
+            // Use 18 - hedgeTokenDecimals difference as heuristic: not needed
+            // because both values are in raw units. Just use raw ratio.
+            otherDecimals = 18; // we'll normalize hedgeSide to 18-dec
+        } else {
+            hedgeAbs = absD1;
+            otherAbs = absD0;
+            otherDecimals = 18;
+        }
+
+        // spotPrice = otherAmount / hedgeAmount, normalized to 1e18.
+        // To avoid overflow: (otherAbs * 1e18) / hedgeAbs
+        if (hedgeAbs == 0) return 0;
+        spotPriceE18 = (otherAbs * 1e18) / hedgeAbs;
+    }
+
+    function _updateTwap(bytes32 poolId, uint256 spotPriceE18) internal {
+        uint256 twap = poolTwapPriceE18[poolId];
+        if (twap == 0) {
+            poolTwapPriceE18[poolId] = spotPriceE18;
+        } else {
+            // EMA with alpha = 5%: twap = (twap * 95 + spot * 5) / 100
+            poolTwapPriceE18[poolId] = (twap * 95 + spotPriceE18 * 5) / 100;
         }
     }
 
