@@ -15,6 +15,9 @@
     "MorphoOracleAdapterM2": "0xf0cdaa9cf9e8d52060dcb41a045e3a6d618a9f65",
     "MorphoOracleAdapterM3": "0x384880459CB2E924dFE8310abaD3650C5078f5cB",
     "MorphoOracleAdapterM4": "0xeaCBcBB84D86E307ea560a26Aed6E47B27C3170e",
+    "MorphoOracleAdapterM5": "0x3229C7aaE05C62D35239b31691aae60A202E5428",
+    "MorphoOracleAdapterM6": "0xCBf653324caA206cC9748099751B0Ff99596cC80",
+    "FxOracleJpyc": "0xC0c525361d62ff904A200f9143D548759c0Be063",
     "FxReceiptEURC": "0xefd7cf5ad5a2db9a3c23e2807f2279de92c730d2",
     "FxReceiptUSDC": "0x9f0947d7fff3b7e15d149fbbc61d83a07c46b88e",
     "FxLiquidator": "0x2900599ff0e6dd057493d62fac856e5a8f93c6eb",
@@ -37,6 +40,7 @@
     "CctpDomain": "1",
     "USDC": "0x5425890298aed601595a70AB815c96711a31Bc65",
     "MXNB": "0xAB99d44185af87AeB08361588F00F59B0CE85eBb",
+    "JPYC": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
     "Pyth": "0x23f0e8FAeE7bbb405E7A7C3d60138FCfd43d7509",
     "GatewayWallet": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
     "GatewayMinter": "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
@@ -46,7 +50,9 @@
     "M1_EURC_USDC": "0x7d99088a9fe61331c49a92eb16fa3794b0bc2862b211f5a70f31a64cef25029e",
     "M2_USDC_EURC": "0x1700104cf29eceb113e01a1bcdc913e5e10d3d37314cee235752aa88bf153197",
     "M3_MXNB_USDC": "0x0a19c08b12d4cdb37ea4574886cb392ff5f4c7c2149bf5f7edb80d46dc03a617",
-    "M4_USDC_MXNB": "0xfcd8ba3b7a6eca50f0936b7a640369e07956815d4828e22105a0af1532d82dcd"
+    "M4_USDC_MXNB": "0xfcd8ba3b7a6eca50f0936b7a640369e07956815d4828e22105a0af1532d82dcd",
+    "M5_JPYC_USDC": "0x90d8cad29bcab8554d61ce1471d5556f6b982c4f156b362e1c343c41a225f2b6",
+    "M6_USDC_JPYC": "0x26ab330932e2f0e78c712b0dbbf27255eaee8b32f0f5bc92b346349226f2446f"
   },
   "marketIdsBroadcastTx": {
     "_note": "Broadcast 2026-05-18 via contracts/script/DeployFujiMxnbMarkets.s.sol. M3+M4 share a fresh FxOracle (FxOracleMxnb above) configured for USDC + MXNB; M1/M2 continue to use the original FxOracle (EURC + USDC) which is owned by FxTimelock and was not retrofitted. See contracts/broadcast/DeployFujiMxnbMarkets.s.sol/43113/run-latest.json for tx hashes.",

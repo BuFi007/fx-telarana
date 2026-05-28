@@ -1,0 +1,47 @@
+{
+  "network": "avalanche-fuji",
+  "chainId": 43113,
+  "source": "DeployFujiJpycMarkets.s.sol -- Fuji JPYC Morpho markets (JPYC loan + USDC loan)",
+  "deployedAt": "2026-05-27",
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "MorphoBlue": "0xeF64621D41093144D9ED8aB8327eE381ECdB79E6",
+  "IrmMock": "0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA",
+  "lltv": 860000000000000000,
+  "FxOracleJpyc": "0xC0c525361d62ff904A200f9143D548759c0Be063",
+  "USDC": "0x5425890298aed601595a70AB815c96711a31Bc65",
+  "JPYC": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
+  "M5_JPYC_USDC": {
+    "marketId": "0x90d8cad29bcab8554d61ce1471d5556f6b982c4f156b362e1c343c41a225f2b6",
+    "loanToken": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
+    "collateralToken": "0x5425890298aed601595a70AB815c96711a31Bc65",
+    "oracle": "0x3229C7aaE05C62D35239b31691aae60A202E5428",
+    "irm": "0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA",
+    "lltv": 860000000000000000,
+    "description": "loan=JPYC, collateral=USDC (borrowers post USDC, borrow JPYC)"
+  },
+  "M6_USDC_JPYC": {
+    "marketId": "0x26ab330932e2f0e78c712b0dbbf27255eaee8b32f0f5bc92b346349226f2446f",
+    "loanToken": "0x5425890298aed601595a70AB815c96711a31Bc65",
+    "collateralToken": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
+    "oracle": "0xCBf653324caA206cC9748099751B0Ff99596cC80",
+    "irm": "0x0B5D18BBE92F07eC0111Ae6d2E102858268D6aCA",
+    "lltv": 860000000000000000,
+    "description": "loan=USDC, collateral=JPYC (borrowers post JPYC, borrow USDC)"
+  },
+  "transactions": {
+    "deployFxOracle": "0x948939441fb8daa15ac8efbc711e4ab0c352747543791be358a91da00e8ed964",
+    "setFeedUSDC": "0xf6935388abb7f2575a03b313ce47f8ffbb4e92df3f81c06e3341a453323ddfa7",
+    "setPythFeedConfigJPYC": "0xa4568023ddd7c1111a5cdc5ee8d1150ab8696245ccef64804165dab161304143",
+    "deployAdapterM5": "0xab5f129502ed8d8abb832e08cb9de3cc1faf207fd355f6b3eed2d6a3d3357368",
+    "deployAdapterM6": "0xc47c069b00ebfe2c961c1784e7a84ccb9c288ab74b6991de4c9daafce0722cfd",
+    "createMarketM5": "0x1e1981022e015e7234fb8635ae23470a7c632cc944e854af6843db27faf81c17",
+    "createMarketM6": "0x2c58a7afdbc40b4179f1cf39f0ede6e347d418c563201da331f307237dd5949b"
+  },
+  "blockNumber": 55842551,
+  "pythFeeds": {
+    "USDC_USD": "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
+    "JPY_USD": "0xef2c98c804ba503c6a707e38be4dfbb16683775f195b091252bf24693042fd52",
+    "JPY_USD_inverted": true,
+    "note": "Pyth JPY/USD feed reports JPY-per-USD (~140). Inverted on-chain so protocol reads USD-per-JPYC (~0.007)."
+  }
+}
