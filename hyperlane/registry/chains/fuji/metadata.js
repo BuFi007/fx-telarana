@@ -1,0 +1,39 @@
+export const metadata = {
+    "blockExplorers": [
+        {
+            "apiUrl": "https://api.routescan.io/v2/network/testnet/evm/43113/etherscan/api",
+            "family": "etherscan",
+            "name": "SnowTrace",
+            "url": "https://testnet.snowtrace.io"
+        }
+    ],
+    "blocks": {
+        "confirmations": 3,
+        "estimateBlockTime": 2,
+        "reorgPeriod": 3
+    },
+    "chainId": 43113,
+    "deployer": {
+        "name": "Abacus Works",
+        "url": "https://www.hyperlane.xyz"
+    },
+    "displayName": "Fuji",
+    "domainId": 43113,
+    "gasCurrencyCoinGeckoId": "avalanche-2",
+    "isTestnet": true,
+    "name": "fuji",
+    "nativeToken": {
+        "decimals": 18,
+        "name": "Avalanche",
+        "symbol": "AVAX"
+    },
+    "protocol": "ethereum",
+    "rpcUrls": [
+        {
+            "http": "https://api.avax-test.network/ext/bc/C/rpc",
+            "pagination": {
+                "maxBlockRange": 2048
+            }
+        }
+    ]
+};

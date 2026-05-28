@@ -1,0 +1,12 @@
+arctestnet:
+  type: collateral
+  token: "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b"
+  mailbox: "0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9"
+  owner: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69"
+fuji:
+  type: synthetic
+  mailbox: "0x5b6CFf85442B851A8e6eaBd2A4E4507B5135B3B0"
+  name: "AUDF (Hyperlane)"
+  symbol: "hAUDF"
+  decimals: 6
+  owner: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69"

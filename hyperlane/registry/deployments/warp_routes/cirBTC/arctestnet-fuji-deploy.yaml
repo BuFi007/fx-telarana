@@ -1,0 +1,12 @@
+arctestnet:
+  mailbox: "0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9"
+  owner: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69"
+  token: "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF"
+  type: collateral
+fuji:
+  decimals: 8
+  mailbox: "0x5b6CFf85442B851A8e6eaBd2A4E4507B5135B3B0"
+  name: cirBTC (Hyperlane)
+  owner: "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69"
+  symbol: hcirBTC
+  type: synthetic

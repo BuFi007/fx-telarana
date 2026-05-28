@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=../schema.json
+tokens:
+  - addressOrDenom: "0x25c0d9C95d4257358A2f4C803749B367A053a5Cf"
+    chainName: arctestnet
+    collateralAddressOrDenom: "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d"
+    connections:
+      - token: ethereum|fuji|0x1869D0253286dF29ce0AB8d29207772C7fD9dc35
+    decimals: 6
+    name: QCAD
+    standard: EvmHypCollateral
+    symbol: QCAD
+  - addressOrDenom: "0x1869D0253286dF29ce0AB8d29207772C7fD9dc35"
+    chainName: fuji
+    connections:
+      - token: ethereum|arctestnet|0x25c0d9C95d4257358A2f4C803749B367A053a5Cf
+    decimals: 6
+    name: QCAD (Hyperlane)
+    standard: EvmHypSynthetic
+    symbol: hQCAD

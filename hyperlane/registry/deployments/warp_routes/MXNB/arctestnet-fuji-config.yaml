@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=../schema.json
+tokens:
+  - addressOrDenom: "0x1f8692E3165772Fa44533a14C3BBbc308Ff4D76a"
+    chainName: arctestnet
+    collateralAddressOrDenom: "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461"
+    connections:
+      - token: ethereum|fuji|0x9559A55Ea94aF58002a857f73B15c8EF4E850Fd8
+    decimals: 6
+    name: MXNB
+    standard: EvmHypCollateral
+    symbol: MXNB
+  - addressOrDenom: "0x9559A55Ea94aF58002a857f73B15c8EF4E850Fd8"
+    chainName: fuji
+    connections:
+      - token: ethereum|arctestnet|0x1f8692E3165772Fa44533a14C3BBbc308Ff4D76a
+    decimals: 6
+    name: MXNB (Hyperlane)
+    standard: EvmHypSynthetic
+    symbol: hMXNB

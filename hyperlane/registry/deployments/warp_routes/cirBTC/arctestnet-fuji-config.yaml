@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=../schema.json
+tokens:
+  - addressOrDenom: "0x5F1eD958a6d8c02A54968959889D3ede8Fc98641"
+    chainName: arctestnet
+    collateralAddressOrDenom: "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF"
+    connections:
+      - token: ethereum|fuji|0xA6C8242DB160Cb5c6036bFada664322503fFf0d3
+    decimals: 8
+    name: Circle Wrapped Bitcoin
+    standard: EvmHypCollateral
+    symbol: cirBTC
+  - addressOrDenom: "0xA6C8242DB160Cb5c6036bFada664322503fFf0d3"
+    chainName: fuji
+    connections:
+      - token: ethereum|arctestnet|0x5F1eD958a6d8c02A54968959889D3ede8Fc98641
+    decimals: 8
+    name: cirBTC (Hyperlane)
+    standard: EvmHypSynthetic
+    symbol: hcirBTC

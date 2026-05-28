@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=../schema.json
+tokens:
+  - addressOrDenom: "0x76e90f28Ad1E3ACBd47F7a75294DCF23C598214a"
+    chainName: arctestnet
+    collateralAddressOrDenom: "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29"
+    connections:
+      - token: ethereum|fuji|0xAba718626a1521D90bE044985C0Ba6F146c8ed29
+    decimals: 18
+    name: JPY Coin
+    standard: EvmHypCollateral
+    symbol: JPYC
+  - addressOrDenom: "0xAba718626a1521D90bE044985C0Ba6F146c8ed29"
+    chainName: fuji
+    collateralAddressOrDenom: "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29"
+    connections:
+      - token: ethereum|arctestnet|0x76e90f28Ad1E3ACBd47F7a75294DCF23C598214a
+    decimals: 18
+    name: JPY Coin
+    standard: EvmHypCollateral
+    symbol: JPYC

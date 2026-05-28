@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=../schema.json
+tokens:
+  - addressOrDenom: "0x342a62877ecC28c0C84498C70aB1bF2559CA4918"
+    chainName: arctestnet
+    collateralAddressOrDenom: "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b"
+    connections:
+      - token: ethereum|fuji|0xc8d059C0Da4A28E46367D5f0aB489860A8De6FE4
+    decimals: 6
+    name: Forte AUD
+    standard: EvmHypCollateral
+    symbol: AUDF
+  - addressOrDenom: "0xc8d059C0Da4A28E46367D5f0aB489860A8De6FE4"
+    chainName: fuji
+    connections:
+      - token: ethereum|arctestnet|0x342a62877ecC28c0C84498C70aB1bF2559CA4918
+    decimals: 6
+    name: AUDF (Hyperlane)
+    standard: EvmHypSynthetic
+    symbol: hAUDF

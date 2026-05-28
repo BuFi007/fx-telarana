@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=../schema.json
+blockExplorers:
+  - apiUrl: https://api.routescan.io/v2/network/testnet/evm/43113/etherscan/api
+    family: etherscan
+    name: SnowTrace
+    url: https://testnet.snowtrace.io
+blocks:
+  confirmations: 1
+  estimateBlockTime: 2
+  reorgPeriod: 1
+chainId: 43113
+deployer:
+  name: Abacus Works
+  url: https://www.hyperlane.xyz
+displayName: Fuji
+domainId: 43113
+gasCurrencyCoinGeckoId: avalanche-2
+isTestnet: true
+name: fuji
+nativeToken:
+  decimals: 18
+  name: Avalanche
+  symbol: AVAX
+protocol: ethereum
+rpcUrls:
+  - http: https://avalanche-fuji-c-chain.publicnode.com
+    pagination:
+      maxBlockRange: 2048
+  - http: https://avalanche-fuji-c-chain-rpc.publicnode.com
+    pagination:
+      maxBlockRange: 2048
+  - http: https://api.avax-test.network/ext/bc/C/rpc
+    pagination:
+      maxBlockRange: 2048
