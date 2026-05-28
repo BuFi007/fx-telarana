@@ -69,7 +69,7 @@
  * Tunable env
  * ───────────
  *   FUJI_RPC_URL                    default api.avax-test.network ext/bc/C/rpc
- *   ARC_RPC_URL                     default rpc.testnet.arc.network
+ *   ARC_RPC_URL                     default rpc.drpc.testnet.arc.network
  *   MXNB_BRIDGE_AMOUNT              human MXNB, default "1.0" (= 1_000_000 raw, 6dp)
  *   MXNB_RECIPIENT                  Arc recipient address; default = relayer
  *   FUJI_MXNB_WARP_ROUTER           HypERC20Collateral on Fuji (full mode only)
@@ -124,7 +124,7 @@ const FULL_MODE = process.argv.includes("--full");
 
 const FUJI_RPC_URL =
   process.env.FUJI_RPC_URL ?? "https://api.avax-test.network/ext/bc/C/rpc";
-const ARC_RPC_URL = process.env.ARC_RPC_URL ?? "https://rpc.testnet.arc.network";
+const ARC_RPC_URL = process.env.ARC_RPC_URL ?? "https://rpc.drpc.testnet.arc.network";
 
 const AMOUNT_HUMAN = process.env.MXNB_BRIDGE_AMOUNT ?? "1.0";
 

@@ -14,7 +14,7 @@ import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 ///         unhedged IL outcomes.
 /// @dev Run against the live testnet (read-only, no broadcast needed):
 ///      forge script script/HedgedVsUnhedgedIlDemo.s.sol -vvv \
-///        --rpc-url https://rpc.testnet.arc.network
+///        --rpc-url https://rpc.drpc.testnet.arc.network
 contract HedgedVsUnhedgedIlDemo is Script {
     using SignedMathFormat for uint256;
     using StateLibrary for IPoolManager;

@@ -10,7 +10,7 @@ import {
   loadFxPerpRuntimeConfig,
 } from "../src/perps-runtime.js";
 
-const ARC_RPC_URL = process.env.ARC_RPC_URL ?? "https://rpc.testnet.arc.network";
+const ARC_RPC_URL = process.env.ARC_RPC_URL ?? "https://rpc.drpc.testnet.arc.network";
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const PERP_CONFIG_PATH =
   process.env.ARC_PERP_CONFIG_PATH ?? resolve(REPO_ROOT, "deployments/perps-config-5042002.json");

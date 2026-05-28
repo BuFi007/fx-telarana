@@ -28,7 +28,7 @@ import {
 } from "../src/perps-runtime.js";
 import { writeWithRedstone } from "../src/perps-keeper.js";
 
-const ARC_RPC_URL = process.env.ARC_RPC_URL ?? "https://rpc.testnet.arc.network";
+const ARC_RPC_URL = process.env.ARC_RPC_URL ?? "https://rpc.drpc.testnet.arc.network";
 const DEPLOYER_PRIVATE_KEY = normalizePrivateKey(process.env.DEPLOYER_PRIVATE_KEY);
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const PERP_CONFIG_PATH =

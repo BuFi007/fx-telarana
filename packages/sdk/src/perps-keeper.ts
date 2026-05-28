@@ -38,7 +38,7 @@ import {
   type FxPerpRuntimeConfig,
 } from "./perps-runtime.js";
 
-export const DEFAULT_ARC_RPC_URL = "https://rpc.testnet.arc.network";
+export const DEFAULT_ARC_RPC_URL = "https://rpc.drpc.testnet.arc.network";
 export const DEFAULT_KEEPER_STATE_PATH = ".keeper/perps-5042002-state.json";
 export const DEFAULT_KEEPER_INTERVAL_MS = 30_000;
 export const DEFAULT_FUNDING_MIN_INTERVAL_SECONDS = 60;

@@ -21,7 +21,7 @@
  *
  * Optional env:
  *   FUJI_RPC_URL                          — default https://api.avax-test.network/ext/bc/C/rpc
- *   ARC_RPC_URL                           — default https://rpc.testnet.arc.network
+ *   ARC_RPC_URL                           — default https://rpc.drpc.testnet.arc.network
  *   GATEWAY_SIGNER_OUT                    — path for watch-mode jsonl output, default reports/gateway-attestations.jsonl
  *   GATEWAY_API_BASE                      — override Circle's API base (default: testnet)
  *
@@ -155,7 +155,7 @@ function getRpcUrl(chainId: number): string {
     return process.env.FUJI_RPC_URL ?? "https://api.avax-test.network/ext/bc/C/rpc";
   }
   if (chainId === ChainId.ArcTestnet) {
-    return process.env.ARC_RPC_URL ?? "https://rpc.testnet.arc.network";
+    return process.env.ARC_RPC_URL ?? "https://rpc.drpc.testnet.arc.network";
   }
   throw new Error(`No RPC url known for chainId ${chainId}`);
 }

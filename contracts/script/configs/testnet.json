@@ -3,7 +3,7 @@
   "chains": {
     "arc-testnet": {
       "chainId": 5042002,
-      "rpc": "https://rpc.testnet.arc.network",
+      "rpc": "https://rpc.drpc.testnet.arc.network",
       "hyperlaneMailbox": "0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9",
       "isHub": true
     },

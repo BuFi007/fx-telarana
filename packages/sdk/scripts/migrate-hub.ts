@@ -114,7 +114,7 @@ const RPC: Record<number, string> = {
   59141:    "https://rpc.sepolia.linea.build",
   1301:     "https://sepolia.unichain.org",
   4801:     "https://worldchain-sepolia.g.alchemy.com/public",
-  5042002:  "https://rpc.testnet.arc.network",
+  5042002:  "https://rpc.drpc.testnet.arc.network",
 };
 
 function loadSpokes(): { path: string; manifest: SpokeManifest }[] {

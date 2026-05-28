@@ -32,7 +32,7 @@ import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
 ///   * Canonical Circle-deployed EURC exists on Arc — no MockEURC required.
 ///
 /// Required env (set these before running):
-///   ARC_TESTNET_RPC_URL              — defaults to https://rpc.testnet.arc.network
+///   ARC_TESTNET_RPC_URL              — defaults to https://rpc.drpc.testnet.arc.network
 ///   DEPLOYER_PRIVATE_KEY             — funded via faucet.circle.com
 ///
 /// Pre-set defaults (verified Arc testnet addresses):

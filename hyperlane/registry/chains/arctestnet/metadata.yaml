@@ -19,7 +19,7 @@ nativeToken:
   symbol: USDC
 protocol: ethereum
 rpcUrls:
+  - http: https://rpc.drpc.testnet.arc.network
   - http: https://rpc.testnet.arc.network
   - http: https://rpc.blockdaemon.testnet.arc.network
-  - http: https://rpc.drpc.testnet.arc.network
 technicalStack: other

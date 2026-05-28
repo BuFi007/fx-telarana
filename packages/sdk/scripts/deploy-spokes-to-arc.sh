@@ -18,7 +18,7 @@ CHAINS=(
   "unichain-sepolia|https://sepolia.unichain.org|1301"
   "worldchain-sepolia|https://worldchain-sepolia.g.alchemy.com/public|4801"
   "avalanche-fuji|https://api.avax-test.network/ext/bc/C/rpc|43113"
-  "arc-testnet|https://rpc.testnet.arc.network|5042002"
+  "arc-testnet|https://rpc.drpc.testnet.arc.network|5042002"
 )
 
 OUT_FILE="${OUT_FILE:-deployments/.arc-spokes-deploy-log.tsv}"

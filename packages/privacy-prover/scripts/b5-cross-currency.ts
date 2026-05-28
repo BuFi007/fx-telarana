@@ -48,7 +48,7 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const ARC_RPC      = "https://rpc.testnet.arc.network";
+const ARC_RPC      = "https://rpc.drpc.testnet.arc.network";
 const ARC_CHAIN_ID = 5042002;
 const EURC: Address = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
 

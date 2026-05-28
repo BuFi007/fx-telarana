@@ -46,7 +46,7 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ---- Constants — live Arc Testnet ----
-const ARC_RPC      = "https://rpc.testnet.arc.network";
+const ARC_RPC      = "https://rpc.drpc.testnet.arc.network";
 const ARC_CHAIN_ID = 5042002;
 const USDC         = "0x3600000000000000000000000000000000000000" as const;
 const ENTRYPOINT   = "0xD11cDdd1f04e850d3810a71608A49907c80f2736" as const;

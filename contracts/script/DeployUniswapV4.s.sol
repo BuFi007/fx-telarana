@@ -13,7 +13,7 @@ import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 /// Usage:
 ///   # Arc Testnet
 ///   forge script script/DeployUniswapV4.s.sol \
-///     --rpc-url https://rpc.testnet.arc.network \
+///     --rpc-url https://rpc.drpc.testnet.arc.network \
 ///     --private-key $DEPLOYER_PRIVATE_KEY \
 ///     --broadcast --verify
 ///
