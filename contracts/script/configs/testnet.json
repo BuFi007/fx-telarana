@@ -1,0 +1,102 @@
+{
+  "environment": "testnet",
+  "chains": {
+    "arc-testnet": {
+      "chainId": 5042002,
+      "rpc": "https://rpc.testnet.arc.network",
+      "hyperlaneMailbox": "0x9316246c42436ad74d81c8f5c9b295da5f2a8EE9",
+      "isHub": true
+    },
+    "avalanche-fuji": {
+      "chainId": 43113,
+      "rpc": "https://api.avax-test.network/ext/bc/C/rpc",
+      "hyperlaneMailbox": "0x5b6CFf85442B851A8e6eaBd2A4E4507B5135B3B0",
+      "isHub": true
+    },
+    "sepolia": {
+      "chainId": 11155111,
+      "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+      "isSpoke": true
+    },
+    "polygon-amoy": {
+      "chainId": 80002,
+      "rpc": "https://rpc-amoy.polygon.technology",
+      "isSpoke": true
+    },
+    "kaia-kairos": {
+      "chainId": 1001,
+      "rpc": "https://public-en-kairos.node.kaia.io",
+      "isSpoke": true
+    }
+  },
+  "assets": {
+    "USDC": {
+      "decimals": 6,
+      "bridgeStrategy": "CCTP",
+      "liquidityHomeChainId": 0,
+      "addresses": {
+        "5042002": "0x3600000000000000000000000000000000000000",
+        "43113": "0x5425890298aed601595a70AB815c96711a31Bc65",
+        "11155111": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+        "80002": "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582"
+      }
+    },
+    "EURC": {
+      "decimals": 6,
+      "bridgeStrategy": "CCTP",
+      "liquidityHomeChainId": 0,
+      "addresses": {
+        "5042002": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+        "11155111": "0x08210F9170F89Ab7658F0B5E3fF39b0E03C594D4"
+      }
+    },
+    "JPYC": {
+      "decimals": 18,
+      "bridgeStrategy": "Native",
+      "liquidityHomeChainId": 137,
+      "addresses": {
+        "5042002": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
+        "43113": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
+        "11155111": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
+        "80002": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
+        "1001": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29"
+      },
+      "hyperlaneWarpRoutes": {
+        "5042002": "0x76e90f28Ad1E3ACBd47F7a75294DCF23C598214a",
+        "43113": "0xAba718626a1521D90bE044985C0Ba6F146c8ed29"
+      }
+    },
+    "MXNB": {
+      "decimals": 6,
+      "bridgeStrategy": "Hyperlane",
+      "liquidityHomeChainId": 5042002,
+      "addresses": {
+        "5042002": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461"
+      }
+    },
+    "AUDF": {
+      "decimals": 6,
+      "bridgeStrategy": "Hyperlane",
+      "liquidityHomeChainId": 5042002,
+      "addresses": {
+        "5042002": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b"
+      }
+    },
+    "QCAD": {
+      "decimals": 6,
+      "bridgeStrategy": "Hyperlane",
+      "liquidityHomeChainId": 5042002,
+      "addresses": {
+        "5042002": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d"
+      }
+    },
+    "cirBTC": {
+      "decimals": 8,
+      "bridgeStrategy": "Hyperlane",
+      "liquidityHomeChainId": 5042002,
+      "addresses": {
+        "5042002": "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF"
+      }
+    }
+  }
+}

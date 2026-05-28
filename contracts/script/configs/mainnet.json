@@ -1,0 +1,94 @@
+{
+  "environment": "mainnet",
+  "chains": {
+    "arc-mainnet": {
+      "chainId": 0,
+      "rpc": "https://rpc.arc.network",
+      "comment": "Arc mainnet not launched yet — placeholder",
+      "isHub": true
+    },
+    "avalanche-mainnet": {
+      "chainId": 43114,
+      "rpc": "https://api.avax.network/ext/bc/C/rpc",
+      "hyperlaneMailbox": "0xFf06aFcaABaDDd1fb08371f9ccA15D73D51FeBD6",
+      "isHub": true
+    },
+    "ethereum-mainnet": {
+      "chainId": 1,
+      "rpc": "https://ethereum-rpc.publicnode.com",
+      "isLiquiditySource": true
+    },
+    "polygon-mainnet": {
+      "chainId": 137,
+      "rpc": "https://polygon-bor-rpc.publicnode.com",
+      "isLiquiditySource": true,
+      "comment": "Where JPYC liquidity lives — Uniswap V3 pool 0xfda7E76F768cE8152bbe6E2aCbF5bF16fAf02eB6"
+    },
+    "kaia-mainnet": {
+      "chainId": 8217,
+      "rpc": "https://public-en.node.kaia.io",
+      "isSpoke": true
+    }
+  },
+  "assets": {
+    "USDC": {
+      "decimals": 6,
+      "bridgeStrategy": "CCTP",
+      "liquidityHomeChainId": 0,
+      "addresses": {
+        "43114": "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
+        "1": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "137": "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359"
+      }
+    },
+    "EURC": {
+      "decimals": 6,
+      "bridgeStrategy": "CCTP",
+      "liquidityHomeChainId": 43114,
+      "comment": "Liquidity home: Avalanche UniV3 pool 0x975d4286bdB7b2989C8129f0B7C1299b166A11b3 (fee 100, ~$3.3M)",
+      "addresses": {
+        "43114": "0xC891EB4cbdEFf6e073e859e987815Ed1505c2ACD",
+        "1": "0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c"
+      }
+    },
+    "JPYC": {
+      "decimals": 18,
+      "bridgeStrategy": "Hyperlane",
+      "liquidityHomeChainId": 137,
+      "comment": "Liquidity home: Polygon UniV3 pool 0xfda7E76F768cE8152bbe6E2aCbF5bF16fAf02eB6 (fee 3000, ~$17K)",
+      "addresses": {
+        "1": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
+        "137": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
+        "43114": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
+        "8217": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29"
+      }
+    },
+    "MXNB": {
+      "decimals": 6,
+      "bridgeStrategy": "Hyperlane",
+      "liquidityHomeChainId": 43114,
+      "comment": "PLACEHOLDER — fill once Bitso publishes MXNB mainnet address",
+      "addresses": {
+        "43114": "0x0000000000000000000000000000000000000000"
+      }
+    },
+    "AUDF": {
+      "decimals": 6,
+      "bridgeStrategy": "Hyperlane",
+      "liquidityHomeChainId": 137,
+      "comment": "PLACEHOLDER — fill once Forte publishes AUDF mainnet address",
+      "addresses": {
+        "137": "0x0000000000000000000000000000000000000000"
+      }
+    },
+    "QCAD": {
+      "decimals": 6,
+      "bridgeStrategy": "Hyperlane",
+      "liquidityHomeChainId": 137,
+      "comment": "PLACEHOLDER — fill once Stablecorp publishes QCAD mainnet address",
+      "addresses": {
+        "137": "0x0000000000000000000000000000000000000000"
+      }
+    }
+  }
+}

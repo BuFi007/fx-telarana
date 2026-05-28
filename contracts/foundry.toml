@@ -31,6 +31,7 @@ fs_permissions = [
   { access = "read-write", path = "../deployments" },
   { access = "read", path = "./out" },
   { access = "read", path = "./script/poseidon" },
+  { access = "read", path = "./script/configs" },
 ]
 
 remappings = [
