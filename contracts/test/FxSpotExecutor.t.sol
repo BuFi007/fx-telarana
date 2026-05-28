@@ -125,6 +125,55 @@ contract MockTelaranaGatewayHubHook is ITelaranaGatewayHubHook {
     }
 }
 
+/// @notice Stub LiquidityRouter that pulls USDC via the allowance the executor
+///         sets and pays tokenOut to the recipient from a pre-seeded reserve.
+///         Matches the real LiquidityRouter's `swapExactIn` signature.
+contract MockLiquidityRouter {
+    using SafeERC20Lib for IERC20;
+
+    /// @dev Per-pair fixed quote (tokenIn,tokenOut) => amountOut. Returns
+    ///      `amountIn` 1:1 if no rate set, mirroring a stable-stable route.
+    mapping(bytes32 => uint256) public quote;
+    uint256 public swaps;
+    bool public reverts;
+
+    function setQuote(address tokenIn, address tokenOut, uint256 amountOut) external {
+        quote[keccak256(abi.encode(tokenIn, tokenOut))] = amountOut;
+    }
+
+    function setReverts(bool r) external {
+        reverts = r;
+    }
+
+    function swapExactIn(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 minAmountOut,
+        address recipient,
+        uint256 deadline
+    ) external returns (uint256 amountOut) {
+        require(!reverts, "MockLiquidityRouter: forced revert");
+        require(block.timestamp <= deadline, "deadline");
+        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+        uint256 q = quote[keccak256(abi.encode(tokenIn, tokenOut))];
+        amountOut = q == 0 ? amountIn : q;
+        require(amountOut >= minAmountOut, "minOut");
+        IERC20(tokenOut).safeTransfer(recipient, amountOut);
+        swaps++;
+    }
+}
+
+library SafeERC20Lib {
+    function safeTransferFrom(IERC20 t, address from, address to, uint256 amount) internal {
+        require(t.transferFrom(from, to, amount), "transferFrom");
+    }
+
+    function safeTransfer(IERC20 t, address to, uint256 amount) internal {
+        require(t.transfer(to, amount), "transfer");
+    }
+}
+
 contract FxSpotExecutorTest is Test {
     FxSpotExecutor public executor;
     MockFxOracle public oracle;
@@ -532,6 +581,126 @@ contract FxSpotExecutorTest is Test {
         vm.prank(newKeeper);
         executor.executeSpotFx(REQUEST_ID);
         assertTrue(executor.executed(REQUEST_ID));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          LIQUIDITY ROUTER ROUTING
+    //////////////////////////////////////////////////////////////*/
+
+    function test_executeSpotFx_usesLiquidityRouter_whenSet() public {
+        // Wire a router with a fixed 0.94 EURC-per-USDC quote — independent of
+        // the oracle, since the router is the source of truth for the swap.
+        MockLiquidityRouter router = new MockLiquidityRouter();
+        router.setQuote(address(usdc), address(eurc), 940_000);
+        // Seed the router's tokenOut reserve so it can pay the recipient.
+        eurc.mint(address(router), 940_000);
+
+        vm.prank(ADMIN);
+        executor.setLiquidityRouter(address(router));
+
+        // Executor needs USDC (delivered by TGH in real flow).
+        usdc.mint(address(executor), 1e6);
+        _setReceipt(REQUEST_ID, 1e6, address(eurc), 900_000, TRADER);
+
+        uint256 executorUsdcBefore = usdc.balanceOf(address(executor));
+        uint256 executorEurcBefore = eurc.balanceOf(address(executor));
+
+        vm.prank(KEEPER);
+        uint256 amountOut = executor.executeSpotFx(REQUEST_ID);
+
+        assertEq(amountOut, 940_000, "router quote returned");
+        assertEq(eurc.balanceOf(TRADER), 940_000, "trader paid by router");
+        assertEq(
+            usdc.balanceOf(address(executor)),
+            executorUsdcBefore - 1e6,
+            "router pulled USDC from executor"
+        );
+        assertEq(
+            eurc.balanceOf(address(executor)),
+            executorEurcBefore,
+            "executor inventory untouched by router path"
+        );
+        assertEq(router.swaps(), 1, "router swapExactIn called");
+        assertTrue(executor.executed(REQUEST_ID), "executed flag set");
+        assertTrue(tgh.settled(REQUEST_ID), "TGH settled");
+        // Allowance is revoked after the swap.
+        assertEq(usdc.allowance(address(executor), address(router)), 0, "allowance revoked");
+    }
+
+    function test_executeSpotFx_fallsBackToInventory_whenRouterUnset() public {
+        // Default state: liquidityRouter == address(0). The happy-path math
+        // should match the original inventory behavior — tokenOut comes from
+        // executor reserves, not from any router.
+        assertEq(address(executor.liquidityRouter()), address(0), "router unset");
+
+        usdc.mint(address(executor), 1e6);
+        _setReceipt(REQUEST_ID, 1e6, address(eurc), 900_000, TRADER);
+
+        uint256 reserveBefore = eurc.balanceOf(address(executor));
+
+        vm.prank(KEEPER);
+        uint256 amountOut = executor.executeSpotFx(REQUEST_ID);
+
+        uint256 gross = uint256(1e6) * MID_USDC_TO_EURC_E18 / 1e18;
+        uint256 expected = gross * 9995 / 10_000;
+        assertEq(amountOut, expected, "inventory path quote");
+        assertEq(eurc.balanceOf(TRADER), expected, "trader paid from inventory");
+        assertEq(
+            eurc.balanceOf(address(executor)),
+            reserveBefore - expected,
+            "executor reserve drawn down"
+        );
+        assertTrue(executor.executed(REQUEST_ID));
+        assertTrue(tgh.settled(REQUEST_ID));
+    }
+
+    function test_setLiquidityRouter_revertsOnNonContract() public {
+        address eoa = address(uint160(uint256(keccak256("spot.test.EOA_NOT_A_ROUTER"))));
+        vm.expectRevert(abi.encodeWithSelector(FxSpotExecutor.InvalidRouter.selector, eoa));
+        vm.prank(ADMIN);
+        executor.setLiquidityRouter(eoa);
+    }
+
+    function test_setLiquidityRouter_acceptsZeroAddressToDisable() public {
+        MockLiquidityRouter router = new MockLiquidityRouter();
+        vm.prank(ADMIN);
+        executor.setLiquidityRouter(address(router));
+        assertEq(address(executor.liquidityRouter()), address(router));
+
+        vm.prank(ADMIN);
+        executor.setLiquidityRouter(address(0));
+        assertEq(address(executor.liquidityRouter()), address(0));
+    }
+
+    function test_setLiquidityRouter_revertsForNonAdmin() public {
+        MockLiquidityRouter router = new MockLiquidityRouter();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                OUTSIDER,
+                executor.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        vm.prank(OUTSIDER);
+        executor.setLiquidityRouter(address(router));
+    }
+
+    function test_executeSpotFx_routerPath_revertsOnRouterSlippage() public {
+        MockLiquidityRouter router = new MockLiquidityRouter();
+        // Quote intentionally below the receipt's minAmountOut — the mock
+        // router itself enforces minOut and reverts before delivery.
+        router.setQuote(address(usdc), address(eurc), 800_000);
+        eurc.mint(address(router), 800_000);
+
+        vm.prank(ADMIN);
+        executor.setLiquidityRouter(address(router));
+
+        usdc.mint(address(executor), 1e6);
+        _setReceipt(REQUEST_ID, 1e6, address(eurc), 900_000, TRADER);
+
+        vm.expectRevert(bytes("minOut"));
+        vm.prank(KEEPER);
+        executor.executeSpotFx(REQUEST_ID);
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -13,6 +13,20 @@ import {IFxOracle} from "../interfaces/IFxOracle.sol";
 import {ITelaranaGatewayHubHook} from "../interfaces/ITelaranaGatewayHubHook.sol";
 import {ITurboFeeVault} from "../interfaces/ITurboFeeVault.sol";
 
+/// @dev Minimal local interface for the LiquidityRouter. Kept inline (not
+///      imported) so this contract has no compile-time dependency on the
+///      router package — the address is set post-deploy by an admin.
+interface ILiquidityRouter {
+    function swapExactIn(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 minAmountOut,
+        address recipient,
+        uint256 deadline
+    ) external returns (uint256 amountOut);
+}
+
 /// @title FxSpotExecutor
 /// @notice Phase A v0.2 spot-FX executor for fx-Telaraña. Plugs into
 ///         `TelaranaGatewayHubHook` (TGH) as a `destinationHub` for spot-FX
@@ -139,6 +153,12 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
     /// gate). Requires the executor caller to wrap its tx with RedStone SDK calldata.
     bool public requireVerifiedOracle;
 
+    /// @notice Optional LiquidityRouter for inventory-less routing. When set,
+    ///         `executeSpotFx` skips the local-inventory path and routes the
+    ///         USDC through the router instead. Backwards compatible — defaults
+    ///         to unset, in which case the original inventory path is used.
+    ILiquidityRouter public liquidityRouter;
+
     event SpotFxExecuted(
         bytes32 indexed requestId,
         bytes32 indexed routeId,
@@ -157,6 +177,16 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
     event RequireVerifiedOracleSet(bool required);
     event FeeVaultSet(address indexed feeVault);
     event SpotFeeRouted(bytes32 indexed requestId, bytes32 indexed routeId, address indexed feeVault, uint256 amount);
+    event LiquidityRouterSet(address indexed router);
+    event SpotFxRoutedViaRouter(
+        bytes32 indexed requestId,
+        bytes32 indexed routeId,
+        address indexed recipient,
+        address tokenOut,
+        uint256 usdcIn,
+        uint256 amountOut,
+        uint256 minAmountOut
+    );
 
     error ZeroAddress();
     error ZeroAmount();
@@ -171,6 +201,7 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
     error TokenDecimalsTooLarge(address token, uint8 decimals);
     error EmptyReceipt(bytes32 requestId);
     error InvalidFeeVault(address feeVault);
+    error InvalidRouter(address router);
 
     constructor(
         address usdc_,
@@ -236,6 +267,15 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
         if (receipt.recipient == address(0) || receipt.tokenOut == address(0)) revert ZeroAddress();
         if (receipt.tokenOut == address(USDC)) revert UsdcAsTokenOut();
         if (!tokenEnabled[receipt.tokenOut]) revert TokenNotEnabled(receipt.tokenOut);
+
+        // Router-routed path (preferred when set). Skips the inventory branch
+        // — the LiquidityRouter pulls USDC from this contract, dispatches the
+        // swap via PoolRegistry's best venue, and pays the recipient directly.
+        // The router's own slippage gate enforces `minAmountOut`; we keep the
+        // executed-flag + TGH settlement effects below.
+        if (address(liquidityRouter) != address(0)) {
+            return _executeViaLiquidityRouter(requestId, receipt);
+        }
 
         uint8 outDecimals = tokenDecimals[receipt.tokenOut];
 
@@ -365,6 +405,17 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
         emit FeeVaultSet(feeVault_);
     }
 
+    /// @notice Set (or clear) the LiquidityRouter used by `executeSpotFx`.
+    /// @dev    When set, the executor no longer needs to hold tokenOut
+    ///         inventory — the router dispatches into a real venue (Uniswap
+    ///         v4 / v3 / Trader Joe) via PoolRegistry. Pass `address(0)` to
+    ///         disable router routing and fall back to inventory.
+    function setLiquidityRouter(address router_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (router_ != address(0) && router_.code.length == 0) revert InvalidRouter(router_);
+        liquidityRouter = ILiquidityRouter(router_);
+        emit LiquidityRouterSet(router_);
+    }
+
     function pause() external onlyRole(OPERATIONS_ROLE) {
         _pause();
     }
@@ -382,6 +433,50 @@ contract FxSpotExecutor is AccessControl, Pausable, ReentrancyGuard {
             return amount.mulDiv(10 ** uint256(toDecimals - fromDecimals), 1);
         }
         return amount.mulDiv(1, 10 ** uint256(fromDecimals - toDecimals));
+    }
+
+    /// @dev Router-routed leg of `executeSpotFx`. Pays the canonical receipt
+    ///      recipient out of the LiquidityRouter's chosen venue, settles TGH,
+    ///      and flips the executed flag — same end-state as the inventory path.
+    function _executeViaLiquidityRouter(
+        bytes32 requestId,
+        ITelaranaGatewayHubHook.GatewayReceipt memory receipt
+    ) internal returns (uint256 amountOut) {
+        // Effects first: idempotency flag flipped before the external swap.
+        executed[requestId] = true;
+
+        // Approve the router for exactly the USDC notional the receipt names,
+        // then revoke. `safeIncreaseAllowance` is robust for the USDC mock and
+        // for real Circle USDC (no force-approve race).
+        address routerAddr = address(liquidityRouter);
+        USDC.safeIncreaseAllowance(routerAddr, receipt.amount);
+        amountOut = liquidityRouter.swapExactIn(
+            address(USDC),
+            receipt.tokenOut,
+            receipt.amount,
+            receipt.minAmountOut,
+            receipt.recipient,
+            block.timestamp + 5 minutes
+        );
+        USDC.forceApprove(routerAddr, 0);
+
+        if (amountOut < receipt.minAmountOut) {
+            revert SlippageExceeded(amountOut, receipt.minAmountOut);
+        }
+
+        // Tell TGH the spot route is settled. Same belt-and-braces as the
+        // inventory path — will revert if TGH receipt isn't in MINTED state.
+        TELARANA_HUB_HOOK.markGatewayAtomicFxSwapSettled(requestId, amountOut);
+
+        emit SpotFxRoutedViaRouter(
+            requestId,
+            receipt.routeId,
+            receipt.recipient,
+            receipt.tokenOut,
+            receipt.amount,
+            amountOut,
+            receipt.minAmountOut
+        );
     }
 
     function _routeSpotFee(bytes32 requestId, bytes32 routeId, uint256 feeAmount) internal {
