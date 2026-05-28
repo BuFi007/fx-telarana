@@ -1,0 +1,13 @@
+{
+  "chainId": 5042002,
+  "network": "arc-testnet",
+  "poolRegistry": "0x05B71cA260EC64925CB961fbf85F2a8944F77103",
+  "liquidityRouter": "0x50737c2fDf26e0Ba2cEd6855D4A1e2E2a9EAaB28",
+  "assetRegistry": "0x7618dfa920b6416b9924fafbf5aa56a6fe978efc",
+  "poolRegistryAdmin": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "assetRegistryAdmin": "0xca437B03CDb1f2BCddB49dc45e267fc7038291fD",
+  "assetRegistryAdminNote": "Deployed via DEMO_TAKER to avoid KEEPER nonce contention during concurrent liquidity seeding. Migrate admin to multisig/timelock per decentralization spec.",
+  "assetsRegistered": 7,
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "notes": "PoolRegistry + LiquidityRouter deployed earlier (commit window 582ec9a); AssetRegistry deployed 2026-05-28. LiquidityRouter.REGISTRY() points at PoolRegistry. Routes NOT yet registered (pending KEEPER nonce availability)."
+}

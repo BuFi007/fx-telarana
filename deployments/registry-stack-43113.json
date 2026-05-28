@@ -1,0 +1,12 @@
+{
+  "chainId": 43113,
+  "network": "avalanche-fuji",
+  "poolRegistry": "0x952645e4216d863b892a95d0105ab9159cc1311c",
+  "liquidityRouter": "0x1acd4b3a9231b291363af043858141cb5bd82826",
+  "assetRegistry": "0xf1c8d4d0c1e1c012b0d9ea4a04beb0c5d560f815",
+  "poolRegistryAdmin": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "assetRegistryAdmin": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "assetsRegistered": 7,
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "notes": "Full registry stack deployed from KEEPER 2026-05-28. No v4 pools initialized on Fuji yet, so no routes registered. Migrate admin to multisig/timelock per decentralization spec."
+}
