@@ -1,0 +1,40 @@
+{
+  "market": "QCAD/USDC",
+  "chainId": 5042002,
+  "chainName": "Arc Testnet",
+  "marketId": "0x8ff4ca87809655d824803aa87eec8e3a7b15c73215aca5e72650c04072df4645",
+  "baseToken": {
+    "symbol": "QCAD",
+    "address": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d"
+  },
+  "quoteToken": {
+    "symbol": "USDC",
+    "address": "0x3600000000000000000000000000000000000000"
+  },
+  "pythFeed": {
+    "id": "0x3112b03a41c910ed446852aacf67118cb1bec67b2cd0b9a214c58cc0eaa2ecca",
+    "pair": "USD/CAD",
+    "inverted": true,
+    "note": "Pyth publishes USD/CAD; oracle inverts to CAD/USD on-chain"
+  },
+  "clearinghouse": "0x7707d108F6Ce3d95ceA38D3965448F00C21CaFdC",
+  "fundingEngine": "0xE08a146B9081A8dd32203fC5e7B5988352489518",
+  "oracle": "0xF181caF51bD2450211CB9e72d5Cc853d3789698B",
+  "config": {
+    "initialMarginBps": 500,
+    "maintenanceMarginBps": 300,
+    "tradingFeeBps": 5,
+    "maxLeverageBps": 200000,
+    "maxOpenInterestUsd": "500000000000000000000",
+    "maxSkewUsd": "500000000000000000000",
+    "fundingVelocityBps": 1,
+    "maxFundingRateBpsPerSecond": 1
+  },
+  "configTxHashes": {
+    "setPythFeedConfig": "0xdda0563fab4e2a8a6b4f2f39c580abbb2a8fbbbcb6fcc4e9567ff44ae6638445",
+    "configureMarket": "0xec80159d04121333dcf71714336427bf920a90bda3a95247bddd26b1fef733d4",
+    "configureFunding": "0x86b6445b3e4b911fc4e5ce195a0ba49a15ea2e0600477cb5b6929393f5e5a9f3"
+  },
+  "deployedAt": "2026-05-27",
+  "deployedBy": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69"
+}

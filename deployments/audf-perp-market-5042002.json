@@ -1,0 +1,39 @@
+{
+  "market": "AUDF/USDC",
+  "chainId": 5042002,
+  "chainName": "Arc Testnet",
+  "marketId": "0x921b564f97b14b7d73c12a72af4b7847fb5e3414f98cbe5fb5f1d8a3168c0a00",
+  "baseToken": {
+    "symbol": "AUDF",
+    "address": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b"
+  },
+  "quoteToken": {
+    "symbol": "USDC",
+    "address": "0x3600000000000000000000000000000000000000"
+  },
+  "pythFeed": {
+    "id": "0x67a6f93030420c1c9e3fe37c1ab6b77966af82f995944a9fefce357a22854a80",
+    "pair": "AUD/USD",
+    "inverted": false
+  },
+  "clearinghouse": "0x7707d108F6Ce3d95ceA38D3965448F00C21CaFdC",
+  "fundingEngine": "0xE08a146B9081A8dd32203fC5e7B5988352489518",
+  "oracle": "0xF181caF51bD2450211CB9e72d5Cc853d3789698B",
+  "config": {
+    "initialMarginBps": 500,
+    "maintenanceMarginBps": 300,
+    "tradingFeeBps": 5,
+    "maxLeverageBps": 200000,
+    "maxOpenInterestUsd": "500000000000000000000",
+    "maxSkewUsd": "500000000000000000000",
+    "fundingVelocityBps": 1,
+    "maxFundingRateBpsPerSecond": 1
+  },
+  "configTxHashes": {
+    "setPythFeedConfig": "0xd2a851a901789d8ba033e0af4f23d4e0710fed1e55f4d8aca8eea376491f7c72",
+    "configureMarket": "0xace15c856a54e83a7ae9b7cd4edef0ea55160aee5093ce3a5b28798fa0863d14",
+    "configureFunding": "0x4c4c9893582b659f09655af535bfd22d12647dbb5400cc3d107c7d1622b98d5e"
+  },
+  "deployedAt": "2026-05-27",
+  "deployedBy": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69"
+}
