@@ -45,8 +45,9 @@
     "source": "Pyth Hermes FX.USD/CAD 0x3112b03a41c910ed446852aacf67118cb1bec67b2cd0b9a214c58cc0eaa2ecca (inverted → CAD/USD)",
     "target": "ManualPriceFeed CAD_USD 0x48f01A9B92FFcF6AD854cBb71bAd7094435CAf10 setPrice(int256), 8-dec, owner=KEEPER",
     "guards": "publishAge<60s, conf<50bps, sanity 0.5–1.0 CAD/USD, max step 5% vs on-chain; CRON_SECRET bearer auth",
-    "env": ["CRON_SECRET", "CAD_KEEPER_PRIVATE_KEY (=KEEPER 0x0646…eC69)", "ARC_RPC_URL (optional paid dRPC)"],
-    "note": "ManualPriceFeed stales at FxOracleV2 chainlinkMaxAge=3600s; 10-min cron gives 6x margin. KEEPER needs native-USDC gas on Arc. Retire when a native CAD push feed exists."
+    "env": ["CRON_SECRET", "CAD_KEEPER_PRIVATE_KEY (=dedicated CAD_RELAYER 0x861A994347bcb86EfE0200EA83B62f1A0681D3A6)", "ARC_RPC_URL (optional paid dRPC)"],
+    "signer": "CAD_RELAYER 0x861A994347bcb86EfE0200EA83B62f1A0681D3A6 — dedicated EOA, owns ManualPriceFeed(CAD); split off KEEPER so admin/deploy batches don't race the cron nonce",
+    "note": "ManualPriceFeed stales at FxOracleV2 chainlinkMaxAge=3600s; 10-min cron gives 6x margin. CAD_RELAYER needs native-USDC gas on Arc (funded 10). Retire when a native CAD push feed exists."
   },
   "deployedAt": "2026-05-28",
   "notes": "Vault per-pool allocation (Codex HIGH#1) + hardened (steal-window guard, idempotent migrate, pre-credit cap snapshot). FxOracleV2 admin=KEEPER. CANARY: admin==timelock==KEEPER (mainnet → real TimelockController + timelock allowHook per Codex HIGH#2). NEXT: Envio + app repoint (off-chain) from retired hooks → these 4 V2 hooks; ~85-LOC dead-Morpho cleanup in FxSwapHook."
