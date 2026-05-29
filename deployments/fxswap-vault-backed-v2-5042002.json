@@ -23,7 +23,9 @@
   "phase25SwapAdapter": {
     "contract": "src/hub/FxRouterSwapAdapter.sol",
     "deployScript": "script/DeployFxRouterSwapAdapter.s.sol",
-    "status": "DEPLOYED on Arc + 8 routes set (owner=KEEPER); pending FxRouter-side wiring",
+    "status": "LIVE — adapter + FxRouter deployed & fully wired on Arc (cross-currency path open)",
+    "fxRouter": "0xd6607B37B7f8eE679E0f4c932560529711f88249",
+    "fxRouterConfig": "owner=KEEPER, treasury=KEEPER, maxFeeBps=50bps cap, permit2=0x000000000022D473030F116dDEE9F6B43aC78BA3, all 8 pairs allowed, not paused",
     "purpose": "production IFxRouterSwapAdapter — routes FxRouter cross-currency swaps through the vault-backed V2 pools via PoolManager.unlock; unblocks SwapAdapterNotSet",
     "wiringSteps": [
       "deploy adapter (owner=KEEPER)",
@@ -33,7 +35,8 @@
     ],
     "address": "0xe9147f799C1d65d1bAcFD0fE019d8c46531ef917",
     "routesSet": "USDC<->EURC, USDC<->AUDF, USDC<->MXNB, USDC<->QCAD (all @ fee=100/ts=1, verified on-chain)",
-    "pendingFxRouterWiring": ["adapter.setAuthorizedCaller(FxRouter,true)", "FxRouter.setSwapAdapter(adapter)", "FxRouter.setPairAllowed x8"]
+    "wiringComplete": "adapter.setAuthorizedCaller(FxRouter)=true; FxRouter ctor swapAdapter=adapter; FxRouter.setPairAllowed x8=true — all verified on-chain",
+    "nextStep": "deepen junior liquidity (fundJunior) before opening to users; then app/MCP repoint to FxRouter executeIntent"
   },
   "cadFeedKeeper": {
     "route": "apps/web/app/api/cron/cad-feed/route.ts",
