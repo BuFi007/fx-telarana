@@ -1,0 +1,12 @@
+# Docker build context excludes — keeps the relayer image small + secret-free.
+.git
+contracts
+**/node_modules
+**/dist
+broadcast
+out
+cache
+.relayer-state
+*.log
+.env
+.env.*
