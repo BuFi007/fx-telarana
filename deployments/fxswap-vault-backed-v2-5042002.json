@@ -37,6 +37,7 @@
     "routesSet": "USDC<->EURC, USDC<->AUDF, USDC<->MXNB, USDC<->QCAD (all @ fee=100/ts=1, verified on-chain)",
     "wiringComplete": "adapter.setAuthorizedCaller(FxRouter)=true; FxRouter ctor swapAdapter=adapter; FxRouter.setPairAllowed x8=true — all verified on-chain",
     "smokeTest": "executeIntent proven end-to-end on Arc — EURC->USDC, taker!=recipient, tx 0x6cf372edd204151cfcba546e318e48b4f57ab07a4605e73c3fdcf02f3d0b1bc5 (1 EURC -> 1.1612 USDC)",
+    "liquidityDeepened": "2026-05-29 via fundJunior from KEEPER — EURC ~10.6k USDC/10091 EURC; AUDF 5.5k/9967; MXNB 5.5k/176590; QCAD 5.5k/13850",
     "nextStep": "deepen junior liquidity (fundJunior) before opening to users; then app/MCP repoint to FxRouter executeIntent"
   },
   "cadFeedKeeper": {
