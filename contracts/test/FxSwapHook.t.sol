@@ -9,12 +9,14 @@ import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 import {MockPyth} from "./mocks/MockPyth.sol";
+import {MockFxVault} from "./mocks/MockFxVault.sol";
 import {FxOracle} from "../src/hub/FxOracle.sol";
 
 contract FxSwapHookTest is Test {
     FxSwapHook internal hook;
     FxOracle   internal oracle;
     MockPyth   internal pyth;
+    MockFxVault internal vault;
     MockERC20  internal token0;
     MockERC20  internal token1;
     address    internal poolManager = address(0x1111);
@@ -49,6 +51,12 @@ contract FxSwapHookTest is Test {
         pyth.setPrice(PYTH_T0, 1_00_000_000, 100, -8, block.timestamp);
         pyth.setPrice(PYTH_T1, 1_00_000_000, 100, -8, block.timestamp);
 
+        // Vault-backed refactor: liquidity reserves now live in the shared vault.
+        // The hook reads them via `_vaultReserve` so unit tests must supply a real
+        // vault contract (a non-contract placeholder reverts on the staticcall).
+        // asset = token0 → `_vaultReserve(token0)` reads `juniorUsdc()`.
+        vault = new MockFxVault(address(token0));
+
         hook = new FxSwapHook(
             poolManager,
             address(oracle),
@@ -56,7 +64,8 @@ contract FxSwapHookTest is Test {
             owner,
             address(token0),
             address(token1),
-            address(0x4444)   // mock morpho — unused at hotReservePct = 10_000
+            address(0x4444),  // mock morpho — unused at hotReservePct = 10_000
+            address(vault)    // vault-backed reserves (replaces deprecated deposit() custody)
         );
 
         // Use 100% hot reserves so these standalone unit tests don't touch
@@ -84,12 +93,40 @@ contract FxSwapHookTest is Test {
         vm.stopPrank();
     }
 
-    /// @notice Helper: owner bootstraps the pool with the given amounts.
-    ///         Tests that subsequently exercise alice/bob deposits or redeems
-    ///         call this first to seed B0/Q0.
+    /// @notice Helper: owner bootstraps the PMM equilibrium with the given amounts.
+    ///         Vault-backed refactor: the old `hook.deposit(...)` self-custody seed
+    ///         is gone (it now reverts `UseVault`). We reproduce its exact effect by
+    ///         (1) setting the vault's junior reserves to the seed amounts, then
+    ///         (2) calling `sync()` so `baseTargetE18`/`quoteTargetE18` AND
+    ///         `_vaultReserve(...)` equal those amounts — identical post-state to
+    ///         what `deposit()` used to produce. Passing the exact expected target
+    ///         (= the reserve) makes drift 0, so seeding always succeeds.
     function _seedAsOwner(uint256 amount0, uint256 amount1) internal {
+        _seedVault(hook, vault, address(token0), amount0, address(token1), amount1);
+    }
+
+    /// @notice Vault-backed seed for an arbitrary hook/vault pair. Sets reserves on
+    ///         the vault and syncs the hook's PMM targets to them.
+    function _seedVault(
+        FxSwapHook h,
+        MockFxVault v,
+        address tokenA,
+        uint256 amountA,
+        address tokenB,
+        uint256 amountB
+    ) internal {
+        v.setReserve(tokenA, amountA);
+        v.setReserve(tokenB, amountB);
+        // `sync()` reads _vaultReserve(TOKEN0)/(TOKEN1) and normalizes to 1e18.
+        uint256 expBase  = _e18(h.TOKEN0() == tokenA ? amountA : amountB, MockERC20(h.TOKEN0()).decimals());
+        uint256 expQuote = _e18(h.TOKEN1() == tokenB ? amountB : amountA, MockERC20(h.TOKEN1()).decimals());
         vm.prank(owner);
-        hook.deposit(amount0, amount1);
+        h.sync(expBase, expQuote, 10_000);
+    }
+
+    /// @notice Mirror of the hook's `_rawToE18`: scale a raw token amount to 1e18.
+    function _e18(uint256 amount, uint8 decimals) private pure returns (uint256) {
+        return amount * (10 ** uint256(18 - decimals));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -144,7 +181,7 @@ contract FxSwapHookTest is Test {
         // Re-deploy to inspect untouched constructor defaults.
         FxSwapHook fresh = new FxSwapHook(
             poolManager, address(oracle), registry, owner,
-            address(token0), address(token1), address(0x4444)
+            address(token0), address(token1), address(0x4444), address(0x5555)
         );
         assertEq(fresh.spreadBps(), fresh.DEFAULT_SPREAD_BPS());
         assertEq(fresh.kBps(), fresh.DEFAULT_K_BPS());
@@ -157,7 +194,7 @@ contract FxSwapHookTest is Test {
 
     function test_constructor_revertsOnTokensUnsorted() public {
         vm.expectRevert();
-        new FxSwapHook(poolManager, address(oracle), registry, owner, address(token1), address(token0), address(0x4444));
+        new FxSwapHook(poolManager, address(oracle), registry, owner, address(token1), address(token0), address(0x4444), address(0x5555));
     }
 
     function test_setHotReservePct_revertsAbove10k() public {
@@ -195,63 +232,25 @@ contract FxSwapHookTest is Test {
                                 LP API
     //////////////////////////////////////////////////////////////*/
 
-    function test_deposit_firstDepositBootstrapsShares() public {
-        // First deposit is owner-only (codex-r12 patch); use the helper.
-        _seedAsOwner(1_000_000, 1_000_000);
-        uint256 shares = hook.sharesOf(owner);
-        assertEq(shares, 2_000_000 - hook.MINIMUM_LIQUIDITY());
-        assertEq(hook.totalShares(), 2_000_000);
-        assertEq(token0.balanceOf(address(hook)), 1_000_000);
-        assertEq(token1.balanceOf(address(hook)), 1_000_000);
+    // Vault-backed refactor: `deposit()` is permanently disabled — it reverts
+    // `UseVault()` on its FIRST line. The legacy share-bootstrap / pro-rata /
+    // first-deposit-ratio / target-growth mechanics it used to implement no
+    // longer exist (liquidity lives in SharedFxVault, not the hook). The whole
+    // obsolete set is collapsed into one assertion that the function is dead.
+    function test_deposit_revertsUseVault() public {
+        vm.expectRevert(FxSwapHook.UseVault.selector);
+        vm.prank(owner);
+        hook.deposit(1e6, 1e6);
     }
 
-    function test_deposit_subsequentDepositProRata() public {
-        _seedAsOwner(1_000_000, 1_000_000);
-
-        address bob = address(0xBEEF);
-        token0.mint(bob, 1_000_000);
-        token1.mint(bob, 1_000_000);
-        vm.startPrank(bob);
-        token0.approve(address(hook), type(uint256).max);
-        token1.approve(address(hook), type(uint256).max);
-        uint256 bobShares = hook.deposit(500_000, 500_000);
-        vm.stopPrank();
-
-        assertGt(bobShares, 0);
-        uint256 total = hook.totalShares();
-        assertApproxEqRel(bobShares * 3, total, 0.01e18);
-    }
-
-    function test_redeem_returnsProRataBalance() public {
-        _seedAsOwner(1_000_000, 1_000_000);
+    // Vault-backed refactor: `redeem()` is likewise permanently disabled —
+    // reverts `UseVault()` first thing. Pro-rata return / insufficient-shares /
+    // target-shrink behaviors are gone (lenders exit via the vault). Collapsed
+    // into a single dead-function assertion.
+    function test_redeem_revertsUseVault() public {
+        vm.expectRevert(FxSwapHook.UseVault.selector);
         vm.prank(alice);
-        uint256 aliceShares = hook.deposit(1_000_000, 1_000_000);
-
-        vm.prank(alice);
-        (uint256 out0, uint256 out1) = hook.redeem(aliceShares);
-
-        // alice deposited 1M:1M subsequently; her share of post-redeem pool ≈ 1M each.
-        assertApproxEqAbs(out0, 1_000_000, 2);
-        assertApproxEqAbs(out1, 1_000_000, 2);
-    }
-
-    function test_redeem_revertsOnInsufficientShares() public {
-        _seedAsOwner(1_000_000, 1_000_000);
-        vm.expectRevert();
-        vm.prank(alice);
-        hook.redeem(type(uint256).max);
-    }
-
-    function test_redeem_revertsOnZero() public {
-        vm.expectRevert();
-        vm.prank(alice);
-        hook.redeem(0);
-    }
-
-    function test_deposit_revertsOnZero() public {
-        vm.expectRevert();
-        vm.prank(alice);
-        hook.deposit(0, 0);
+        hook.redeem(1);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -338,15 +337,10 @@ contract FxSwapHookTest is Test {
     function test_quoteExactInput_scalesSixDecimalUsdcToEighteenDecimalJpyc() public {
         MockERC20 usdc = new MockERC20("USD Coin", "USDC", 6);
         MockERC20 jpyc = new MockERC20("JPYC", "JPYC", 18);
-        FxSwapHook h = _newHotOnlyHook(usdc, jpyc, 1_00_000_000, 640_000); // JPYC/USD = 0.0064
+        (FxSwapHook h, MockFxVault v) = _newHotOnlyHook(usdc, jpyc, 1_00_000_000, 640_000); // JPYC/USD = 0.0064
 
-        usdc.mint(owner, 10_000e6);
-        jpyc.mint(owner, 1_562_500e18);
-        vm.startPrank(owner);
-        usdc.approve(address(h), type(uint256).max);
-        jpyc.approve(address(h), type(uint256).max);
-        _depositSorted(h, address(usdc), 10_000e6, address(jpyc), 1_562_500e18);
-        vm.stopPrank();
+        // Vault-backed seed (replaces the old owner deposit): set reserves + sync.
+        _depositSorted(h, v, address(usdc), 10_000e6, address(jpyc), 1_562_500e18);
 
         vm.prank(owner);
         h.setKBps(0);
@@ -359,15 +353,10 @@ contract FxSwapHookTest is Test {
     function test_quoteExactInput_scalesSixDecimalUsdcToZeroDecimalKrw1() public {
         MockERC20 usdc = new MockERC20("USD Coin", "USDC", 6);
         MockERC20 krw1 = new MockERC20("KRW1", "KRW1", 0);
-        FxSwapHook h = _newHotOnlyHook(usdc, krw1, 1_00_000_000, 67_120); // KRW1/USD ~= 0.00067120
+        (FxSwapHook h, MockFxVault v) = _newHotOnlyHook(usdc, krw1, 1_00_000_000, 67_120); // KRW1/USD ~= 0.00067120
 
-        usdc.mint(owner, 10_000e6);
-        krw1.mint(owner, 14_898_689);
-        vm.startPrank(owner);
-        usdc.approve(address(h), type(uint256).max);
-        krw1.approve(address(h), type(uint256).max);
-        _depositSorted(h, address(usdc), 10_000e6, address(krw1), 14_898_689);
-        vm.stopPrank();
+        // Vault-backed seed (replaces the old owner deposit): set reserves + sync.
+        _depositSorted(h, v, address(usdc), 10_000e6, address(krw1), 14_898_689);
 
         vm.prank(owner);
         h.setKBps(0);
@@ -381,7 +370,11 @@ contract FxSwapHookTest is Test {
                           DODO PMM (Phase 2.7 #2)
     //////////////////////////////////////////////////////////////*/
 
-    function test_deposit_firstDepositSeedsTargetsAtRatio() public {
+    // Was `test_deposit_firstDepositSeedsTargetsAtRatio`. Vault-backed refactor:
+    // targets are no longer seeded by `deposit()`; they're set by `sync()` from
+    // the vault reserves. The 1e18-normalization invariant the old test asserted
+    // is preserved, so we keep it — re-pointed at the vault-backed seed path.
+    function test_sync_seedsTargetsAtVaultReserveRatio() public {
         _seedAsOwner(200_000_000, 400_000_000);
 
         // Both tokens are 6-dec → targets are 1e18-normalized
@@ -389,44 +382,34 @@ contract FxSwapHookTest is Test {
         assertEq(hook.quoteTargetE18(), 400_000_000 * 1e12);
     }
 
-    function test_deposit_subsequentDepositGrowsTargetsProRata() public {
+    // Was `test_deposit_subsequentDepositGrowsTargetsProRata`. Vault-backed
+    // refactor: there is no pro-rata target growth on deposit anymore — targets
+    // track vault reserves and only move on `sync()`. Verify a re-sync after the
+    // vault reserves grow snaps both targets up to the new reserves.
+    function test_sync_growsTargetsWhenVaultReservesGrow() public {
         _seedAsOwner(1_000e6, 1_000e6);
         uint256 b0 = hook.baseTargetE18();
         uint256 q0 = hook.quoteTargetE18();
 
-        // bob joins with same ratio → targets double-ish (modulo MINIMUM_LIQUIDITY dust)
-        address bob = address(0xBEEF);
-        token0.mint(bob, 1_000e6);
-        token1.mint(bob, 1_000e6);
-        vm.startPrank(bob);
-        token0.approve(address(hook), type(uint256).max);
-        token1.approve(address(hook), type(uint256).max);
-        hook.deposit(1_000e6, 1_000e6);
-        vm.stopPrank();
+        // Vault reserves double, owner re-syncs → targets double.
+        _seedAsOwner(2_000e6, 2_000e6);
 
-        // Targets grew by share ratio, not raw deposit. Allow 0.2% tolerance for
-        // MINIMUM_LIQUIDITY share lock.
-        assertApproxEqRel(hook.baseTargetE18(), b0 * 2, 0.002e18);
-        assertApproxEqRel(hook.quoteTargetE18(), q0 * 2, 0.002e18);
+        assertEq(hook.baseTargetE18(), b0 * 2);
+        assertEq(hook.quoteTargetE18(), q0 * 2);
     }
 
     function test_quote_donationCannotDoSEitherDirection() public {
-        // Codex-2.7 round 6 regression: an attacker donating 1 wei of
-        // either pair token to the hook used to leave (B,Q,B0,Q0) outside
-        // the DODO regime preconditions, underflowing _SolveQuadraticFunction
-        // and bricking one swap direction. Patch: _normalizePmmState snaps
-        // targets to absorb the donation. Verify quotes succeed both ways
-        // after dust transfers from a random address.
+        // Codex-2.7 round 6 regression: a 1-wei reserve bump on either pair
+        // token used to leave (B,Q,B0,Q0) outside the DODO regime preconditions,
+        // underflowing _SolveQuadraticFunction and bricking one swap direction.
+        // Patch: _normalizePmmState snaps targets to absorb it. Vault-backed:
+        // reserves live in the vault, so the "donation" is a direct reserve bump
+        // WITHOUT a re-sync (targets stay at the seeded value, reserves drift up).
         _seedAsOwner(1_000_000_000, 1_000_000_000);
 
-        // Donate dust on each side from an arbitrary address.
-        address donor = address(0xDEAD42);
-        token0.mint(donor, 1);
-        token1.mint(donor, 1);
-        vm.startPrank(donor);
-        token0.transfer(address(hook), 1);
-        token1.transfer(address(hook), 1);
-        vm.stopPrank();
+        // Bump each side's vault reserve by 1 wei without re-syncing targets.
+        vault.setReserve(address(token0), 1_000_000_000 + 1);
+        vault.setReserve(address(token1), 1_000_000_000 + 1);
 
         // Both quote directions must still succeed (no underflow).
         uint256 out01 = hook.quote(10_000, true);
@@ -451,16 +434,12 @@ contract FxSwapHookTest is Test {
         uint256 b0Before = hook.baseTargetE18();
         uint256 q0Before = hook.quoteTargetE18();
 
-        // Balanced 1% donation.
-        address donor = address(0xDEAD43);
-        token0.mint(donor, 10_000_000);
-        token1.mint(donor, 10_000_000);
-        vm.startPrank(donor);
-        token0.transfer(address(hook), 10_000_000);
-        token1.transfer(address(hook), 10_000_000);
-        vm.stopPrank();
+        // Balanced 1% donation — vault-backed: bump junior reserves directly,
+        // leaving targets stale until sync() captures them.
+        vault.setReserve(address(token0), 1_000_000_000 + 10_000_000);
+        vault.setReserve(address(token1), 1_000_000_000 + 10_000_000);
 
-        // Pre-sync: targets unchanged from donation.
+        // Pre-sync: targets unchanged from the reserve bump.
         assertEq(hook.baseTargetE18(), b0Before, "targets shifted without sync");
 
         // Owner predicts post-sync targets off-chain and submits with 1% drift tolerance.
@@ -477,8 +456,8 @@ contract FxSwapHookTest is Test {
         assertGt(postSyncQuote, 0);
     }
 
-    function test_sync_revertsBeforeFirstDeposit() public {
-        // Un-seeded pool has no reserves to sync.
+    function test_sync_revertsBeforeFirstSeed() public {
+        // Un-seeded vault → _vaultReserve(TOKEN0/TOKEN1) == 0 → sync reverts ZeroAmount.
         vm.expectRevert();
         vm.prank(owner);
         hook.sync(0, 0, 10_000);
@@ -497,11 +476,9 @@ contract FxSwapHookTest is Test {
         // outside the owner's expected envelope, reverting sync.
         _seedAsOwner(1_000_000_000, 1_000_000_000);
 
-        // Donor "sandwich" pushes balance to 1.05× expected.
-        address donor = address(0xDEAD44);
-        token0.mint(donor, 50_000_000);
-        vm.prank(donor);
-        token0.transfer(address(hook), 50_000_000);
+        // "Sandwich" pushes the vault reserve to 1.05× expected (vault-backed:
+        // sync reads _vaultReserve, so the drift is a reserve bump not a transfer).
+        vault.setReserve(address(token0), 1_050_000_000);
 
         // Owner expected 1e21 baseTarget; actual is 1.05e21 (5% drift).
         // Tolerance 1% (100 bps) → must revert.
@@ -510,39 +487,29 @@ contract FxSwapHookTest is Test {
         hook.sync(1e21, 1e21, 100);
     }
 
-    function test_deposit_firstDepositRevertsOnOneSided() public {
-        // Codex-2.7 round 1 regression: a one-sided first deposit would
-        // have zeroed baseTargetE18 or quoteTargetE18, permanently bricking
-        // the PMM curve. Owner-gated path; verify the ZeroAmount check
-        // still fires before any seed math runs.
+    // Was `test_deposit_firstDepositRevertsOnOneSided` (codex-2.7 r1) and
+    // `test_deposit_firstDepositRevertsForNonOwner` (codex-2.7 r13). Vault-backed
+    // refactor: `deposit()` is dead for ALL inputs/callers — it reverts UseVault
+    // before any one-sided / owner-gating check can run. Both regressions are
+    // subsumed: there is no longer any deposit path that could brick the curve or
+    // poison equilibrium. Asserting the unconditional revert here.
+    function test_deposit_revertsUseVaultForAnyInput() public {
         vm.startPrank(owner);
-        vm.expectRevert();
+        vm.expectRevert(FxSwapHook.UseVault.selector);
         hook.deposit(1_000_000, 0);
-        vm.expectRevert();
+        vm.expectRevert(FxSwapHook.UseVault.selector);
         hook.deposit(0, 1_000_000);
         vm.stopPrank();
-    }
-
-    function test_deposit_firstDepositRevertsForNonOwner() public {
-        // Codex-2.7 round 13 regression: first deposit must be owner-only.
-        vm.expectRevert();
+        // Non-owner also hits UseVault (no owner-gate reached).
+        vm.expectRevert(FxSwapHook.UseVault.selector);
         vm.prank(alice);
         hook.deposit(1_000_000, 1_000_000);
     }
 
-    function test_redeem_shrinksTargetsProRata() public {
-        _seedAsOwner(1_000e6, 1_000e6);
-        uint256 ownerShares = hook.sharesOf(owner);
-        uint256 b0 = hook.baseTargetE18();
-        uint256 q0 = hook.quoteTargetE18();
-
-        vm.prank(owner);
-        hook.redeem(ownerShares / 2);
-
-        // Half the stake redeemed → ~half the targets remain.
-        assertApproxEqRel(hook.baseTargetE18(), b0 / 2, 0.002e18);
-        assertApproxEqRel(hook.quoteTargetE18(), q0 / 2, 0.002e18);
-    }
+    // Was `test_redeem_shrinksTargetsProRata`. Vault-backed refactor: `redeem()`
+    // can no longer mutate the PMM targets — it reverts UseVault. Pro-rata target
+    // shrink is gone; the dead-function behavior is covered by
+    // `test_redeem_revertsUseVault`. Deleted (no replacement needed).
 
     function test_quote_K0_isStraightMidMinusSpread() public {
         _seedAsOwner(1_000_000_000, 1_000_000_000);
@@ -570,9 +537,9 @@ contract FxSwapHookTest is Test {
         assertLt(bigRate, 0.997e18);
     }
 
-    function test_quote_revertsBeforeFirstDeposit() public {
-        // No deposit yet → targets are 0 → regime=ONE but reserves=0 → PMM math
-        // routes through ROne path which returns 0 cleanly. Just assert no revert.
+    function test_quote_revertsBeforeFirstSync() public {
+        // No sync yet → targets are 0 → _quote short-circuits (baseTarget_/quoteTarget_
+        // == 0) and returns 0 cleanly. Vault reserves are also 0 here. Assert no revert.
         uint256 amountOut = hook.quote(1_000, true);
         assertEq(amountOut, 0);
     }
@@ -652,14 +619,18 @@ contract FxSwapHookTest is Test {
 
     function test_constructor_revertsOnZeroAddress() public {
         vm.expectRevert();
-        new FxSwapHook(address(0), address(oracle), registry, owner, address(token0), address(token1), address(0x4444));
+        new FxSwapHook(address(0), address(oracle), registry, owner, address(token0), address(token1), address(0x4444), address(0x5555));
         vm.expectRevert();
-        new FxSwapHook(poolManager, address(oracle), registry, owner, address(token0), address(token1), address(0));
+        new FxSwapHook(poolManager, address(oracle), registry, owner, address(token0), address(token1), address(0), address(0x5555));
     }
 
+    /// @dev Vault-backed: returns the hook AND its dedicated MockFxVault. `a` is
+    ///      the USD-side token (USDC) in both callers, so the vault's `asset` is set
+    ///      to `a` — `_vaultReserve(a)` then reads `juniorUsdc()`, the other token
+    ///      reads `juniorTokenBalance()`, matching production semantics.
     function _newHotOnlyHook(MockERC20 a, MockERC20 b, int64 priceA, int64 priceB)
         internal
-        returns (FxSwapHook h)
+        returns (FxSwapHook h, MockFxVault v)
     {
         MockPyth p = new MockPyth();
         FxOracle o = new FxOracle(address(p), owner, 60, 50, 30);
@@ -675,17 +646,22 @@ contract FxSwapHookTest is Test {
         p.setPrice(feedB, priceB, 100, -8, block.timestamp);
 
         (address t0, address t1) = address(a) < address(b) ? (address(a), address(b)) : (address(b), address(a));
-        h = new FxSwapHook(poolManager, address(o), registry, owner, t0, t1, address(0x4444));
+        v = new MockFxVault(address(a)); // asset = USD-side token
+        h = new FxSwapHook(poolManager, address(o), registry, owner, t0, t1, address(0x4444), address(v));
         vm.prank(owner);
         h.setHotReservePct(10_000);
     }
 
-    function _depositSorted(FxSwapHook h, address tokenA, uint256 amountA, address tokenB, uint256 amountB) internal {
-        if (h.TOKEN0() == tokenA) {
-            h.deposit(amountA, amountB);
-        } else {
-            assertEq(h.TOKEN0(), tokenB);
-            h.deposit(amountB, amountA);
-        }
+    /// @dev Vault-backed seed for the JPYC/KRW1 hooks: set both junior reserves on
+    ///      `v`, then sync the hook's PMM targets to them (drift 0 → always passes).
+    function _depositSorted(
+        FxSwapHook h,
+        MockFxVault v,
+        address tokenA,
+        uint256 amountA,
+        address tokenB,
+        uint256 amountB
+    ) internal {
+        _seedVault(h, v, tokenA, amountA, tokenB, amountB);
     }
 }

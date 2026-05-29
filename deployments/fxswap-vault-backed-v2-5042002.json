@@ -1,0 +1,33 @@
+{
+  "chainId": 5042002,
+  "network": "arc-testnet",
+  "description": "All 4 FX pools on the canonical shape: shared SharedFxVault (per-pool junior allocation) + vault-backed FxSwapHooks priced by consolidated FxOracleV2 (Pyth + MXN inversion + Chainlink manual CAD). Legacy self-custody pools redeemed; first vault-backed EURC hook (0x72aEa3) retired/deallowed.",
+  "sharedFxVault": "0x0E63eff212382F2679c3A363F60e00b7A6d6e3E4",
+  "sharedFxVaultImplV2": "0x7f578823135740dB6799eA86e8CeC74962521a18",
+  "fxOracleV2": "0xdA5Cd65521B64A7375C8d63EeDe52347783cEd74",
+  "manualFeeds": { "CAD_USD": "0x48f01A9B92FFcF6AD854cBb71bAd7094435CAf10", "USDC_USD": "0x1A7dCE8095543abd883f627083D8A582c9b3697a" },
+  "poolManager": "0x3FA22b7Aeda9ebBe34732ea394f1711887363B34",
+  "morpho": "0x3c9b95C6E7B23f094f066733E7797C8680760830",
+  "pools": {
+    "USDC/EURC": { "hook": "0x5bA91EB2f67302C947dFD35cC75D1dBcDb2CcAc8", "token0": "USDC", "token1": "EURC", "junior": { "usdc": "10100000000", "eurc": "9090000000" }, "oracle": "pyth EURC/USD" },
+    "USDC/AUDF": { "hook": "0x7Af1ed939C2d4965490f1546b08b07e0BFdA0ac8", "token0": "USDC", "token1": "AUDF", "junior": { "usdc": "5000000000", "audf": "6967000000" }, "oracle": "pyth AUD/USD" },
+    "USDC/MXNB": { "hook": "0xe9B0cD01eD5F83EEAe98522052Ae3a798dfb8aC8", "token0": "USDC", "token1": "MXNB", "junior": { "usdc": "5000000000", "mxnb": "86590000000" }, "oracle": "pyth USD/MXN INVERTED" },
+    "QCAD/USDC": { "hook": "0x6f80Ab06A4e359e9E6D025105945f02CcC98CAc8", "token0": "QCAD", "token1": "USDC", "inverted": true, "junior": { "qcad": "6850000000", "usdc": "5000000000" }, "oracle": "chainlink manual CAD/USD" }
+  },
+  "retired": {
+    "legacyVaultBackedEurcHook": "0x72aEa3a27718F1a6682C3355226a12Ea882b0ac8",
+    "legacySelfCustody": { "EURC": "0xC6F894f30d0D28972C876B4af58C02A4E88A0aC8", "AUDF": "0xe66db582e2c2a85f1b442247dae2abc5d123cac8", "MXNB": "0x5410b91Dd6b4047c9E70e70a1Ae6CdA120cF8aC8", "QCAD": "0x04a160D2bD91F681Bb84a2D6d338D49B1DA3caC8" }
+  },
+  "pusherFeeds": ["USDC/USD", "EURC/USD", "AUD/USD", "USD/MXN"],
+  "cadFeedKeeper": {
+    "route": "apps/web/app/api/cron/cad-feed/route.ts",
+    "schedule": "*/10 * * * * (vercel.json cron)",
+    "source": "Pyth Hermes FX.USD/CAD 0x3112b03a41c910ed446852aacf67118cb1bec67b2cd0b9a214c58cc0eaa2ecca (inverted → CAD/USD)",
+    "target": "ManualPriceFeed CAD_USD 0x48f01A9B92FFcF6AD854cBb71bAd7094435CAf10 setPrice(int256), 8-dec, owner=KEEPER",
+    "guards": "publishAge<60s, conf<50bps, sanity 0.5–1.0 CAD/USD, max step 5% vs on-chain; CRON_SECRET bearer auth",
+    "env": ["CRON_SECRET", "CAD_KEEPER_PRIVATE_KEY (=KEEPER 0x0646…eC69)", "ARC_RPC_URL (optional paid dRPC)"],
+    "note": "ManualPriceFeed stales at FxOracleV2 chainlinkMaxAge=3600s; 10-min cron gives 6x margin. KEEPER needs native-USDC gas on Arc. Retire when a native CAD push feed exists."
+  },
+  "deployedAt": "2026-05-28",
+  "notes": "Vault per-pool allocation (Codex HIGH#1) + hardened (steal-window guard, idempotent migrate, pre-credit cap snapshot). FxOracleV2 admin=KEEPER. CANARY: admin==timelock==KEEPER (mainnet → real TimelockController + timelock allowHook per Codex HIGH#2). NEXT: Envio + app repoint (off-chain) from retired hooks → these 4 V2 hooks; ~85-LOC dead-Morpho cleanup in FxSwapHook."
+}

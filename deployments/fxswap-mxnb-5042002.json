@@ -1,0 +1,33 @@
+{
+  "chainId": 5042002,
+  "network": "arc-testnet",
+  "market": "USDC/MXNB",
+  "venue": "FxSwapHook (oracle-anchored PMM, custom accounting)",
+  "fxSwapHook": "0x5410b91Dd6b4047c9E70e70a1Ae6CdA120cF8aC8",
+  "hookDeployer": "0xa00b6D3a1C999DEc09EE1178d61EDC520c7d7AB9",
+  "owner": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "poolManager": "0x3FA22b7Aeda9ebBe34732ea394f1711887363B34",
+  "oracle": "0x77b3A3B420dB98B01085b8C46a753Ed9879e2865",
+  "registry": "0x813232259c9b922e7571F15220617C80581f1464",
+  "morpho": "0x3c9b95C6E7B23f094f066733E7797C8680760830",
+  "token0": "0x3600000000000000000000000000000000000000",
+  "token0Symbol": "USDC",
+  "token1": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
+  "token1Symbol": "MXNB",
+  "fee": 100,
+  "tickSpacing": 1,
+  "sqrtPriceX96": "329707881693095117678884186153",
+  "poolInitTx": "0x29299bfa18ba5b3179a37e8b186d049bebd37d0d44a8f2e887a6884371a72d19",
+  "hotReservePct": 10000,
+  "pythPair": "USD/MXN",
+  "pythFeedId": "0xe13b1c1ffb32f34e1be9545583f01ef385fde7f42ee66049d30570dc866b77ca",
+  "pythFeedWiredOnFxOracle": false,
+  "firstDeposit": {
+    "usdc": "5000000000",
+    "mxnb": "86590350000",
+    "mxnbPerUsdc": "17.31807",
+    "tx": "0xbed440f9c69b5cfeff7003f5c1c34559f753ca1119b67a6c90b6d853d3406f6f"
+  },
+  "deployedAt": "2026-05-28",
+  "notes": "Tranche-1 USDC/MXNB seed (~$10k two-sided). FxOracle has NO MXNB feed wired (pythFeedOf returns 0) — swaps blocked until setPythFeedConfig(MXNB, USD/MXN id, inverted=false-ish) + on-chain Pyth refresh. Bootstrap priced off Pyth USD/MXN read directly. Scale: FX_SWAP_HOOK=0x5410b91D... ./script/seed-fxswap-liquidity.sh <usdc_6dec> MXNB --execute. See [[project_liquidity_seeding_tranche1]]."
+}

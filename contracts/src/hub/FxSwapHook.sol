@@ -25,6 +25,7 @@ import {PMMPricing} from "dodo-pmm/PMMPricing.sol";
 import {IFxOracle} from "../interfaces/IFxOracle.sol";
 import {IFxMarketRegistry} from "../interfaces/IFxMarketRegistry.sol";
 import {ITurboFeeVault} from "../interfaces/ITurboFeeVault.sol";
+import {ISharedFxVault} from "../vault/interfaces/ISharedFxVault.sol";
 
 /// @title FxSwapHook
 /// @notice Uniswap v4 hook for fx-Telarana FX swaps. Locked to a single
@@ -105,6 +106,7 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     IFxOracle         public immutable ORACLE;
     IFxMarketRegistry public immutable REGISTRY;
     IMorpho           public immutable MORPHO;
+    ISharedFxVault    public immutable VAULT;
 
     /// @notice Pair tokens. TOKEN0 < TOKEN1 by address.
     address public immutable TOKEN0;
@@ -220,6 +222,7 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     error InvalidToken(address token);
     error AmountExceedsProtocolFee(uint256 requested, uint256 available);
     error SyncDriftTooLarge(uint256 actual, uint256 expected, uint256 maxDriftBps);
+    error UseVault();
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -297,19 +300,22 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         address owner_,
         address token0_,
         address token1_,
-        address morpho_
+        address morpho_,
+        address vault_
     ) {
         if (
             poolManager_ == address(0) || oracle_ == address(0) || registry_ == address(0)
                 || owner_ == address(0) || token0_ == address(0) || token1_ == address(0)
                 || morpho_ == address(0)
         ) revert ZeroAddress();
+        if (vault_ == address(0)) revert ZeroAddress();
         if (token0_ >= token1_) revert TokensNotSorted();
 
         POOL_MANAGER  = IPoolManager(poolManager_);
         ORACLE        = IFxOracle(oracle_);
         REGISTRY      = IFxMarketRegistry(registry_);
         MORPHO        = IMorpho(morpho_);
+        VAULT         = ISharedFxVault(vault_);
         owner         = owner_;
         TOKEN0        = token0_;
         TOKEN1        = token1_;
@@ -473,8 +479,8 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         uint256 expectedQuoteTargetE18,
         uint256 maxDriftBps
     ) external onlyOwner nonReentrant {
-        uint256 newBaseTargetE18  = _rawToE18(_tradableAssets(TOKEN0), TOKEN0_DECIMALS);
-        uint256 newQuoteTargetE18 = _rawToE18(_tradableAssets(TOKEN1), TOKEN1_DECIMALS);
+        uint256 newBaseTargetE18  = _rawToE18(_vaultReserve(TOKEN0), TOKEN0_DECIMALS);
+        uint256 newQuoteTargetE18 = _rawToE18(_vaultReserve(TOKEN1), TOKEN1_DECIMALS);
         if (newBaseTargetE18 == 0 || newQuoteTargetE18 == 0) revert ZeroAmount();
         _requireWithinDrift(newBaseTargetE18, expectedBaseTargetE18, maxDriftBps);
         _requireWithinDrift(newQuoteTargetE18, expectedQuoteTargetE18, maxDriftBps);
@@ -520,6 +526,7 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         nonReentrant
         returns (uint256 shares)
     {
+        revert UseVault();
         if (amount0 == 0 && amount1 == 0) revert ZeroAmount();
         // First deposit is owner-gated: anyone else doing it could lock the
         // PMM equilibrium at an arbitrary ratio, then later honest LPs deposit
@@ -583,6 +590,10 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         nonReentrant
         returns (uint256 amount0, uint256 amount1)
     {
+        // Vault-backed: liquidity lives in SharedFxVault. Legacy self-custody LP exit is
+        // disabled so redeem() can never mutate the live PMM targets that price vault-backed
+        // swaps (a fresh vault-backed hook has zero legacy shares). Lenders exit via the vault.
+        revert UseVault();
         if (shares == 0) revert ZeroAmount();
         uint256 bal = sharesOf[msg.sender];
         if (shares > bal) revert InsufficientShares(shares, bal);
@@ -713,9 +724,8 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         // Treasury fees are accounted as off-curve liability; they must not
         // back swap liquidity, otherwise a later swap can drain past the
         // claimable balance and brick `claimProtocolFees`.
-        uint256 baseReserveRaw  = _tradableAssets(TOKEN0);
-        uint256 quoteReserveRaw = _tradableAssets(TOKEN1);
-        uint256 hotOut          = IERC20(outputToken).balanceOf(address(this));
+        uint256 baseReserveRaw  = _vaultReserve(TOKEN0);
+        uint256 quoteReserveRaw = _vaultReserve(TOKEN1);
         uint256 effReserveOut   = params.zeroForOne ? quoteReserveRaw : baseReserveRaw;
 
         (uint256 canonicalMidE18, ) = ORACLE.getMid(TOKEN0, TOKEN1);
@@ -737,37 +747,13 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
             revert InsufficientLiquidity(effReserveOut, amountOut);
         }
 
-        // Accrue protocol's slice of the swap fee to the treasury sleeve.
-        // The remaining (1 - protocolFeeBps) of `feeOut` stays in reserves
-        // and accrues to LPs implicitly via pro-rata redemption.
-        if (feeOut > 0 && protocolFeeBps > 0) {
-            uint256 protoDelta = (feeOut * uint256(protocolFeeBps)) / 10_000;
-            if (protoDelta > 0) {
-                if (params.zeroForOne) {
-                    protocolFee1 += protoDelta;
-                    emit ProtocolFeeAccrued(TOKEN1, protoDelta, protocolFee1);
-                } else {
-                    protocolFee0 += protoDelta;
-                    emit ProtocolFeeAccrued(TOKEN0, protoDelta, protocolFee0);
-                }
-            }
-        }
-
-        // JIT-withdraw from Morpho if TRADABLE hot reserve is insufficient.
-        // Raw `hotOut` includes the accrued protocol-fee sleeve sitting in
-        // the hot balance; paying swap output from those tokens would leave
-        // `claimProtocolFees` depending on Morpho liquidity later. By gating
-        // the withdraw decision on `hotOut − outputFee`, we preserve the fee
-        // sleeve in hot and force a Morpho draw whenever the swap would
-        // otherwise eat into it.
-        uint256 outputFee = params.zeroForOne ? protocolFee1 : protocolFee0;
-        uint256 hotOutTradable = hotOut > outputFee ? hotOut - outputFee : 0;
-        if (amountOut > hotOutTradable) {
-            _withdrawFromMorphoAssets(outputToken, amountOut - hotOutTradable);
-        }
-
-        inputCurrency.take(POOL_MANAGER, address(this), amountIn, false);
-        outputCurrency.settle(POOL_MANAGER, address(this), amountOut, false);
+        // Input goes straight to the shared vault; output is funded by the vault to the
+        // PoolManager and the hook settles it. PoolManager-side deltas are identical to
+        // self-custody — only token custody moves to the vault.
+        inputCurrency.take(POOL_MANAGER, address(VAULT), amountIn, false);
+        POOL_MANAGER.sync(outputCurrency);
+        VAULT.fundFill(outputToken, amountOut, address(POOL_MANAGER));
+        POOL_MANAGER.settle();
 
         emit Swapped(
             msg.sender,
@@ -797,7 +783,7 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
         // After swap: input-side balance grew (we just took amountIn from user).
         // Push the excess into Morpho so capital keeps earning supply APY.
         address inputToken = params.zeroForOne ? TOKEN0 : TOKEN1;
-        _rebalanceToken(inputToken);
+        VAULT.recordInflow(inputToken);
         return (IHooks.afterSwap.selector, 0);
     }
 
@@ -945,8 +931,8 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     }
 
     function quote(uint256 amountIn, bool zeroForOne) external view returns (uint256 amountOut) {
-        uint256 baseReserveRaw  = _tradableAssets(TOKEN0);
-        uint256 quoteReserveRaw = _tradableAssets(TOKEN1);
+        uint256 baseReserveRaw  = _vaultReserve(TOKEN0);
+        uint256 quoteReserveRaw = _vaultReserve(TOKEN1);
         (uint256 rawCanonicalMidE18, ) = ORACLE.getMid(TOKEN0, TOKEN1);
         (uint256 truncatedCanonicalMidE18,, uint16 dynamicSpreadBps) = _previewObservation(rawCanonicalMidE18);
         (amountOut, ) = _quote(
@@ -968,6 +954,7 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     ///         locked pair tokens.
     /// @return buyAmount       Output amount of the other pair token (post-spread).
     /// @return oraclePriceE18  The mid price used in the quote (1e18-scaled, sell/buy).
+    // @dev vault-backed: quote views read shared vault reserves (matching live swaps).
     function quoteExactInput(address sellToken, uint256 sellAmount)
         external
         view
@@ -975,8 +962,8 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     {
         if (sellToken != TOKEN0 && sellToken != TOKEN1) revert InvalidSellToken(sellToken);
         bool zeroForOne = (sellToken == TOKEN0);
-        uint256 baseReserveRaw  = _tradableAssets(TOKEN0);
-        uint256 quoteReserveRaw = _tradableAssets(TOKEN1);
+        uint256 baseReserveRaw  = _vaultReserve(TOKEN0);
+        uint256 quoteReserveRaw = _vaultReserve(TOKEN1);
         (uint256 rawCanonicalMidE18, ) = ORACLE.getMid(TOKEN0, TOKEN1);
         (uint256 truncatedCanonicalMidE18,, uint16 dynamicSpreadBps) = _previewObservation(rawCanonicalMidE18);
         oraclePriceE18 = zeroForOne ? truncatedCanonicalMidE18 : _invertE18(truncatedCanonicalMidE18);
@@ -1000,6 +987,11 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     /*//////////////////////////////////////////////////////////////
                               MORPHO INTEGRATION
     //////////////////////////////////////////////////////////////*/
+
+    /// @dev Pool reserve for a token = the vault's shared junior buffer for it.
+    function _vaultReserve(address token) internal view returns (uint256) {
+        return token == VAULT.asset() ? VAULT.juniorUsdc() : VAULT.juniorTokenBalance(token);
+    }
 
     /// @notice Total assets the hook controls for `loanToken` = hot + Morpho.
     function _totalAssets(address loanToken) internal view returns (uint256) {

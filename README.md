@@ -227,6 +227,27 @@ Full walkthrough + event chains: [`reports/gateway-fuji-to-arc-bypass.md`](repor
 
 ---
 
+## Capital efficiency — `SharedFxVault` (advancing Aqua0's Hookathon design)
+
+[**Aqua0**](https://github.com/Aqua0-fi) — a recent **Hookathon** participant (YC / Founders Inc credit, incubated by 1inch + Uniswap) — ships a sharp thesis: *one LP deposit should back many pools*, via a shared vault that JIT-injects liquidity into Uniswap v4 pools. Their `avax-aqua0` shared-liquidity hook (MIT) validated the idea on Avalanche for LATAM stablecoins. We took the thesis and **built a leaner, safer version on our oracle-anchored PMM** — `contracts/src/vault/SharedFxVault.sol` (UUPS, ERC-4626, 10/10 tests). Spec: [`docs/architecture/shared-fx-vault-spec.md`](https://github.com/) (BUFX repo).
+
+**Why ours advances theirs:**
+
+| Dimension | Aqua0 (`avax-aqua0`) | BUFX `SharedFxVault` |
+|---|---|---|
+| **JIT mechanism** | Injects `modifyLiquidity` ranges per swap, then burns them (transient-storage round-trip, backend-signed range authorizations) | **None needed.** Our v4 pools are empty by design — `FxSwapHook` serves 100% of each swap via `beforeSwapReturnDelta` (oracle-anchored PMM). We share *reserves*, not ranges. Fewer moving parts, smaller attack surface. |
+| **Accounting** | No on-chain LP balances; a backend signer authorizes withdrawals (single point of failure — a compromised signer drains the vault) | **Real on-chain ERC-4626 ledger.** `totalAssets()` is pure USDC (hot + Morpho) — **no oracle in the share price**, deleting the #1 manipulation vector. No backend signer in the value path. |
+| **Risk isolation** | One undifferentiated pool | **Senior / junior tranches.** Senior (lenders) USDC sits in Morpho Blue (overcollateralized, redeemable); a protocol-funded junior buffer takes *all* market-making PnL first. A swap can never reduce senior principal. |
+| **Hook trust** | Any contract inheriting the ERC-165 marker is auto-trusted to pull funds (flagged risk) | **Explicit per-hook allowlist** (`HOOK_ROLE`). |
+| **Drain guards** | None beyond range bounds | Per-swap + per-block notional **caps** + an oracle-move **circuit breaker** — load-bearing because Arc has only one oracle (no Chainlink/RedStone). |
+| **Yield on idle** | Idle capital sits | **Morpho rehypothecation** — idle senior USDC earns lending yield while it waits. |
+| **Upgrades** | UUPS, deployer == owner == signer | UUPS with `_authorizeUpgrade` gated by a **TimelockController** (`UPGRADER_ROLE`) — no instant rug. ERC-7201 namespaced storage, `_disableInitializers()`. |
+| **Tests** | Zero | Fuzz/unit suite, growing toward invariants; external audit gated before lender deposits. |
+
+Same insight — *one balance, many pools* — but rebuilt for an oracle-anchored PMM with on-chain accounting, tranche-protected lender capital, and a rugproof upgrade path. Designed with `/v4-security-foundations` + `/adversarial-uniswap-hooks` + OpenZeppelin's `/upgrade-solidity-contracts` and `/develop-secure-contracts`. **We don't compete with Uniswap LPs — we make a single deposit back every BUFX FX pool, and let lenders earn on it.**
+
+---
+
 ## Repo layout
 
 ```
@@ -235,6 +256,8 @@ contracts/                        Foundry — protocol contracts, tests, deploy 
     hub/                          FxHubMessageReceiver (Stage 6), FxMarketRegistry, FxOracle,
                                   FxLiquidator, FxReceipt, FxSwapHook, MorphoOracleAdapter,
                                   FxGatewayHook
+    vault/                        SharedFxVault (UUPS ERC-4626 shared JIT liquidity) +
+                                  interfaces/ISharedFxVault — one deposit backs all FX pools
     spoke/                        FxSpoke
     interfaces/                   IFxOracle, IFxMarketRegistry, IFxSpoke,
                                   IFxHubMessageReceiver, IFxGatewayHook, IGateway

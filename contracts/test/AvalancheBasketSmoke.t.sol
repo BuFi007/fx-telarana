@@ -263,7 +263,7 @@ contract AvalancheBasketSmokeTest is Test {
         (address token0, address token1) = _sort(address(usdc), asset);
         bytes memory creationCode = abi.encodePacked(
             type(FxSwapHook).creationCode,
-            abi.encode(address(poolManager), address(oracle), address(registry), owner, token0, token1, address(morpho))
+            abi.encode(address(poolManager), address(oracle), address(registry), owner, token0, token1, address(morpho), address(0x5555))
         );
         uint160 flags = uint160(
             Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG
@@ -273,7 +273,7 @@ contract AvalancheBasketSmokeTest is Test {
         deployCodeTo(
             _fxSwapHookArtifact(),
             abi.encode(
-                address(poolManager), address(oracle), address(registry), owner, token0, token1, address(morpho)
+                address(poolManager), address(oracle), address(registry), owner, token0, token1, address(morpho), address(0x5555)
             ),
             expected
         );

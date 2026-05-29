@@ -146,7 +146,7 @@ contract MainnetForkTest is Test {
         // PoolManager is a mock since these fork tests exercise only the LP +
         // rehypothecation paths, not the v4 swap callbacks.
         (address t0, address t1) = USDC < EURC ? (USDC, EURC) : (EURC, USDC);
-        hook = new FxSwapHook(hookPoolManager, address(fxOracle), address(registry), owner, t0, t1, MORPHO);
+        hook = new FxSwapHook(hookPoolManager, address(fxOracle), address(registry), owner, t0, t1, MORPHO, address(0x5555));
         // Default 20% hot, 80% Morpho
 
         // Fund test users via Foundry's `deal` cheatcode
