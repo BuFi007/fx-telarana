@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { RateLimiter, validateRequest } from "./relayer-api.js";
+import { RateLimiter, validateRequest, validateRelayRequest } from "./relayer-api.js";
 
 const VALID_BODY = {
   scope: "12345",
@@ -76,6 +76,63 @@ describe("validateRequest", () => {
     b.proof = null;
     const r = validateRequest(b);
     expect(r.ok).toBe(false);
+  });
+});
+
+const VALID_RELAY_BODY = {
+  scope: "12345",
+  data: {
+    recipient:    "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    feeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    relayFeeBPS:  "50",
+  },
+  proof: {
+    pA: ["1", "2"],
+    pB: [["3", "4"], ["5", "6"]],
+    pC: ["7", "8"],
+    pubSignals: ["9", "10", "11", "12", "13", "14", "15", "16"],
+  },
+};
+
+describe("validateRelayRequest (same-asset)", () => {
+  test("accepts a well-formed same-asset payload (no buyToken/minBuyAmount)", () => {
+    const r = validateRelayRequest(VALID_RELAY_BODY);
+    expect(r.ok).toBe(true);
+  });
+
+  test("rejects non-object body", () => {
+    expect(validateRelayRequest("nope").ok).toBe(false);
+  });
+
+  test("rejects missing scope", () => {
+    expect(validateRelayRequest({ ...VALID_RELAY_BODY, scope: undefined }).ok).toBe(false);
+  });
+
+  test("rejects bad recipient address", () => {
+    const b = JSON.parse(JSON.stringify(VALID_RELAY_BODY));
+    b.data.recipient = "not-an-address";
+    const r = validateRelayRequest(b);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toMatch(/recipient/);
+  });
+
+  test("rejects missing feeRecipient", () => {
+    const b = JSON.parse(JSON.stringify(VALID_RELAY_BODY));
+    delete b.data.feeRecipient;
+    expect(validateRelayRequest(b).ok).toBe(false);
+  });
+
+  test("rejects wrong pubSignals length", () => {
+    const b = JSON.parse(JSON.stringify(VALID_RELAY_BODY));
+    b.proof.pubSignals = ["1", "2", "3"];
+    expect(validateRelayRequest(b).ok).toBe(false);
+  });
+
+  test("a cross-currency body still validates (extra fields ignored)", () => {
+    // Same-asset validator only requires the 3 base fields; extra buyToken/
+    // minBuyAmount on the blob don't make it invalid.
+    const r = validateRelayRequest(VALID_BODY);
+    expect(r.ok).toBe(true);
   });
 });
 

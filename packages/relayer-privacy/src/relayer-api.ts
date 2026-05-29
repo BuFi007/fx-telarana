@@ -35,8 +35,11 @@ import { privateKeyToAccount } from "viem/accounts";
 
 import {
   PrivacyContractsService,
+  encodeRelayData,
   type CrossCurrencyRelayData,
+  type RelayData,
   type WithdrawProofTuple,
+  type Withdrawal,
 } from "@bu/fx-engine/privacy";
 
 // ---------------------------------------------------------------------------
@@ -135,6 +138,47 @@ function validateRequest(body: unknown): { ok: true; req: RelayCrossCurrencyRequ
     return { ok: false, reason: "proof.pubSignals must be string[8]" };
   }
   return { ok: true, req: body as RelayCrossCurrencyRequest };
+}
+
+/** Wire shape for the same-currency relay payload (base 0xbow `relay()`).
+ *  Same as cross-currency minus buyToken/minBuyAmount. */
+export interface RelayRequest {
+  scope: string;
+  data: {
+    recipient: string;
+    feeRecipient: string;
+    relayFeeBPS: string;
+  };
+  proof: {
+    pA: [string, string];
+    pB: [[string, string], [string, string]];
+    pC: [string, string];
+    pubSignals: [string, string, string, string, string, string, string, string];
+  };
+}
+
+function validateRelayRequest(body: unknown): { ok: true; req: RelayRequest } | { ok: false; reason: string } {
+  if (typeof body !== "object" || body === null) {
+    return { ok: false, reason: "body must be a JSON object" };
+  }
+  const b = body as Record<string, unknown>;
+  if (!isString(b.scope)) return { ok: false, reason: "scope must be a decimal string" };
+  if (typeof b.data !== "object" || b.data === null) return { ok: false, reason: "data missing" };
+  const d = b.data as Record<string, unknown>;
+  for (const k of ["recipient", "feeRecipient", "relayFeeBPS"] as const) {
+    if (!isString(d[k])) return { ok: false, reason: `data.${k} must be string` };
+  }
+  if (!isAddress(d.recipient as string)) return { ok: false, reason: "data.recipient invalid address" };
+  if (!isAddress(d.feeRecipient as string)) return { ok: false, reason: "data.feeRecipient invalid address" };
+  if (typeof b.proof !== "object" || b.proof === null) return { ok: false, reason: "proof missing" };
+  const p = b.proof as Record<string, unknown>;
+  if (!Array.isArray(p.pA) || p.pA.length !== 2) return { ok: false, reason: "proof.pA must be [string, string]" };
+  if (!Array.isArray(p.pB) || p.pB.length !== 2) return { ok: false, reason: "proof.pB must be [[s,s],[s,s]]" };
+  if (!Array.isArray(p.pC) || p.pC.length !== 2) return { ok: false, reason: "proof.pC must be [string, string]" };
+  if (!Array.isArray(p.pubSignals) || p.pubSignals.length !== 8) {
+    return { ok: false, reason: "proof.pubSignals must be string[8]" };
+  }
+  return { ok: true, req: body as RelayRequest };
 }
 
 // ---------------------------------------------------------------------------
@@ -247,6 +291,72 @@ export function buildApp(args: {
     }
   });
 
+  // Same-currency relay (base 0xbow relay()). Unblocked today (USDC→USDC to a
+  // fresh recipient); the relayer is msg.sender so the user's EOA never appears.
+  // The base relay requires processooor == entrypoint (Entrypoint.sol), which
+  // the user's Groth16 context already commits to; the relayer just submits.
+  app.post("/v1/relay", async (c) => {
+    const ip =
+      c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
+      c.req.header("x-real-ip") ??
+      "unknown";
+    if (!args.rateLimit.check(ip)) {
+      return c.json({ error: "rate_limited" }, 429);
+    }
+
+    const raw = await c.req.json().catch(() => null);
+    const valid = validateRelayRequest(raw);
+    if (!valid.ok) {
+      log("warn", "rejected malformed relay request", { ip, reason: valid.reason });
+      return c.json({ error: "bad_request", reason: valid.reason }, 400);
+    }
+    const r = valid.req;
+
+    const relayFeeBPS = BigInt(r.data.relayFeeBPS);
+    if (relayFeeBPS > BigInt(args.cfg.maxRelayFeeBPS)) {
+      log("warn", "rejected over-fee relay request", { ip });
+      return c.json({ error: "fee_too_high", max: String(args.cfg.maxRelayFeeBPS) }, 400);
+    }
+
+    const relayData: RelayData = {
+      recipient:    r.data.recipient as Address,
+      feeRecipient: r.data.feeRecipient as Address,
+      relayFeeBPS,
+    };
+    // processooor MUST be the entrypoint (Entrypoint.relay reverts otherwise);
+    // the user's proof context commits to exactly this withdrawal blob.
+    const withdrawal: Withdrawal = {
+      processooor: args.cfg.entrypoint,
+      data:        encodeRelayData(relayData),
+    };
+    const proof: WithdrawProofTuple = {
+      pA: r.proof.pA,
+      pB: r.proof.pB,
+      pC: r.proof.pC,
+      pubSignals: r.proof.pubSignals,
+    };
+
+    // Don't log trade metadata (recipient/fee) — same posture as cross-currency.
+    log("info", "received relay", { ip, dryRun: args.cfg.dryRun });
+
+    if (args.cfg.dryRun) {
+      return c.json({ ok: true, dryRun: true });
+    }
+
+    try {
+      const txHash = await args.contracts.relay(args.wallet, {
+        withdrawal,
+        proof,
+        scope: BigInt(r.scope),
+      });
+      log("info", "tx submitted", { ip, txHash });
+      return c.json({ ok: true, txHash });
+    } catch (err) {
+      log("error", "relay failed", { ip, err: String(err) });
+      return c.json({ error: "relay_failed", message: String(err) }, 500);
+    }
+  });
+
   return app;
 }
 
@@ -283,4 +393,4 @@ if (import.meta.main) {
 }
 
 // Exported helpers — useful for tests.
-export { RateLimiter, validateRequest, type RelayerConfig };
+export { RateLimiter, validateRequest, validateRelayRequest, type RelayerConfig };
