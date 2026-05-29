@@ -2,6 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -91,6 +92,8 @@ contract MockOracle {
 ///      and reverts stale-oracle fills, so a bounded swap legitimately no-ops under
 ///      those conditions — the invariants below must still hold either way.
 contract FxSwapHookVaultInvariantHandler {
+    Vm private constant VM = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+
     FxSwapHook public immutable hook;
     FxV4RouterHarness public immutable router;
     MockERC20 public immutable token0;
@@ -143,6 +146,14 @@ contract FxSwapHookVaultInvariantHandler {
 
         token1.mint(address(this), amountIn);
         try router.swapExactInputSingle(key, false, amountIn, 1, address(this)) returns (uint256) {} catch {}
+    }
+
+    /// @notice Advance the block so the vault's per-block notional cap resets.
+    ///         Foundry's invariant runner keeps every call in one block by default,
+    ///         which fills the per-block cap early and starves later fills. Rolling
+    ///         lets fills land across many blocks, ~doubling realized swap coverage.
+    function advanceBlock(uint256 n) external {
+        VM.roll(block.number + _bound(n, 1, 3));
     }
 
     function moveOracle(uint256 rawMoveBps, bool up) external {
@@ -302,10 +313,11 @@ contract FxSwapHookInvariantTest is Test {
             maxSwap1_: 50_000e6
         });
 
-        bytes4[] memory selectors = new bytes4[](3);
+        bytes4[] memory selectors = new bytes4[](4);
         selectors[0] = FxSwapHookVaultInvariantHandler.swap0For1.selector;
         selectors[1] = FxSwapHookVaultInvariantHandler.swap1For0.selector;
         selectors[2] = FxSwapHookVaultInvariantHandler.moveOracle.selector;
+        selectors[3] = FxSwapHookVaultInvariantHandler.advanceBlock.selector;
 
         targetContract(address(handler));
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
