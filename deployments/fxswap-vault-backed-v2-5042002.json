@@ -23,7 +23,7 @@
   "phase25SwapAdapter": {
     "contract": "src/hub/FxRouterSwapAdapter.sol",
     "deployScript": "script/DeployFxRouterSwapAdapter.s.sol",
-    "status": "built+tested, NOT yet deployed/wired on-chain",
+    "status": "DEPLOYED on Arc + 8 routes set (owner=KEEPER); pending FxRouter-side wiring",
     "purpose": "production IFxRouterSwapAdapter — routes FxRouter cross-currency swaps through the vault-backed V2 pools via PoolManager.unlock; unblocks SwapAdapterNotSet",
     "wiringSteps": [
       "deploy adapter (owner=KEEPER)",
@@ -31,7 +31,9 @@
       "adapter.setAuthorizedCaller(FxRouter, true)",
       "FxRouter.setSwapAdapter(adapter) + setPairAllowed(sell,buy,true) x8 (FxRouter owner)"
     ],
-    "address": null
+    "address": "0xe9147f799C1d65d1bAcFD0fE019d8c46531ef917",
+    "routesSet": "USDC<->EURC, USDC<->AUDF, USDC<->MXNB, USDC<->QCAD (all @ fee=100/ts=1, verified on-chain)",
+    "pendingFxRouterWiring": ["adapter.setAuthorizedCaller(FxRouter,true)", "FxRouter.setSwapAdapter(adapter)", "FxRouter.setPairAllowed x8"]
   },
   "cadFeedKeeper": {
     "route": "apps/web/app/api/cron/cad-feed/route.ts",
