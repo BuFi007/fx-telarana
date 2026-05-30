@@ -4,11 +4,17 @@
   "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
   "deployedAt": "2026-05-18",
   "lastBasketExpansionAt": "2026-05-23",
-  "scope": "Privacy Hook v1 — shielded USDC + EURC pools live + Track B fixed-rate swap adapter wired for atomic cross-currency relay. `FxPrivacyEntrypoint.relayCrossCurrency()` is fully operational on Arc; shield USDC, withdraw EURC to a fresh address (or vice versa) in a single tx. 2026-05-23 expansion: MXNB / QCAD / cirBTC / AUDF shielded pools added in 100%-hot mode (no Morpho rehyp — canonical Morpho markets are USDC-loan, not asset-loan).",
+  "denominationGateEnabledAt": "2026-05-30",
+  "scope": "Privacy Hook v1 — shielded USDC + EURC pools live + Track B fixed-rate swap adapter wired for atomic cross-currency relay. `FxPrivacyEntrypoint.relayCrossCurrency()` is fully operational on Arc; shield USDC, withdraw EURC to a fresh address (or vice versa) in a single tx. 2026-05-23 expansion: MXNB / QCAD / cirBTC / AUDF shielded pools added in 100%-hot mode (no Morpho rehyp — canonical Morpho markets are USDC-loan, not asset-loan). 2026-05-30: fixed-denomination gate enabled — deposits/withdrawals must be a denomination (stablecoins 1/10/100/1000/10000; cirBTC 0.001/0.01/0.1/1) or the entrypoint reverts NotADenomination. Amount-privacy lever; no new trusted setup (WithdrawalVerifier unchanged). Impl upgraded to 0x56A4a05862aC57E0E1432f5e2CAC0Cd9852608fE.",
+  "denominations": {
+    "stablecoins (USDC/EURC/MXNB/QCAD/AUDF, 6dp atomic)": ["1000000", "10000000", "100000000", "1000000000", "10000000000"],
+    "cirBTC (18dp atomic)": ["1000000000000000", "10000000000000000", "100000000000000000", "1000000000000000000"]
+  },
   "contracts": {
     "WithdrawalVerifier": "0x7f0326cea0796e31ed38f01b1e8660faad7bb6ee",
     "CommitmentVerifier": "0x9056facd889a94e4acba8cbc4c8a81ed47ba8ea0",
-    "FxPrivacyEntrypointImpl": "0x4506441df7960b2cb2b600b0d37dfd3ea79fa92a",
+    "FxPrivacyEntrypointImpl": "0x56A4a05862aC57E0E1432f5e2CAC0Cd9852608fE",
+    "FxPrivacyEntrypointImplPrev": "0x4506441df7960b2cb2b600b0d37dfd3ea79fa92a",
     "FxPrivacyEntrypoint": "0xd11cddd1f04e850d3810a71608a49907c80f2736",
     "FxPrivacyPoolUSDC": "0xc11c216c9c7a36848b1d4276d223160c8b51988f",
     "FxPrivacyPoolEURC": "0x7B4582CDE65c8cC00fE24B16dBA60472242d234c",
