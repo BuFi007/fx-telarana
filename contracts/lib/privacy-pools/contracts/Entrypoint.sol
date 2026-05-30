@@ -148,6 +148,10 @@ contract Entrypoint is AccessControlUpgradeable, UUPSUpgradeable, ReentrancyGuar
     IERC20 _asset = IERC20(_pool.ASSET());
     uint256 _balanceBefore = _assetBalance(_asset);
 
+    // fx-Telarana extension hook: enforce fixed denominations on the public
+    // withdrawnValue. Default no-op; override in FxPrivacyEntrypoint.
+    _beforeWithdraw(_asset, _proof.withdrawnValue());
+
     // Process withdrawal
     _pool.withdraw(_withdrawal, _proof);
 
@@ -320,6 +324,11 @@ contract Entrypoint is AccessControlUpgradeable, UUPSUpgradeable, ReentrancyGuar
     IPrivacyPool _pool = _config.pool;
     if (address(_pool) == address(0)) revert PoolNotFound();
 
+    // fx-Telarana extension hook: enforce fixed denominations on the
+    // (pre-fee) deposited value. Default no-op; override in
+    // FxPrivacyEntrypoint. Reverting here reverts the whole deposit.
+    _beforeDeposit(_asset, _value);
+
     // Check if the `_precommitment` has already been used
     if (usedPrecommitments[_precommitment]) revert PrecommitmentAlreadyUsed();
     // Mark it as used
@@ -399,4 +408,24 @@ contract Entrypoint is AccessControlUpgradeable, UUPSUpgradeable, ReentrancyGuar
     _config.vettingFeeBPS = _vettingFeeBPS;
     _config.maxRelayFeeBPS = _maxRelayFeeBPS;
   }
+
+  /*///////////////////////////////////////////////////////////////
+                    EXTENSION HOOKS (fx-Telarana)
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Hook invoked on every deposit with the (pre-fee) deposited value.
+   *         Default no-op; fx-Telarana overrides this to enforce fixed
+   *         denominations so deposits share amount buckets. Reverting reverts
+   *         the deposit. Kept as a hook (not an edit to deposit/relay) so the
+   *         vendored proof/withdraw logic stays untouched.
+   */
+  function _beforeDeposit(IERC20 _asset, uint256 _value) internal virtual {}
+
+  /**
+   * @notice Hook invoked on every relay/withdrawal with the public
+   *         `withdrawnValue`. Default no-op; fx-Telarana overrides this to
+   *         enforce fixed denominations. Reverting reverts the withdrawal.
+   */
+  function _beforeWithdraw(IERC20 _asset, uint256 _value) internal virtual {}
 }

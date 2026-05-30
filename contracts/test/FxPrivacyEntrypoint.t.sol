@@ -538,6 +538,95 @@ contract FxPrivacyEntrypointTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
+                        DENOMINATION GATE
+    //////////////////////////////////////////////////////////////*/
+
+    function _denomSet() internal pure returns (uint256[] memory d) {
+        d = new uint256[](4);
+        d[0] = 1e6; d[1] = 10e6; d[2] = 100e6; d[3] = 1_000e6;
+    }
+
+    function test_setDenominations_revertsForNonOwner() public {
+        vm.expectRevert();
+        vm.prank(USER);
+        entrypoint.setDenominations(IERC20(address(usdc)), _denomSet());
+    }
+
+    function test_setDenominations_enablesGateAndRegistersSet() public {
+        vm.prank(OWNER);
+        entrypoint.setDenominations(IERC20(address(usdc)), _denomSet());
+        assertTrue(entrypoint.denominationGateEnabled(IERC20(address(usdc))));
+        assertTrue(entrypoint.isDenomination(IERC20(address(usdc)), 100e6));
+        assertFalse(entrypoint.isDenomination(IERC20(address(usdc)), 100.5e6));
+    }
+
+    function test_deposit_revertsOnNonDenomination() public {
+        vm.prank(OWNER);
+        entrypoint.setDenominations(IERC20(address(usdc)), _denomSet());
+
+        usdc.mint(USER, 100.5e6);
+        vm.startPrank(USER);
+        usdc.approve(address(entrypoint), 100.5e6);
+        vm.expectRevert(abi.encodeWithSelector(
+            FxPrivacyEntrypoint.NotADenomination.selector, IERC20(address(usdc)), uint256(100.5e6)
+        ));
+        entrypoint.deposit(IERC20(address(usdc)), 100.5e6, _fakePrecommitment(99));
+        vm.stopPrank();
+    }
+
+    function test_deposit_succeedsOnDenomination() public {
+        vm.prank(OWNER);
+        entrypoint.setDenominations(IERC20(address(usdc)), _denomSet());
+        _depositFromUser(100e6, 7); // exactly 100e6 — in set
+    }
+
+    function test_gateDisabled_allowsArbitraryDeposit() public {
+        // Register a set, then turn the gate OFF — arbitrary amounts pass again.
+        vm.startPrank(OWNER);
+        entrypoint.setDenominations(IERC20(address(usdc)), _denomSet());
+        entrypoint.setDenominationGateEnabled(IERC20(address(usdc)), false);
+        vm.stopPrank();
+        _depositFromUser(100.5e6, 8); // off-denomination, but gate disabled
+    }
+
+    function test_relayCrossCurrency_revertsOnNonDenomination() public {
+        vm.prank(OWNER);
+        entrypoint.setDenominations(IERC20(address(usdc)), _denomSet());
+        _depositFromUser(100e6, 11);
+
+        FxPrivacyEntrypoint.CrossCurrencyRelayData memory data = FxPrivacyEntrypoint.CrossCurrencyRelayData({
+            recipient: RECIPIENT, feeRecipient: FEE_SINK, relayFeeBPS: 0,
+            buyToken: address(eurc), minBuyAmount: 37e6
+        });
+        // withdrawnValue = 37e6 — NOT a registered denomination
+        (IPrivacyPool.Withdrawal memory w, ProofLib.WithdrawProof memory p) =
+            _craftWithdrawal(data, 37e6, 0xB1);
+
+        vm.expectRevert(abi.encodeWithSelector(
+            FxPrivacyEntrypoint.NotADenomination.selector, IERC20(address(usdc)), uint256(37e6)
+        ));
+        entrypoint.relayCrossCurrency(w, p, poolScope);
+    }
+
+    function test_relayCrossCurrency_succeedsOnDenomination() public {
+        vm.prank(OWNER);
+        entrypoint.setDenominations(IERC20(address(usdc)), _denomSet());
+        uint256 amount = 100e6; // in set
+        _depositFromUser(amount, 12);
+
+        FxPrivacyEntrypoint.CrossCurrencyRelayData memory data = FxPrivacyEntrypoint.CrossCurrencyRelayData({
+            recipient: RECIPIENT, feeRecipient: FEE_SINK, relayFeeBPS: 0,
+            buyToken: address(eurc), minBuyAmount: amount
+        });
+        (IPrivacyPool.Withdrawal memory w, ProofLib.WithdrawProof memory p) =
+            _craftWithdrawal(data, amount, 0xB2);
+
+        uint256 before = eurc.balanceOf(RECIPIENT);
+        entrypoint.relayCrossCurrency(w, p, poolScope);
+        assertEq(eurc.balanceOf(RECIPIENT), before + amount, "denomination withdrawal delivers");
+    }
+
+    /*//////////////////////////////////////////////////////////////
                               HELPERS
     //////////////////////////////////////////////////////////////*/
 

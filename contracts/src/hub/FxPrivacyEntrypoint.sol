@@ -54,6 +54,15 @@ contract FxPrivacyEntrypoint is Entrypoint {
     struct FxPrivacyEntrypointStorage {
         IFxRouterSwapAdapter swapAdapter;
         mapping(IERC20 _asset => bool _enabled) crossCurrencyEnabled;
+        // Fixed-denomination gate. When enabled for an asset, every deposit
+        // value and every withdrawal `withdrawnValue` MUST be one of the
+        // allowed denominations — this is what gives Ghost Mode an anonymity
+        // set on a transparent chain (the amount is necessarily public, so the
+        // only privacy lever is making everyone share a small set of amounts).
+        // Appended to the END of the struct so existing slots are unchanged on
+        // upgrade. See PRIVACY_CIRCUIT_WORKPLAN.md.
+        mapping(IERC20 _asset => bool _enabled) denominationGateEnabled;
+        mapping(IERC20 _asset => mapping(uint256 _value => bool _ok)) denominationAllowed;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -85,6 +94,8 @@ contract FxPrivacyEntrypoint is Entrypoint {
 
     event SwapAdapterSet(address indexed oldAdapter, address indexed newAdapter);
     event CrossCurrencyEnabled(IERC20 indexed _asset, bool _enabled);
+    event DenominationGateSet(IERC20 indexed _asset, bool _enabled);
+    event DenominationsSet(IERC20 indexed _asset, uint256[] _values);
 
     /// @notice Emitted on a successful cross-currency withdrawal relay.
     /// @param  _relayer     The keeper / SDK relayer that processed the call.
@@ -114,6 +125,7 @@ contract FxPrivacyEntrypoint is Entrypoint {
     error AdapterUnderdelivered(uint256 received, uint256 minBuyAmount);
     error RecipientUnderdelivered(uint256 received, uint256 minBuyAmount);
     error ZeroRecipient();
+    error NotADenomination(IERC20 _asset, uint256 _value);
 
     /*//////////////////////////////////////////////////////////////
                                 VIEWS
@@ -127,6 +139,16 @@ contract FxPrivacyEntrypoint is Entrypoint {
     /// @notice Whether cross-currency relays are enabled for `_asset`.
     function crossCurrencyEnabled(IERC20 _asset) external view returns (bool) {
         return _getFxStorage().crossCurrencyEnabled[_asset];
+    }
+
+    /// @notice Whether the fixed-denomination gate is enforced for `_asset`.
+    function denominationGateEnabled(IERC20 _asset) external view returns (bool) {
+        return _getFxStorage().denominationGateEnabled[_asset];
+    }
+
+    /// @notice Whether `_value` (atomic units) is an allowed denomination for `_asset`.
+    function isDenomination(IERC20 _asset, uint256 _value) public view returns (bool) {
+        return _getFxStorage().denominationAllowed[_asset][_value];
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -148,6 +170,57 @@ contract FxPrivacyEntrypoint is Entrypoint {
         if (address(_asset) == address(0)) revert ZeroAddress();
         _getFxStorage().crossCurrencyEnabled[_asset] = _enabled;
         emit CrossCurrencyEnabled(_asset, _enabled);
+    }
+
+    /// @notice Register the allowed denomination set (atomic units) for `_asset`
+    ///         and turn the gate ON. Additive — call again to whitelist more
+    ///         values. Owner-gated. Stablecoins (6dp): 1e6/10e6/100e6/1000e6/
+    ///         10000e6; cirBTC (18dp): 1e15/1e16/1e17/1e18. Mirror the MCP set.
+    function setDenominations(IERC20 _asset, uint256[] calldata _values) external onlyRole(_OWNER_ROLE) {
+        if (address(_asset) == address(0)) revert ZeroAddress();
+        FxPrivacyEntrypointStorage storage $ = _getFxStorage();
+        for (uint256 i; i < _values.length; ++i) {
+            $.denominationAllowed[_asset][_values[i]] = true;
+        }
+        $.denominationGateEnabled[_asset] = true;
+        emit DenominationsSet(_asset, _values);
+        emit DenominationGateSet(_asset, true);
+    }
+
+    /// @notice Toggle enforcement of the denomination gate for `_asset` without
+    ///         touching the registered set. Owner-gated.
+    function setDenominationGateEnabled(IERC20 _asset, bool _enabled) external onlyRole(_OWNER_ROLE) {
+        if (address(_asset) == address(0)) revert ZeroAddress();
+        _getFxStorage().denominationGateEnabled[_asset] = _enabled;
+        emit DenominationGateSet(_asset, _enabled);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        DENOMINATION GATE (hooks)
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev Authoritative on-chain enforcement of the amount-privacy lever:
+    ///      every deposit value and every withdrawal `withdrawnValue` must be a
+    ///      registered denomination once the gate is on for the asset. The MCP
+    ///      advice layer mirrors this, but THIS is the source of truth — a user
+    ///      calling the contract directly cannot self-deanonymize with an
+    ///      off-denomination amount. No new trusted setup: the deployed
+    ///      WithdrawalVerifier is unchanged; this is a value-domain require().
+    function _enforceDenomination(IERC20 _asset, uint256 _value) internal view {
+        FxPrivacyEntrypointStorage storage $ = _getFxStorage();
+        if ($.denominationGateEnabled[_asset] && !$.denominationAllowed[_asset][_value]) {
+            revert NotADenomination(_asset, _value);
+        }
+    }
+
+    /// @inheritdoc Entrypoint
+    function _beforeDeposit(IERC20 _asset, uint256 _value) internal view override {
+        _enforceDenomination(_asset, _value);
+    }
+
+    /// @inheritdoc Entrypoint
+    function _beforeWithdraw(IERC20 _asset, uint256 _value) internal view override {
+        _enforceDenomination(_asset, _value);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -181,6 +254,10 @@ contract FxPrivacyEntrypoint is Entrypoint {
 
         IERC20 _asset = IERC20(_pool.ASSET());
         if (!$.crossCurrencyEnabled[_asset]) revert CrossCurrencyDisabled(_asset);
+
+        // Cross-currency bypasses the base relay() path, so enforce the
+        // denomination gate here too (same lever, same source of truth).
+        _enforceDenomination(_asset, _proof.withdrawnValue());
 
         uint256 _sellBalanceBefore = _asset.balanceOf(address(this));
 
