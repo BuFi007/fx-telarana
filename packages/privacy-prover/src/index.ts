@@ -6,4 +6,5 @@
 
 export * from "./withdrawal.js";
 export * from "./convert.js";
+export * from "./relay-execute.js";
 export type { WithdrawalProof } from "./types.js";
