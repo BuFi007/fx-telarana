@@ -64,6 +64,23 @@ const ENTRYPOINT_ABI = [
     outputs: [],
   },
   {
+    type: "function", stateMutability: "nonpayable", name: "relayExecute",
+    inputs: [
+      { name: "_withdrawal", type: "tuple", components: [
+        { name: "processooor", type: "address" },
+        { name: "data",        type: "bytes"   },
+      ]},
+      { name: "_proof", type: "tuple", components: [
+        { name: "pA",         type: "uint256[2]"     },
+        { name: "pB",         type: "uint256[2][2]"  },
+        { name: "pC",         type: "uint256[2]"     },
+        { name: "pubSignals", type: "uint256[8]"     },
+      ]},
+      { name: "_scope", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
     type: "function", stateMutability: "nonpayable", name: "relayCrossCurrency",
     inputs: [
       { name: "_withdrawal", type: "tuple", components: [
@@ -234,6 +251,35 @@ export class PrivacyContractsService {
       address: this.entrypoint,
       abi: ENTRYPOINT_ABI,
       functionName: "relay",
+      args: [
+        { processooor: args.withdrawal.processooor, data: args.withdrawal.data },
+        proofToTuple(args.proof),
+        args.scope,
+      ],
+    });
+  }
+
+  /**
+   * Submit `relayExecute` — withdraw a shielded note and atomically run a
+   * registered execution adapter (Morpho supply / perp margin / spot swap)
+   * funded from it. `withdrawal.data` is the ABI-encoded ExecutionRelayData,
+   * bound into the proof context so the adapter call can't be redirected.
+   * Same proof shape + circuit as `relay` (no new ceremony).
+   */
+  async relayExecute(
+    wallet: WalletClient,
+    args: {
+      withdrawal: Withdrawal;
+      proof:      WithdrawProofTuple;
+      scope:      bigint;
+    },
+  ): Promise<ViemHash> {
+    return wallet.writeContract({
+      chain: null,
+      account: wallet.account!,
+      address: this.entrypoint,
+      abi: ENTRYPOINT_ABI,
+      functionName: "relayExecute",
       args: [
         { processooor: args.withdrawal.processooor, data: args.withdrawal.data },
         proofToTuple(args.proof),
