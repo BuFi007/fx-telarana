@@ -20,12 +20,15 @@
 //   - dry-run mode (sim only, no broadcast)
 //   - max-fee guard (reject obviously-overpaying gas requests)
 
+import { readFileSync } from "node:fs";
+
 import { Hono } from "hono";
 import {
   createPublicClient,
   createWalletClient,
   http,
   isAddress,
+  parseAbi,
   type Address,
   type Hex,
   type PublicClient,
@@ -41,6 +44,7 @@ import {
   type WithdrawProofTuple,
   type Withdrawal,
 } from "@bu/fx-engine/privacy";
+import { proveAndBuildRelayExecute, type ShieldedNote } from "@bu/privacy-prover";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -58,6 +62,9 @@ interface RelayerConfig {
   maxRelayFeeBPS: number;
   /** If true, simulate (eth_call) only — never broadcast. */
   dryRun: boolean;
+  /** Dir holding the Groth16 withdraw artifacts (withdraw.wasm/.zkey) for the
+   *  server-side prover used by /v1/relayExecute. */
+  circuitsDir: string;
 }
 
 function loadConfig(): RelayerConfig {
@@ -75,6 +82,7 @@ function loadConfig(): RelayerConfig {
     rateLimit:      Number(Bun.env["RELAYER_RATE_LIMIT_PER_MIN"] ?? 60),
     maxRelayFeeBPS: Number(Bun.env["RELAYER_MAX_FEE_BPS"] ?? 500), // 5%
     dryRun:         Bun.env["DRY_RUN"] === "true",
+    circuitsDir:    Bun.env["CIRCUITS_DIR"] ?? "./circuits",
   };
 }
 
@@ -181,6 +189,49 @@ function validateRelayRequest(body: unknown): { ok: true; req: RelayRequest } | 
   return { ok: true, req: body as RelayRequest };
 }
 
+/** Wire shape for /v1/relayExecute (server-side prove + submit). The note
+ *  secrets are decimal strings; the relayer proves with them. */
+export interface RelayExecuteRequest {
+  pool: string;
+  recipient: string;
+  feeRecipient?: string;
+  adapterId: string;
+  adapterData: string;
+  relayFeeBPS: string;
+  searchLoBlock?: string;
+  note: { nullifier: string; secret: string; value: string; label: string; commitmentHash: string };
+}
+
+function validateRelayExecuteRequest(
+  body: unknown,
+): { ok: true; req: RelayExecuteRequest } | { ok: false; reason: string } {
+  if (typeof body !== "object" || body === null) return { ok: false, reason: "body must be a JSON object" };
+  const b = body as Record<string, unknown>;
+  if (!isAddress(b.pool as string)) return { ok: false, reason: "pool invalid address" };
+  if (!isAddress(b.recipient as string)) return { ok: false, reason: "recipient invalid address" };
+  if (b.feeRecipient !== undefined && !isAddress(b.feeRecipient as string)) return { ok: false, reason: "feeRecipient invalid address" };
+  if (typeof b.adapterData !== "string" || !(b.adapterData as string).startsWith("0x")) return { ok: false, reason: "adapterData must be 0x hex" };
+  if (b.adapterId === undefined || b.adapterId === null) return { ok: false, reason: "adapterId required" };
+  const note = b.note as Record<string, unknown> | undefined;
+  if (typeof note !== "object" || note === null) return { ok: false, reason: "note required" };
+  for (const k of ["nullifier", "secret", "value", "label", "commitmentHash"]) {
+    if (typeof note[k] !== "string") return { ok: false, reason: `note.${k} must be a decimal string` };
+  }
+  return {
+    ok: true,
+    req: {
+      pool: b.pool as string,
+      recipient: b.recipient as string,
+      feeRecipient: b.feeRecipient as string | undefined,
+      adapterId: String(b.adapterId),
+      adapterData: b.adapterData as string,
+      relayFeeBPS: String(b.relayFeeBPS ?? "0"),
+      searchLoBlock: b.searchLoBlock !== undefined ? String(b.searchLoBlock) : undefined,
+      note: note as unknown as RelayExecuteRequest["note"],
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Per-IP rate limiter (in-memory; testnet posture)
 // ---------------------------------------------------------------------------
@@ -207,12 +258,26 @@ class RateLimiter {
 // ---------------------------------------------------------------------------
 
 export function buildApp(args: {
-  contracts: PrivacyContractsService;
-  wallet:    WalletClient;
-  cfg:       RelayerConfig;
-  rateLimit: RateLimiter;
+  contracts:    PrivacyContractsService;
+  wallet:       WalletClient;
+  publicClient: PublicClient;
+  cfg:          RelayerConfig;
+  rateLimit:    RateLimiter;
 }) {
   const app = new Hono();
+
+  // Lazily-loaded withdraw circuit artifacts for server-side proving.
+  let _wasm: Uint8Array | undefined;
+  let _zkey: Uint8Array | undefined;
+  const loadCircuits = (): { wasm: Uint8Array; zkey: Uint8Array } => {
+    if (!_wasm) _wasm = new Uint8Array(readFileSync(`${args.cfg.circuitsDir}/withdraw.wasm`));
+    if (!_zkey) _zkey = new Uint8Array(readFileSync(`${args.cfg.circuitsDir}/withdraw.zkey`));
+    return { wasm: _wasm, zkey: _zkey };
+  };
+  const ASP_ABI = parseAbi([
+    "function updateRoot(uint256 root, string ipfsCID) returns (uint256 index)",
+    "function latestRoot() view returns (uint256)",
+  ]);
 
   app.get("/health", (c) => {
     return c.json({
@@ -357,6 +422,96 @@ export function buildApp(args: {
     }
   });
 
+  // Own-stack private execution: SERVER-SIDE prove + submit. The caller hands the
+  // shielded note + the registered adapter id/calldata; the relayer reconstructs
+  // the pool tree, proves (snarkjs), ensures the ASP root, and submits
+  // relayExecute as msg.sender (so the user's wallet never appears). Trust note:
+  // the prover sees the note secrets — run it in the user's trust domain
+  // (self-hosted) for the strong tier.
+  app.post("/v1/relayExecute", async (c) => {
+    const ip =
+      c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
+      c.req.header("x-real-ip") ?? "unknown";
+    if (!args.rateLimit.check(ip)) return c.json({ error: "rate_limited" }, 429);
+
+    const raw = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+    const v = validateRelayExecuteRequest(raw);
+    if (!v.ok) {
+      log("warn", "rejected malformed relayExecute", { ip, reason: v.reason });
+      return c.json({ error: "bad_request", reason: v.reason }, 400);
+    }
+    const req = v.req;
+
+    const relayFeeBPS = BigInt(req.relayFeeBPS);
+    if (relayFeeBPS > BigInt(args.cfg.maxRelayFeeBPS)) {
+      log("warn", "rejected over-fee relayExecute", { ip });
+      return c.json({ error: "fee_too_high", max: String(args.cfg.maxRelayFeeBPS) }, 400);
+    }
+
+    const note: ShieldedNote = {
+      nullifier: BigInt(req.note.nullifier), secret: BigInt(req.note.secret),
+      value: BigInt(req.note.value), label: BigInt(req.note.label),
+      commitmentHash: BigInt(req.note.commitmentHash),
+    };
+
+    // Ensure the single-leaf ASP root (== note.label) is the entrypoint's latest.
+    try {
+      const cur = (await args.publicClient.readContract({
+        address: args.cfg.entrypoint, abi: ASP_ABI, functionName: "latestRoot",
+      })) as bigint;
+      if (cur !== note.label) {
+        const tx = await args.wallet.writeContract({
+          chain: null, account: args.wallet.account!, address: args.cfg.entrypoint,
+          abi: ASP_ABI, functionName: "updateRoot",
+          args: [note.label, `relayer-${note.label.toString(36)}`.slice(0, 40).padEnd(40, "x")],
+        });
+        await args.publicClient.waitForTransactionReceipt({ hash: tx });
+      }
+    } catch (err) {
+      log("error", "asp publish failed", { ip, err: String(err) });
+      return c.json({ error: "asp_publish_failed", message: String(err) }, 500);
+    }
+
+    // Server-side prove.
+    let built;
+    try {
+      const { wasm, zkey } = loadCircuits();
+      built = await proveAndBuildRelayExecute({
+        publicClient: args.publicClient,
+        pool: req.pool as Address,
+        entrypoint: args.cfg.entrypoint,
+        note,
+        adapterId: BigInt(req.adapterId),
+        adapterData: req.adapterData as `0x${string}`,
+        recipient: req.recipient as Address,
+        feeRecipient: (req.feeRecipient ?? req.recipient) as Address,
+        relayFeeBPS,
+        aspRoot: note.label,
+        wasmBytes: wasm,
+        zkeyBytes: zkey,
+        searchLoBlock: req.searchLoBlock ? BigInt(req.searchLoBlock) : undefined,
+      });
+    } catch (err) {
+      log("error", "prove failed", { ip, err: String(err) });
+      return c.json({ error: "prove_failed", message: String(err) }, 500);
+    }
+
+    log("info", "received relayExecute", { ip, dryRun: args.cfg.dryRun });
+    if (args.cfg.dryRun) return c.json({ ok: true, dryRun: true, stateRoot: String(built.stateRoot) });
+
+    try {
+      const txHash = await args.contracts.relayExecute(args.wallet, {
+        withdrawal: built.withdrawal,
+        proof: built.proof as unknown as WithdrawProofTuple,
+        scope: built.scope,
+      });
+      return c.json({ ok: true, txHash });
+    } catch (err) {
+      log("error", "relayExecute failed", { ip, err: String(err) });
+      return c.json({ error: "relay_execute_failed", message: String(err) }, 500);
+    }
+  });
+
   return app;
 }
 
@@ -381,7 +536,7 @@ async function main(): Promise<void> {
     dryRun:     cfg.dryRun,
   });
 
-  const app = buildApp({ contracts, wallet, cfg, rateLimit });
+  const app = buildApp({ contracts, wallet, publicClient, cfg, rateLimit });
   Bun.serve({ port: cfg.port, fetch: app.fetch });
 }
 

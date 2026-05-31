@@ -40,6 +40,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@bu/fx-engine": "workspace:*",
+        "@bu/privacy-prover": "workspace:*",
         "@zk-kit/lean-imt": "^2.2.4",
         "hono": "^4.6.0",
         "maci-crypto": "^2.5.0",
