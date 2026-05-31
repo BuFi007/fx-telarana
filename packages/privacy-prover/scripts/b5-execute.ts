@@ -93,15 +93,54 @@ const ENTRYPOINT_ABI = parseAbi([
 ]);
 const POOL_ABI = parseAbi(["function SCOPE() view returns (uint256)"]);
 
-// ASP root (single-leaf == label).
+// ASP root (single-leaf == label). Idempotent: re-inserting the same ASP leaf
+// reverts (LeanIMT rejects duplicates), so skip if already the latest root.
 const aspRoot = label;
-const cid = `permissive-root-${Date.now().toString(36)}`.padEnd(40, "x");
-log(`publishing ASP root ${aspRoot}`);
-const ur = await walletClient.writeContract({ address: entrypoint, abi: ENTRYPOINT_ABI, functionName: "updateRoot", args: [aspRoot, cid] });
-await publicClient.waitForTransactionReceipt({ hash: ur });
-log("ASP root confirmed");
+const curRoot = await publicClient.readContract({ address: entrypoint, abi: ENTRYPOINT_ABI, functionName: "latestRoot" }) as bigint;
+if (curRoot === aspRoot) {
+  log(`ASP root ${aspRoot} already published — skipping updateRoot`);
+} else {
+  const cid = `permissive-root-${Date.now().toString(36)}`.padEnd(40, "x");
+  log(`publishing ASP root ${aspRoot}`);
+  const ur = await walletClient.writeContract({ address: entrypoint, abi: ENTRYPOINT_ABI, functionName: "updateRoot", args: [aspRoot, cid] });
+  await publicClient.waitForTransactionReceipt({ hash: ur });
+  log("ASP root confirmed");
+}
 
-const stateMP = generateMerkleProof([commitmentHash], commitmentHash);
+// Reconstruct the pool's REAL state tree from on-chain Deposited events — the
+// pool has multiple leaves, so a synthetic single-leaf root is unknown to it
+// (pool.withdraw's _isKnownRoot would revert). ASP tree stays single-leaf (we
+// publish our label as latestRoot above).
+const POOL_DEPOSIT_ABI = parseAbi([
+  "event Deposited(address indexed depositor, uint256 commitment, uint256 label, uint256 value, uint256 precommitmentHash)",
+]);
+// The free-tier RPC caps eth_getLogs at 10k-block ranges, so scan backward in
+// windows until we've collected the whole tree (currentTreeSize leaves).
+const treeSize = Number(await publicClient.readContract({
+  address: pool, abi: parseAbi(["function currentTreeSize() view returns (uint256)"]), functionName: "currentTreeSize",
+}) as bigint);
+const latest = await publicClient.getBlockNumber();
+const WIN = 9000n;
+const collected: typeof POOL_DEPOSIT_ABI extends never ? never : any[] = [];
+let hi = latest;
+for (let w = 0; w < 400 && collected.length < treeSize && hi > 0n; w++) {
+  const lo = hi > WIN ? hi - WIN : 0n;
+  const chunk = await publicClient.getLogs({ address: pool, event: POOL_DEPOSIT_ABI[0], fromBlock: lo, toBlock: hi });
+  collected.push(...chunk);
+  hi = lo - 1n;
+}
+log(`scanned for leaves: collected ${collected.length}/${treeSize}`);
+const leaves = collected
+  .sort((a, b) => (a.blockNumber === b.blockNumber ? a.logIndex! - b.logIndex! : Number(a.blockNumber! - b.blockNumber!)))
+  .map((l) => (l.args as { commitment: bigint }).commitment);
+log(`fetched ${leaves.length} pool leaves; my leaf index = ${leaves.findIndex((c) => c === commitmentHash)}`);
+const stateMP = generateMerkleProof(leaves, commitmentHash);
+const onchainRootNow = await publicClient.readContract({ address: pool, abi: parseAbi(["function currentRoot() view returns (uint256)"]), functionName: "currentRoot" }) as bigint;
+if (stateMP.root !== onchainRootNow) {
+  console.error(`reconstructed state root ${stateMP.root} != pool.currentRoot() ${onchainRootNow}`);
+  process.exit(1);
+}
+log(`state root matches pool.currentRoot() ✓ (${stateMP.root})`);
 const aspMP = generateMerkleProof([label], label);
 
 const recipient = account.address; // executor / onBehalf — detached in prod
