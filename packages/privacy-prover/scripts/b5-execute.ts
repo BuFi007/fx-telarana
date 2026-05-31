@@ -31,6 +31,7 @@ import {
   createPublicClient,
   createWalletClient,
   encodeAbiParameters,
+  encodeFunctionData,
   http,
   parseAbi,
   type Address,
@@ -167,17 +168,24 @@ const recipient = account.address; // executor / onBehalf — detached in prod
 const feeRecipient = account.address;
 const relayFeeBPS = 0n;
 
-// ExecutionRelayData ABI: (uint256 adapterId, address recipient, address
-// feeRecipient, uint256 relayFeeBPS, bytes data)
+// ExecutionRelayData is a struct with a DYNAMIC `bytes` field, so the entrypoint's
+// abi.decode(data, (ExecutionRelayData)) expects a SINGLE dynamic TUPLE (leading
+// offset), NOT 5 separate head params. Encode as one tuple type to match.
 const executionData = encodeAbiParameters(
   [
-    { type: "uint256", name: "adapterId" },
-    { type: "address", name: "recipient" },
-    { type: "address", name: "feeRecipient" },
-    { type: "uint256", name: "relayFeeBPS" },
-    { type: "bytes", name: "data" },
+    {
+      type: "tuple",
+      name: "d",
+      components: [
+        { type: "uint256", name: "adapterId" },
+        { type: "address", name: "recipient" },
+        { type: "address", name: "feeRecipient" },
+        { type: "uint256", name: "relayFeeBPS" },
+        { type: "bytes", name: "data" },
+      ],
+    },
   ],
-  [adapterId, recipient, feeRecipient, relayFeeBPS, adapterData],
+  [{ adapterId, recipient, feeRecipient, relayFeeBPS, data: adapterData }],
 );
 const withdrawal: Withdrawal = { processooor: entrypoint, data: executionData };
 
@@ -209,6 +217,19 @@ const pB: [[bigint, bigint], [bigint, bigint]] = [
 ];
 const pC: [bigint, bigint] = [BigInt(proof.pi_c[0]), BigInt(proof.pi_c[1])];
 const pubSignals = sig.map((s) => BigInt(s)) as unknown as [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint];
+
+// Dump exact args for a forge fork-trace replay.
+{
+  const { writeFileSync } = await import("node:fs");
+  writeFileSync(join(__dirname, ".b5-execute-args.json"), JSON.stringify({
+    withdrawalData: withdrawal.data, processooor: withdrawal.processooor,
+    pA: pA.map(String), pB: pB.map((r) => r.map(String)), pC: pC.map(String),
+    pubSignals: (pubSignals as bigint[]).map(String), scope: scope.toString(),
+  }, null, 2));
+  log("dumped args → .b5-execute-args.json");
+}
+
+console.log("CALLDATA_HEX=" + encodeFunctionData({ abi: ENTRYPOINT_ABI, functionName: "relayExecute", args: [withdrawal, { pA, pB, pC, pubSignals }, scope] }));
 
 log("calling entrypoint.relayExecute");
 const tx = await walletClient.writeContract({
