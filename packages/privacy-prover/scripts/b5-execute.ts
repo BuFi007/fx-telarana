@@ -111,28 +111,48 @@ if (curRoot === aspRoot) {
 // pool has multiple leaves, so a synthetic single-leaf root is unknown to it
 // (pool.withdraw's _isKnownRoot would revert). ASP tree stays single-leaf (we
 // publish our label as latestRoot above).
+// Reconstruct from LeafInserted (every state-tree insert: deposits AND
+// withdrawal change-notes), NOT Deposited — the tree grows on withdrawals too.
 const POOL_DEPOSIT_ABI = parseAbi([
-  "event Deposited(address indexed depositor, uint256 commitment, uint256 label, uint256 value, uint256 precommitmentHash)",
+  "event LeafInserted(uint256 _index, uint256 _leaf, uint256 _root)",
 ]);
-// The free-tier RPC caps eth_getLogs at 10k-block ranges, so scan backward in
-// windows until we've collected the whole tree (currentTreeSize leaves).
-const treeSize = Number(await publicClient.readContract({
-  address: pool, abi: parseAbi(["function currentTreeSize() view returns (uint256)"]), functionName: "currentTreeSize",
-}) as bigint);
+// The free-tier RPC caps eth_getLogs at 10k blocks but DOES serve historical
+// eth_call. So binary-search `currentTreeSize()` by block to find each leaf's
+// insertion block, then a 1-block getLogs per block. O(treeSize · log range).
+const SIZE_ABI = parseAbi(["function currentTreeSize() view returns (uint256)"]);
+const treeSize = Number(await publicClient.readContract({ address: pool, abi: SIZE_ABI, functionName: "currentTreeSize" }) as bigint);
 const latest = await publicClient.getBlockNumber();
-const WIN = 9000n;
-const collected: typeof POOL_DEPOSIT_ABI extends never ? never : any[] = [];
-let hi = latest;
-for (let w = 0; w < 400 && collected.length < treeSize && hi > 0n; w++) {
-  const lo = hi > WIN ? hi - WIN : 0n;
-  const chunk = await publicClient.getLogs({ address: pool, event: POOL_DEPOSIT_ABI[0], fromBlock: lo, toBlock: hi });
-  collected.push(...chunk);
-  hi = lo - 1n;
+const sizeAt = async (block: bigint): Promise<number> => {
+  try { return Number(await publicClient.readContract({ address: pool, abi: SIZE_ABI, functionName: "currentTreeSize", blockNumber: block }) as bigint); }
+  catch { return 0; } // pre-deploy / no code → 0 leaves
+};
+// smallest block whose tree size >= s
+const blockForSize = async (s: number): Promise<bigint> => {
+  let lo = 40_000_000n, hi = latest, ans = hi;
+  while (lo <= hi) {
+    const mid = (lo + hi) / 2n;
+    if ((await sizeAt(mid)) >= s) { ans = mid; hi = mid - 1n; } else { lo = mid + 1n; }
+  }
+  return ans;
+};
+const blocks = new Set<bigint>();
+for (let s = 1; s <= treeSize; s++) blocks.add(await blockForSize(s));
+log(`leaf-insertion blocks: ${[...blocks].map(String).join(", ")}`);
+const seen = new Set<string>();
+const collected: any[] = [];
+for (const b of blocks) {
+  // small window catches off-by-one between size-transition block and the tx
+  const lo = b > 8n ? b - 8n : 0n;
+  const chunk = await publicClient.getLogs({ address: pool, event: POOL_DEPOSIT_ABI[0], fromBlock: lo, toBlock: b + 8n });
+  for (const l of chunk) {
+    const k = `${l.transactionHash}:${l.logIndex}`;
+    if (!seen.has(k)) { seen.add(k); collected.push(l); }
+  }
 }
-log(`scanned for leaves: collected ${collected.length}/${treeSize}`);
+log(`collected ${collected.length}/${treeSize} LeafInserted logs`);
 const leaves = collected
-  .sort((a, b) => (a.blockNumber === b.blockNumber ? a.logIndex! - b.logIndex! : Number(a.blockNumber! - b.blockNumber!)))
-  .map((l) => (l.args as { commitment: bigint }).commitment);
+  .sort((a, b) => Number((a.args as { _index: bigint })._index - (b.args as { _index: bigint })._index))
+  .map((l) => (l.args as { _leaf: bigint })._leaf);
 log(`fetched ${leaves.length} pool leaves; my leaf index = ${leaves.findIndex((c) => c === commitmentHash)}`);
 const stateMP = generateMerkleProof(leaves, commitmentHash);
 const onchainRootNow = await publicClient.readContract({ address: pool, abi: parseAbi(["function currentRoot() view returns (uint256)"]), functionName: "currentRoot" }) as bigint;
