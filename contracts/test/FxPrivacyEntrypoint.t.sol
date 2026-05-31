@@ -9,7 +9,12 @@ import {IMorpho, MarketParams as MorphoMarketParams, Id as MorphoId} from "morph
 
 import {FxPrivacyPool} from "../src/hub/FxPrivacyPool.sol";
 import {FxPrivacyEntrypoint} from "../src/hub/FxPrivacyEntrypoint.sol";
-import {FxMorphoSupplyAdapter, IFxExecutionAdapter} from "../src/hub/FxExecutionAdapter.sol";
+import {
+    FxMorphoSupplyAdapter,
+    FxPerpMarginAdapter,
+    FxSpotSwapAdapter,
+    IFxExecutionAdapter
+} from "../src/hub/FxExecutionAdapter.sol";
 import {IFxRouterSwapAdapter} from "../src/hub/FxRouter.sol";
 import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
 import {MockStablecoin} from "../src/test-helpers/MockStablecoin.sol";
@@ -162,6 +167,17 @@ contract MaliciousAdapter is IFxRouterSwapAdapter {
             IERC20(buyToken).safeTransfer(recipient, actualDelivery);
         }
         return reportedDelivery;
+    }
+}
+
+/// @notice Minimal IFxMarginAccount stand-in: credits margin + pulls USDC.
+contract MockMarginAccount {
+    mapping(address => uint256) public marginOf;
+    IERC20 public immutable usdc;
+    constructor(address _usdc) { usdc = IERC20(_usdc); }
+    function depositMargin(address trader, uint256 amount) external {
+        marginOf[trader] += amount;
+        usdc.transferFrom(msg.sender, address(this), amount);
     }
 }
 
@@ -705,6 +721,51 @@ contract FxPrivacyEntrypointTest is Test {
         // 1% fee skimmed in the sell asset; the rest supplied.
         assertEq(usdc.balanceOf(FEE_SINK), 1e6, "1% relay fee");
         assertEq(morpho.supplyAssetsOf(address(usdc), RECIPIENT), 99e6, "99 USDC supplied after fee");
+    }
+
+    function test_relayExecute_perpMarginFromShieldedNote() public {
+        uint256 amount = 100e6;
+        _depositFromUser(amount, 31);
+
+        MockMarginAccount margin = new MockMarginAccount(address(usdc));
+        FxPerpMarginAdapter adapter =
+            new FxPerpMarginAdapter(address(margin), address(entrypoint), address(usdc));
+        vm.prank(OWNER);
+        entrypoint.registerExecutionAdapter(2, IFxExecutionAdapter(address(adapter)));
+
+        // recipient = the detached executor whose perp margin gets funded.
+        FxPrivacyEntrypoint.ExecutionRelayData memory data = FxPrivacyEntrypoint.ExecutionRelayData({
+            adapterId: 2, recipient: RECIPIENT, feeRecipient: FEE_SINK, relayFeeBPS: 0, data: ""
+        });
+        (IPrivacyPool.Withdrawal memory w, ProofLib.WithdrawProof memory p) =
+            _craftExecuteWithdrawal(data, amount, 0xF1);
+
+        entrypoint.relayExecute(w, p, poolScope);
+        assertEq(margin.marginOf(RECIPIENT), amount, "executor perp margin funded from shielded note");
+    }
+
+    function test_relayExecute_spotSwapFromShieldedNote() public {
+        uint256 amount = 100e6;
+        _depositFromUser(amount, 32);
+
+        // Wrap the existing MockSwapAdapter (1:1, pre-funded with EURC in setUp).
+        FxSpotSwapAdapter spotAdapter = new FxSpotSwapAdapter(address(adapter), address(entrypoint));
+        vm.prank(OWNER);
+        entrypoint.registerExecutionAdapter(3, IFxExecutionAdapter(address(spotAdapter)));
+
+        FxPrivacyEntrypoint.ExecutionRelayData memory data = FxPrivacyEntrypoint.ExecutionRelayData({
+            adapterId: 3,
+            recipient: RECIPIENT,
+            feeRecipient: FEE_SINK,
+            relayFeeBPS: 0,
+            data: abi.encode(address(eurc), amount) // buyToken=EURC, minBuyAmount=amount (1:1)
+        });
+        (IPrivacyPool.Withdrawal memory w, ProofLib.WithdrawProof memory p) =
+            _craftExecuteWithdrawal(data, amount, 0xF2);
+
+        uint256 before = eurc.balanceOf(RECIPIENT);
+        entrypoint.relayExecute(w, p, poolScope);
+        assertEq(eurc.balanceOf(RECIPIENT), before + amount, "spot swap output delivered to recipient");
     }
 
     function test_relayExecute_revertsOnUnregisteredAdapter() public {
