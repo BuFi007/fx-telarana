@@ -9,6 +9,7 @@ import {IPrivacyPool} from "privacy-pools/interfaces/IPrivacyPool.sol";
 import {ProofLib} from "privacy-pools/contracts/lib/ProofLib.sol";
 
 import {IFxRouterSwapAdapter} from "./FxRouter.sol";
+import {IFxExecutionAdapter} from "./FxExecutionAdapter.sol";
 
 /// @title FxPrivacyEntrypoint
 /// @notice fx-Telaraña Privacy Pool router. Extends the vendored 0xbow
@@ -49,6 +50,19 @@ contract FxPrivacyEntrypoint is Entrypoint {
         uint256 minBuyAmount;
     }
 
+    /// @notice Carried in `Withdrawal.data` for `relayExecute` — the own-stack
+    ///         private-execution router. Like CrossCurrencyRelayData it is bound
+    ///         into the proof context (`keccak256(_withdrawal, scope)`), so the
+    ///         adapter + its calldata are signed into the user's proof and a
+    ///         relayer cannot redirect the execution.
+    struct ExecutionRelayData {
+        uint256 adapterId;   // which registered IFxExecutionAdapter to invoke
+        address recipient;   // on whose behalf the action runs (e.g. Morpho onBehalf)
+        address feeRecipient;
+        uint256 relayFeeBPS;
+        bytes data;          // adapter-specific calldata (e.g. abi-encoded MarketParams)
+    }
+
     /// @notice ERC-7201 namespaced storage for fx-Telarana state.
     /// @custom:storage-location erc7201:fx.privacy.entrypoint
     struct FxPrivacyEntrypointStorage {
@@ -63,6 +77,10 @@ contract FxPrivacyEntrypoint is Entrypoint {
         // upgrade. See PRIVACY_CIRCUIT_WORKPLAN.md.
         mapping(IERC20 _asset => bool _enabled) denominationGateEnabled;
         mapping(IERC20 _asset => mapping(uint256 _value => bool _ok)) denominationAllowed;
+        // Own-stack private-execution router: owner-controlled registry of
+        // execution adapters invoked by relayExecute. WE control what's
+        // registered (no vendor gate). Appended at the END (upgrade-safe).
+        mapping(uint256 _adapterId => IFxExecutionAdapter) executionAdapters;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -96,6 +114,15 @@ contract FxPrivacyEntrypoint is Entrypoint {
     event CrossCurrencyEnabled(IERC20 indexed _asset, bool _enabled);
     event DenominationGateSet(IERC20 indexed _asset, bool _enabled);
     event DenominationsSet(IERC20 indexed _asset, uint256[] _values);
+    event ExecutionAdapterRegistered(uint256 indexed _adapterId, address indexed _adapter);
+    event Executed(
+        address indexed _relayer,
+        uint256 indexed _adapterId,
+        address indexed _recipient,
+        IERC20 _asset,
+        uint256 _withdrawnAmount,
+        uint256 _feeAmount
+    );
 
     /// @notice Emitted on a successful cross-currency withdrawal relay.
     /// @param  _relayer     The keeper / SDK relayer that processed the call.
@@ -126,6 +153,7 @@ contract FxPrivacyEntrypoint is Entrypoint {
     error RecipientUnderdelivered(uint256 received, uint256 minBuyAmount);
     error ZeroRecipient();
     error NotADenomination(IERC20 _asset, uint256 _value);
+    error ExecutionAdapterNotRegistered(uint256 _adapterId);
 
     /*//////////////////////////////////////////////////////////////
                                 VIEWS
@@ -149,6 +177,11 @@ contract FxPrivacyEntrypoint is Entrypoint {
     /// @notice Whether `_value` (atomic units) is an allowed denomination for `_asset`.
     function isDenomination(IERC20 _asset, uint256 _value) public view returns (bool) {
         return _getFxStorage().denominationAllowed[_asset][_value];
+    }
+
+    /// @notice The execution adapter registered at `_adapterId` (address(0) if none).
+    function executionAdapter(uint256 _adapterId) external view returns (IFxExecutionAdapter) {
+        return _getFxStorage().executionAdapters[_adapterId];
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -193,6 +226,19 @@ contract FxPrivacyEntrypoint is Entrypoint {
         if (address(_asset) == address(0)) revert ZeroAddress();
         _getFxStorage().denominationGateEnabled[_asset] = _enabled;
         emit DenominationGateSet(_asset, _enabled);
+    }
+
+    /// @notice Register (or rotate) an execution adapter at `_adapterId`. Owner-
+    ///         gated and ours — adding a protocol (Morpho, perp settlement, spot)
+    ///         is our action, not a vendor's. This is the no-lock-in lever for
+    ///         the private-execution router.
+    function registerExecutionAdapter(uint256 _adapterId, IFxExecutionAdapter _adapter)
+        external
+        onlyRole(_OWNER_ROLE)
+    {
+        if (address(_adapter) == address(0)) revert ZeroAddress();
+        _getFxStorage().executionAdapters[_adapterId] = _adapter;
+        emit ExecutionAdapterRegistered(_adapterId, address(_adapter));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -329,5 +375,78 @@ contract FxPrivacyEntrypoint is Entrypoint {
             _feeAmount,
             _recipientDelta
         );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    PRIVATE EXECUTION ROUTER (own-stack)
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Withdraw a shielded note and atomically execute a REGISTERED
+    ///         execution adapter funded from it — trade / lend / borrow from the
+    ///         shielded balance with the entrypoint (not the user) as the
+    ///         on-chain caller. Generalizes `relayCrossCurrency` from a single
+    ///         swap adapter to an owner-controlled adapter registry, reusing the
+    ///         deployed `WithdrawalVerifier` (the adapter + calldata are carried
+    ///         in `_withdrawal.data`, which is bound into the proof `context`, so
+    ///         a relayer cannot redirect the execution). No new circuit/ceremony.
+    /// @dev    Same adapter trust boundary as relayCrossCurrency: we transfer the
+    ///         post-fee amount to the adapter, do NOT trust its return value for
+    ///         accounting, and assert the entrypoint's sell-asset balance did not
+    ///         drop below its pre-withdraw level (an adapter that pulls extra
+    ///         reverts). A settle-back result token (e.g. a borrow's output) is
+    ///         forwarded to the recipient by the measured amount.
+    function relayExecute(
+        IPrivacyPool.Withdrawal calldata _withdrawal,
+        ProofLib.WithdrawProof calldata _proof,
+        uint256 _scope
+    ) external nonReentrant {
+        FxPrivacyEntrypointStorage storage $ = _getFxStorage();
+
+        if (_proof.withdrawnValue() == 0) revert InvalidWithdrawalAmount();
+        if (_withdrawal.processooor != address(this)) revert InvalidProcessooor();
+
+        IPrivacyPool _pool = scopeToPool[_scope];
+        if (address(_pool) == address(0)) revert PoolNotFound();
+
+        IERC20 _asset = IERC20(_pool.ASSET());
+        _enforceDenomination(_asset, _proof.withdrawnValue());
+
+        ExecutionRelayData memory _data = abi.decode(_withdrawal.data, (ExecutionRelayData));
+        IFxExecutionAdapter _adapter = $.executionAdapters[_data.adapterId];
+        if (address(_adapter) == address(0)) revert ExecutionAdapterNotRegistered(_data.adapterId);
+        if (_data.recipient == address(0)) revert ZeroRecipient();
+        if (_data.relayFeeBPS > assetConfig[_asset].maxRelayFeeBPS) revert RelayFeeGreaterThanMax();
+
+        uint256 _sellBalanceBefore = _asset.balanceOf(address(this));
+
+        // Pool withdraws to address(this).
+        _pool.withdraw(_withdrawal, _proof);
+
+        uint256 _withdrawnAmount = _proof.withdrawnValue();
+        uint256 _amountAfterFee = _deductFee(_withdrawnAmount, _data.relayFeeBPS);
+        uint256 _feeAmount = _withdrawnAmount - _amountAfterFee;
+        if (_feeAmount > 0) _asset.safeTransfer(_data.feeRecipient, _feeAmount);
+
+        // Fund the adapter, then execute. The adapter is caller-gated to this
+        // entrypoint and performs its protocol action on behalf of recipient.
+        _asset.safeTransfer(address(_adapter), _amountAfterFee);
+        (address _resultToken, uint256 _resultAmount) =
+            _adapter.execute(address(_asset), _amountAfterFee, _data.recipient, _data.data);
+
+        // Defense-in-depth: the adapter must not have pulled MORE sell asset than
+        // we forwarded (post-routing balance can't be below the pre-withdraw level).
+        uint256 _sellBalanceAfter = _asset.balanceOf(address(this));
+        if (_sellBalanceBefore > _sellBalanceAfter) revert InvalidPoolState();
+
+        // Settle-back path (e.g. a borrow): forward the measured result to the
+        // recipient. Supplies return (0,0) and skip this.
+        if (_resultToken != address(0) && _resultAmount > 0) {
+            IERC20 _rt = IERC20(_resultToken);
+            uint256 _have = _rt.balanceOf(address(this));
+            uint256 _send = _have < _resultAmount ? _have : _resultAmount;
+            if (_send > 0) _rt.safeTransfer(_data.recipient, _send);
+        }
+
+        emit Executed(msg.sender, _data.adapterId, _data.recipient, _asset, _withdrawnAmount, _feeAmount);
     }
 }

@@ -9,6 +9,7 @@ import {IMorpho, MarketParams as MorphoMarketParams, Id as MorphoId} from "morph
 
 import {FxPrivacyPool} from "../src/hub/FxPrivacyPool.sol";
 import {FxPrivacyEntrypoint} from "../src/hub/FxPrivacyEntrypoint.sol";
+import {FxMorphoSupplyAdapter, IFxExecutionAdapter} from "../src/hub/FxExecutionAdapter.sol";
 import {IFxRouterSwapAdapter} from "../src/hub/FxRouter.sol";
 import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
 import {MockStablecoin} from "../src/test-helpers/MockStablecoin.sol";
@@ -624,6 +625,113 @@ contract FxPrivacyEntrypointTest is Test {
         uint256 before = eurc.balanceOf(RECIPIENT);
         entrypoint.relayCrossCurrency(w, p, poolScope);
         assertEq(eurc.balanceOf(RECIPIENT), before + amount, "denomination withdrawal delivers");
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                  PRIVATE EXECUTION ROUTER (own-stack)
+    //////////////////////////////////////////////////////////////*/
+
+    function _morphoMarket() internal view returns (MorphoMarketParams memory) {
+        return MorphoMarketParams({
+            loanToken: address(usdc),
+            collateralToken: address(eurc),
+            oracle: address(0x1),
+            irm: address(0x2),
+            lltv: 86e16
+        });
+    }
+
+    function _craftExecuteWithdrawal(
+        FxPrivacyEntrypoint.ExecutionRelayData memory data,
+        uint256 withdrawnValue,
+        uint256 nullifierSalt
+    ) internal view returns (IPrivacyPool.Withdrawal memory w, ProofLib.WithdrawProof memory p) {
+        w = IPrivacyPool.Withdrawal({ processooor: address(entrypoint), data: abi.encode(data) });
+        p.pubSignals[0] = uint256(keccak256(abi.encode("new-commit", nullifierSalt))) % PpConstants.SNARK_SCALAR_FIELD;
+        p.pubSignals[1] = uint256(keccak256(abi.encode("nullifier", nullifierSalt))) % PpConstants.SNARK_SCALAR_FIELD;
+        p.pubSignals[2] = withdrawnValue;
+        p.pubSignals[3] = pool.currentRoot();
+        p.pubSignals[4] = 1;
+        p.pubSignals[5] = entrypoint.latestRoot();
+        p.pubSignals[6] = 1;
+        p.pubSignals[7] = uint256(keccak256(abi.encode(w, poolScope))) % PpConstants.SNARK_SCALAR_FIELD;
+    }
+
+    function test_registerExecutionAdapter_revertsForNonOwner() public {
+        FxMorphoSupplyAdapter adapter = new FxMorphoSupplyAdapter(address(morpho), address(entrypoint));
+        vm.expectRevert();
+        vm.prank(USER);
+        entrypoint.registerExecutionAdapter(1, IFxExecutionAdapter(address(adapter)));
+    }
+
+    function test_relayExecute_morphoSupplyFromShieldedNote() public {
+        uint256 amount = 100e6;
+        _depositFromUser(amount, 21);
+
+        FxMorphoSupplyAdapter adapter = new FxMorphoSupplyAdapter(address(morpho), address(entrypoint));
+        vm.prank(OWNER);
+        entrypoint.registerExecutionAdapter(1, IFxExecutionAdapter(address(adapter)));
+
+        FxPrivacyEntrypoint.ExecutionRelayData memory data = FxPrivacyEntrypoint.ExecutionRelayData({
+            adapterId: 1,
+            recipient: RECIPIENT,
+            feeRecipient: FEE_SINK,
+            relayFeeBPS: 0,
+            data: abi.encode(_morphoMarket())
+        });
+        (IPrivacyPool.Withdrawal memory w, ProofLib.WithdrawProof memory p) =
+            _craftExecuteWithdrawal(data, amount, 0xE1);
+
+        entrypoint.relayExecute(w, p, poolScope);
+
+        // Morpho recorded the supply on behalf of RECIPIENT, funded from the
+        // shielded note — the user's EOA never appears as the supplier.
+        assertEq(morpho.supplyAssetsOf(address(usdc), RECIPIENT), amount, "supplied onBehalf recipient");
+    }
+
+    function test_relayExecute_skimsRelayFee() public {
+        uint256 amount = 100e6;
+        _depositFromUser(amount, 23);
+        FxMorphoSupplyAdapter adapter = new FxMorphoSupplyAdapter(address(morpho), address(entrypoint));
+        vm.prank(OWNER);
+        entrypoint.registerExecutionAdapter(1, IFxExecutionAdapter(address(adapter)));
+
+        FxPrivacyEntrypoint.ExecutionRelayData memory data = FxPrivacyEntrypoint.ExecutionRelayData({
+            adapterId: 1, recipient: RECIPIENT, feeRecipient: FEE_SINK, relayFeeBPS: 100, data: abi.encode(_morphoMarket())
+        });
+        (IPrivacyPool.Withdrawal memory w, ProofLib.WithdrawProof memory p) =
+            _craftExecuteWithdrawal(data, amount, 0xE3);
+        entrypoint.relayExecute(w, p, poolScope);
+        // 1% fee skimmed in the sell asset; the rest supplied.
+        assertEq(usdc.balanceOf(FEE_SINK), 1e6, "1% relay fee");
+        assertEq(morpho.supplyAssetsOf(address(usdc), RECIPIENT), 99e6, "99 USDC supplied after fee");
+    }
+
+    function test_relayExecute_revertsOnUnregisteredAdapter() public {
+        uint256 amount = 100e6;
+        _depositFromUser(amount, 22);
+        FxPrivacyEntrypoint.ExecutionRelayData memory data = FxPrivacyEntrypoint.ExecutionRelayData({
+            adapterId: 99, recipient: RECIPIENT, feeRecipient: FEE_SINK, relayFeeBPS: 0, data: ""
+        });
+        (IPrivacyPool.Withdrawal memory w, ProofLib.WithdrawProof memory p) =
+            _craftExecuteWithdrawal(data, amount, 0xE2);
+        vm.expectRevert(abi.encodeWithSelector(FxPrivacyEntrypoint.ExecutionAdapterNotRegistered.selector, uint256(99)));
+        entrypoint.relayExecute(w, p, poolScope);
+    }
+
+    function test_relayExecute_revertsOnZeroRecipient() public {
+        uint256 amount = 100e6;
+        _depositFromUser(amount, 24);
+        FxMorphoSupplyAdapter adapter = new FxMorphoSupplyAdapter(address(morpho), address(entrypoint));
+        vm.prank(OWNER);
+        entrypoint.registerExecutionAdapter(1, IFxExecutionAdapter(address(adapter)));
+        FxPrivacyEntrypoint.ExecutionRelayData memory data = FxPrivacyEntrypoint.ExecutionRelayData({
+            adapterId: 1, recipient: address(0), feeRecipient: FEE_SINK, relayFeeBPS: 0, data: abi.encode(_morphoMarket())
+        });
+        (IPrivacyPool.Withdrawal memory w, ProofLib.WithdrawProof memory p) =
+            _craftExecuteWithdrawal(data, amount, 0xE4);
+        vm.expectRevert(FxPrivacyEntrypoint.ZeroRecipient.selector);
+        entrypoint.relayExecute(w, p, poolScope);
     }
 
     /*//////////////////////////////////////////////////////////////
