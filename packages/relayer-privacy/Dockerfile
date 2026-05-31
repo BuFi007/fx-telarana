@@ -18,9 +18,14 @@ WORKDIR /app
 
 COPY . .
 
-# Install workspace deps and build @bu/fx-engine — relayer-api imports
-# "@bu/fx-engine/privacy", which resolves to packages/sdk/dist/privacy/index.js.
-RUN bun install && bun run --cwd packages/sdk build
+# Install workspace deps and build the two workspace packages relayer-api imports:
+#  - @bu/fx-engine  → packages/sdk/dist/privacy/index.js ("@bu/fx-engine/privacy")
+#  - @bu/privacy-prover → packages/privacy-prover/dist/index.js (server-side
+#    Groth16 prover behind /v1/relayExecute). dist is .dockerignored, so it MUST
+#    be built in-container or the import fails at boot ("Cannot find module").
+RUN bun install \
+  && bun run --cwd packages/sdk build \
+  && bun run --cwd packages/privacy-prover build
 
 ENV RELAYER_PORT=8787
 EXPOSE 8787
