@@ -16,6 +16,7 @@ import {ITurboFeeVault} from "../interfaces/ITurboFeeVault.sol";
 import {IFxFundingEngine} from "./interfaces/IFxFundingEngine.sol";
 import {IFxMarginAccount} from "./interfaces/IFxMarginAccount.sol";
 import {IFxPerpClearinghouse} from "./interfaces/IFxPerpClearinghouse.sol";
+import {IFeeDiscount} from "./interfaces/IFeeDiscount.sol";
 import {FxPerpMath} from "./FxPerpMath.sol";
 
 /// @title FxPerpClearinghouse
@@ -43,6 +44,9 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
     uint8 public immutable MARGIN_DECIMALS;
     address public fundingEngine;
     ITurboFeeVault public feeVault;
+    /// @notice Optional perp trading-fee discount source. Zero address = no
+    ///         discount (full fee), preserving pre-discount behavior.
+    IFeeDiscount public feeDiscount;
 
     mapping(bytes32 marketId => MarketConfig config) private _marketConfig;
     mapping(bytes32 marketId => bool configured) private _marketConfigured;
@@ -74,6 +78,7 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
     );
     event BadDebtSocialized(bytes32 indexed marketId, address indexed trader, uint256 amount);
     event FeeVaultSet(address indexed feeVault);
+    event FeeDiscountSet(address indexed feeDiscount);
     event TradingFeeRouted(bytes32 indexed marketId, address indexed trader, address indexed feeVault, uint256 amount);
 
     error ZeroAddress();
@@ -89,6 +94,7 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
     error FundingEngineNotSet();
     error InvalidFundingEngine(address fundingEngine);
     error InvalidFeeVault(address feeVault);
+    error InvalidFeeDiscount(address feeDiscount);
 
     constructor(address usdc_, address oracle_, address marginAccount_, address initialAdmin) {
         if (usdc_ == address(0) || oracle_ == address(0) || marginAccount_ == address(0) || initialAdmin == address(0))
@@ -131,6 +137,17 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         if (feeVault_ != address(0) && feeVault_.code.length == 0) revert InvalidFeeVault(feeVault_);
         feeVault = ITurboFeeVault(feeVault_);
         emit FeeVaultSet(feeVault_);
+    }
+
+    /// @notice Set the optional perp trading-fee discount source. Zero address
+    ///         disables discounts entirely (full fee). A nonzero address must
+    ///         be a contract; the read itself is wrapped in try/catch at the
+    ///         fee sites so a misbehaving discount contract can never block
+    ///         trading — it just yields the full fee.
+    function setFeeDiscount(address feeDiscount_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (feeDiscount_ != address(0) && feeDiscount_.code.length == 0) revert InvalidFeeDiscount(feeDiscount_);
+        feeDiscount = IFeeDiscount(feeDiscount_);
+        emit FeeDiscountSet(feeDiscount_);
     }
 
     function openOrIncrease(bytes32 marketId, address trader, int256 sizeDeltaE18, uint256 maxFee)
@@ -198,7 +215,7 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         (marginReleased, pnl, badDebt) = _applyDecrease(marketId, trader, closeDelta, priceE18);
     }
 
-    function quoteFee(bytes32 marketId, address, int256 sizeDeltaE18)
+    function quoteFee(bytes32 marketId, address trader, int256 sizeDeltaE18)
         external
         view
         returns (uint256 feeAmount, uint256 priceE18)
@@ -207,6 +224,7 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         priceE18 = _priceView(config);
         uint256 notional = FxPerpMath.notionalFromSize(FxPerpMath.abs(sizeDeltaE18), priceE18, MARGIN_DECIMALS);
         feeAmount = FxPerpMath.fee(notional, config.tradingFeeBps);
+        feeAmount = _applyDiscount(trader, feeAmount);
     }
 
     function unrealizedPnl(bytes32 marketId, address trader) public view returns (int256 pnlAmount) {
@@ -291,6 +309,7 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         uint256 deltaAbs = FxPerpMath.abs(sizeDeltaE18);
         uint256 notional = FxPerpMath.notionalFromSize(deltaAbs, fillPriceE18, MARGIN_DECIMALS);
         uint256 feeAmount = FxPerpMath.fee(notional, config.tradingFeeBps);
+        feeAmount = _applyDiscount(trader, feeAmount);
         if (feeAmount > maxFee) revert SlippageFeeExceeded(feeAmount, maxFee);
         uint256 required = FxPerpMath.requiredMargin(notional, config.initialMarginBps);
 
@@ -378,6 +397,22 @@ contract FxPerpClearinghouse is IFxPerpClearinghouse, AccessControl, Pausable, R
         emit PositionDecreased(
             marketId, trader, sizeDeltaE18, p.sizeE18, fillPriceE18, marginReleased, pnlAmount, badDebt
         );
+    }
+
+    /// @dev Apply the configured fee discount to `feeAmount` for `trader`.
+    ///      Returns the full fee when no discount source is set. The external
+    ///      read is wrapped in try/catch: on any revert the full fee is
+    ///      charged, so a broken/hostile discount contract can never block a
+    ///      trade. The returned bps is clamped to {MAX} (= 50%).
+    function _applyDiscount(address trader, uint256 feeAmount) internal view returns (uint256) {
+        IFeeDiscount source = feeDiscount;
+        if (address(source) == address(0) || feeAmount == 0) return feeAmount;
+        try source.discountBps(trader) returns (uint16 bps) {
+            if (bps > 5000) bps = 5000;
+            return feeAmount * (10_000 - bps) / 10_000;
+        } catch {
+            return feeAmount;
+        }
     }
 
     function _realizeFee(bytes32 marketId, address trader, uint256 feeAmount) internal {
