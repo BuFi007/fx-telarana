@@ -32,7 +32,7 @@ function dep(
   pool: Address,
   label: bigint,
 ): CanonicalDeposit {
-  return { blockNumber: block, transactionIndex: txIndex, logIndex, pool, label };
+  return { blockNumber: block, transactionIndex: txIndex, logIndex, pool, label, commitment: label + 1_000_000n };
 }
 
 describe("compareCanonical", () => {

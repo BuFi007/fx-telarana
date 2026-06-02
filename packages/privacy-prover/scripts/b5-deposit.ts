@@ -17,8 +17,8 @@
 //   DEPLOYER_PRIVATE_KEY=0x... bun run scripts/b5-deposit.ts
 //
 // Outputs:
-//   stdout — pipeline timing + the Deposited event values.
-//   ./scripts/.b5-deposit-state.json — { nullifier, secret, value,
+//   stdout — pipeline timing + public Deposited event values.
+//   $B5_STATE_PATH or ./scripts/.b5-deposit-state.json — { nullifier, secret, value,
 //   label, commitmentHash, blockNumber, txHash }.
 
 import { writeFileSync } from "node:fs";
@@ -93,9 +93,8 @@ const secret    = randomFieldElement() as Secret;
 const fakeLabel = 1n; // placeholder for the commitment-hash computation below
 const dummyCommitment = getCommitment(DEPOSIT_AMOUNT, fakeLabel, nullifier, secret);
 const precommitmentHash = dummyCommitment.preimage.precommitment.hash;
-log(`nullifier = ${nullifier}`);
-log(`secret    = ${secret}`);
 log(`precommitmentHash = ${precommitmentHash}`);
+log("generated note secrets (not printed)");
 
 // --- ABIs (only what we need) ---
 const ERC20_ABI = parseAbi([
@@ -181,7 +180,7 @@ if (localCommitmentHash !== depositedEvent.commitment) {
 log("commitment hash matches local computation ✓");
 
 // --- Persist state for the withdraw step ---
-const statePath = join(__dirname, ".b5-deposit-state.json");
+const statePath = process.env.B5_STATE_PATH ?? join(__dirname, ".b5-deposit-state.json");
 writeFileSync(
   statePath,
   JSON.stringify(

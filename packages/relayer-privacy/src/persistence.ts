@@ -35,11 +35,15 @@ export interface PersistedState {
    *  key `${blockNumber}:${txIndex}:${logIndex}`; `label` is the
    *  commitment label that was inserted into the tree at that point. */
   leaves: Array<{ key: string; label: bigint }>;
+  /** Ordered per-pool state leaves (commitments), used by relayExecute to avoid
+   *  replaying historical LeafInserted logs during the request path. */
+  stateLeaves: Array<{ key: string; pool: Address; commitment: bigint; poolOrder: number }>;
 }
 
 export class PostmanStore {
   private readonly db: Database;
   private readonly insertLeafStmt: import("bun:sqlite").Statement;
+  private readonly insertStateLeafStmt: import("bun:sqlite").Statement;
   private readonly insertPoolStmt: import("bun:sqlite").Statement;
   private readonly setCursorStmt: import("bun:sqlite").Statement;
 
@@ -79,10 +83,27 @@ export class PostmanStore {
       CREATE INDEX IF NOT EXISTS idx_leaves_order
         ON leaves (inserted_order);
     `);
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS state_leaves (
+        key        TEXT    PRIMARY KEY,
+        pool       TEXT    NOT NULL,
+        commitment TEXT    NOT NULL,
+        pool_order INTEGER NOT NULL,
+        UNIQUE(pool, pool_order)
+      );
+    `);
+    this.db.run(`
+      CREATE INDEX IF NOT EXISTS idx_state_leaves_pool_order
+        ON state_leaves (pool, pool_order);
+    `);
 
     this.insertLeafStmt = this.db.prepare(
       `INSERT OR IGNORE INTO leaves (key, label, inserted_order)
        VALUES (?, ?, ?);`,
+    );
+    this.insertStateLeafStmt = this.db.prepare(
+      `INSERT OR IGNORE INTO state_leaves (key, pool, commitment, pool_order)
+       VALUES (?, ?, ?, ?);`,
     );
     this.insertPoolStmt = this.db.prepare(
       `INSERT OR IGNORE INTO pools (address) VALUES (?);`,
@@ -114,11 +135,22 @@ export class PostmanStore {
         "SELECT key, label FROM leaves ORDER BY inserted_order;",
       )
       .all();
+    const stateLeafRows = this.db
+      .query<{ key: string; pool: string; commitment: string; pool_order: number }, []>(
+        "SELECT key, pool, commitment, pool_order FROM state_leaves ORDER BY pool, pool_order;",
+      )
+      .all();
 
     return {
       cursor,
       pools:  poolRows.map((r) => r.address as Address),
       leaves: leafRows.map((r) => ({ key: r.key, label: BigInt(r.label) })),
+      stateLeaves: stateLeafRows.map((r) => ({
+        key: r.key,
+        pool: r.pool as Address,
+        commitment: BigInt(r.commitment),
+        poolOrder: r.pool_order,
+      })),
     };
   }
 
@@ -126,6 +158,12 @@ export class PostmanStore {
    *  re-running the same key (idempotent recovery) is a no-op. */
   appendLeaf(key: string, label: bigint, order: number): void {
     this.insertLeafStmt.run(key, label.toString(), order);
+  }
+
+  /** Append a per-pool state leaf. `poolOrder` is the insertion order within
+   *  that pool's state tree. */
+  appendStateLeaf(key: string, pool: Address, commitment: bigint, poolOrder: number): void {
+    this.insertStateLeafStmt.run(key, pool.toLowerCase(), commitment.toString(), poolOrder);
   }
 
   /** Record a discovered pool. Idempotent. */

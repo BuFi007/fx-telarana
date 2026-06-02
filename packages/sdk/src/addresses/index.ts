@@ -99,6 +99,9 @@ export interface StablecoinBasketToken {
 export interface PrivacyHookAddresses {
   entrypoint: Address;
   swapAdapter?: Address;
+  fixedRateSwapAdapter?: Address;
+  spotExecutionAdapterId?: string;
+  spotExecutionAdapter?: Address;
   pools: Partial<Record<"USDC" | "EURC" | StablecoinBasketToken["symbol"], Address>>;
 }
 
@@ -374,7 +377,10 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     // configs (asset, scope) live in privacyTradeClient.ts.
     privacy: {
       entrypoint: "0xD11cDdd1f04e850d3810a71608A49907c80f2736",
-      swapAdapter: "0x3Fa1AcC89DFd52f6692F20b7E49cD58A306C27f2",
+      swapAdapter: "0xe9147f799C1d65d1bAcFD0fE019d8c46531ef917",
+      fixedRateSwapAdapter: "0x3Fa1AcC89DFd52f6692F20b7E49cD58A306C27f2",
+      spotExecutionAdapterId: "3",
+      spotExecutionAdapter: "0x73633884c21997d8ef09dd2730841e770a5e3371",
       pools: {
         USDC: "0xC11C216C9C7A36848b1d4276d223160C8b51988f",
         EURC: "0x7B4582CDE65c8cC00fE24B16dBA60472242d234c",

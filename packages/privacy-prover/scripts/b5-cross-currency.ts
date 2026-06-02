@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0
 //
-// B5c — Live Arc cross-currency withdraw. Reads the deposit state from
+// B5c — Legacy fixed-rate Arc cross-currency withdraw. Reads the deposit state from
 // b5-deposit, reconstructs the pool's on-chain state tree by replaying
 // `LeafInserted` events, publishes a fresh ASP root that approves the
 // deposit's label, generates a Groth16 withdrawal proof bound to a
 // CrossCurrencyRelayData (buyToken = EURC), then calls
-// FxPrivacyEntrypoint.relayCrossCurrency() — which atomically:
+// FxPrivacyEntrypoint.relayCrossCurrency() — which, in the old Track B shape,
+// atomically:
 //
 //   1. Withdraws sellAmount from the pool to entrypoint.
 //   2. Forwards sellAmount to FxFixedRateSwapAdapter.
@@ -13,8 +14,8 @@
 //   4. Entrypoint measures the buy-side delta + forwards EURC to the
 //      user's signed recipient.
 //
-// End state: a brand-new address holds EURC, with no on-chain link to
-// the USDC depositor. This is the marquee privacy feature.
+// Current Ghost spot execution uses /v1/relayExecute with adapter id 3 and the
+// v4-backed FxRouterSwapAdapter. Do not use this script as the live Ghost smoke.
 //
 // Pre-req: b5-deposit must have just run (state file written) and the
 // adapter must be funded with ≥ minBuyAmount of EURC.

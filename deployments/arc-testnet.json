@@ -288,9 +288,12 @@
     }
   },
   "privacy": {
-    "summary": "Shielded pools for all 6 Arc basket assets. USDC + EURC are the original v1 ship (2026-05-18); MXNB + QCAD + cirBTC + AUDF added 2026-05-23 in 100%-hot mode (no Morpho rehyp). Full detail in deployments/privacy-hook-arc.json.",
+    "summary": "Shielded pools for all 6 Arc basket assets. USDC + EURC are the original v1 ship (2026-05-18); MXNB + QCAD + cirBTC + AUDF added 2026-05-23 in 100%-hot mode (no Morpho rehyp). Ghost spot execution is wired through the v4-backed FxRouterSwapAdapter as of 2026-06-02. Full detail in deployments/privacy-hook-arc.json.",
     "entrypoint": "0xD11cDdd1f04e850d3810a71608A49907c80f2736",
-    "swapAdapter": "0x3Fa1AcC89DFd52f6692F20b7E49cD58A306C27f2",
+    "swapAdapter": "0xe9147f799C1d65d1bAcFD0fE019d8c46531ef917",
+    "fixedRateSwapAdapter": "0x3Fa1AcC89DFd52f6692F20b7E49cD58A306C27f2",
+    "spotExecutionAdapterId": "3",
+    "spotExecutionAdapter": "0x73633884c21997d8ef09dd2730841e770a5e3371",
     "pools": {
       "USDC": "0xc11c216c9c7a36848b1d4276d223160c8b51988f",
       "EURC": "0x7B4582CDE65c8cC00fE24B16dBA60472242d234c",
@@ -300,8 +303,8 @@
       "AUDF": "0x5BC0e0795D5ea842601220bd1f855e60Fad7E3D1"
     },
     "crossCurrencyRoutes": [
-      { "from": "USDC", "to": "EURC", "rate": "920000000000000000", "rateHumanReadable": "1 USDC -> 0.92 EURC" },
-      { "from": "EURC", "to": "USDC", "rate": "1080000000000000000", "rateHumanReadable": "1 EURC -> 1.08 USDC" }
+      { "from": "USDC", "to": "EURC", "rate": "dynamic-v4-fx-router", "rateHumanReadable": "quote via FxRouterSwapAdapter / FxSwapHook" },
+      { "from": "EURC", "to": "USDC", "rate": "dynamic-v4-fx-router", "rateHumanReadable": "quote via FxRouterSwapAdapter / FxSwapHook" }
     ],
     "manifest": "deployments/privacy-hook-arc.json"
   }

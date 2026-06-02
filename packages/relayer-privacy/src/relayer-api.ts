@@ -20,8 +20,10 @@
 //   - dry-run mode (sim only, no broadcast)
 //   - max-fee guard (reject obviously-overpaying gas requests)
 
-import { readFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
+import { Database } from "bun:sqlite";
 import { Hono } from "hono";
 import {
   createPublicClient,
@@ -44,11 +46,28 @@ import {
   type WithdrawProofTuple,
   type Withdrawal,
 } from "@bu/fx-engine/privacy";
-import { proveAndBuildRelayExecute, type ShieldedNote } from "@bu/privacy-prover";
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
+
+interface ShieldedNote {
+  nullifier: bigint;
+  secret: bigint;
+  value: bigint;
+  label: bigint;
+  commitmentHash: bigint;
+}
+
+interface RelayExecuteProofResult {
+  withdrawal: Withdrawal;
+  proof: WithdrawProofTuple;
+  scope: bigint;
+  stateRoot: bigint;
+  aspRoot: bigint;
+  leafCount: number;
+  aspLeafCount: number;
+}
 
 interface RelayerConfig {
   rpcUrl: string;
@@ -65,6 +84,18 @@ interface RelayerConfig {
   /** Dir holding the Groth16 withdraw artifacts (withdraw.wasm/.zkey) for the
    *  server-side prover used by /v1/relayExecute. */
   circuitsDir: string;
+  /** Lower bound for canonical ASP pool discovery/label indexing. Must match
+   *  the ASP postman's FROM_BLOCK. */
+  aspFromBlock: bigint;
+  /** Max block range for canonical ASP event pagination. */
+  aspMaxRangePerCall: bigint;
+  /** Optional asp-postman SQLite DB. If present, /v1/relayExecute proves ASP
+   *  membership from the persisted canonical label list instead of rescanning
+   *  chain events. */
+  aspDbPath?: string;
+  /** Hard timeout for the server-side Node prover. Prevents orphaned proof
+   *  workers after clients time out. */
+  relayExecuteProofTimeoutMs: number;
 }
 
 function loadConfig(): RelayerConfig {
@@ -83,6 +114,10 @@ function loadConfig(): RelayerConfig {
     maxRelayFeeBPS: Number(Bun.env["RELAYER_MAX_FEE_BPS"] ?? 500), // 5%
     dryRun:         Bun.env["DRY_RUN"] === "true",
     circuitsDir:    Bun.env["CIRCUITS_DIR"] ?? "./circuits",
+    aspFromBlock:   BigInt(Bun.env["ASP_FROM_BLOCK"] ?? Bun.env["FROM_BLOCK"] ?? "0"),
+    aspMaxRangePerCall: BigInt(Bun.env["ASP_MAX_RANGE_PER_CALL"] ?? Bun.env["MAX_RANGE_PER_CALL"] ?? "5000"),
+    aspDbPath:      Bun.env["ASP_DB_PATH"] ?? Bun.env["DB_PATH"],
+    relayExecuteProofTimeoutMs: Number(Bun.env["RELAY_EXECUTE_PROOF_TIMEOUT_MS"] ?? 240_000),
   };
 }
 
@@ -94,6 +129,130 @@ function log(level: "info" | "warn" | "error", msg: string, ctx?: unknown): void
     (ctx ? ` ${JSON.stringify(ctx, (_k, v) => typeof v === "bigint" ? v.toString() : v)}` : "");
   if (level === "error") console.error(line);
   else console.log(line);
+}
+
+const NODE_PROVER_SCRIPT = fileURLToPath(new URL("../scripts/prove-relay-execute.mjs", import.meta.url));
+
+function toBigIntTuple<T>(value: T): T {
+  if (Array.isArray(value)) return value.map((item) => toBigIntTuple(item)) as T;
+  if (typeof value === "string" && /^\d+$/.test(value)) return BigInt(value) as T;
+  return value;
+}
+
+async function proveRelayExecuteInNode(input: {
+  rpcUrl: string;
+  pool: Address;
+  entrypoint: Address;
+  note: ShieldedNote;
+  adapterId: bigint;
+  adapterData: Hex;
+  recipient: Address;
+  feeRecipient: Address;
+  relayFeeBPS: bigint;
+  circuitsDir: string;
+  stateLeaves?: string[];
+  aspLabels?: string[];
+  aspFromBlock: string;
+  aspMaxRangePerCall: string;
+  proofTimeoutMs: number;
+  searchLoBlock?: string;
+}): Promise<RelayExecuteProofResult> {
+  const child = spawn(process.env.NODE_BINARY ?? "node", [NODE_PROVER_SCRIPT], {
+    stdio: ["pipe", "pipe", "pipe"],
+    env: process.env,
+  });
+  const stdout: Buffer[] = [];
+  const stderr: Buffer[] = [];
+  child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
+  child.stderr.on("data", (chunk) => {
+    const buf = Buffer.from(chunk);
+    stderr.push(buf);
+    for (const line of buf.toString("utf8").split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      try {
+        const parsed = JSON.parse(line) as { kind?: string; event?: string; elapsedMs?: number };
+        if (parsed.kind === "relayExecuteProverProgress") {
+          log("info", "relayExecute prover progress", parsed);
+        }
+      } catch {
+        // Keep non-JSON stderr buffered for the final error detail only.
+      }
+    }
+  });
+  child.stdin.end(JSON.stringify(input, (_key, value) => typeof value === "bigint" ? value.toString() : value));
+
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    child.kill("SIGTERM");
+    setTimeout(() => child.kill("SIGKILL"), 5_000).unref();
+  }, input.proofTimeoutMs);
+  const code = await new Promise<number | null>((resolve, reject) => {
+    child.on("error", reject);
+    child.on("close", resolve);
+  });
+  clearTimeout(timeout);
+  if (timedOut) {
+    throw new Error(`node prover timed out after ${input.proofTimeoutMs}ms`);
+  }
+  if (code !== 0) {
+    const detail = Buffer.concat(stderr).toString("utf8").trim();
+    throw new Error(`node prover failed${detail ? `: ${detail.slice(0, 300)}` : ""}`);
+  }
+  const parsed = JSON.parse(Buffer.concat(stdout).toString("utf8")) as {
+    withdrawal: Withdrawal;
+    proof: WithdrawProofTuple;
+    scope: string;
+    stateRoot: string;
+    aspRoot: string;
+    leafCount: number;
+    aspLeafCount: number;
+  };
+  return {
+    withdrawal: parsed.withdrawal,
+    proof: toBigIntTuple(parsed.proof),
+    scope: BigInt(parsed.scope),
+    stateRoot: BigInt(parsed.stateRoot),
+    aspRoot: BigInt(parsed.aspRoot),
+    leafCount: parsed.leafCount,
+    aspLeafCount: parsed.aspLeafCount,
+  };
+}
+
+function loadAspLabelsFromDb(dbPath: string | undefined): string[] | undefined {
+  if (!dbPath) return undefined;
+  try {
+    const db = new Database(dbPath, { readonly: true });
+    try {
+      return db
+        .query<{ label: string }, []>("SELECT label FROM leaves ORDER BY inserted_order;")
+        .all()
+        .map((row) => row.label);
+    } finally {
+      db.close();
+    }
+  } catch {
+    return undefined;
+  }
+}
+
+function loadStateLeavesFromDb(dbPath: string | undefined, pool: Address): string[] | undefined {
+  if (!dbPath) return undefined;
+  try {
+    const db = new Database(dbPath, { readonly: true });
+    try {
+      const rows = db
+        .query<{ commitment: string }, [string]>(
+          "SELECT commitment FROM state_leaves WHERE pool = ? ORDER BY pool_order;",
+        )
+        .all(pool.toLowerCase());
+      return rows.length > 0 ? rows.map((row) => row.commitment) : undefined;
+    } finally {
+      db.close();
+    }
+  } catch {
+    return undefined;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -266,18 +425,7 @@ export function buildApp(args: {
 }) {
   const app = new Hono();
 
-  // Lazily-loaded withdraw circuit artifacts for server-side proving.
-  let _wasm: Uint8Array | undefined;
-  let _zkey: Uint8Array | undefined;
-  const loadCircuits = (): { wasm: Uint8Array; zkey: Uint8Array } => {
-    if (!_wasm) _wasm = new Uint8Array(readFileSync(`${args.cfg.circuitsDir}/withdraw.wasm`));
-    if (!_zkey) _zkey = new Uint8Array(readFileSync(`${args.cfg.circuitsDir}/withdraw.zkey`));
-    return { wasm: _wasm, zkey: _zkey };
-  };
-  const ASP_ABI = parseAbi([
-    "function updateRoot(uint256 root, string ipfsCID) returns (uint256 index)",
-    "function latestRoot() view returns (uint256)",
-  ]);
+  const ASP_ABI = parseAbi(["function latestRoot() view returns (uint256)"]);
 
   app.get("/health", (c) => {
     return c.json({
@@ -285,6 +433,11 @@ export function buildApp(args: {
       entrypoint: args.cfg.entrypoint,
       dryRun: args.cfg.dryRun,
       maxRelayFeeBPS: args.cfg.maxRelayFeeBPS,
+      relayExecute: {
+        proofTimeoutMs: args.cfg.relayExecuteProofTimeoutMs,
+        aspDbConfigured: Boolean(args.cfg.aspDbPath),
+        aspFromBlock: args.cfg.aspFromBlock.toString(),
+      },
     });
   });
 
@@ -454,30 +607,11 @@ export function buildApp(args: {
       commitmentHash: BigInt(req.note.commitmentHash),
     };
 
-    // Ensure the single-leaf ASP root (== note.label) is the entrypoint's latest.
-    try {
-      const cur = (await args.publicClient.readContract({
-        address: args.cfg.entrypoint, abi: ASP_ABI, functionName: "latestRoot",
-      })) as bigint;
-      if (cur !== note.label) {
-        const tx = await args.wallet.writeContract({
-          chain: null, account: args.wallet.account!, address: args.cfg.entrypoint,
-          abi: ASP_ABI, functionName: "updateRoot",
-          args: [note.label, `relayer-${note.label.toString(36)}`.slice(0, 40).padEnd(40, "x")],
-        });
-        await args.publicClient.waitForTransactionReceipt({ hash: tx });
-      }
-    } catch (err) {
-      log("error", "asp publish failed", { ip, err: String(err) });
-      return c.json({ error: "asp_publish_failed", message: String(err) }, 500);
-    }
-
     // Server-side prove.
     let built;
     try {
-      const { wasm, zkey } = loadCircuits();
-      built = await proveAndBuildRelayExecute({
-        publicClient: args.publicClient,
+      built = await proveRelayExecuteInNode({
+        rpcUrl: args.cfg.rpcUrl,
         pool: req.pool as Address,
         entrypoint: args.cfg.entrypoint,
         note,
@@ -486,10 +620,13 @@ export function buildApp(args: {
         recipient: req.recipient as Address,
         feeRecipient: (req.feeRecipient ?? req.recipient) as Address,
         relayFeeBPS,
-        aspRoot: note.label,
-        wasmBytes: wasm,
-        zkeyBytes: zkey,
-        searchLoBlock: req.searchLoBlock ? BigInt(req.searchLoBlock) : undefined,
+        circuitsDir: args.cfg.circuitsDir,
+        stateLeaves: loadStateLeavesFromDb(args.cfg.aspDbPath, req.pool as Address),
+        aspLabels: loadAspLabelsFromDb(args.cfg.aspDbPath),
+        aspFromBlock: args.cfg.aspFromBlock.toString(),
+        aspMaxRangePerCall: args.cfg.aspMaxRangePerCall.toString(),
+        proofTimeoutMs: args.cfg.relayExecuteProofTimeoutMs,
+        searchLoBlock: req.searchLoBlock,
       });
     } catch (err) {
       log("error", "prove failed", { ip, err: String(err) });
@@ -497,7 +634,39 @@ export function buildApp(args: {
     }
 
     log("info", "received relayExecute", { ip, dryRun: args.cfg.dryRun });
-    if (args.cfg.dryRun) return c.json({ ok: true, dryRun: true, stateRoot: String(built.stateRoot) });
+    try {
+      const latestAspRoot = (await args.publicClient.readContract({
+        address: args.cfg.entrypoint,
+        abi: ASP_ABI,
+        functionName: "latestRoot",
+      })) as bigint;
+      if (latestAspRoot !== built.aspRoot) {
+        log("warn", "relayExecute ASP root is not current", {
+          ip,
+          latestRoot: String(latestAspRoot),
+          proofRoot: String(built.aspRoot),
+          aspLeafCount: built.aspLeafCount,
+        });
+        return c.json({
+          error: "asp_root_not_current",
+          message: "ASP postman root changed or has not published the proof root; retry after the postman catches up.",
+        }, 409);
+      }
+    } catch (err) {
+      log("error", "asp latestRoot check failed", { ip, err: String(err) });
+      return c.json({ error: "asp_root_check_failed", message: String(err) }, 500);
+    }
+
+    if (args.cfg.dryRun) {
+      return c.json({
+        ok: true,
+        dryRun: true,
+        stateRoot: String(built.stateRoot),
+        aspRoot: String(built.aspRoot),
+        leafCount: built.leafCount,
+        aspLeafCount: built.aspLeafCount,
+      });
+    }
 
     try {
       const txHash = await args.contracts.relayExecute(args.wallet, {

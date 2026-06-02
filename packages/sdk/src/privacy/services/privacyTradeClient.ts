@@ -88,8 +88,8 @@ export interface PrivacyChainConfig {
  *  table moves with each deploy: new chain, new pool — extend here. */
 export const PRIVACY_CHAIN_CONFIGS: Record<number, PrivacyChainConfig> = {
   // Arc Testnet (chainId 5042002) — full basket coverage. USDC + EURC
-  // live since 2026-05-18 and are wired into the FxFixedRateSwapAdapter
-  // for cross-currency relay. MXNB / QCAD / cirBTC / AUDF added 2026-05-23
+  // live since 2026-05-18 and cross-currency relay now uses the v4-backed
+  // FxRouterSwapAdapter. MXNB / QCAD / cirBTC / AUDF added 2026-05-23
   // in 100%-hot mode (no Morpho rehyp); cross-currency is NOT enabled for
   // them yet (adapter only supports USDC<->EURC).
   5042002: {
@@ -486,9 +486,11 @@ export class PrivacyTradeClient {
   //////////////////////////////////////////////////////////*/
 
   /**
-   * Quote the buy-token amount a cross-currency relay would deliver
-   * BEFORE the relayer fee skim. Reads `entrypoint.swapAdapter()`, then
-   * the adapter's `rate(sellToken, buyToken)` and `enabled(...)` map.
+   * Legacy fixed-rate quote helper. Reads `entrypoint.swapAdapter()`, then
+   * tries the old adapter's `rate(sellToken, buyToken)` and `enabled(...)`
+   * map. Live Arc now uses the v4-backed FxRouterSwapAdapter, which does not
+   * expose that ABI; callers should use the app/Pasillo fx-router quote path
+   * for v4 routes.
    *
    * Returns null when the pair isn't enabled or the rate isn't set.
    */
@@ -504,7 +506,7 @@ export class PrivacyTradeClient {
     });
     if (adapter === "0x0000000000000000000000000000000000000000") return null;
 
-    const [rate, enabled] = await Promise.all([
+    const fixedRateQuote = await Promise.all([
       this.publicClient.readContract({
         address:      adapter,
         abi:          ADAPTER_ABI,
@@ -517,7 +519,9 @@ export class PrivacyTradeClient {
         functionName: "enabled",
         args:         [args.note.asset, buyEntry.asset],
       }) as Promise<boolean>,
-    ]);
+    ]).catch(() => null);
+    if (!fixedRateQuote) return null;
+    const [rate, enabled] = fixedRateQuote;
     if (!enabled || rate === 0n) return null;
     const expectedBuy = (args.note.value * rate) / 10n ** 18n;
     return { rate, expectedBuy };

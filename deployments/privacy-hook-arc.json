@@ -5,7 +5,7 @@
   "deployedAt": "2026-05-18",
   "lastBasketExpansionAt": "2026-05-23",
   "denominationGateEnabledAt": "2026-05-30",
-  "scope": "Privacy Hook v1 — shielded USDC + EURC pools live + Track B fixed-rate swap adapter wired for atomic cross-currency relay. `FxPrivacyEntrypoint.relayCrossCurrency()` is fully operational on Arc; shield USDC, withdraw EURC to a fresh address (or vice versa) in a single tx. 2026-05-23 expansion: MXNB / QCAD / cirBTC / AUDF shielded pools added in 100%-hot mode (no Morpho rehyp — canonical Morpho markets are USDC-loan, not asset-loan). 2026-05-30: fixed-denomination gate enabled — deposits/withdrawals must be a denomination (stablecoins 1/10/100/1000/10000; cirBTC 0.001/0.01/0.1/1) or the entrypoint reverts NotADenomination. Amount-privacy lever; no new trusted setup (WithdrawalVerifier unchanged). Impl upgraded to 0x56A4a05862aC57E0E1432f5e2CAC0Cd9852608fE.",
+  "scope": "Privacy Hook v1 — shielded Arc pools live. `FxPrivacyEntrypoint` is wired to the v4-backed FxRouterSwapAdapter for cross-currency relay and Ghost spot execution; adapter id 3 settles private `relayExecute` swaps through the vault-backed v4 pools. 2026-05-23 expansion: MXNB / QCAD / cirBTC / AUDF shielded pools added in 100%-hot mode (no Morpho rehyp — canonical Morpho markets are USDC-loan, not asset-loan). 2026-05-30: fixed-denomination gate enabled — deposits/withdrawals must be a denomination (stablecoins 1/10/100/1000/10000; cirBTC 0.001/0.01/0.1/1) or the entrypoint reverts NotADenomination. Amount-privacy lever; no new trusted setup (WithdrawalVerifier unchanged). Impl upgraded to 0x56A4a05862aC57E0E1432f5e2CAC0Cd9852608fE.",
   "denominations": {
     "stablecoins (USDC/EURC/MXNB/QCAD/AUDF, 6dp atomic)": ["1000000", "10000000", "100000000", "1000000000", "10000000000"],
     "cirBTC (18dp atomic)": ["1000000000000000", "10000000000000000", "100000000000000000", "1000000000000000000"]
@@ -22,25 +22,34 @@
     "FxPrivacyPoolQCAD": "0xF3bd84bDdaD66a3b1F94dF7de0aD34AB158f2De4",
     "FxPrivacyPoolCIRBTC": "0x2465806A9293A588867DD94b9A6aB5d47531E928",
     "FxPrivacyPoolAUDF": "0x5BC0e0795D5ea842601220bd1f855e60Fad7E3D1",
-    "FxFixedRateSwapAdapter": "0x3Fa1AcC89DFd52f6692F20b7E49cD58A306C27f2"
+    "FxFixedRateSwapAdapter": "0x3Fa1AcC89DFd52f6692F20b7E49cD58A306C27f2",
+    "FxRouterSwapAdapter": "0xe9147f799C1d65d1bAcFD0fE019d8c46531ef917",
+    "FxSpotSwapAdapter": "0x73633884c21997d8ef09dd2730841e770a5e3371"
   },
   "deprecated": {
     "FxFixedRateSwapAdapter_v1": "0xA1930d3c9fce68D408D62b4B1b18D8B51F232E0A",
     "reason": "Codex round-11 HIGH (Track B): the v1 adapter had no caller gate on swapExactInput, meaning any EOA could drain seed liquidity without transferring sell tokens. v1 was emergency-disabled (setEnabled(USDC,EURC,false) + setEnabled(EURC,USDC,false)), drained, and replaced by v2 at 0x3Fa1AcC8...27f2 which adds authorizedCaller[entrypoint] = true gate."
   },
   "crossCurrency": {
-    "swapAdapter": "0x3Fa1AcC89DFd52f6692F20b7E49cD58A306C27f2",
+    "swapAdapter": "0xe9147f799C1d65d1bAcFD0fE019d8c46531ef917",
+    "previousFixedRateSwapAdapter": "0x3Fa1AcC89DFd52f6692F20b7E49cD58A306C27f2",
+    "spotExecutionAdapterId": "3",
+    "spotExecutionAdapter": "0x73633884c21997d8ef09dd2730841e770a5e3371",
     "enabledAssets": ["USDC", "EURC"],
     "rates": {
-      "USDC_to_EURC": "0.92e18 — 1 USDC produces 0.92 EURC",
-      "EURC_to_USDC": "1.08e18 — 1 EURC produces 1.08 USDC"
+      "source": "dynamic v4 FxRouter/FxSwapHook quote",
+      "USDC_to_EURC": "quoteExactInput on FxRouterSwapAdapter / FxSwapHook",
+      "EURC_to_USDC": "quoteExactInput on FxRouterSwapAdapter / FxSwapHook"
     },
     "seedLiquidity": {
       "USDC": "1000000 (1 USDC)",
       "EURC": "1000000 (1 EURC)"
     },
-    "authorizedCallers": ["0xD11cDdd1f04e850d3810a71608A49907c80f2736 (FxPrivacyEntrypoint)"],
-    "scope": "Track B (B-fast) — owner-operated fixed-rate market maker. NOT an AMM. Caller-gated: only the privacy entrypoint can invoke swapExactInput (codex round-11 patch). Owner manually updates rates via adapter.setRate(); owner pre-funds liquidity via direct ERC-20 transfers. Drop-in replaced by a production V4 + FxSwapHook adapter via entrypoint.setSwapAdapter(newAdapter) — privacy hook unchanged."
+    "authorizedCallers": [
+      "0xD11cDdd1f04e850d3810a71608A49907c80f2736 (FxPrivacyEntrypoint)",
+      "0x73633884c21997d8ef09dd2730841e770a5e3371 (FxSpotSwapAdapter id 3)"
+    ],
+    "scope": "Track B v4 — caller-gated FxRouterSwapAdapter backed by FxSwapHook/vault liquidity. The previous fixed-rate adapter remains recorded for history but is no longer the entrypoint swap adapter."
   },
   "poseidon": {
     "PoseidonT3": "0x3333333C0A88F9BE4fd23ed0536F9B6c427e3B93",
@@ -143,13 +152,28 @@
     "FxPrivacyPoolAUDF": "0xdc1ca52d7c9a188849d781ed3eec27377db3fa083351ea22748fe71016bb40e8",
     "registerPoolAUDF": "0xd0657ff96c4d9e8eee0fb5842b983d6a8e79fafa0f53d661a3f44ebb46dc6246",
     "basketBroadcast": "see contracts/broadcast/AddArcBasketPrivacyPools.s.sol/5042002/run-latest.json",
-    "Poseidon": "see contracts/broadcast/DeployPoseidon.s.sol/5042002/run-latest.json"
+    "Poseidon": "see contracts/broadcast/DeployPoseidon.s.sol/5042002/run-latest.json",
+    "FxSpotSwapAdapter": "0xd3b66ce7a5b2858fbdc7370328453789375ec7334e86e0c1d3fc4f5fd912305b",
+    "setSwapAdapterFxRouter": "0x32558ffeded539f4c0a3c8df1137c26c1f63e5d690fa7062533fa8c3ecee0032",
+    "authorizeFxRouterEntrypoint": "0x54498d523402a4fedd14343909cad5b3a4f988500d45b889ce55798e5a7f4b72",
+    "authorizeFxRouterSpotExecution": "0x66ff43f9bc5736d9d3de869af61cb54696c06bc285425798ef07a4c9eb9341db",
+    "registerExecutionAdapter3": "0x4d2b03dd8c5a5c4389cd15e5e0f964a593a56d237fde5bb669844e1b6e2d778f"
   },
   "verification": {
     "scope": "13628782019290114344365157513531312776376936678300719745279061801973571818236",
     "scopeToPool": "0xC11C216C9C7A36848b1d4276d223160C8b51988f",
     "asset": "0x3600000000000000000000000000000000000000",
-    "dead": false
+    "dead": false,
+    "ghostSpotExecution": {
+      "entrypoint.swapAdapter": "0xe9147f799C1d65d1bAcFD0fE019d8c46531ef917",
+      "entrypoint.executionAdapter(3)": "0x73633884c21997d8ef09dd2730841e770a5e3371",
+      "spotAdapter.SWAP": "0xe9147f799C1d65d1bAcFD0fE019d8c46531ef917",
+      "spotAdapter.ENTRYPOINT": "0xD11cDdd1f04e850d3810a71608A49907c80f2736",
+      "fxRouterSwapAdapter.authorizedCaller(entrypoint)": true,
+      "fxRouterSwapAdapter.authorizedCaller(spotAdapter)": true,
+      "livePrivateSwapTx": "0x9d929f6eec9affa10e9f2b4fa218ee6419ad0d3814659090f4d6b41469b54477",
+      "livePrivateSwap": "1 USDC shielded note -> 857015 EURC atoms to recipient via relayExecute"
+    }
   },
-  "notes": "Arc Testnet v1 privacy ship — mirrors Fuji shape but uses real Circle EURC as collateral leg (Arc's M1/M2 markets pair USDC<->real EURC, not MockEURC). Self-deployed Morpho Blue at 0x3c9b... (Arc has no canonical Morpho). UUPS proxy ASP_POSTMAN role currently held by deployer; rotate to relayer EOA after the relayer service has a stable key. 2026-05-23 basket expansion: MXNB / QCAD / cirBTC / AUDF pools deployed in 100%-hot mode via AddArcBasketPrivacyPools.s.sol — `hotReservePct = 10000` so `_rebalance` early-returns and the Morpho rehyp path is never touched (canonical Arc Morpho markets are USDC-loan, not basket-asset-loan, so registry.paramsOf would have reverted). USDC is passed as a dummy collateral constructor arg purely to satisfy the non-zero / != asset checks; it is never read at runtime."
+  "notes": "Arc Testnet v1 privacy ship — mirrors Fuji shape but uses real Circle EURC as collateral leg (Arc's M1/M2 markets pair USDC<->real EURC, not MockEURC). Self-deployed Morpho Blue at 0x3c9b... (Arc has no canonical Morpho). UUPS proxy ASP_POSTMAN role currently held by deployer; rotate to relayer EOA after the relayer service has a stable key. 2026-05-23 basket expansion: MXNB / QCAD / cirBTC / AUDF pools deployed in 100%-hot mode via AddArcBasketPrivacyPools.s.sol — `hotReservePct = 10000` so `_rebalance` early-returns and the Morpho rehyp path is never touched (canonical Arc Morpho markets are USDC-loan, not basket-asset-loan, so registry.paramsOf would have reverted). USDC is passed as a dummy collateral constructor arg purely to satisfy the non-zero / != asset checks; it is never read at runtime. 2026-06-02 Ghost spot execution was rewired from the fixed-rate adapter to FxRouterSwapAdapter and smoke-tested with a live relayExecute USDC->EURC private swap."
 }

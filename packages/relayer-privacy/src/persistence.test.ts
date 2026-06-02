@@ -30,6 +30,7 @@ const dep = (block: bigint, txIdx: number, logIdx: number, pool: string, label: 
   logIndex:         logIdx,
   pool:             pool as `0x${string}`,
   label,
+  commitment:       label + 1_000_000n,
 });
 
 const cleanups: Array<() => void> = [];
@@ -62,6 +63,9 @@ describe("PostmanStore", () => {
         store.appendLeaf("100:0:0", 12345n, 0);
         store.appendLeaf("100:0:1", 67890n, 1);
         store.appendLeaf("101:2:5", 99999n, 2);
+        store.appendStateLeaf("100:0:0", POOL_A, 111n, 0);
+        store.appendStateLeaf("100:0:1", POOL_A, 222n, 1);
+        store.appendStateLeaf("101:2:5", POOL_B, 333n, 0);
         store.setCursor(101n);
       });
       store.close();
@@ -77,6 +81,11 @@ describe("PostmanStore", () => {
         { key: "100:0:0", label: 12345n },
         { key: "100:0:1", label: 67890n },
         { key: "101:2:5", label: 99999n },
+      ]);
+      expect(loaded.stateLeaves).toEqual([
+        { key: "100:0:0", pool: POOL_A.toLowerCase() as `0x${string}`, commitment: 111n, poolOrder: 0 },
+        { key: "100:0:1", pool: POOL_A.toLowerCase() as `0x${string}`, commitment: 222n, poolOrder: 1 },
+        { key: "101:2:5", pool: POOL_B.toLowerCase() as `0x${string}`, commitment: 333n, poolOrder: 0 },
       ]);
       store.close();
     }
@@ -140,6 +149,11 @@ describe("applyDeposits + persistence round-trip", () => {
         state.applied.add(leaf.key);
         state.tree.insert(leaf.label);
       }
+      for (const leaf of persisted.stateLeaves) {
+        const poolKey = leaf.pool.toLowerCase();
+        const next = Math.max(state.stateLeafCounts.get(poolKey) ?? 0, leaf.poolOrder + 1);
+        state.stateLeafCounts.set(poolKey, next);
+      }
       expect(state.cursor).toBe(102n);
       expect(state.pools).toEqual([POOL_A, POOL_B]);
       expect(state.tree.size).toBe(3);
@@ -180,6 +194,11 @@ describe("applyDeposits + persistence round-trip", () => {
       for (const leaf of persisted.leaves) {
         state.applied.add(leaf.key);
         state.tree.insert(leaf.label);
+      }
+      for (const leaf of persisted.stateLeaves) {
+        const poolKey = leaf.pool.toLowerCase();
+        const next = Math.max(state.stateLeafCounts.get(poolKey) ?? 0, leaf.poolOrder + 1);
+        state.stateLeafCounts.set(poolKey, next);
       }
       // Replay — applied set already covers them; no leaves should be added.
       const reapplied = applyDeposits(state, deposits.slice());

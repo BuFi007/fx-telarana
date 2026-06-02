@@ -101,6 +101,16 @@ const PRIVACY_POOL_ABI = [
     ],
     anonymous: false,
   },
+  {
+    type: "event",
+    name: "LeafInserted",
+    inputs: [
+      { name: "_index", type: "uint256", indexed: false },
+      { name: "_leaf",  type: "uint256", indexed: false },
+      { name: "_root",  type: "uint256", indexed: false },
+    ],
+    anonymous: false,
+  },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -176,14 +186,30 @@ interface CanonicalDeposit {
   logIndex:         number;
   pool:             Address;
   label:            bigint;
+  commitment?:      bigint;
 }
 
-function compareCanonical(a: CanonicalDeposit, b: CanonicalDeposit): number {
+interface CanonicalStateLeaf {
+  blockNumber:      bigint;
+  transactionIndex: number;
+  logIndex:         number;
+  pool:             Address;
+  leaf:             bigint;
+}
+
+function compareCanonicalPosition(
+  a: { blockNumber: bigint; transactionIndex: number; logIndex: number },
+  b: { blockNumber: bigint; transactionIndex: number; logIndex: number },
+): number {
   if (a.blockNumber !== b.blockNumber)
     return a.blockNumber < b.blockNumber ? -1 : 1;
   if (a.transactionIndex !== b.transactionIndex)
     return a.transactionIndex - b.transactionIndex;
   return a.logIndex - b.logIndex;
+}
+
+function compareCanonical(a: CanonicalDeposit, b: CanonicalDeposit): number {
+  return compareCanonicalPosition(a, b);
 }
 
 // ---------------------------------------------------------------------------
@@ -197,6 +223,11 @@ interface IndexerState {
   pools: Address[];
   /** Labels already in `tree`, by `${blockNumber}:${txIndex}:${logIndex}`. */
   applied: Set<string>;
+  /** State leaves already persisted, by `${blockNumber}:${txIndex}:${logIndex}`. */
+  stateApplied: Set<string>;
+  /** Per-pool state leaf count, used to persist commitments in each pool's
+   *  insertion order for relayExecute proof generation. */
+  stateLeafCounts: Map<string, number>;
   /** The published Merkle tree (LeanIMT over Poseidon). */
   tree: LeanIMT<bigint>;
   /** Tree mutated since the last successfully-confirmed updateRoot. */
@@ -211,6 +242,8 @@ function newState(): IndexerState {
     cursor:                     0n,
     pools:                      [],
     applied:                    new Set<string>(),
+    stateApplied:               new Set<string>(),
+    stateLeafCounts:            new Map<string, number>(),
     tree:                       new LeanIMT<bigint>((a: bigint, b: bigint) => poseidon([a, b])),
     dirty:                      false,
     consecutivePublishFailures: 0,
@@ -244,14 +277,37 @@ function applyDeposits(state: IndexerState, deposits: CanonicalDeposit[]): Appli
   return applied;
 }
 
+interface AppliedStateLeaf {
+  key: string;
+  pool: Address;
+  leaf: bigint;
+  poolOrder: number;
+}
+
+function applyStateLeaves(state: IndexerState, leaves: CanonicalStateLeaf[]): AppliedStateLeaf[] {
+  leaves.sort(compareCanonicalPosition);
+  const applied: AppliedStateLeaf[] = [];
+  for (const l of leaves) {
+    const key = `${l.blockNumber}:${l.transactionIndex}:${l.logIndex}`;
+    if (state.stateApplied.has(key)) continue;
+    const poolKey = l.pool.toLowerCase();
+    const poolOrder = state.stateLeafCounts.get(poolKey) ?? 0;
+    state.stateLeafCounts.set(poolKey, poolOrder + 1);
+    state.stateApplied.add(key);
+    applied.push({ key, pool: l.pool, leaf: l.leaf, poolOrder });
+  }
+  return applied;
+}
+
 async function fetchRange(
   client: PublicClient,
   cfg: PostmanConfig,
   pools: Address[],
   fromBlock: bigint,
   toBlock:   bigint,
-): Promise<CanonicalDeposit[]> {
-  const collected: CanonicalDeposit[] = [];
+): Promise<{ deposits: CanonicalDeposit[]; stateLeaves: CanonicalStateLeaf[] }> {
+  const deposits: CanonicalDeposit[] = [];
+  const stateLeaves: CanonicalStateLeaf[] = [];
   // Page through [fromBlock, toBlock] respecting `maxRangePerCall`.
   let cursor = fromBlock;
   while (cursor <= toBlock) {
@@ -285,7 +341,7 @@ async function fetchRange(
         toBlock:   end,
       });
       for (const ev of events) {
-        const a = ev.args as { _label?: bigint };
+        const a = ev.args as { _commitment?: bigint; _label?: bigint };
         if (typeof a._label !== "bigint") continue;
         // viem provides nullable block / index fields on logs; for
         // canonical ordering we require all three.
@@ -296,19 +352,46 @@ async function fetchRange(
           });
           continue;
         }
-        collected.push({
+        deposits.push({
           blockNumber:      ev.blockNumber,
           transactionIndex: ev.transactionIndex,
           logIndex:         ev.logIndex,
           pool:             ev.address,
           label:            a._label,
+          commitment:       a._commitment,
+        });
+      }
+
+      const leafEvents = await client.getContractEvents({
+        address:   pools,
+        abi:       PRIVACY_POOL_ABI,
+        eventName: "LeafInserted",
+        fromBlock: cursor,
+        toBlock:   end,
+      });
+      for (const ev of leafEvents) {
+        const a = ev.args as { _leaf?: bigint };
+        if (typeof a._leaf !== "bigint") continue;
+        if (ev.blockNumber == null || ev.transactionIndex == null || ev.logIndex == null) {
+          log("warn", "skipping state leaf log with missing positional metadata", {
+            pool: ev.address,
+            block: String(ev.blockNumber ?? "n/a"),
+          });
+          continue;
+        }
+        stateLeaves.push({
+          blockNumber:      ev.blockNumber,
+          transactionIndex: ev.transactionIndex,
+          logIndex:         ev.logIndex,
+          pool:             ev.address,
+          leaf:             a._leaf,
         });
       }
     }
 
     cursor = end + 1n;
   }
-  return collected;
+  return { deposits, stateLeaves };
 }
 
 // ---------------------------------------------------------------------------
@@ -349,6 +432,12 @@ async function main(): Promise<void> {
       state.applied.add(leaf.key);
       state.tree.insert(leaf.label);
     }
+    for (const leaf of persisted.stateLeaves) {
+      state.stateApplied.add(leaf.key);
+      const poolKey = leaf.pool.toLowerCase();
+      const next = Math.max(state.stateLeafCounts.get(poolKey) ?? 0, leaf.poolOrder + 1);
+      state.stateLeafCounts.set(poolKey, next);
+    }
     log("info", "hydrated state from disk", {
       cursor:    state.cursor,
       pools:     state.pools.length,
@@ -376,7 +465,8 @@ async function main(): Promise<void> {
         });
         const knownPoolsBefore = state.pools.length;
         const fresh = await fetchRange(publicClient, cfg, state.pools, from, finalized);
-        const applied = applyDeposits(state, fresh);
+        const applied = applyDeposits(state, fresh.deposits);
+        const appliedStateLeaves = applyStateLeaves(state, fresh.stateLeaves);
         state.cursor = finalized;
 
         // Track C1: persist range outcomes atomically. We persist BEFORE
@@ -391,6 +481,9 @@ async function main(): Promise<void> {
           }
           for (const leaf of applied) {
             store.appendLeaf(leaf.key, leaf.label, leaf.order);
+          }
+          for (const leaf of appliedStateLeaves) {
+            store.appendStateLeaf(leaf.key, leaf.pool, leaf.leaf, leaf.poolOrder);
           }
           store.setCursor(state.cursor);
         });
