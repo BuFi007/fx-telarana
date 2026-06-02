@@ -12,6 +12,7 @@ import {FxPrivacyEntrypoint} from "../src/hub/FxPrivacyEntrypoint.sol";
 import {
     FxMorphoSupplyAdapter,
     FxPerpMarginAdapter,
+    FxSharedFxVaultDepositAdapter,
     FxSpotSwapAdapter,
     IFxExecutionAdapter
 } from "../src/hub/FxExecutionAdapter.sol";
@@ -178,6 +179,30 @@ contract MockMarginAccount {
     function depositMargin(address trader, uint256 amount) external {
         marginOf[trader] += amount;
         usdc.transferFrom(msg.sender, address(this), amount);
+    }
+}
+
+/// @notice Minimal ERC-4626 stand-in: 1 USDC asset = 1 senior share.
+contract MockSharedFxVault {
+    IERC20 public immutable assetToken;
+    mapping(address => uint256) public balanceOf;
+    uint256 public totalAssets;
+    uint256 public totalSupply;
+
+    constructor(address _asset) {
+        assetToken = IERC20(_asset);
+    }
+
+    function asset() external view returns (address) {
+        return address(assetToken);
+    }
+
+    function deposit(uint256 assets, address receiver) external returns (uint256 shares) {
+        assetToken.transferFrom(msg.sender, address(this), assets);
+        shares = assets;
+        balanceOf[receiver] += shares;
+        totalAssets += assets;
+        totalSupply += shares;
     }
 }
 
@@ -742,6 +767,27 @@ contract FxPrivacyEntrypointTest is Test {
 
         entrypoint.relayExecute(w, p, poolScope);
         assertEq(margin.marginOf(RECIPIENT), amount, "executor perp margin funded from shielded note");
+    }
+
+    function test_relayExecute_sharedFxVaultDepositFromShieldedNote() public {
+        uint256 amount = 100e6;
+        _depositFromUser(amount, 33);
+
+        MockSharedFxVault vault = new MockSharedFxVault(address(usdc));
+        FxSharedFxVaultDepositAdapter vaultAdapter =
+            new FxSharedFxVaultDepositAdapter(address(vault), address(entrypoint));
+        vm.prank(OWNER);
+        entrypoint.registerExecutionAdapter(4, IFxExecutionAdapter(address(vaultAdapter)));
+
+        FxPrivacyEntrypoint.ExecutionRelayData memory data = FxPrivacyEntrypoint.ExecutionRelayData({
+            adapterId: 4, recipient: RECIPIENT, feeRecipient: FEE_SINK, relayFeeBPS: 0, data: ""
+        });
+        (IPrivacyPool.Withdrawal memory w, ProofLib.WithdrawProof memory p) =
+            _craftExecuteWithdrawal(data, amount, 0xF3);
+
+        entrypoint.relayExecute(w, p, poolScope);
+        assertEq(vault.balanceOf(RECIPIENT), amount, "recipient senior shares minted from shielded note");
+        assertEq(usdc.balanceOf(address(vault)), amount, "vault received shielded USDC");
     }
 
     function test_relayExecute_spotSwapFromShieldedNote() public {

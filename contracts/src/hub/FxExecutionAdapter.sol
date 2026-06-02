@@ -29,6 +29,11 @@ interface IFxExecutionAdapter {
     ) external returns (address resultToken, uint256 resultAmount);
 }
 
+interface IERC4626DepositVault {
+    function asset() external view returns (address);
+    function deposit(uint256 assets, address receiver) external returns (uint256 shares);
+}
+
 /// @title FxMorphoSupplyAdapter
 /// @notice Registered execution adapter: supplies `amount` of `asset` into a
 ///         Morpho Blue market on behalf of `recipient`. Funds stay in Morpho
@@ -154,5 +159,42 @@ contract FxSpotSwapAdapter is IFxExecutionAdapter {
 
         // settle-back: relayExecute forwards min(measured, out) of buyToken.
         return (buyToken, out);
+    }
+}
+
+/// @title FxSharedFxVaultDepositAdapter
+/// @notice Registered execution adapter: deposits a shielded USDC note into the
+///         senior ERC-4626 SharedFxVault for a detached recipient. The minted
+///         vault shares stay on the recipient address, so this returns (0,0).
+contract FxSharedFxVaultDepositAdapter is IFxExecutionAdapter {
+    using SafeERC20 for IERC20;
+
+    IERC4626DepositVault public immutable VAULT;
+    address public immutable ENTRYPOINT;
+    IERC20 public immutable ASSET;
+
+    error OnlyEntrypoint();
+    error AssetMismatch(address asset, address vaultAsset);
+    error ZeroAddress();
+
+    constructor(address _vault, address _entrypoint) {
+        if (_vault == address(0) || _entrypoint == address(0)) revert ZeroAddress();
+        VAULT = IERC4626DepositVault(_vault);
+        ENTRYPOINT = _entrypoint;
+        ASSET = IERC20(IERC4626DepositVault(_vault).asset());
+    }
+
+    /// @inheritdoc IFxExecutionAdapter
+    /// @param recipient the detached executor/stealth address receiving senior shares
+    function execute(address asset, uint256 amount, address recipient, bytes calldata)
+        external
+        returns (address, uint256)
+    {
+        if (msg.sender != ENTRYPOINT) revert OnlyEntrypoint();
+        if (asset != address(ASSET)) revert AssetMismatch(asset, address(ASSET));
+
+        ASSET.forceApprove(address(VAULT), amount);
+        VAULT.deposit(amount, recipient);
+        return (address(0), 0);
     }
 }
