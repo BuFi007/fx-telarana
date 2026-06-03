@@ -6,10 +6,11 @@
 # feed on-chain it goes stale and getMid() reverts → FxSwapHook swaps revert.
 # Chainlink/RedStone push feeds don't exist on Arc, so we push Pyth ourselves.
 #
-# Pushes the exact feeds FxOracle.pythFeedOf() returns for USDC / EURC / AUDF
-# (one merged Hermes VAA → IPyth.updatePriceFeeds{value: fee}). MXNB/QCAD are
-# NOT included — their FxOracle pyth feed isn't wired (MXNB) / has no Arc Pyth
-# feed (CAD); wire those separately before adding them here.
+# Pushes the feeds FxOracle / FxOracleCanon.pythFeedOf() returns for USDC / EURC /
+# AUDF / USD-MXN (MXNB) / BTC-USD (cirBTC) as one merged Hermes VAA →
+# IPyth.updatePriceFeeds{value: fee}. QCAD is still excluded — FxOracleCanon's CAD
+# feed id is a placeholder, not the real Pyth USD/CAD; the oracle admin must wire the
+# real feed (0x3112b03a…ecca, inverted) before it can be pushed here.
 #
 # Run (background):
 #   ARC_RPC_URL=… PYTH_PUSHER_PRIVATE_KEY=0x… ./pyth-fx-pusher.sh
@@ -27,12 +28,17 @@ PK="${PYTH_PUSHER_PRIVATE_KEY:?set PYTH_PUSHER_PRIVATE_KEY}"
 INTERVAL="${PYTH_PUSH_INTERVAL:-20}"
 HERMES="https://hermes.pyth.network/v2/updates/price/latest"
 
-# FxOracleV2 feeds: USDC/USD, EURC/USD, AUD/USD, USD/MXN (MXN priced inverted on the oracle)
+# FxOracleV2 feeds: USDC/USD, EURC/USD, AUD/USD, USD/MXN (MXN inverted on the oracle).
+# + BTC/USD for the canonical Morpho cirBTC market (FxOracleCanon 0xf9b0356A); USD/MXN
+# also backs the canonical MXNB market. Both keep those lending markets' adapter
+# price() fresh (oracle 60s window). QCAD is NOT here: its FxOracleCanon feed id is a
+# placeholder, not the real Pyth USD/CAD — wire the real feed (oracle admin) first.
 FEEDS=(
   0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a
   0x76fa85158bf14ede77087fe3ae472f66213f6ea2f5b411cb2de472794990fa5c
   0x67a6f93030420c1c9e3fe37c1ab6b77966af82f995944a9fefce357a22854a80
   0xe13b1c1ffb32f34e1be9545583f01ef385fde7f42ee66049d30570dc866b77ca
+  0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43
 )
 Q=""; for f in "${FEEDS[@]}"; do Q="${Q}ids[]=${f}&"; done; Q="${Q}encoding=hex"
 
