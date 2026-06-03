@@ -9,12 +9,12 @@ Snapshot of fx-Telaraña at `main` HEAD `c0ff0d3` (2026-05-22). This is the sing
 | Contract | Arc Testnet (5042002) | Fuji (43113) |
 |---|---|---|
 | `FxOracle` | `0xf9b0356A31BC7125e2eD0DADf8b5957860d42c78` | `0xC9CBF1c262871F0D1A401558adDf66008fe1c735` |
-| `FxPerpClearinghouse` | `0x39dc43E2133CF860c1d17d4DB75Ef4204eebD46A` | `0x5fe82aFd87bdEE8911FfED1427c2bF653Bca4AcA` |
-| `FxMarginAccount` | `0x4EB6018F988301417B93cb2b8899D74D42273e96` | `0x2EacaCDAEf6a7ec82C168aFbdDd1B0E7D7993E69` |
-| `FxFundingEngine` | `0x859bA11A3693895f8B03C31C6AE3b8F04992115B` | `0xB3142418EacEc98dCD33f722603043c830DED376` |
-| `FxHealthChecker` | `0xA00Be167609c02F3879138dA8530BC31527c02b8` | `0x80c6CA073b7e22ebff0E2e49b717E5902C5bC6C7` |
-| `FxLiquidationEngine` | `0xF579e265EF1D5E67EfDbb1F20863465E94a9d3eA` | `0x6690b4B9Cb9B97B5752F86c6354A55D3eF55876C` |
-| `FxOrderSettlement` | `0x93C3d831D6F0657479d7Fb6Cf0D06e75aA05E4CC` | `0x01A3186ffb7c0c4b8f7A352Dbb8F8A5EA4649F5D` |
+| `FxPerpClearinghouse` | `0x7707d108F6Ce3d95ceA38D3965448F00C21CaFdC` | `0x5fe82aFd87bdEE8911FfED1427c2bF653Bca4AcA` |
+| `FxMarginAccount` | `0x77BBAef17257AD4800BE12A5D36AF87f3a49FBb7` | `0x2EacaCDAEf6a7ec82C168aFbdDd1B0E7D7993E69` |
+| `FxFundingEngine` | `0xE08a146B9081A8dd32203fC5e7B5988352489518` | `0xB3142418EacEc98dCD33f722603043c830DED376` |
+| `FxHealthChecker` | `0x234E06a0761cde322E4Fc5065A8256247669F362` | `0x80c6CA073b7e22ebff0E2e49b717E5902C5bC6C7` |
+| `FxLiquidationEngine` | `0x18DEA7845c36d45AaDbcCeC04aC6cFc103748D80` | `0x6690b4B9Cb9B97B5752F86c6354A55D3eF55876C` |
+| `FxOrderSettlement` | `0xCeae7846c8ED2Dd9E6f541798a657875305EA0d8` | `0x01A3186ffb7c0c4b8f7A352Dbb8F8A5EA4649F5D` |
 
 **Invariants on both chains (verified live):**
 - `MAX_ORACLE_AGE_HARD_CAP = 1800s`, `MAX_DEVIATION_BPS_HARD_CAP = 500`, `MAX_CONFIDENCE_BPS_HARD_CAP = 500`
@@ -73,7 +73,7 @@ import { FxPerpClearinghouseAbi, FxLiquidationEngineAbi, FxHealthCheckerAbi } fr
 import { PrivacyTradeClient } from "@bu/fx-engine/privacy";
 
 const arc = getAddresses(ChainId.ArcTestnet);
-arc.fxPerps.clearinghouse;  // 0x39dc43E2…
+arc.fxPerps.clearinghouse;  // 0x7707d108…
 arc.morphoBlue;             // 0x65f435eB… (canonical)
 arc.usdc;                   // 0x3600000000000000000000000000000000000000
 arc.stablecoinBasket?.mxnb; // { address: 0x836F73Fb…, decimals: 6, ... }

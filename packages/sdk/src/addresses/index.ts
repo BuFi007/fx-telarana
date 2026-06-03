@@ -331,8 +331,9 @@ export const addresses: Record<ChainIdValue, Partial<FxAddresses>> = {
     fxReceiptUSDC: "0xdd22365Bba7330BE537c9BC26da9b1b4Db9aC431",
     fxHubMessageReceiver: "0x44B50E93eCC7775aF99bcd04c30e1A00da80F63C",
     fxGatewayHook: "0x2931C50745334d6DFf9eC4E3106fE05b49717DF1",
-    // Arc hookathon yield-engine perp stack. Old sprint-1 contracts
-    // (clearinghouse 0x39dc43E2…) are superseded by these.
+    // Arc hookathon yield-engine perp stack. Canonical clearinghouse is
+    // 0x7707d108… (the literal below); earlier sprint-1 contracts are
+    // superseded.
     fxPerps: {
       clearinghouse: "0x7707d108F6Ce3d95ceA38D3965448F00C21CaFdC",
       marginAccount: "0x77BBAef17257AD4800BE12A5D36AF87f3a49FBb7",
