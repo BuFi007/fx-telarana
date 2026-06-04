@@ -14,6 +14,7 @@ import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {BeforeSwapDelta, toBeforeSwapDelta} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {ModifyLiquidityParams, SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {CurrencySettler} from "@uniswap/v4-core/test/utils/CurrencySettler.sol";
 
 import {IMorpho, MarketParams as MorphoMarketParams} from "morpho-blue/interfaces/IMorpho.sol";
@@ -670,26 +671,26 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     }
 
     function beforeAddLiquidity(
-        address, PoolKey calldata, IPoolManager.ModifyLiquidityParams calldata, bytes calldata
+        address, PoolKey calldata, ModifyLiquidityParams calldata, bytes calldata
     ) external view override onlyPoolManager returns (bytes4) {
         revert HookNotEnabled(IHooks.beforeAddLiquidity.selector);
     }
 
     function afterAddLiquidity(
-        address, PoolKey calldata, IPoolManager.ModifyLiquidityParams calldata,
+        address, PoolKey calldata, ModifyLiquidityParams calldata,
         BalanceDelta, BalanceDelta, bytes calldata
     ) external pure override returns (bytes4, BalanceDelta) {
         revert HookNotEnabled(IHooks.afterAddLiquidity.selector);
     }
 
     function beforeRemoveLiquidity(
-        address, PoolKey calldata, IPoolManager.ModifyLiquidityParams calldata, bytes calldata
+        address, PoolKey calldata, ModifyLiquidityParams calldata, bytes calldata
     ) external view override onlyPoolManager returns (bytes4) {
         revert HookNotEnabled(IHooks.beforeRemoveLiquidity.selector);
     }
 
     function afterRemoveLiquidity(
-        address, PoolKey calldata, IPoolManager.ModifyLiquidityParams calldata,
+        address, PoolKey calldata, ModifyLiquidityParams calldata,
         BalanceDelta, BalanceDelta, bytes calldata
     ) external pure override returns (bytes4, BalanceDelta) {
         revert HookNotEnabled(IHooks.afterRemoveLiquidity.selector);
@@ -698,7 +699,7 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     function beforeSwap(
         address,
         PoolKey calldata key,
-        IPoolManager.SwapParams calldata params,
+        SwapParams calldata params,
         bytes calldata
     ) external override onlyPoolManager returns (bytes4, BeforeSwapDelta, uint24) {
         _assertKey(key);
@@ -776,7 +777,7 @@ contract FxSwapHook is IHooks, ReentrancyGuard {
     function afterSwap(
         address,
         PoolKey calldata,
-        IPoolManager.SwapParams calldata params,
+        SwapParams calldata params,
         BalanceDelta,
         bytes calldata
     ) external override onlyPoolManager returns (bytes4, int128) {

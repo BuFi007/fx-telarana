@@ -11,6 +11,7 @@ import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {TransientStateLibrary} from "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
+import {SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
 /// @notice Exact-input v4 router that forwards arbitrary `hookData` to the
 ///         pool's hook (designed for `TelaranaGatewayHubHook.beforeSwap` —
@@ -93,7 +94,7 @@ contract FxV4RouterHarnessGateway is IUnlockCallback {
 
         BalanceDelta delta = manager.swap(
             data.key,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: data.zeroForOne,
                 amountSpecified: -int256(data.amountIn),
                 sqrtPriceLimitX96: data.zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1

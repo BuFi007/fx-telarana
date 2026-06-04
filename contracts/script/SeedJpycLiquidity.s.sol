@@ -13,6 +13,7 @@ import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
 interface IFxSpotExecutorLiquidity {
     function addLiquidity(address token, uint256 amount) external;
@@ -33,7 +34,7 @@ contract JpycV4LiquiditySeeder is IUnlockCallback {
         address payer;
         address recipient;
         PoolKey key;
-        IPoolManager.ModifyLiquidityParams params;
+        ModifyLiquidityParams params;
         bytes hookData;
     }
 
@@ -45,7 +46,7 @@ contract JpycV4LiquiditySeeder is IUnlockCallback {
         address payer,
         address recipient,
         PoolKey memory key,
-        IPoolManager.ModifyLiquidityParams memory params,
+        ModifyLiquidityParams memory params,
         bytes memory hookData
     ) external returns (BalanceDelta callerDelta, BalanceDelta feesAccrued) {
         return abi.decode(
@@ -195,7 +196,7 @@ contract SeedJpycLiquidity is Script {
                 hooks: IHooks(FX_HEDGE_HOOK)
             });
 
-            IPoolManager.ModifyLiquidityParams memory params = IPoolManager.ModifyLiquidityParams({
+            ModifyLiquidityParams memory params = ModifyLiquidityParams({
                 tickLower: TICK_LOWER,
                 tickUpper: TICK_UPPER,
                 liquidityDelta: int256(v4LiquidityDelta),

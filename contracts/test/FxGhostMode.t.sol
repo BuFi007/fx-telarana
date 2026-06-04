@@ -4,11 +4,11 @@ pragma solidity ^0.8.26;
 import {Test} from "forge-std/Test.sol";
 
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
-import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {BeforeSwapDelta} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
+import {ModifyLiquidityParams, SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
 import {IBufiKycPass} from "../src/interfaces/IBufiKycPass.sol";
 import {FxGhostCommitmentRegistry} from "../src/ghost/FxGhostCommitmentRegistry.sol";
@@ -344,11 +344,11 @@ contract FxGhostModeTest is Test {
         });
     }
 
-    function _swapParams() internal pure returns (IPoolManager.SwapParams memory) {
-        return IPoolManager.SwapParams({zeroForOne: true, amountSpecified: -1, sqrtPriceLimitX96: 0});
+    function _swapParams() internal pure returns (SwapParams memory) {
+        return SwapParams({zeroForOne: true, amountSpecified: -1, sqrtPriceLimitX96: 0});
     }
 
-    function _modifyParams() internal pure returns (IPoolManager.ModifyLiquidityParams memory) {
-        return IPoolManager.ModifyLiquidityParams({tickLower: -60, tickUpper: 60, liquidityDelta: 1, salt: bytes32(0)});
+    function _modifyParams() internal pure returns (ModifyLiquidityParams memory) {
+        return ModifyLiquidityParams({tickLower: -60, tickUpper: 60, liquidityDelta: 1, salt: bytes32(0)});
     }
 }

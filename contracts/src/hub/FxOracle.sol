@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.26;
 
-import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
-import {PythStructs} from "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
+import {IPyth} from "../vendor/pyth/IPyth.sol";
+import {PythStructs} from "../vendor/pyth/PythStructs.sol";
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 

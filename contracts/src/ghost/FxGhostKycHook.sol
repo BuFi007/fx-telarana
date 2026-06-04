@@ -9,6 +9,7 @@ import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {ModifyLiquidityParams, SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
 /// @title FxGhostKycHook
 /// @notice Minimal KYC/pass gate for future Ghost Mode v4 pools.
@@ -131,7 +132,7 @@ contract FxGhostKycHook is IHooks {
     function beforeAddLiquidity(
         address sender,
         PoolKey calldata,
-        IPoolManager.ModifyLiquidityParams calldata,
+        ModifyLiquidityParams calldata,
         bytes calldata hookData
     ) external view onlyPoolManager returns (bytes4) {
         _assertGhostAuthorized(sender, hookData);
@@ -141,7 +142,7 @@ contract FxGhostKycHook is IHooks {
     function afterAddLiquidity(
         address,
         PoolKey calldata,
-        IPoolManager.ModifyLiquidityParams calldata,
+        ModifyLiquidityParams calldata,
         BalanceDelta,
         BalanceDelta,
         bytes calldata
@@ -152,7 +153,7 @@ contract FxGhostKycHook is IHooks {
     function beforeRemoveLiquidity(
         address,
         PoolKey calldata,
-        IPoolManager.ModifyLiquidityParams calldata,
+        ModifyLiquidityParams calldata,
         bytes calldata
     ) external pure returns (bytes4) {
         revert HookNotEnabled(IHooks.beforeRemoveLiquidity.selector);
@@ -161,7 +162,7 @@ contract FxGhostKycHook is IHooks {
     function afterRemoveLiquidity(
         address,
         PoolKey calldata,
-        IPoolManager.ModifyLiquidityParams calldata,
+        ModifyLiquidityParams calldata,
         BalanceDelta,
         BalanceDelta,
         bytes calldata
@@ -169,7 +170,7 @@ contract FxGhostKycHook is IHooks {
         revert HookNotEnabled(IHooks.afterRemoveLiquidity.selector);
     }
 
-    function beforeSwap(address sender, PoolKey calldata, IPoolManager.SwapParams calldata, bytes calldata hookData)
+    function beforeSwap(address sender, PoolKey calldata, SwapParams calldata, bytes calldata hookData)
         external
         view
         onlyPoolManager
@@ -179,7 +180,7 @@ contract FxGhostKycHook is IHooks {
         return (IHooks.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
 
-    function afterSwap(address, PoolKey calldata, IPoolManager.SwapParams calldata, BalanceDelta, bytes calldata)
+    function afterSwap(address, PoolKey calldata, SwapParams calldata, BalanceDelta, bytes calldata)
         external
         pure
         returns (bytes4, int128)

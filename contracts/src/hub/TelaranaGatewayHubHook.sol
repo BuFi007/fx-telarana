@@ -17,6 +17,7 @@ import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {BeforeSwapDelta, toBeforeSwapDelta} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {ModifyLiquidityParams, SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
 import {ICircleGatewayMinter} from "../interfaces/ICircleGateway.sol";
 import {IHyperlaneRecipient} from "../interfaces/IHyperlane.sol";
@@ -390,7 +391,7 @@ contract TelaranaGatewayHubHook is
     function beforeAddLiquidity(
         address,
         PoolKey calldata,
-        IPoolManager.ModifyLiquidityParams calldata,
+        ModifyLiquidityParams calldata,
         bytes calldata
     ) external pure override returns (bytes4) {
         revert HookNotEnabled(IHooks.beforeAddLiquidity.selector);
@@ -400,7 +401,7 @@ contract TelaranaGatewayHubHook is
     function afterAddLiquidity(
         address,
         PoolKey calldata,
-        IPoolManager.ModifyLiquidityParams calldata,
+        ModifyLiquidityParams calldata,
         BalanceDelta,
         BalanceDelta,
         bytes calldata
@@ -412,7 +413,7 @@ contract TelaranaGatewayHubHook is
     function beforeRemoveLiquidity(
         address,
         PoolKey calldata,
-        IPoolManager.ModifyLiquidityParams calldata,
+        ModifyLiquidityParams calldata,
         bytes calldata
     ) external pure override returns (bytes4) {
         revert HookNotEnabled(IHooks.beforeRemoveLiquidity.selector);
@@ -422,7 +423,7 @@ contract TelaranaGatewayHubHook is
     function afterRemoveLiquidity(
         address,
         PoolKey calldata,
-        IPoolManager.ModifyLiquidityParams calldata,
+        ModifyLiquidityParams calldata,
         BalanceDelta,
         BalanceDelta,
         bytes calldata
@@ -452,7 +453,7 @@ contract TelaranaGatewayHubHook is
     function beforeSwap(
         address sender,
         PoolKey calldata key,
-        IPoolManager.SwapParams calldata params,
+        SwapParams calldata params,
         bytes calldata hookData
     ) external override onlyPoolManager whenNotPaused nonReentrant returns (bytes4, BeforeSwapDelta, uint24) {
         PoolId poolId = key.toId();
@@ -566,7 +567,7 @@ contract TelaranaGatewayHubHook is
     }
 
     /// @inheritdoc IHooks
-    function afterSwap(address, PoolKey calldata, IPoolManager.SwapParams calldata, BalanceDelta, bytes calldata)
+    function afterSwap(address, PoolKey calldata, SwapParams calldata, BalanceDelta, bytes calldata)
         external
         pure
         override

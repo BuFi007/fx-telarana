@@ -12,6 +12,7 @@ import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
+import {SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
 import {TelaranaGatewayHubHook} from "../src/hub/TelaranaGatewayHubHook.sol";
 import {ITelaranaGatewayHubHook} from "../src/interfaces/ITelaranaGatewayHubHook.sol";
@@ -186,7 +187,7 @@ contract TelaranaGatewayHubHookBeforeSwapTest is Test {
         ITelaranaGatewayHubHook.GatewayMintContext memory ctx = _ctx(REQUEST_ID, MINT_AMOUNT);
         bytes memory hookData = abi.encode(bytes("attestation"), bytes("signature"), ctx);
 
-        IPoolManager.SwapParams memory params = _swapParamsBuyingUsdc();
+        SwapParams memory params = _swapParamsBuyingUsdc();
 
         // Pre-state
         uint256 hookUsdcBefore = usdc.balanceOf(address(hook));
@@ -247,7 +248,7 @@ contract TelaranaGatewayHubHookBeforeSwapTest is Test {
         ITelaranaGatewayHubHook.GatewayMintContext memory ctx = _ctx(REQUEST_ID, MINT_AMOUNT);
         bytes memory hookData = abi.encode(bytes("a"), bytes("s"), ctx);
 
-        IPoolManager.SwapParams memory params = _swapParamsBuyingUsdc();
+        SwapParams memory params = _swapParamsBuyingUsdc();
 
         vm.prank(address(0x1337));
         vm.expectRevert(abi.encodeWithSelector(TelaranaGatewayHubHook.NotPoolManager.selector, address(0x1337)));
@@ -263,7 +264,7 @@ contract TelaranaGatewayHubHookBeforeSwapTest is Test {
         minter.setNextMint(false, MINT_AMOUNT);
         ITelaranaGatewayHubHook.GatewayMintContext memory ctx = _ctx(REQUEST_ID, MINT_AMOUNT);
         bytes memory hookData = abi.encode(bytes("a"), bytes("s"), ctx);
-        IPoolManager.SwapParams memory params = _swapParamsBuyingUsdc();
+        SwapParams memory params = _swapParamsBuyingUsdc();
 
         vm.prank(address(poolManager));
         vm.expectRevert(abi.encodeWithSelector(TelaranaGatewayHubHook.PoolGatewayRouteUnset.selector, poolId));
@@ -277,7 +278,7 @@ contract TelaranaGatewayHubHookBeforeSwapTest is Test {
 
         ITelaranaGatewayHubHook.GatewayMintContext memory ctx = _ctx(REQUEST_ID, MINT_AMOUNT);
         bytes memory hookData = abi.encode(bytes("a"), bytes("s"), ctx);
-        IPoolManager.SwapParams memory params = _swapParamsBuyingUsdc();
+        SwapParams memory params = _swapParamsBuyingUsdc();
 
         vm.prank(address(poolManager));
         vm.expectRevert(bytes("scripted mint revert"));
@@ -295,7 +296,7 @@ contract TelaranaGatewayHubHookBeforeSwapTest is Test {
 
         ITelaranaGatewayHubHook.GatewayMintContext memory ctx = _ctx(REQUEST_ID, MINT_AMOUNT);
         bytes memory hookData = abi.encode(bytes("a"), bytes("s"), ctx);
-        IPoolManager.SwapParams memory params = _swapParamsBuyingUsdc();
+        SwapParams memory params = _swapParamsBuyingUsdc();
 
         vm.prank(address(poolManager));
         vm.expectRevert(
@@ -310,7 +311,7 @@ contract TelaranaGatewayHubHookBeforeSwapTest is Test {
         minter.setNextMint(false, MINT_AMOUNT);
         ITelaranaGatewayHubHook.GatewayMintContext memory ctx = _ctx(REQUEST_ID, MINT_AMOUNT);
         bytes memory hookData = abi.encode(bytes("a"), bytes("s"), ctx);
-        IPoolManager.SwapParams memory params = _swapParamsBuyingUsdc();
+        SwapParams memory params = _swapParamsBuyingUsdc();
 
         vm.prank(address(poolManager));
         hook.beforeSwap(taker, key, params, hookData);
@@ -337,7 +338,7 @@ contract TelaranaGatewayHubHookBeforeSwapTest is Test {
         minter.setNextMint(false, MINT_AMOUNT);
         ITelaranaGatewayHubHook.GatewayMintContext memory ctx = _ctx(REQUEST_ID, MINT_AMOUNT);
         bytes memory hookData = abi.encode(bytes("a"), bytes("s"), ctx);
-        IPoolManager.SwapParams memory params = _swapParamsBuyingUsdc();
+        SwapParams memory params = _swapParamsBuyingUsdc();
 
         vm.prank(address(poolManager));
         vm.expectRevert();
@@ -379,12 +380,12 @@ contract TelaranaGatewayHubHookBeforeSwapTest is Test {
         });
     }
 
-    function _swapParamsBuyingUsdc() internal view returns (IPoolManager.SwapParams memory) {
+    function _swapParamsBuyingUsdc() internal view returns (SwapParams memory) {
         // We need params such that the user "receives USDC". If USDC == currency0,
         // user pays currency1 → currency0, so zeroForOne = false.
         // If USDC == currency1, zeroForOne = true.
         bool usdcIsCurrency0 = Currency.unwrap(key.currency0) == address(usdc);
-        return IPoolManager.SwapParams({
+        return SwapParams({
             zeroForOne: usdcIsCurrency0 ? false : true,
             amountSpecified: -int256(MINT_AMOUNT), // exact input
             sqrtPriceLimitX96: 0

@@ -14,6 +14,7 @@ import {
     BalanceDeltaLibrary
 } from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {BeforeSwapDelta} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
+import {ModifyLiquidityParams, SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
 /// @title FxHedgeHook
 /// @notice Uniswap v4 observer hook for BUFX delta-neutral LP pools.
@@ -200,7 +201,7 @@ contract FxHedgeHook is IHooks, AccessControl {
     function beforeAddLiquidity(
         address,
         PoolKey calldata,
-        IPoolManager.ModifyLiquidityParams calldata,
+        ModifyLiquidityParams calldata,
         bytes calldata
     ) external pure override returns (bytes4) {
         revert HookNotEnabled(IHooks.beforeAddLiquidity.selector);
@@ -209,7 +210,7 @@ contract FxHedgeHook is IHooks, AccessControl {
     function afterAddLiquidity(
         address,
         PoolKey calldata key,
-        IPoolManager.ModifyLiquidityParams calldata,
+        ModifyLiquidityParams calldata,
         BalanceDelta delta,
         BalanceDelta,
         bytes calldata
@@ -221,7 +222,7 @@ contract FxHedgeHook is IHooks, AccessControl {
     function beforeRemoveLiquidity(
         address,
         PoolKey calldata,
-        IPoolManager.ModifyLiquidityParams calldata,
+        ModifyLiquidityParams calldata,
         bytes calldata
     ) external pure override returns (bytes4) {
         revert HookNotEnabled(IHooks.beforeRemoveLiquidity.selector);
@@ -230,7 +231,7 @@ contract FxHedgeHook is IHooks, AccessControl {
     function afterRemoveLiquidity(
         address,
         PoolKey calldata key,
-        IPoolManager.ModifyLiquidityParams calldata,
+        ModifyLiquidityParams calldata,
         BalanceDelta delta,
         BalanceDelta,
         bytes calldata
@@ -239,7 +240,7 @@ contract FxHedgeHook is IHooks, AccessControl {
         return (IHooks.afterRemoveLiquidity.selector, BalanceDeltaLibrary.ZERO_DELTA);
     }
 
-    function beforeSwap(address, PoolKey calldata, IPoolManager.SwapParams calldata, bytes calldata)
+    function beforeSwap(address, PoolKey calldata, SwapParams calldata, bytes calldata)
         external
         pure
         override
@@ -251,7 +252,7 @@ contract FxHedgeHook is IHooks, AccessControl {
     function afterSwap(
         address,
         PoolKey calldata key,
-        IPoolManager.SwapParams calldata,
+        SwapParams calldata,
         BalanceDelta delta,
         bytes calldata
     ) external override onlyPoolManager returns (bytes4, int128) {

@@ -10,6 +10,7 @@ import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
 /// @notice Minimal exact-input v4 router for custom-accounting hooks.
 /// @dev FxSwapHook takes the specified input from PoolManager during
@@ -78,7 +79,7 @@ contract FxV4RouterHarness is IUnlockCallback {
 
         BalanceDelta delta = manager.swap(
             data.key,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: data.zeroForOne,
                 amountSpecified: -int256(data.amountIn),
                 sqrtPriceLimitX96: data.zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1

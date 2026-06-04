@@ -17,6 +17,7 @@ import {
     BalanceDeltaLibrary,
     toBalanceDelta
 } from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {ModifyLiquidityParams, SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
 contract FxHedgeHookTest is Test {
     using BalanceDeltaLibrary for BalanceDelta;
@@ -72,7 +73,7 @@ contract FxHedgeHookTest is Test {
     }
 
     function test_afterAddLiquidityTracksToken1ExposureAndRebalances() public {
-        IPoolManager.ModifyLiquidityParams memory params = _modifyParams(1);
+        ModifyLiquidityParams memory params = _modifyParams(1);
         BalanceDelta delta = toBalanceDelta(-1_000e6, -2_000e18);
 
         vm.prank(poolManager);
@@ -99,8 +100,8 @@ contract FxHedgeHookTest is Test {
             ""
         );
 
-        IPoolManager.SwapParams memory params =
-            IPoolManager.SwapParams({zeroForOne: true, amountSpecified: -100e6, sqrtPriceLimitX96: 0});
+        SwapParams memory params =
+            SwapParams({zeroForOne: true, amountSpecified: -100e6, sqrtPriceLimitX96: 0});
 
         vm.prank(poolManager);
         (bytes4 selector, int128 hookDelta) =
@@ -140,8 +141,8 @@ contract FxHedgeHookTest is Test {
     }
 
     function test_afterSwapRevertsWhenNotPoolManager() public {
-        IPoolManager.SwapParams memory params =
-            IPoolManager.SwapParams({zeroForOne: true, amountSpecified: -1, sqrtPriceLimitX96: 0});
+        SwapParams memory params =
+            SwapParams({zeroForOne: true, amountSpecified: -1, sqrtPriceLimitX96: 0});
 
         vm.expectRevert(abi.encodeWithSelector(FxHedgeHook.NotPoolManager.selector, address(this)));
         hook.afterSwap(address(this), key, params, toBalanceDelta(0, 0), "");
@@ -151,8 +152,8 @@ contract FxHedgeHookTest is Test {
         // Seed initial exposure + TWAP via a normal swap.
         // hedgeToken = JPYC (currency1). spotPrice = |d0| * 1e18 / |d1|.
         // For delta(-100e6, 100e18): spotPrice = 100e6 * 1e18 / 100e18 = 1e6.
-        IPoolManager.SwapParams memory normalSwap =
-            IPoolManager.SwapParams({zeroForOne: true, amountSpecified: -100e6, sqrtPriceLimitX96: 0});
+        SwapParams memory normalSwap =
+            SwapParams({zeroForOne: true, amountSpecified: -100e6, sqrtPriceLimitX96: 0});
         vm.prank(poolManager);
         hook.afterSwap(address(this), key, normalSwap, toBalanceDelta(-100e6, 100e18), "");
 
@@ -168,8 +169,8 @@ contract FxHedgeHookTest is Test {
         // Exposure delta = -rawToE18Signed(100e18, 18) = -100e18.
         // newExposure = -100e18 + (-100e18) = -200e18.
         // |newExposure + hedge| = |-200e18 + 100e18| = 100e18 >= threshold(100e18).
-        IPoolManager.SwapParams memory extremeSwap =
-            IPoolManager.SwapParams({zeroForOne: true, amountSpecified: -1000e6, sqrtPriceLimitX96: 0});
+        SwapParams memory extremeSwap =
+            SwapParams({zeroForOne: true, amountSpecified: -1000e6, sqrtPriceLimitX96: 0});
         vm.prank(poolManager);
         hook.afterSwap(address(this), key, extremeSwap, toBalanceDelta(-1000e6, 100e18), "");
 
@@ -222,9 +223,9 @@ contract FxHedgeHookTest is Test {
     function _modifyParams(int256 liquidityDelta)
         internal
         pure
-        returns (IPoolManager.ModifyLiquidityParams memory)
+        returns (ModifyLiquidityParams memory)
     {
-        return IPoolManager.ModifyLiquidityParams({
+        return ModifyLiquidityParams({
             tickLower: -60,
             tickUpper: 60,
             liquidityDelta: liquidityDelta,

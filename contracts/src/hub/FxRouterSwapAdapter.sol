@@ -13,6 +13,7 @@ import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
 import {IFxRouterSwapAdapter} from "./FxRouter.sol";
 
@@ -212,7 +213,7 @@ contract FxRouterSwapAdapter is IFxRouterSwapAdapter, IUnlockCallback, Ownable2S
 
         BalanceDelta delta = POOL_MANAGER.swap(
             key,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: zeroForOne,
                 amountSpecified: -int256(amountIn),
                 sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
