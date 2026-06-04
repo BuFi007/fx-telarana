@@ -54,7 +54,7 @@ contract DeployArbMxnbMarket is Script {
 
     // Arbitrum One defaults (verified addresses).
     address internal constant DEFAULT_ONE_MORPHO = 0x6c247b1F6182318877311737BaC0844bAa518F5e;
-    address internal constant DEFAULT_ONE_IRM    = 0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC;
+    address internal constant DEFAULT_ONE_IRM    = 0x66F30587FB8D4206918deb78ecA7d5eBbafD06DA;
     address internal constant DEFAULT_ONE_PYTH   = 0xff1a0f4744e8582DF1aE09D5611b887B6a12925C;
     address internal constant DEFAULT_ONE_USDC   = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
     address internal constant DEFAULT_ONE_MXNB   = 0xF197FFC28c23E0309B5559e7a166f2c6164C80aA;
