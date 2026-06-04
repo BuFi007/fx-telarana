@@ -3,6 +3,7 @@ pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {PoolManager} from "@uniswap/v4-core/src/PoolManager.sol";
@@ -18,6 +19,7 @@ import {FxOracle} from "../src/hub/FxOracle.sol";
 import {FxMarketRegistry} from "../src/hub/FxMarketRegistry.sol";
 import {FxSwapHook} from "../src/hub/FxSwapHook.sol";
 import {MorphoOracleAdapter} from "../src/hub/MorphoOracleAdapter.sol";
+import {SharedFxVault} from "../src/vault/SharedFxVault.sol";
 import {HookMiner} from "../src/libraries/HookMiner.sol";
 import {IFxMarketRegistry} from "../src/interfaces/IFxMarketRegistry.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
@@ -106,19 +108,16 @@ contract AvalancheBasketSmokeTest is Test {
     function _runCase(AssetCase memory c) internal {
         MockERC20 asset = _deployAssetAndMarkets(c);
 
-        FxSwapHook hook = _deployHook(address(asset));
+        (SharedFxVault vault, FxSwapHook hook) = _deployVaultBackedHook(address(asset));
         PoolKey memory key = _poolKey(address(asset), address(hook));
+
+        _fundJunior(vault, address(hook), address(usdc), 10_000e6);
+        _fundJunior(vault, address(hook), address(asset), c.seedAsset);
+        _syncSorted(hook, address(usdc), 10_000e6, address(asset), c.seedAsset);
         poolManager.initialize(key, Q96);
 
-        // First deposit is owner-gated (codex-r12). Owner = this test contract.
-        usdc.mint(owner, 10_000e6);
-        asset.mint(owner, c.seedAsset);
-        usdc.approve(address(hook), type(uint256).max);
-        asset.approve(address(hook), type(uint256).max);
-        _depositSorted(hook, address(usdc), 10_000e6, address(asset), c.seedAsset);
-
-        assertGt(hook.morphoShares(address(usdc)), 0, "USDC was not rehypothecated");
-        assertGt(hook.morphoShares(address(asset)), 0, "asset was not rehypothecated");
+        assertEq(vault.juniorUsdcOf(address(hook)), 10_000e6, "USDC junior slice missing");
+        assertEq(vault.juniorTokenBalanceOf(address(hook), address(asset)), c.seedAsset, "asset junior slice missing");
 
         uint256 amountIn = 100e6;
         (uint256 quoted,) = hook.quoteExactInput(address(usdc), amountIn);
@@ -259,11 +258,21 @@ contract AvalancheBasketSmokeTest is Test {
         );
     }
 
-    function _deployHook(address asset) internal returns (FxSwapHook hook) {
+    function _deployVaultBackedHook(address asset) internal returns (SharedFxVault vault, FxSwapHook hook) {
+        vault = _deployVault(asset);
         (address token0, address token1) = _sort(address(usdc), asset);
         bytes memory creationCode = abi.encodePacked(
             type(FxSwapHook).creationCode,
-            abi.encode(address(poolManager), address(oracle), address(registry), owner, token0, token1, address(morpho), address(0x5555))
+            abi.encode(
+                address(poolManager),
+                address(oracle),
+                address(registry),
+                owner,
+                token0,
+                token1,
+                address(morpho),
+                address(vault)
+            )
         );
         uint160 flags = uint160(
             Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG
@@ -273,11 +282,32 @@ contract AvalancheBasketSmokeTest is Test {
         deployCodeTo(
             _fxSwapHookArtifact(),
             abi.encode(
-                address(poolManager), address(oracle), address(registry), owner, token0, token1, address(morpho), address(0x5555)
+                address(poolManager),
+                address(oracle),
+                address(registry),
+                owner,
+                token0,
+                token1,
+                address(morpho),
+                address(vault)
             ),
             expected
         );
         hook = FxSwapHook(expected);
+        vault.allowHook(address(hook), true);
+        vault.grantRole(vault.JUNIOR_ROLE(), owner);
+    }
+
+    function _deployVault(address asset) internal returns (SharedFxVault deployed) {
+        SharedFxVault impl = new SharedFxVault();
+        MorphoMarketParams memory mkt = MorphoMarketParams({
+            loanToken: address(usdc), collateralToken: asset, oracle: address(0xBEEF), irm: irm, lltv: LLTV
+        });
+        bytes memory initData = abi.encodeCall(
+            SharedFxVault.initialize,
+            (IERC20(address(usdc)), owner, address(0xA11CE), address(poolManager), address(oracle), morpho, mkt)
+        );
+        deployed = SharedFxVault(address(new ERC1967Proxy(address(impl), initData)));
     }
 
     function _fxSwapHookArtifact() internal view returns (string memory) {
@@ -298,15 +328,28 @@ contract AvalancheBasketSmokeTest is Test {
         });
     }
 
-    function _depositSorted(FxSwapHook hook, address tokenA, uint256 amountA, address tokenB, uint256 amountB)
-        internal
-    {
+    function _fundJunior(SharedFxVault vault, address hook, address token, uint256 amount) internal {
+        MockERC20(token).mint(owner, amount);
+        MockERC20(token).approve(address(vault), amount);
+        vault.fundJunior(hook, token, amount);
+    }
+
+    function _syncSorted(FxSwapHook hook, address tokenA, uint256 amountA, address tokenB, uint256 amountB) internal {
+        uint256 amount0;
+        uint256 amount1;
         if (hook.TOKEN0() == tokenA) {
-            hook.deposit(amountA, amountB);
+            amount0 = amountA;
+            amount1 = amountB;
         } else {
             assertEq(hook.TOKEN0(), tokenB);
-            hook.deposit(amountB, amountA);
+            amount0 = amountB;
+            amount1 = amountA;
         }
+        hook.sync(_rawToE18(amount0, hook.TOKEN0_DECIMALS()), _rawToE18(amount1, hook.TOKEN1_DECIMALS()), 100);
+    }
+
+    function _rawToE18(uint256 amount, uint8 decimals_) internal pure returns (uint256) {
+        return amount * (10 ** uint256(18 - decimals_));
     }
 
     function _sort(address a, address b) internal pure returns (address token0, address token1) {
