@@ -23,7 +23,10 @@
 set -uo pipefail   # NOT -e: the loop must survive transient RPC/Hermes errors
 
 PYTH="${PYTH_ADDRESS:-0x2880aB155794e7179c9eE2e38200202908C17B43}"
-RPC="${ARC_RPC_URL:?set ARC_RPC_URL}"
+# Multi-chain: PYTH_PUSHER_RPC_URL wins (Arbitrum etc.); falls back to ARC_RPC_URL.
+# Prepend https:// if the env value is missing the scheme (the .env.local URLs are).
+RPC="${PYTH_PUSHER_RPC_URL:-${ARC_RPC_URL:?set PYTH_PUSHER_RPC_URL or ARC_RPC_URL}}"
+case "$RPC" in http*://*) :;; *) RPC="https://$RPC";; esac
 PK="${PYTH_PUSHER_PRIVATE_KEY:?set PYTH_PUSHER_PRIVATE_KEY}"
 INTERVAL="${PYTH_PUSH_INTERVAL:-20}"
 HERMES="https://hermes.pyth.network/v2/updates/price/latest"
@@ -33,6 +36,13 @@ HERMES="https://hermes.pyth.network/v2/updates/price/latest"
 # also backs the canonical MXNB market. Both keep those lending markets' adapter
 # price() fresh (oracle 60s window). QCAD is NOT here: its FxOracleCanon feed id is a
 # placeholder, not the real Pyth USD/CAD — wire the real feed (oracle admin) first.
+# PYTH_FEEDS (space-separated feed ids) overrides the Arc defaults — e.g. on
+# Arbitrum One push only USDC/USD + USD/MXN for the MXNB/USDC Morpho market:
+#   PYTH_PUSHER_RPC_URL=$ARBITRUM_RPC_URL PYTH_ADDRESS=0xff1a0f47… \
+#   PYTH_FEEDS="0xeaa020…94a 0xe13b1c1f…77ca" PYTH_PUSH_INTERVAL=120 ./pyth-fx-pusher.sh
+if [ -n "${PYTH_FEEDS:-}" ]; then
+  read -ra FEEDS <<< "$PYTH_FEEDS"
+else
 FEEDS=(
   0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a
   0x76fa85158bf14ede77087fe3ae472f66213f6ea2f5b411cb2de472794990fa5c
@@ -40,6 +50,7 @@ FEEDS=(
   0xe13b1c1ffb32f34e1be9545583f01ef385fde7f42ee66049d30570dc866b77ca
   0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43
 )
+fi
 Q=""; for f in "${FEEDS[@]}"; do Q="${Q}ids[]=${f}&"; done; Q="${Q}encoding=hex"
 
 echo "$(date +%T) pyth-fx-pusher up: ${#FEEDS[@]} feeds, every ${INTERVAL}s, signer $(cast wallet address --private-key "$PK")"
