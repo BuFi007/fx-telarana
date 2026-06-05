@@ -57,6 +57,25 @@ contract MockPerpOracle is IFxOracle {
     }
 }
 
+contract LocalMatcherRelay {
+    IFxOrderSettlement public immutable settlement;
+
+    constructor(IFxOrderSettlement settlement_) {
+        settlement = settlement_;
+    }
+
+    function settleMatched(
+        IFxOrderSettlement.SignedOrder calldata makerOrder,
+        bytes calldata makerSig,
+        IFxOrderSettlement.SignedOrder calldata takerOrder,
+        bytes calldata takerSig,
+        uint256 fillSizeE18,
+        uint256 fillPriceE18
+    ) external {
+        settlement.settleMatch(makerOrder, makerSig, takerOrder, takerSig, fillSizeE18, fillPriceE18);
+    }
+}
+
 contract FxPerpStackTest is Test {
     using SafeCast for uint256;
 
@@ -275,6 +294,48 @@ contract FxPerpStackTest is Test {
         vm.expectRevert(abi.encodeWithSelector(FxOrderSettlement.NonceAlreadyUsed.selector, maker, uint64(1)));
         vm.prank(KEEPER);
         settlement.settleMatch(makerOrder, makerSig, takerOrder, takerSig, 5e18, PRICE_1_10);
+    }
+
+    function test_localMatcherRelaySettlesSignedOrdersThroughSettlement() public {
+        _deposit(maker, 100e6);
+        _deposit(taker, 100e6);
+
+        LocalMatcherRelay relay = new LocalMatcherRelay(IFxOrderSettlement(address(settlement)));
+        bytes32 settlerRole = settlement.SETTLER_ROLE();
+        vm.prank(ADMIN);
+        settlement.grantRole(settlerRole, address(relay));
+
+        IFxOrderSettlement.SignedOrder memory makerOrder = IFxOrderSettlement.SignedOrder({
+            trader: maker,
+            marketId: MARKET_ID,
+            sizeDeltaE18: 5e18,
+            priceE18: PRICE_1_10,
+            maxFee: 10_000,
+            orderType: settlement.ORDER_TYPE_LIMIT(),
+            flags: settlement.FLAG_POST_ONLY(),
+            nonce: 21,
+            deadline: uint64(block.timestamp + 1 hours)
+        });
+        IFxOrderSettlement.SignedOrder memory takerOrder = IFxOrderSettlement.SignedOrder({
+            trader: taker,
+            marketId: MARKET_ID,
+            sizeDeltaE18: -5e18,
+            priceE18: PRICE_1_10,
+            maxFee: 10_000,
+            orderType: settlement.ORDER_TYPE_LIMIT(),
+            flags: 0,
+            nonce: 22,
+            deadline: uint64(block.timestamp + 1 hours)
+        });
+
+        relay.settleMatched(
+            makerOrder, _signOrder(MAKER_PK, makerOrder), takerOrder, _signOrder(TAKER_PK, takerOrder), 5e18, PRICE_1_10
+        );
+
+        assertEq(clearinghouse.position(MARKET_ID, maker).sizeE18, 5e18, "maker long via matcher relay");
+        assertEq(clearinghouse.position(MARKET_ID, taker).sizeE18, -5e18, "taker short via matcher relay");
+        assertEq(settlement.nonceBitmap(maker, 0) & (1 << 21), 1 << 21, "maker nonce consumed");
+        assertEq(settlement.nonceBitmap(taker, 0) & (1 << 22), 1 << 22, "taker nonce consumed");
     }
 
     function test_orderSettlementHonorsSignedMaxFee() public {

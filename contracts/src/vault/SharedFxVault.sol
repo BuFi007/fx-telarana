@@ -18,6 +18,7 @@ import {IMorpho, MarketParams, Id, Market} from "morpho-blue/interfaces/IMorpho.
 import {MarketParamsLib} from "morpho-blue/libraries/MarketParamsLib.sol";
 import {SharesMathLib} from "morpho-blue/libraries/SharesMathLib.sol";
 
+import {IFxUsycAdapter} from "./interfaces/IFxUsycAdapter.sol";
 import {ISharedFxVault} from "./interfaces/ISharedFxVault.sol";
 
 /// @title  SharedFxVault
@@ -70,6 +71,7 @@ contract SharedFxVault is
     bytes32 public constant HOOK_ROLE = keccak256("HOOK_ROLE"); // allowlisted FxSwapHooks
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE"); // Morpho rehypothecation
     bytes32 public constant JUNIOR_ROLE = keccak256("JUNIOR_ROLE"); // fund/withdraw junior buffer
+    bytes32 public constant GATEWAY_ACCOUNTANT_ROLE = keccak256("GATEWAY_ACCOUNTANT_ROLE"); // cross-hub in-transit book
 
     /*//////////////////////////////////////////////////////////////
                              PARAMETER BOUNDS
@@ -113,11 +115,17 @@ contract SharedFxVault is
         mapping(address hook => uint256 filled) capBlockFilledOf; // usdc notional filled this block (per hook)
         mapping(address hook => uint256 base) capBaseJuniorUsdcOf; // hook's junior USDC snapshot at window start
         bool legacyJuniorMigrated; // one-shot guard for migrateLegacyJuniorToHook
+        // --- APPENDED (G2): yield + cross-hub senior accounting -------------------------------
+        // `yieldAdapter` is expected to be FxUsycAdapter on Arc after Circle entitlement. It is
+        // zero until the human-gated entitlement/deploy step is complete.
+        address yieldAdapter;
+        // USDC senior principal burned/locked into a Gateway transfer but not yet minted/cleared
+        // on the destination hub. Included in totalAssets so share price does not wobble mid-flight.
+        uint256 gatewayInTransitUsdc;
     }
 
     // keccak256(abi.encode(uint256(keccak256("bufx.sharedfxvault.main")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant STORAGE_LOCATION =
-        0x82dfe0b48341232b6b6f25f0ced28120c66a25ed3cb1d8e79e3155dc48a95300;
+    bytes32 private constant STORAGE_LOCATION = 0x82dfe0b48341232b6b6f25f0ced28120c66a25ed3cb1d8e79e3155dc48a95300;
 
     function _s() private pure returns (VaultStorage storage $) {
         assembly {
@@ -141,11 +149,18 @@ contract SharedFxVault is
     error LegacyAlreadyMigrated();
     error LegacyNotMigrated();
     error HookNotAllowlisted();
+    error YieldAdapterNotSet();
+    error GatewayInTransitShort();
 
     /*//////////////////////////////////////////////////////////////
                           EVENTS (per-hook migration)
     //////////////////////////////////////////////////////////////*/
     event LegacyJuniorMigrated(address indexed hook, uint256 usdc, address[] tokens);
+    event YieldAdapterUpdated(address indexed adapter);
+    event SeniorYieldDeployed(uint256 assets, uint256 shares);
+    event SeniorYieldRedeemed(uint256 requestedAssets, uint256 receivedAssets);
+    event GatewayBurnRecorded(uint256 assets, uint256 inTransit);
+    event GatewayMintCleared(uint256 assets, uint256 inTransit);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -172,8 +187,8 @@ contract SharedFxVault is
         __UUPSUpgradeable_init();
 
         if (
-            admin == address(0) || timelock == address(0) || poolManager == address(0)
-                || oracle == address(0) || address(morpho_) == address(0)
+            admin == address(0) || timelock == address(0) || poolManager == address(0) || oracle == address(0)
+                || address(morpho_) == address(0)
         ) revert ZeroAddress();
         if (morphoMarket_.loanToken != address(usdc)) revert MorphoLoanTokenMismatch();
 
@@ -208,7 +223,8 @@ contract SharedFxVault is
     ///      path (deposit/withdraw) so entry/exit pricing is exact, or use the extSloads-based
     ///      MorphoBalancesLib simulation. FX inventory and junior USDC are NOT senior assets.
     function totalAssets() public view override returns (uint256) {
-        return _s().seniorUsdcHot + _morphoSupplyAssets();
+        VaultStorage storage $ = _s();
+        return $.seniorUsdcHot + _morphoSupplyAssets() + $.gatewayInTransitUsdc + _yieldAdapterAssets($);
     }
 
     /// @dev Diamond-resolution override: both ERC4626Upgradeable and ISharedFxVault
@@ -223,6 +239,10 @@ contract SharedFxVault is
         Market memory m = $.morpho.market(id);
         uint256 shares = $.morpho.position(id, address(this)).supplyShares;
         return shares.toAssetsDown(m.totalSupplyAssets, m.totalSupplyShares);
+    }
+
+    function _yieldAdapterAssets(VaultStorage storage $) internal view returns (uint256) {
+        return $.yieldAdapter == address(0) ? 0 : IFxUsycAdapter($.yieldAdapter).yieldAssets();
     }
 
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares)
@@ -318,8 +338,7 @@ contract SharedFxVault is
         uint256 bal = IERC20(inToken).balanceOf(address(this));
         // O(1) balance-based: subtract senior (USDC only) + the GLOBAL junior total. The newly
         // measured delta is credited to the CALLING HOOK's slice (and the matching global total).
-        uint256 accounted =
-            inToken == asset() ? ($.seniorUsdcHot + $.totalJuniorUsdc) : $.totalJuniorToken[inToken];
+        uint256 accounted = inToken == asset() ? ($.seniorUsdcHot + $.totalJuniorUsdc) : $.totalJuniorToken[inToken];
         if (bal < accounted) revert BalanceUnderflow();
         credited = bal - accounted;
         if (credited == 0) return 0;
@@ -361,11 +380,7 @@ contract SharedFxVault is
     //////////////////////////////////////////////////////////////*/
     /// @notice Fund a SPECIFIC hook's junior slice (per-pool first-loss). Allocates the funded
     ///         amount to `hook`'s slice AND the matching global total.
-    function fundJunior(address hook, address token, uint256 amount)
-        external
-        onlyRole(JUNIOR_ROLE)
-        nonReentrant
-    {
+    function fundJunior(address hook, address token, uint256 amount) external onlyRole(JUNIOR_ROLE) nonReentrant {
         if (hook == address(0)) revert ZeroAddress();
         // Credit the REAL received delta, not the requested amount — robust to any
         // fee-on-transfer / non-exact ERC20 behavior (USDC is exact today; defense-in-depth).
@@ -411,10 +426,7 @@ contract SharedFxVault is
     ///         (`juniorUsdc` + `juniorToken[token]`) into `hook`'s per-hook slice + global totals,
     ///         then zeroes the legacy globals. For the deployed vault's EURC junior
     ///         (10,100 USDC + 9,090 EURC) → the EURC hook's slice. Guarded so it runs at most once.
-    function migrateLegacyJuniorToHook(address hook, address[] calldata tokens)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function migrateLegacyJuniorToHook(address hook, address[] calldata tokens) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (hook == address(0)) revert ZeroAddress();
         // Only an allowlisted hook can receive the migrated slice (a typo'd hook can't strand funds
         // in a dead slice that a non-hook could never spend). Idempotent: re-callable to move any
@@ -466,6 +478,94 @@ contract SharedFxVault is
         $.morphoSupplied = $.morphoSupplied > assets ? $.morphoSupplied - assets : 0;
         $.seniorUsdcHot += withdrawn;
         emit MorphoWithdrawn(withdrawn);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    USYC YIELD + GATEWAY IN-TRANSIT BOOK
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Wire the Arc-only USYC adapter. Keep zero until the adapter is deployed and entitled.
+    function setYieldAdapter(address adapter) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _s().yieldAdapter = adapter;
+        emit YieldAdapterUpdated(adapter);
+    }
+
+    /// @notice Move hot senior USDC into the configured yield adapter. PRE-P5 keeper path only.
+    function deploySeniorToYield(uint256 assets)
+        external
+        onlyRole(KEEPER_ROLE)
+        whenNotPaused
+        nonReentrant
+        returns (uint256 shares)
+    {
+        shares = _deploySeniorToYield(assets);
+    }
+
+    /// @notice Redeem USYC adapter assets back into hot senior USDC.
+    function redeemSeniorFromYield(uint256 assets)
+        external
+        onlyRole(KEEPER_ROLE)
+        nonReentrant
+        returns (uint256 received)
+    {
+        received = _redeemSeniorFromYield(assets);
+    }
+
+    /// @notice Policy stub: a keeper may choose one leg per call from an off-chain (s,S) policy.
+    /// @dev    This deliberately contains no oracle/bridge policy. It only executes the chosen
+    ///         accounting-safe action so the policy can be reviewed independently.
+    function rebalanceYield(uint256 deployAssets, uint256 redeemAssets)
+        external
+        onlyRole(KEEPER_ROLE)
+        whenNotPaused
+        nonReentrant
+        returns (uint256 shares, uint256 received)
+    {
+        if (deployAssets == 0 && redeemAssets == 0) revert ParamOutOfBounds();
+        if (deployAssets != 0 && redeemAssets != 0) revert ParamOutOfBounds();
+        if (deployAssets != 0) shares = _deploySeniorToYield(deployAssets);
+        if (redeemAssets != 0) received = _redeemSeniorFromYield(redeemAssets);
+    }
+
+    function _deploySeniorToYield(uint256 assets) internal returns (uint256 shares) {
+        if (assets == 0) revert ParamOutOfBounds();
+        VaultStorage storage $ = _s();
+        address adapter = $.yieldAdapter;
+        if (adapter == address(0)) revert YieldAdapterNotSet();
+        if ($.seniorUsdcHot < assets) revert InsufficientSeniorLiquidity();
+        $.seniorUsdcHot -= assets;
+        IERC20(asset()).forceApprove(adapter, assets);
+        shares = IFxUsycAdapter(adapter).depositToYield(assets);
+        emit SeniorYieldDeployed(assets, shares);
+    }
+
+    function _redeemSeniorFromYield(uint256 assets) internal returns (uint256 received) {
+        if (assets == 0) revert ParamOutOfBounds();
+        VaultStorage storage $ = _s();
+        address adapter = $.yieldAdapter;
+        if (adapter == address(0)) revert YieldAdapterNotSet();
+        received = IFxUsycAdapter(adapter).redeemFromYield(assets, address(this));
+        $.seniorUsdcHot += received;
+        emit SeniorYieldRedeemed(assets, received);
+    }
+
+    /// @notice Record senior USDC that has left Arc through Gateway but is still protocol-owned.
+    function recordGatewayBurn(uint256 assets) external onlyRole(GATEWAY_ACCOUNTANT_ROLE) nonReentrant {
+        if (assets == 0) revert ParamOutOfBounds();
+        VaultStorage storage $ = _s();
+        if ($.seniorUsdcHot < assets) revert InsufficientSeniorLiquidity();
+        $.seniorUsdcHot -= assets;
+        $.gatewayInTransitUsdc += assets;
+        emit GatewayBurnRecorded(assets, $.gatewayInTransitUsdc);
+    }
+
+    /// @notice Clear senior USDC once the matching Gateway mint has landed on the destination book.
+    function clearGatewayMint(uint256 assets) external onlyRole(GATEWAY_ACCOUNTANT_ROLE) nonReentrant {
+        if (assets == 0) revert ParamOutOfBounds();
+        VaultStorage storage $ = _s();
+        if ($.gatewayInTransitUsdc < assets) revert GatewayInTransitShort();
+        $.gatewayInTransitUsdc -= assets;
+        $.seniorUsdcHot += assets;
+        emit GatewayMintCleared(assets, $.gatewayInTransitUsdc);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -587,5 +687,21 @@ contract SharedFxVault is
     /// @notice Live senior USDC supplied to Morpho (NAV component).
     function morphoLiveAssets() external view returns (uint256) {
         return _morphoSupplyAssets();
+    }
+
+    /// @notice Configured Arc USYC adapter, or address(0) until human entitlement/deploy is complete.
+    function yieldAdapter() external view returns (address) {
+        return _s().yieldAdapter;
+    }
+
+    /// @notice Live USDC-equivalent senior assets held by the yield adapter.
+    function yieldAdapterAssets() external view returns (uint256) {
+        VaultStorage storage $ = _s();
+        return _yieldAdapterAssets($);
+    }
+
+    /// @notice Senior USDC booked as Gateway in-transit between burn/lock and destination mint/clear.
+    function gatewayInTransitUsdc() external view returns (uint256) {
+        return _s().gatewayInTransitUsdc;
     }
 }

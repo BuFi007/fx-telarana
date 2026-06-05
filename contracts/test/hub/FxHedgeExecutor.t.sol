@@ -4,8 +4,23 @@ pragma solidity ^0.8.26;
 import {Test} from "forge-std/Test.sol";
 
 import {FxHedgeExecutor} from "../../src/hub/FxHedgeExecutor.sol";
+import {FxHedgeHook} from "../../src/hub/FxHedgeHook.sol";
+import {HookMiner} from "../../src/libraries/HookMiner.sol";
 import {IHedgeTarget} from "../../src/interfaces/IHedgeTarget.sol";
+import {FxFundingEngine} from "../../src/perp/FxFundingEngine.sol";
+import {FxMarginAccount} from "../../src/perp/FxMarginAccount.sol";
 import {IFxPerpClearinghouse} from "../../src/perp/interfaces/IFxPerpClearinghouse.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
+import {MockPerpOracle} from "../perp/FxPerpStack.t.sol";
+import {FxPerpClearinghouseTestHarness} from "../perp/FxPerpSafetySprint1.t.sol";
+
+import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
+import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {BalanceDeltaLibrary, toBalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 
 /// @dev Settable hedge-target source (FxHedgeHook satisfies IHedgeTarget via its public mapping).
 contract MockHedgeTarget is IHedgeTarget {
@@ -202,5 +217,135 @@ contract FxHedgeExecutorTest is Test {
         vm.prank(makeAddr("notAdmin"));
         vm.expectRevert();
         exec.setPoolMarket(POOL, MARKET);
+    }
+}
+
+contract FxHedgeHookExecutorIntegrationTest is Test {
+    using PoolIdLibrary for PoolKey;
+
+    MockERC20 internal usdc;
+    MockERC20 internal jpyc;
+    MockPerpOracle internal oracle;
+    FxMarginAccount internal margin;
+    FxPerpClearinghouseTestHarness internal clearinghouse;
+    FxFundingEngine internal funding;
+    FxHedgeHook internal hook;
+    FxHedgeExecutor internal executor;
+
+    address internal admin = address(this);
+    address internal poolManager = address(0xBEEF);
+    bytes32 internal constant MARKET_ID = keccak256("FX-PERP:JPYC/USDC");
+    bytes32 internal constant PYTH_JPY_USD = 0xef2c98c804ba503c6a707e38be4dfbb16683775f195b091252bf24693042fd52;
+    uint256 internal constant THRESHOLD = 100e18;
+
+    PoolKey internal key;
+    bytes32 internal poolId;
+
+    function setUp() public {
+        usdc = new MockERC20("USDC", "USDC", 6);
+        jpyc = new MockERC20("JPYC", "JPYC", 18);
+        oracle = new MockPerpOracle();
+        oracle.setMid(address(jpyc), address(usdc), 1e18);
+
+        margin = new FxMarginAccount(address(usdc), admin);
+        clearinghouse = new FxPerpClearinghouseTestHarness(address(usdc), address(oracle), address(margin), admin);
+        funding = new FxFundingEngine(address(clearinghouse), address(margin), admin);
+        clearinghouse.setFundingEngine(address(funding));
+        margin.setFundingSettlementHook(address(clearinghouse));
+        margin.grantRole(margin.CLEARINGHOUSE_ROLE(), address(clearinghouse));
+        margin.grantRole(margin.CLEARINGHOUSE_ROLE(), address(funding));
+        funding.configureFunding(
+            MARKET_ID,
+            FxFundingEngine.FundingConfig({enabled: true, maxFundingRateBpsPerSecond: 1, fundingVelocityBps: 1_000})
+        );
+        clearinghouse.configureMarket(
+            MARKET_ID,
+            IFxPerpClearinghouse.MarketConfig({
+                baseToken: address(jpyc),
+                enabled: true,
+                initialMarginBps: 500,
+                maintenanceMarginBps: 300,
+                tradingFeeBps: 5,
+                maxLeverageBps: 200_000,
+                maxOpenInterestUsd: 1_000_000e6,
+                maxSkewUsd: 1_000_000e6
+            })
+        );
+
+        hook = _deployHook();
+        key = PoolKey({
+            currency0: Currency.wrap(address(usdc)),
+            currency1: Currency.wrap(address(jpyc)),
+            fee: 100,
+            tickSpacing: 1,
+            hooks: IHooks(address(hook))
+        });
+        poolId = PoolId.unwrap(key.toId());
+        hook.configurePool(key, MARKET_ID, address(jpyc), 18, PYTH_JPY_USD, THRESHOLD, true);
+
+        executor = new FxHedgeExecutor(IHedgeTarget(address(hook)), IFxPerpClearinghouse(address(clearinghouse)), admin);
+        executor.setPoolMarket(poolId, MARKET_ID);
+        clearinghouse.grantRole(clearinghouse.EXECUTOR_ROLE(), address(executor));
+        _depositMargin(address(executor), 10_000e6);
+    }
+
+    function test_hookTargetNeedsExecutorPokeToOpenRealPerpHedge() public {
+        vm.prank(poolManager);
+        hook.afterAddLiquidity(
+            address(this),
+            key,
+            _modifyParams(1),
+            toBalanceDelta(-1_000e6, -2_000e18),
+            BalanceDeltaLibrary.ZERO_DELTA,
+            ""
+        );
+
+        assertEq(hook.poolExposureE18(poolId), 2_000e18, "pool exposure tracked");
+        assertEq(hook.poolHedgeSizeE18(poolId), -2_000e18, "hook target is a short hedge");
+        assertEq(clearinghouse.position(MARKET_ID, address(executor)).sizeE18, 0, "hook does not self-execute");
+        assertFalse(executor.isHedged(poolId), "executor has not opened the perp yet");
+
+        vm.prank(makeAddr("permissionlessKeeper"));
+        executor.executeHedge(poolId);
+
+        assertEq(clearinghouse.position(MARKET_ID, address(executor)).sizeE18, -2_000e18, "perp short opened");
+        assertEq(executor.executedHedgeE18(poolId), -2_000e18, "executor records clearinghouse truth");
+        assertTrue(executor.isHedged(poolId), "clearinghouse is synced to target");
+        assertTrue(hook.isDeltaNeutral(poolId), "hook target neutralizes pool delta");
+    }
+
+    function _depositMargin(address trader, uint256 amount) internal {
+        usdc.mint(admin, amount);
+        usdc.approve(address(margin), amount);
+        margin.depositMargin(trader, amount);
+    }
+
+    function _deployHook() internal returns (FxHedgeHook deployedHook) {
+        bytes memory creationCode =
+            abi.encodePacked(type(FxHedgeHook).creationCode, abi.encode(IPoolManager(poolManager), admin, THRESHOLD));
+        (address expected,) = HookMiner.find(address(this), _hedgeHookFlags(), creationCode, 500_000);
+        deployCodeTo(_fxHedgeHookArtifact(), abi.encode(IPoolManager(poolManager), admin, THRESHOLD), expected);
+        deployedHook = FxHedgeHook(expected);
+    }
+
+    function _modifyParams(int256 liquidityDelta) internal pure returns (IPoolManager.ModifyLiquidityParams memory) {
+        return IPoolManager.ModifyLiquidityParams({
+            tickLower: -60, tickUpper: 60, liquidityDelta: liquidityDelta, salt: bytes32(0)
+        });
+    }
+
+    function _hedgeHookFlags() internal pure returns (uint160) {
+        return uint160(Hooks.AFTER_ADD_LIQUIDITY_FLAG | Hooks.AFTER_REMOVE_LIQUIDITY_FLAG | Hooks.AFTER_SWAP_FLAG);
+    }
+
+    function _fxHedgeHookArtifact() internal view returns (string memory) {
+        if (vm.isFile("out/FxHedgeHook.sol/FxHedgeHook.json")) return "out/FxHedgeHook.sol/FxHedgeHook.json";
+        if (vm.isFile("out/FxHedgeHook.sol/FxHedgeHook.0.8.26.json")) {
+            return "out/FxHedgeHook.sol/FxHedgeHook.0.8.26.json";
+        }
+        if (vm.isFile("out/FxHedgeHook.sol/FxHedgeHook.0.8.28.json")) {
+            return "out/FxHedgeHook.sol/FxHedgeHook.0.8.28.json";
+        }
+        return "";
     }
 }
