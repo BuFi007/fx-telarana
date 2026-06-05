@@ -1,0 +1,16 @@
+{
+  "AdaptiveCurveIrm": "0x66F30587FB8D4206918deb78ecA7d5eBbafD06DA",
+  "FxOracle": "0xa4ec7fa2624b7f03469ead3b5184D3eD9205277C",
+  "MXNB": "0xF197FFC28c23E0309B5559e7a166f2c6164C80aA",
+  "MorphoBlue": "0x6c247b1F6182318877311737BaC0844bAa518F5e",
+  "Pyth": "0xff1a0f4744e8582DF1aE09D5611b887B6a12925C",
+  "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+  "USDC_MXNB_adapter": "0x07d01ecdC769A2C01D64F1213Fc483e37CaB27A1",
+  "USDC_MXNB_collateral": "0xF197FFC28c23E0309B5559e7a166f2c6164C80aA",
+  "USDC_MXNB_marketId": "0x6c0dd00c4107f67df32fd79abfb8092e0b0ba17f90f825479cbd8ae3c09cabc5",
+  "chainId": 42161,
+  "exportedBlockNumber": 25240774,
+  "exportedBlockTimestamp": 1780536903,
+  "lltv": 860000000000000000,
+  "source": "DeployArbMxnbMarket.s.sol -- Arbitrum canonical Morpho MXNB/USDC market"
+}

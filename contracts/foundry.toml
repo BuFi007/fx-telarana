@@ -63,6 +63,10 @@ runs = 10_000
 arc_testnet = "${ARC_TESTNET_RPC}"
 ethereum = "${ETHEREUM_RPC}"
 base = "${BASE_RPC}"
+# dRPC (public; ${VAR:-default} falls back when the env var is unset) — added for
+# the Arbitrum-Sepolia MXNB hub deploy + Base-Sepolia.
+arbitrum_sepolia = "${ARBITRUM_SEPOLIA_RPC:-https://arbitrum-sepolia.drpc.org}"
+base_sepolia = "${BASE_SEPOLIA_RPC:-https://base-sepolia.drpc.org}"
 
 [etherscan]
 arc_testnet = { key = "${ARCSCAN_KEY}", url = "${ARCSCAN_URL}" }

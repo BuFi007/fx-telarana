@@ -7,7 +7,7 @@
 # Chainlink/RedStone push feeds don't exist on Arc, so we push Pyth ourselves.
 #
 # Pushes the feeds FxOracle / FxOracleCanon.pythFeedOf() returns for USDC / EURC /
-# AUDF / USD-MXN (MXNB) / BTC-USD (cirBTC) as one merged Hermes VAA →
+# AUDF / JPY-USD (JPYC) / USD-MXN (MXNB) / BTC-USD (cirBTC) as one merged Hermes VAA →
 # IPyth.updatePriceFeeds{value: fee}. QCAD is still excluded — FxOracleCanon's CAD
 # feed id is a placeholder, not the real Pyth USD/CAD; the oracle admin must wire the
 # real feed (0x3112b03a…ecca, inverted) before it can be pushed here.
@@ -31,11 +31,12 @@ PK="${PYTH_PUSHER_PRIVATE_KEY:?set PYTH_PUSHER_PRIVATE_KEY}"
 INTERVAL="${PYTH_PUSH_INTERVAL:-20}"
 HERMES="https://hermes.pyth.network/v2/updates/price/latest"
 
-# FxOracleV2 feeds: USDC/USD, EURC/USD, AUD/USD, USD/MXN (MXN inverted on the oracle).
-# + BTC/USD for the canonical Morpho cirBTC market (FxOracleCanon 0xf9b0356A); USD/MXN
-# also backs the canonical MXNB market. Both keep those lending markets' adapter
-# price() fresh (oracle 60s window). QCAD is NOT here: its FxOracleCanon feed id is a
-# placeholder, not the real Pyth USD/CAD — wire the real feed (oracle admin) first.
+# FxOracleV2 feeds: USDC/USD, EURC/USD, AUD/USD, JPY/USD, USD/MXN (MXN inverted on
+# the oracle), and BTC/USD. JPY/USD backs JPYC after RepairFxOracleV2Feeds,
+# BTC/USD backs cirBTC, and USD/MXN backs the canonical MXNB markets. Keeping all
+# of these fresh prevents Morpho adapter price() reads from tripping the oracle
+# 60s window. QCAD is NOT here: its FxOracleCanon feed id is a placeholder, not
+# the real Pyth USD/CAD — wire the real feed (oracle admin) first.
 # PYTH_FEEDS (space-separated feed ids) overrides the Arc defaults — e.g. on
 # Arbitrum One push only USDC/USD + USD/MXN for the MXNB/USDC Morpho market:
 #   PYTH_PUSHER_RPC_URL=$ARBITRUM_RPC_URL PYTH_ADDRESS=0xff1a0f47… \
@@ -47,6 +48,7 @@ FEEDS=(
   0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a
   0x76fa85158bf14ede77087fe3ae472f66213f6ea2f5b411cb2de472794990fa5c
   0x67a6f93030420c1c9e3fe37c1ab6b77966af82f995944a9fefce357a22854a80
+  0xef2c98c804ba503c6a707e38be4dfbb16683775f195b091252bf24693042fd52
   0xe13b1c1ffb32f34e1be9545583f01ef385fde7f42ee66049d30570dc866b77ca
   0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43
 )

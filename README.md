@@ -132,6 +132,20 @@ Supporting Arc addresses:
 
 Perps manifest: [`deployments/perps-5042002.json`](deployments/perps-5042002.json). Config manifest: [`deployments/perps-config-5042002.json`](deployments/perps-config-5042002.json), now including `CIRBTC_USDC`. Trading smoke report: [`reports/SMOKE_ARC_PHASE_B_E_TRADING.md`](reports/SMOKE_ARC_PHASE_B_E_TRADING.md).
 
+#### Arc Yield Machine — P1 (`FxReserveYieldRouter`)
+
+The idle-capital sink: subscribes/redeems USYC via the Circle Teller on its own behalf, tier-gated to protocol/institutional only (retail NAV never touches USYC). UUPS proxy, deployer EOA holds `DEFAULT_ADMIN` + timelock/`UPGRADER`. Watermarks 5k/20k USDC.
+
+| Contract | Address |
+|---|---|
+| **FxReserveYieldRouter** (proxy) | `0x623d0DAfA24B59809a9fBfa3a60148F69aaB8b06` |
+| FxReserveYieldRouter (impl) | `0x38dE00A43011d13B10E614Af18737fb3EF33CCd7` |
+| USYC | `0xe9185F0c5F296Ed1797AaE4238D26CCaBEadb86C` |
+| USYC Teller | `0x9fdF14c5B14173D74C08Af27AebFf39240dC105A` |
+| USYC Entitlements | `0xcc205224862c7641930c87679e98999d23c26113` |
+
+`FUNDER_ROLE` + `KEEPER_ROLE` granted to keeper `0xcA02Be6cDBb806d4a327FC92E094D1A44EC37445`. The USYC sink (`deployToYield` / rebalance-into-USYC) stays dormant until Circle entitles the **proxy** address in Entitlements; Morpho/par-pure paths work today. Deploy script: `contracts/script/DeployReserveYieldRouter.s.sol`.
+
 ### Spokes — 16 total, dual-routed per chain
 
 Every chain hosts both a Fuji-routed spoke and an Arc-routed spoke. Users pick by intent.
@@ -245,6 +259,73 @@ Full walkthrough + event chains: [`reports/gateway-fuji-to-arc-bypass.md`](repor
 | **Tests** | Zero | Fuzz/unit suite, growing toward invariants; external audit gated before lender deposits. |
 
 Same insight — *one balance, many pools* — but rebuilt for an oracle-anchored PMM with on-chain accounting, tranche-protected lender capital, and a rugproof upgrade path. Designed with `/v4-security-foundations` + `/adversarial-uniswap-hooks` + OpenZeppelin's `/upgrade-solidity-contracts` and `/develop-secure-contracts`. **We don't compete with Uniswap LPs — we make a single deposit back every BUFX FX pool, and let lenders earn on it.**
+
+---
+
+## The Yield Machine
+
+> Every dollar in the protocol is, at every instant, either **earning spread** (serving a swap) or **earning yield** (USYC / Morpho). Never idle. Full spec: `defi-web-app/docs/architecture/yield-machine-spec.md` (BUFX repo).
+
+**Two hard invariants:**
+1. **Performance law — the swap hot path never touches yield or Gateway.** `beforeSwap` stays byte-for-byte unchanged (<50k gas, one vault call, zero new external calls). All yield/cross-chain movement is out-of-band.
+2. **Compliance law — retail NAV never touches USYC.** USYC is Reg-S (institutions only). Enforced on-chain as `retailAssets ∩ USYC = ∅`, not as a policy note.
+
+### v4 delta-accounting is *why* capital can earn yield at all
+
+`FxSwapHook` uses `beforeSwapReturnDelta` (the "delta hook") with **empty pools**. The pool is just a routable `PoolKey`; the hook prices the swap from the oracle PMM and pulls the fill from the vault **just-in-time**. No concentrated liquidity ever sits in the pool.
+
+That is the enabling trick. **Because the pool is empty, the capital that backs it doesn't have to be in the pool — it can be off in USYC and Morpho earning yield, and the delta hook summons it back only at the instant of a swap.** Without v4 delta-accounting, "no idle capital" is impossible; the liquidity would be trapped in pools. With it, the liquidity lives in the yield machine and the pool is just a window onto it. The delta hook isn't adjacent to the yield machine — **it is the mechanism that frees the capital to be a yield machine.**
+
+### The hooks as machine parts
+
+| Hook | Role in the machine |
+|---|---|
+| **FxSwapHook** (delta accounting) | The **spread engine + JIT summon.** Earns the 30bps spread on every swap (the "AMM spread" half of honest yield); its empty-pool design lets the backing capital go earn yield between swaps. |
+| **FxHedgeHook** (hookathon) | The **IL shield.** Auto-opens BTC short perps to neutralize LP exposure → less IL drag → higher *net* yield to LPs. Links the perps book to the LP book. |
+| **FxGatewayHook** `0x2931C50…` | The **cross-hub rail.** Lock/burn on Arc, mint on Fuji/Arbitrum, so working capital can be wherever a swap lands (349ms attestor latency). Becomes fully contract-authorized once Circle ships ERC-1271 on burn intents (authority rotates from the deployer EOA to `FxHubMessageReceiver`). |
+
+### The full machine
+
+```
+  SharedFxVault capital (senior working capital + junior backstop + FX inventory)
+        │
+        ├─ serving a swap?  → FxSwapHook delta-fill → earns SPREAD          ◀ Uniswap v4
+        │                                                                      (+ FxHedgeHook trims IL)
+        └─ idle right now?  → FxReserveYieldRouter:
+                                 ├─ USDC → Morpho lending APY   (retail-OK)   ◀ Arc/Fuji money market
+                                 ├─ FX   → Morpho FX-loan APY    (retail-OK)
+                                 └─ USDC → USYC T-bill floor     (INSTI ONLY)  ◀ Circle Teller
+        +
+  TurboFeeVault: 40% of perp + swap fees ──▶ distributed back to LPs (cross-hub via Gateway)
+        │
+  Permissionless on-chain rebalance() moves dollars between "serving" and "earning",
+  and across hubs via Gateway. Swaps never wait on it (local buffer + perSwapCapBps).
+```
+
+### The compliance wall — an on-chain invariant, not a policy note
+
+USYC yield can never touch retail. USYC is Reg-S, institutions only. The machine carries tier-aware accounting, enforced in the contract:
+
+| Tier | Eligible yield | NAV rule |
+|---|---|---|
+| **Retail** (public lenders) | AMM spread + Morpho lending APY + perp-fee share | **Par-pure USDC NAV. USYC NAV is *never* in retail share price.** |
+| **Institutional** (KYB'd) | all of the above **+ USYC** | opts into RWA NAV explicitly |
+| **Protocol / junior** (treasury, first-loss) | USYC + everything | we own it; no retail exposure |
+
+The router tags capital by tier and **refuses to route retail dollars into the USYC sink.** Audit invariant: `retailAssets ∩ USYC = ∅`. Retail isn't shortchanged — its three sources (lending base + spread + perp fees) are strong on their own; USYC is the institutional/treasury sweetener on top.
+
+### Seamless = it self-operates
+
+No babysitter, no off-chain SaaS. Swaps auto-generate spread and auto-trigger replenishment; idle auto-flows to the best *eligible* sink per tier; fees auto-distribute; the hedge auto-adjusts. The only humans are governance setting params. A permissionless on-chain `rebalance()` + the delta-hook JIT is the seamlessness.
+
+### Build order
+
+- **P1 (now):** `FxReserveYieldRouter` + USYC sink, tier-gated to protocol/institutional only — kills idle USD, sets the retail-exclusion invariant in code before any retail lender exists.
+- **P2:** activate Morpho sinks (USDC-loan retail base yield + FX-loan for inventory).
+- **P3:** wire TurboFeeVault perp-fee distribution cross-hub via Gateway.
+- **P4:** FxHedgeHook IL protection as the net-yield amplifier.
+
+Each phase adds a yield source to the same machine without touching the swap path or the retail/USYC wall.
 
 ---
 

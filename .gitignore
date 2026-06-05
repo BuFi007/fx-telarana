@@ -17,3 +17,9 @@ bun.lockb
 .env.local
 contracts/.env.tenderly
 discovery/
+.gstack/
+
+# relayer private envs (hold deployer key) + state
+.env.arc
+.env.*
+packages/relayer-privacy/.relayer-state/
