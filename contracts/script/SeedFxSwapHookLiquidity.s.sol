@@ -80,7 +80,7 @@ contract SeedFxSwapHookLiquidity is Script {
 
     uint256 internal constant ARC_CHAIN_ID = 5_042_002;
 
-    address internal constant DEFAULT_ASSET_REGISTRY = 0x7618dFA920B6416b9924FAFBf5AA56a6FE978efC;
+    address internal constant DEFAULT_ASSET_REGISTRY = 0xb911d2625DC19D5C88A31fb2b6f334BbBbF91339;
     address internal constant DEFAULT_FX_SWAP_HOOK    = 0xC6F894f30d0D28972C876B4af58C02A4E88A0aC8;
     uint256 internal constant DEFAULT_USDC_BUDGET     = 100_000e6;
     uint256 internal constant DEFAULT_MAX_DRIFT_BPS   = 100; // 1%
