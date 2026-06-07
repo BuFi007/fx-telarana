@@ -3,9 +3,29 @@ pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {KawaiiRebateVault} from "../src/hub/KawaiiRebateVault.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
+
+/// @dev 1% fee-on-transfer token — proves fund() credits only the received delta.
+contract FeeOnTransferToken is ERC20 {
+    constructor() ERC20("FEE", "FEE") {}
+
+    function mint(address to, uint256 a) external {
+        _mint(to, a);
+    }
+
+    function _update(address from, address to, uint256 value) internal override {
+        if (from != address(0) && to != address(0)) {
+            uint256 fee = value / 100;
+            super._update(from, to, value - fee);
+            if (fee > 0) super._update(from, address(0xdead), fee);
+        } else {
+            super._update(from, to, value);
+        }
+    }
+}
 
 contract KawaiiRebateVaultTest is Test {
     MockERC20 internal usdc;
@@ -155,6 +175,31 @@ contract KawaiiRebateVaultTest is Test {
         vm.prank(ALICE);
         vm.expectRevert(); // not PAUSER
         vault.pause();
+    }
+
+    function test_fund_feeOnTransfer_creditsReceivedOnly() public {
+        FeeOnTransferToken fee = new FeeOnTransferToken();
+        vm.prank(ADMIN);
+        KawaiiRebateVault v = new KawaiiRebateVault(IERC20(address(fee)), VEST, ADMIN);
+        vm.startPrank(ADMIN);
+        v.grantRole(v.REBATE_FUNDER_ROLE(), FUNDER);
+        vm.stopPrank();
+
+        fee.mint(FUNDER, 100e6);
+        vm.startPrank(FUNDER);
+        fee.approve(address(v), 100e6);
+        v.fund(100e6);
+        vm.stopPrank();
+
+        assertEq(v.unallocated(), 99e6, "credits only the 99e6 actually received");
+        assertGe(fee.balanceOf(address(v)), v.unallocated() + v.totalOutstanding(), "solvent under fee token");
+    }
+
+    function test_allocate_toSelf_reverts() public {
+        _fund(100e6);
+        vm.prank(KEEPER);
+        vm.expectRevert(KawaiiRebateVault.ZeroAddress.selector);
+        vault.allocate(address(vault), 1e6);
     }
 
     function test_recoverSurplus_onlySweepsDonation() public {

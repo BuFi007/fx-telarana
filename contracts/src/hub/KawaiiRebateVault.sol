@@ -90,10 +90,16 @@ contract KawaiiRebateVault is AccessControl, ReentrancyGuard, Pausable {
     ///         Allowed while paused (adding backing is always safe).
     function fund(uint256 amount) external onlyRole(REBATE_FUNDER_ROLE) nonReentrant {
         if (amount == 0) revert ZeroAmount();
+        // Credit the ACTUAL received amount (balance delta), not the requested
+        // amount — so a fee-on-transfer / non-standard token can never over-credit
+        // `unallocated` and break solvency before allocation (codex audit HIGH-1).
+        uint256 beforeBal = USDC.balanceOf(address(this));
         USDC.safeTransferFrom(msg.sender, address(this), amount);
-        unallocated += amount;
-        totalFunded += amount;
-        emit Funded(msg.sender, amount, unallocated);
+        uint256 received = USDC.balanceOf(address(this)) - beforeBal;
+        if (received == 0) revert ZeroAmount();
+        unallocated += received;
+        totalFunded += received;
+        emit Funded(msg.sender, received, unallocated);
     }
 
     // ─── Allocation (who gets what — the keeper) ─────────────────────
@@ -124,7 +130,11 @@ contract KawaiiRebateVault is AccessControl, ReentrancyGuard, Pausable {
     }
 
     function _allocate(address holder, uint256 amount) internal {
-        if (holder == address(0)) revert ZeroAddress();
+        // Reject zero + the vault itself — allocating to address(this) would strand
+        // backed funds (the vault can't call claim()) outside recoverSurplus reach
+        // (codex audit LOW-3). Misallocation to a non-claiming EOA stays a keeper-
+        // correctness concern, mitigated by off-chain validation before allocate.
+        if (holder == address(0) || holder == address(this)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
         if (amount > unallocated) revert InsufficientUnallocated(amount, unallocated);
 
