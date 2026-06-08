@@ -438,11 +438,12 @@ Completion audit:
 bun run uniswap:completion:audit
 ```
 
-Current expected result: `PASS=13 WARN=4 FAIL=0`, with
+Current expected result: `PASS=13 WARN=6 FAIL=0`, with
 `completionStatus not-complete`. This audits the original goal directly rather
 than redefining completion around local rehearsal evidence. The warnings are the
 remaining completion blockers: official Arc contracts, official Fuji contracts,
-official Arc PoolManager pool publication records, and first liquidity for
+official Arc PoolManager pool publication records, Avalanche hook-pool
+publication, Arbitrum One hook-pool publication, and first liquidity for
 router-active hedge market claims.
 
 Submission audit:
@@ -451,7 +452,7 @@ Submission audit:
 bun run uniswap:submission:audit
 ```
 
-Current expected result: `CHECKS=30 PASS=30 WARN=54 FAIL=0`. This is the
+Current expected result: `CHECKS=30 PASS=30 WARN=56 FAIL=0`. This is the
 single reviewer-facing no-broadcast command for the indexing package. It
 re-runs official Uniswap deployment freshness, official Arc and multichain
 readiness gates, deployment-input generation/checks, the Arc pool-publication
@@ -795,10 +796,10 @@ Ask Claude to verify these points:
 31. Run `bun run uniswap:completion:audit` and confirm the original-goal
    completion audit exits with `FAIL=0`, reports `completionStatus
    not-complete`, and has the current expected summary
-   `PASS=13 WARN=4 FAIL=0`.
+   `PASS=13 WARN=6 FAIL=0`.
 32. Run `bun run uniswap:submission:audit` and confirm the executable
    submission audit exits with `FAIL=0`; the current expected summary is
-   `CHECKS=30 PASS=30 WARN=54 FAIL=0`.
+   `CHECKS=30 PASS=30 WARN=56 FAIL=0`.
 33. Run `bun run hedge:arc:plan-stables` and confirm all six hedge pools are
    live/configured; the current expected summary is `PASS=46 WARN=0 FAIL=0`.
 34. Run `bun run uniswap:hedge:liquidity` and confirm it reports zero liquidity

@@ -812,8 +812,8 @@
     "indexingSubmissionAuditCommand": "bun run uniswap:submission:audit",
     "completionAuditCommand": "bun run uniswap:completion:audit",
     "completionStatus": "not-complete",
-    "currentCompletionAuditResult": "PASS=13 WARN=4 FAIL=0",
-    "currentSubmissionAuditResult": "CHECKS=30 PASS=30 WARN=54 FAIL=0",
+    "currentCompletionAuditResult": "PASS=13 WARN=6 FAIL=0",
+    "currentSubmissionAuditResult": "CHECKS=30 PASS=30 WARN=56 FAIL=0",
     "indexingEvidenceSnapshot": "deployments/uniswap-v4-indexing-evidence-5042002.json",
     "demoableToday": [
       "All six FxHedgeHook poolIds initialized and configured on the self-deployed Arc testnet PoolManager",

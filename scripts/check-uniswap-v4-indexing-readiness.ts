@@ -1305,7 +1305,7 @@ function checkSubmissionEvidenceSnapshot(
 
   if (
     typeof submission.currentCompletionAuditResult === "string"
-    && submission.currentCompletionAuditResult.includes("WARN=4")
+    && submission.currentCompletionAuditResult.includes("WARN=6")
     && submission.currentCompletionAuditResult.includes("FAIL=0")
   ) {
     pass("submission package records the current completion audit result");

@@ -126,6 +126,14 @@ function main(): void {
     fail("Avalanche official v4 PoolManager, Quoter, and StateView must be tracked");
   }
 
+  if (avalanche.poolPublicationStatus === "pending-poolmanager-initialize-and-first-liquidity") {
+    warn("completion remains pending for Avalanche: hook pools still need official Initialize, first liquidity, StateView, subgraph, and route/quoter evidence");
+  } else if (avalanche.poolPublicationStatus === "ready") {
+    pass("Avalanche hook pool publication is ready");
+  } else {
+    fail("Avalanche hook pool publication status is not recognized");
+  }
+
   const arbitrum = targetByNetwork(multichain, "arbitrum-one");
   if (
     arbitrum.status === "official-uniswap-v4-addresses-published"
@@ -136,6 +144,14 @@ function main(): void {
     pass("Arbitrum One official v4 PoolManager, Quoter, and StateView are tracked");
   } else {
     fail("Arbitrum One official v4 PoolManager, Quoter, and StateView must be tracked");
+  }
+
+  if (arbitrum.poolPublicationStatus === "pending-poolmanager-initialize-and-first-liquidity") {
+    warn("completion remains pending for Arbitrum One: hook pools still need official Initialize, first liquidity, StateView, subgraph, and route/quoter evidence");
+  } else if (arbitrum.poolPublicationStatus === "ready") {
+    pass("Arbitrum One hook pool publication is ready");
+  } else {
+    fail("Arbitrum One hook pool publication status is not recognized");
   }
 
   if (doNotClaim.some((entry: unknown) => typeof entry === "string" && entry.includes("Official Uniswap Arc mainnet indexing"))) {
