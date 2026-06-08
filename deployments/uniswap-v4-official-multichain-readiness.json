@@ -155,6 +155,26 @@
       "Router-active indexed pool claims require nonzero subgraph liquidity unless the pool is explicitly not router-active."
     ]
   },
+  "quoterVerification": {
+    "status": "pending-official-multichain-quoter-and-official-poolids",
+    "command": "bun run uniswap:official-multichain:quoter:check",
+    "currentResult": "PASS=25 WARN=4 FAIL=0",
+    "poolPublicationInputEnv": "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT",
+    "requiredContract": "Quoter",
+    "requiredPoolFields": [
+      "poolId",
+      "poolKey",
+      "routerQuoterStatus",
+      "quoteExactInput"
+    ],
+    "requiredChecks": [
+      "Each target chain Quoter address must come from official Uniswap v4 deployments.",
+      "Ready or populated target records must carry exact-input Quoter evidence or an explicit custom-route caveat for every official pool.",
+      "Ready FxHedgeHook pool records must carry official exact-input Quoter evidence.",
+      "FxSwapHook and Gateway-backed routes must document direct quote, protocol-router, custom settlement, or Gateway attestation caveats when generic empty-hookData Quoter is not claimed.",
+      "Arc mainnet and Avalanche Fuji remain pending until official Uniswap v4 addresses and official pool IDs exist."
+    ]
+  },
   "targets": [
     {
       "network": "arc-mainnet",
@@ -277,6 +297,6 @@
       ]
     }
   ],
-  "currentResult": "PASS=254 WARN=4 FAIL=0",
+  "currentResult": "PASS=268 WARN=4 FAIL=0",
   "command": "bun run uniswap:official-multichain:check"
 }

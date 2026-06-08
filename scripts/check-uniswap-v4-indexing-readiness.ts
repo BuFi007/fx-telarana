@@ -54,6 +54,13 @@ const subgraphRequiredPoolFields = [
   "token1",
 ] as const;
 
+const quoterRequiredPoolFields = [
+  "poolId",
+  "poolKey",
+  "routerQuoterStatus",
+  "quoteExactInput",
+] as const;
+
 const counts: Record<Severity, number> = { PASS: 0, WARN: 0, FAIL: 0 };
 
 function record(severity: Severity, message: string): void {
@@ -720,6 +727,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialMultichainPoolPublicationSelfTest", "uniswap:official-multichain:pools:self-test"],
     ["officialMultichainStateViewReadiness", "uniswap:official-multichain:stateview:check"],
     ["officialMultichainSubgraphReadiness", "uniswap:official-multichain:subgraph:check"],
+    ["officialMultichainQuoterReadiness", "uniswap:official-multichain:quoter:check"],
     ["officialArcStateViewReadiness", "uniswap:stateview:check"],
     ["subgraphReadiness", "uniswap:subgraph:check"],
     ["submissionEvidenceExport", "uniswap:evidence:export"],
@@ -1327,6 +1335,63 @@ function checkOfficialMultichainBlock(
     else fail(`official multichain subgraph verification checks must cover ${snippet}`);
   }
 
+  const quoter = block.quoterVerification ?? {};
+  const quoterScript = "scripts/check-official-multichain-quoter-readiness.ts";
+  if (existsSync(join(ROOT, quoterScript))) {
+    pass(`official multichain Quoter verifier exists at ${quoterScript}`);
+  } else {
+    fail(`official multichain Quoter verifier is missing at ${quoterScript}`);
+  }
+
+  if (
+    typeof quoter.command === "string"
+    && quoter.command.includes("uniswap:official-multichain:quoter:check")
+  ) {
+    pass("official multichain Quoter verification command is recorded");
+  } else {
+    fail("official multichain Quoter verification command is missing");
+  }
+
+  if (
+    typeof quoter.currentResult === "string"
+    && quoter.currentResult.includes("WARN=4")
+    && quoter.currentResult.includes("FAIL=0")
+  ) {
+    pass("official multichain Quoter verification result is recorded");
+  } else {
+    fail("official multichain Quoter verification result is missing");
+  }
+
+  if (quoter.poolPublicationInputEnv === "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT") {
+    pass("official multichain Quoter verification records pool-publication input env");
+  } else {
+    fail("official multichain Quoter verification pool-publication input env is missing");
+  }
+
+  if (quoter.requiredContract === "Quoter") {
+    pass("official multichain Quoter verification requires Quoter");
+  } else {
+    fail("official multichain Quoter verification required contract is missing");
+  }
+
+  const quoterFields = new Set<string>(quoter.requiredPoolFields ?? []);
+  for (const field of quoterRequiredPoolFields) {
+    if (quoterFields.has(field)) pass(`official multichain Quoter verification requires pool.${field}`);
+    else fail(`official multichain Quoter verification is missing pool.${field}`);
+  }
+
+  const quoterChecks = Array.isArray(quoter.requiredChecks) ? quoter.requiredChecks.join("\n") : "";
+  for (const snippet of [
+    "official Uniswap v4 deployments",
+    "exact-input Quoter evidence",
+    "Ready FxHedgeHook",
+    "custom settlement",
+    "Arc mainnet and Avalanche Fuji",
+  ]) {
+    if (quoterChecks.includes(snippet)) pass(`official multichain Quoter verification checks cover ${snippet}`);
+    else fail(`official multichain Quoter verification checks must cover ${snippet}`);
+  }
+
   if (multichain.schemaVersion === 1) {
     pass("official multichain manifest schemaVersion is 1");
   } else {
@@ -1562,6 +1627,15 @@ function checkOfficialMultichainBlock(
     pass("indexing evidence snapshot official multichain subgraph result matches manifest");
   } else {
     fail("indexing evidence snapshot official multichain subgraph result does not match manifest");
+  }
+
+  if (
+    snapshot.officialMultichain?.quoterVerification?.currentResult
+    === block.quoterVerification?.currentResult
+  ) {
+    pass("indexing evidence snapshot official multichain Quoter result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official multichain Quoter result does not match manifest");
   }
 }
 
@@ -1831,7 +1905,7 @@ function checkSubmissionEvidenceSnapshot(
   }
 
   if (
-    requirementsSnapshot.summary?.pass === 11
+    requirementsSnapshot.summary?.pass === 12
     && requirementsSnapshot.summary?.warn === 9
     && requirementsSnapshot.summary?.fail === 0
   ) {
@@ -1865,6 +1939,12 @@ function checkSubmissionEvidenceSnapshot(
     pass("requirements matrix includes official multichain subgraph gate evidence");
   } else {
     fail("requirements matrix is missing official multichain subgraph gate evidence");
+  }
+
+  if (requirements.some((requirement: AnyRecord) => requirement.id === "official-multichain-quoter-gate")) {
+    pass("requirements matrix includes official multichain Quoter gate evidence");
+  } else {
+    fail("requirements matrix is missing official multichain Quoter gate evidence");
   }
 
   if (requirements.some((requirement: AnyRecord) => requirement.id === "avalanche-hook-pool-publication")) {

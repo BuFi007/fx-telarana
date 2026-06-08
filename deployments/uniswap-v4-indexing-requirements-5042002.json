@@ -12,11 +12,11 @@
   "completionStatus": "not-complete",
   "summary": {
     "satisfied": 5,
-    "satisfied-with-caveat": 6,
+    "satisfied-with-caveat": 7,
     "pending-external": 6,
     "pending-operator": 3,
     "failed": 0,
-    "pass": 11,
+    "pass": 12,
     "warn": 9,
     "fail": 0
   },
@@ -191,6 +191,20 @@
       ],
       "remainingWork": [
         "After official pool publication records exist, run the gate against populated target-chain records and record Uniswap v4 subgraph pool entity evidence for every official pool."
+      ]
+    },
+    {
+      "id": "official-multichain-quoter-gate",
+      "requirement": "The official multichain publication package must have a Quoter gate for Arc mainnet, Avalanche Fuji, Avalanche, and Arbitrum One before indexed pool claims are made.",
+      "status": "satisfied-with-caveat",
+      "evidence": [
+        "command: bun run uniswap:official-multichain:quoter:check",
+        "result: PASS=25 WARN=4 FAIL=0",
+        "pool input env: OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT",
+        "required contract: Quoter"
+      ],
+      "remainingWork": [
+        "After official pool publication records exist, run the gate against populated target-chain records and record exact-input Quoter evidence or custom-route caveats for every official pool."
       ]
     },
     {

@@ -87,6 +87,7 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
   const multichainHookRedeployPlan = multichain.hookRedeployPlan ?? {};
   const multichainStateView = multichain.stateViewVerification ?? {};
   const multichainSubgraph = multichain.subgraphVerification ?? {};
+  const multichainQuoter = multichain.quoterVerification ?? {};
 
   return [
     {
@@ -278,6 +279,20 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
       ],
       remainingWork: [
         "After official pool publication records exist, run the gate against populated target-chain records and record Uniswap v4 subgraph pool entity evidence for every official pool.",
+      ],
+    },
+    {
+      id: "official-multichain-quoter-gate",
+      requirement: "The official multichain publication package must have a Quoter gate for Arc mainnet, Avalanche Fuji, Avalanche, and Arbitrum One before indexed pool claims are made.",
+      status: hasFailZero(multichainQuoter.currentResult) ? "satisfied-with-caveat" : "failed",
+      evidence: [
+        `command: ${multichainQuoter.command}`,
+        `result: ${multichainQuoter.currentResult}`,
+        `pool input env: ${multichainQuoter.poolPublicationInputEnv}`,
+        `required contract: ${multichainQuoter.requiredContract}`,
+      ],
+      remainingWork: [
+        "After official pool publication records exist, run the gate against populated target-chain records and record exact-input Quoter evidence or custom-route caveats for every official pool.",
       ],
     },
     {

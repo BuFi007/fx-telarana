@@ -84,6 +84,13 @@ const subgraphRequiredPoolFields = [
   "token1",
 ] as const;
 
+const quoterRequiredPoolFields = [
+  "poolId",
+  "poolKey",
+  "routerQuoterStatus",
+  "quoteExactInput",
+] as const;
+
 const counts: Record<Severity, number> = { PASS: 0, WARN: 0, FAIL: 0 };
 
 function record(severity: Severity, message: string): void {
@@ -694,6 +701,65 @@ function checkSubgraphVerificationBlock(manifest: AnyRecord): void {
   }
 }
 
+function checkQuoterVerificationBlock(manifest: AnyRecord): void {
+  const quoter = manifest.quoterVerification ?? {};
+  const script = "scripts/check-official-multichain-quoter-readiness.ts";
+  if (existsSync(join(ROOT, script))) {
+    pass(`multichain Quoter verifier exists at ${script}`);
+  } else {
+    fail(`multichain Quoter verifier is missing at ${script}`);
+  }
+
+  if (
+    typeof quoter.command === "string"
+    && quoter.command.includes("uniswap:official-multichain:quoter:check")
+  ) {
+    pass("multichain Quoter verification command is recorded");
+  } else {
+    fail("multichain Quoter verification command is missing");
+  }
+
+  if (
+    typeof quoter.currentResult === "string"
+    && quoter.currentResult.includes("WARN=4")
+    && quoter.currentResult.includes("FAIL=0")
+  ) {
+    pass("multichain Quoter verification result is recorded");
+  } else {
+    fail("multichain Quoter verification result is missing");
+  }
+
+  if (quoter.poolPublicationInputEnv === "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT") {
+    pass("multichain Quoter verification records pool-publication input env");
+  } else {
+    fail("multichain Quoter verification pool-publication input env is missing");
+  }
+
+  if (quoter.requiredContract === "Quoter") {
+    pass("multichain Quoter verification requires Quoter");
+  } else {
+    fail("multichain Quoter verification required contract is missing");
+  }
+
+  const fields = new Set<string>(quoter.requiredPoolFields ?? []);
+  for (const field of quoterRequiredPoolFields) {
+    if (fields.has(field)) pass(`multichain Quoter verification requires pool.${field}`);
+    else fail(`multichain Quoter verification is missing pool.${field}`);
+  }
+
+  const checks = Array.isArray(quoter.requiredChecks) ? quoter.requiredChecks.join("\n") : "";
+  for (const snippet of [
+    "official Uniswap v4 deployments",
+    "exact-input Quoter evidence",
+    "Ready FxHedgeHook",
+    "custom settlement",
+    "Arc mainnet and Avalanche Fuji",
+  ]) {
+    if (checks.includes(snippet)) pass(`multichain Quoter verification checks cover ${snippet}`);
+    else fail(`multichain Quoter verification checks must cover ${snippet}`);
+  }
+}
+
 async function checkOptionalBytecode(target: AnyRecord): Promise<void> {
   const rpcEnv = target.rpcEnv;
   if (typeof rpcEnv !== "string" || rpcEnv.length === 0) {
@@ -878,6 +944,7 @@ async function main(): Promise<void> {
   checkPoolPublicationBlock(manifest);
   checkStateViewVerificationBlock(manifest);
   checkSubgraphVerificationBlock(manifest);
+  checkQuoterVerificationBlock(manifest);
 
   for (const target of targets) {
     await checkTarget(manifest, target, selfPoolManagers);
