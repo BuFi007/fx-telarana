@@ -81,6 +81,7 @@
     "stateViewSlot0AndLiquidity",
     "subgraphPoolEntity",
     "v4QuoterExactInputDiagnostic",
+    "universalRouterExecutionEvidence",
     "routerQuoterCaveats"
   ],
   "poolPublication": {
@@ -101,7 +102,7 @@
       "Official hook addresses must preserve low-14 permission bits.",
       "Official poolIds must derive from the target-chain official PoolKey.",
       "Fill plan must derive all target-chain publication records from the 11 source Arc testnet pool templates.",
-      "Ready claims require initialize tx, first-liquidity tx, StateView evidence, subgraph evidence, exact-input Quoter evidence or a documented custom-route caveat, and live target-chain PoolManager receipt verification.",
+      "Ready claims require initialize tx, first-liquidity tx, StateView evidence, subgraph evidence, exact-input Quoter evidence, Universal Router execution evidence or a documented custom-route caveat, and live target-chain PoolManager receipt verification.",
       "Self-test must prove populated draft Avalanche/Arbitrum fixtures validate per-target pool counts, ready mode requires live target-chain RPC receipts, self-deployed PoolManagers are rejected, and missing router/quoter evidence fails."
     ]
   },
@@ -172,6 +173,31 @@
       "Ready or populated target records must carry exact-input Quoter evidence or an explicit custom-route caveat for every official pool.",
       "Ready FxHedgeHook pool records must carry official exact-input Quoter evidence.",
       "FxSwapHook and Gateway-backed routes must document direct quote, protocol-router, custom settlement, or Gateway attestation caveats when generic empty-hookData Quoter is not claimed.",
+      "Arc mainnet and Avalanche Fuji remain pending until official Uniswap v4 addresses and official pool IDs exist."
+    ]
+  },
+  "routerExecutionVerification": {
+    "status": "pending-official-multichain-router-and-official-poolids",
+    "command": "bun run uniswap:official-multichain:router:check",
+    "currentResult": "PASS=34 WARN=4 FAIL=0",
+    "poolPublicationInputEnv": "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT",
+    "requiredContracts": [
+      "UniversalRouter",
+      "Permit2",
+      "PoolManager"
+    ],
+    "requiredPoolFields": [
+      "poolId",
+      "poolKey",
+      "routerQuoterStatus",
+      "routerExecution"
+    ],
+    "requiredChecks": [
+      "Each target chain Universal Router and Permit2 address must come from official Uniswap v4 deployments.",
+      "Ready or populated target records must carry Universal Router execution evidence or an explicit custom-route caveat for every official pool.",
+      "Permit2 approval requirements must be explicit for ERC20 exact-input routes.",
+      "Ready FxHedgeHook pool records must carry official Universal Router execution evidence.",
+      "FxSwapHook and Gateway-backed routes must document protocol-router, custom settlement, or Gateway attestation caveats when generic Universal Router execution is not claimed.",
       "Arc mainnet and Avalanche Fuji remain pending until official Uniswap v4 addresses and official pool IDs exist."
     ]
   },
@@ -262,7 +288,7 @@
         "Remine and redeploy target hooks against the Avalanche official PoolManager.",
         "Initialize official PoolKeys through the Avalanche official PoolManager.",
         "Add first liquidity and verify nonzero current in-range liquidity.",
-        "Run exact-input official Quoter diagnostics and publish custom-route caveats for non-generic hooks.",
+        "Run exact-input official Quoter diagnostics and publish Universal Router execution evidence or custom-route caveats for non-generic hooks.",
         "Verify every published pool through Avalanche StateView and the Uniswap v4 subgraph."
       ]
     },
@@ -292,11 +318,11 @@
         "Remine and redeploy target hooks against the Arbitrum One official PoolManager.",
         "Initialize official PoolKeys through the Arbitrum One official PoolManager.",
         "Add first liquidity and verify nonzero current in-range liquidity.",
-        "Run exact-input official Quoter diagnostics and publish custom-route caveats for non-generic hooks.",
+        "Run exact-input official Quoter diagnostics and publish Universal Router execution evidence or custom-route caveats for non-generic hooks.",
         "Verify every published pool through Arbitrum StateView and the Uniswap v4 subgraph."
       ]
     }
   ],
-  "currentResult": "PASS=268 WARN=4 FAIL=0",
+  "currentResult": "PASS=284 WARN=4 FAIL=0",
   "command": "bun run uniswap:official-multichain:check"
 }

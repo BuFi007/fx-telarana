@@ -88,6 +88,7 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
   const multichainStateView = multichain.stateViewVerification ?? {};
   const multichainSubgraph = multichain.subgraphVerification ?? {};
   const multichainQuoter = multichain.quoterVerification ?? {};
+  const multichainRouter = multichain.routerExecutionVerification ?? {};
 
   return [
     {
@@ -293,6 +294,20 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
       ],
       remainingWork: [
         "After official pool publication records exist, run the gate against populated target-chain records and record exact-input Quoter evidence or custom-route caveats for every official pool.",
+      ],
+    },
+    {
+      id: "official-multichain-router-gate",
+      requirement: "The official multichain publication package must have a Universal Router execution gate for Arc mainnet, Avalanche Fuji, Avalanche, and Arbitrum One before router-active pool claims are made.",
+      status: hasFailZero(multichainRouter.currentResult) ? "satisfied-with-caveat" : "failed",
+      evidence: [
+        `command: ${multichainRouter.command}`,
+        `result: ${multichainRouter.currentResult}`,
+        `pool input env: ${multichainRouter.poolPublicationInputEnv}`,
+        `required contracts: ${(multichainRouter.requiredContracts ?? []).join(", ")}`,
+      ],
+      remainingWork: [
+        "After official pool publication records exist, run the gate against populated target-chain records and record Universal Router execution evidence or custom-route caveats for every official pool.",
       ],
     },
     {

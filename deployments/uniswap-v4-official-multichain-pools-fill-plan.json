@@ -68,6 +68,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through <official Universal Router>",
+                "universalRouter": "<official target-chain Universal Router>",
+                "permit2": "<official target-chain Permit2>",
+                "poolManager": "<official target-chain PoolManager>",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -132,6 +145,19 @@
                 "poolManager": "<official target-chain PoolManager>",
                 "hookData": "0x",
                 "result": "<target-chain exact-input quote result>"
+              }
+            },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through <official Universal Router>",
+                "universalRouter": "<official target-chain Universal Router>",
+                "permit2": "<official target-chain Permit2>",
+                "poolManager": "<official target-chain PoolManager>",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
               }
             },
             "stateViewVerification": {
@@ -200,6 +226,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through <official Universal Router>",
+                "universalRouter": "<official target-chain Universal Router>",
+                "permit2": "<official target-chain Permit2>",
+                "poolManager": "<official target-chain PoolManager>",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -264,6 +303,19 @@
                 "poolManager": "<official target-chain PoolManager>",
                 "hookData": "0x",
                 "result": "<target-chain exact-input quote result>"
+              }
+            },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through <official Universal Router>",
+                "universalRouter": "<official target-chain Universal Router>",
+                "permit2": "<official target-chain Permit2>",
+                "poolManager": "<official target-chain PoolManager>",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
               }
             },
             "stateViewVerification": {
@@ -332,6 +384,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through <official Universal Router>",
+                "universalRouter": "<official target-chain Universal Router>",
+                "permit2": "<official target-chain Permit2>",
+                "poolManager": "<official target-chain PoolManager>",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -398,6 +463,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through <official Universal Router>",
+                "universalRouter": "<official target-chain Universal Router>",
+                "permit2": "<official target-chain Permit2>",
+                "poolManager": "<official target-chain PoolManager>",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -456,6 +534,10 @@
               },
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
+            },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -516,6 +598,10 @@
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -574,6 +660,10 @@
               },
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
+            },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -634,6 +724,10 @@
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -690,6 +784,10 @@
               },
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "hookData/attestation context required; generic empty-hookData V4Quoter is not a readiness claim."
+            },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "hookData/attestation context required; generic Universal Router execution is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -770,6 +868,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through <official Universal Router>",
+                "universalRouter": "<official target-chain Universal Router>",
+                "permit2": "<official target-chain Permit2>",
+                "poolManager": "<official target-chain PoolManager>",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -834,6 +945,19 @@
                 "poolManager": "<official target-chain PoolManager>",
                 "hookData": "0x",
                 "result": "<target-chain exact-input quote result>"
+              }
+            },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through <official Universal Router>",
+                "universalRouter": "<official target-chain Universal Router>",
+                "permit2": "<official target-chain Permit2>",
+                "poolManager": "<official target-chain PoolManager>",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
               }
             },
             "stateViewVerification": {
@@ -902,6 +1026,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through <official Universal Router>",
+                "universalRouter": "<official target-chain Universal Router>",
+                "permit2": "<official target-chain Permit2>",
+                "poolManager": "<official target-chain PoolManager>",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -966,6 +1103,19 @@
                 "poolManager": "<official target-chain PoolManager>",
                 "hookData": "0x",
                 "result": "<target-chain exact-input quote result>"
+              }
+            },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through <official Universal Router>",
+                "universalRouter": "<official target-chain Universal Router>",
+                "permit2": "<official target-chain Permit2>",
+                "poolManager": "<official target-chain PoolManager>",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
               }
             },
             "stateViewVerification": {
@@ -1034,6 +1184,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through <official Universal Router>",
+                "universalRouter": "<official target-chain Universal Router>",
+                "permit2": "<official target-chain Permit2>",
+                "poolManager": "<official target-chain PoolManager>",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -1100,6 +1263,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through <official Universal Router>",
+                "universalRouter": "<official target-chain Universal Router>",
+                "permit2": "<official target-chain Permit2>",
+                "poolManager": "<official target-chain PoolManager>",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -1158,6 +1334,10 @@
               },
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
+            },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1218,6 +1398,10 @@
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -1276,6 +1460,10 @@
               },
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
+            },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1336,6 +1524,10 @@
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -1392,6 +1584,10 @@
               },
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "hookData/attestation context required; generic empty-hookData V4Quoter is not a readiness claim."
+            },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "hookData/attestation context required; generic Universal Router execution is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1472,6 +1668,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through 0x94b75331ae8d42c1b61065089b7d48fe14aa73b7",
+                "universalRouter": "0x94b75331ae8d42c1b61065089b7d48fe14aa73b7",
+                "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+                "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -1536,6 +1745,19 @@
                 "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
                 "hookData": "0x",
                 "result": "<target-chain exact-input quote result>"
+              }
+            },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through 0x94b75331ae8d42c1b61065089b7d48fe14aa73b7",
+                "universalRouter": "0x94b75331ae8d42c1b61065089b7d48fe14aa73b7",
+                "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+                "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
               }
             },
             "stateViewVerification": {
@@ -1604,6 +1826,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through 0x94b75331ae8d42c1b61065089b7d48fe14aa73b7",
+                "universalRouter": "0x94b75331ae8d42c1b61065089b7d48fe14aa73b7",
+                "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+                "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -1668,6 +1903,19 @@
                 "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
                 "hookData": "0x",
                 "result": "<target-chain exact-input quote result>"
+              }
+            },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through 0x94b75331ae8d42c1b61065089b7d48fe14aa73b7",
+                "universalRouter": "0x94b75331ae8d42c1b61065089b7d48fe14aa73b7",
+                "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+                "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
               }
             },
             "stateViewVerification": {
@@ -1736,6 +1984,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through 0x94b75331ae8d42c1b61065089b7d48fe14aa73b7",
+                "universalRouter": "0x94b75331ae8d42c1b61065089b7d48fe14aa73b7",
+                "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+                "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -1802,6 +2063,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through 0x94b75331ae8d42c1b61065089b7d48fe14aa73b7",
+                "universalRouter": "0x94b75331ae8d42c1b61065089b7d48fe14aa73b7",
+                "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+                "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -1860,6 +2134,10 @@
               },
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
+            },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1920,6 +2198,10 @@
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -1978,6 +2260,10 @@
               },
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
+            },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -2038,6 +2324,10 @@
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -2094,6 +2384,10 @@
               },
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "hookData/attestation context required; generic empty-hookData V4Quoter is not a readiness claim."
+            },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "hookData/attestation context required; generic Universal Router execution is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -2174,6 +2468,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through 0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+                "universalRouter": "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+                "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+                "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -2238,6 +2545,19 @@
                 "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
                 "hookData": "0x",
                 "result": "<target-chain exact-input quote result>"
+              }
+            },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through 0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+                "universalRouter": "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+                "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+                "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
               }
             },
             "stateViewVerification": {
@@ -2306,6 +2626,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through 0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+                "universalRouter": "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+                "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+                "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -2370,6 +2703,19 @@
                 "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
                 "hookData": "0x",
                 "result": "<target-chain exact-input quote result>"
+              }
+            },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through 0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+                "universalRouter": "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+                "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+                "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
               }
             },
             "stateViewVerification": {
@@ -2438,6 +2784,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through 0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+                "universalRouter": "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+                "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+                "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -2504,6 +2863,19 @@
                 "result": "<target-chain exact-input quote result>"
               }
             },
+            "routerExecution": {
+              "targetRequirement": "official Universal Router exact-input execution evidence required before ready publication",
+              "universalRouterExecution": {
+                "status": "<passed>",
+                "command": "<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through 0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+                "universalRouter": "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+                "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+                "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+                "planner": "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+                "hookData": "0x",
+                "result": "<target-chain execution simulation or reviewed execution result>"
+              }
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -2562,6 +2934,10 @@
               },
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
+            },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -2622,6 +2998,10 @@
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -2680,6 +3060,10 @@
               },
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
+            },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -2740,6 +3124,10 @@
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim."
+            },
             "stateViewVerification": {
               "status": "pending",
               "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
@@ -2796,6 +3184,10 @@
               },
               "targetRequirement": "custom-route caveat required before ready publication",
               "customRouteCaveat": "hookData/attestation context required; generic empty-hookData V4Quoter is not a readiness claim."
+            },
+            "routerExecution": {
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "hookData/attestation context required; generic Universal Router execution is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",

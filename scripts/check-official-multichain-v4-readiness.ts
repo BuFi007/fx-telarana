@@ -91,6 +91,13 @@ const quoterRequiredPoolFields = [
   "quoteExactInput",
 ] as const;
 
+const routerRequiredPoolFields = [
+  "poolId",
+  "poolKey",
+  "routerQuoterStatus",
+  "routerExecution",
+] as const;
+
 const counts: Record<Severity, number> = { PASS: 0, WARN: 0, FAIL: 0 };
 
 function record(severity: Severity, message: string): void {
@@ -760,6 +767,65 @@ function checkQuoterVerificationBlock(manifest: AnyRecord): void {
   }
 }
 
+function checkRouterExecutionVerificationBlock(manifest: AnyRecord): void {
+  const router = manifest.routerExecutionVerification ?? {};
+  const script = "scripts/check-official-multichain-router-readiness.ts";
+  if (existsSync(join(ROOT, script))) {
+    pass(`multichain router execution verifier exists at ${script}`);
+  } else {
+    fail(`multichain router execution verifier is missing at ${script}`);
+  }
+
+  if (
+    typeof router.command === "string"
+    && router.command.includes("uniswap:official-multichain:router:check")
+  ) {
+    pass("multichain router execution command is recorded");
+  } else {
+    fail("multichain router execution command is missing");
+  }
+
+  if (
+    typeof router.currentResult === "string"
+    && router.currentResult.includes("WARN=4")
+    && router.currentResult.includes("FAIL=0")
+  ) {
+    pass("multichain router execution result is recorded");
+  } else {
+    fail("multichain router execution result is missing");
+  }
+
+  if (router.poolPublicationInputEnv === "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT") {
+    pass("multichain router execution records pool-publication input env");
+  } else {
+    fail("multichain router execution pool-publication input env is missing");
+  }
+
+  const contracts = new Set<string>(router.requiredContracts ?? []);
+  for (const contract of ["UniversalRouter", "Permit2", "PoolManager"]) {
+    if (contracts.has(contract)) pass(`multichain router execution requires ${contract}`);
+    else fail(`multichain router execution is missing ${contract}`);
+  }
+
+  const fields = new Set<string>(router.requiredPoolFields ?? []);
+  for (const field of routerRequiredPoolFields) {
+    if (fields.has(field)) pass(`multichain router execution requires pool.${field}`);
+    else fail(`multichain router execution is missing pool.${field}`);
+  }
+
+  const checks = Array.isArray(router.requiredChecks) ? router.requiredChecks.join("\n") : "";
+  for (const snippet of [
+    "official Uniswap v4 deployments",
+    "Universal Router",
+    "Permit2",
+    "FxHedgeHook",
+    "custom-route caveat",
+  ]) {
+    if (checks.includes(snippet)) pass(`multichain router execution checks cover ${snippet}`);
+    else fail(`multichain router execution checks must cover ${snippet}`);
+  }
+}
+
 async function checkOptionalBytecode(target: AnyRecord): Promise<void> {
   const rpcEnv = target.rpcEnv;
   if (typeof rpcEnv !== "string" || rpcEnv.length === 0) {
@@ -945,6 +1011,7 @@ async function main(): Promise<void> {
   checkStateViewVerificationBlock(manifest);
   checkSubgraphVerificationBlock(manifest);
   checkQuoterVerificationBlock(manifest);
+  checkRouterExecutionVerificationBlock(manifest);
 
   for (const target of targets) {
     await checkTarget(manifest, target, selfPoolManagers);

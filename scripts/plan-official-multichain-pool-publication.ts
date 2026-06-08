@@ -184,6 +184,36 @@ function targetRouterQuoterStatusFor(template: AnyRecord, target: AnyRecord): An
   };
 }
 
+function targetRouterExecutionFor(template: AnyRecord, target: AnyRecord): AnyRecord {
+  if (template.family === "FxHedgeHook") {
+    return {
+      targetRequirement: "official Universal Router exact-input execution evidence required before ready publication",
+      universalRouterExecution: {
+        status: "<passed>",
+        command: `<target RPC> Universal Router V4_SWAP exact-input execution dry-run or reviewed broadcast through ${target.contracts?.UniversalRouter ?? "<official Universal Router>"}`,
+        universalRouter: target.contracts?.UniversalRouter ?? "<official target-chain Universal Router>",
+        permit2: target.contracts?.Permit2 ?? "<official target-chain Permit2>",
+        poolManager: target.contracts?.PoolManager ?? "<official target-chain PoolManager>",
+        planner: "V4Planner exact-input single-hop with SETTLE_ALL and TAKE_ALL",
+        hookData: "0x",
+        result: "<target-chain execution simulation or reviewed execution result>",
+      },
+    };
+  }
+
+  if (template.family === "FxSwapHook") {
+    return {
+      targetRequirement: "custom-route caveat required before ready publication",
+      customRouteCaveat: "PMM-aware direct quote/exact-input protocol router; generic Universal Router execution is not a readiness claim.",
+    };
+  }
+
+  return {
+    targetRequirement: "custom-route caveat required before ready publication",
+    customRouteCaveat: "hookData/attestation context required; generic Universal Router execution is not a readiness claim.",
+  };
+}
+
 function plannedPoolRecord(template: AnyRecord, target: AnyRecord): AnyRecord {
   const sourceKey = template.sourcePoolKey ?? {};
   const officialPoolManager = target.contracts?.PoolManager ?? null;
@@ -209,6 +239,7 @@ function plannedPoolRecord(template: AnyRecord, target: AnyRecord): AnyRecord {
       firstLiquidityTx: "<official target-chain positive PoolManager.ModifyLiquidity tx>",
       routerActiveClaim: false,
       routerQuoterStatus: targetRouterQuoterStatusFor(template, target),
+      routerExecution: targetRouterExecutionFor(template, target),
       stateViewVerification: {
         status: "pending",
         sqrtPriceX96: "<StateView.getSlot0(poolId).sqrtPriceX96>",

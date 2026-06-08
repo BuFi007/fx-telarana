@@ -61,6 +61,13 @@ const quoterRequiredPoolFields = [
   "quoteExactInput",
 ] as const;
 
+const routerRequiredPoolFields = [
+  "poolId",
+  "poolKey",
+  "routerQuoterStatus",
+  "routerExecution",
+] as const;
+
 const counts: Record<Severity, number> = { PASS: 0, WARN: 0, FAIL: 0 };
 
 function record(severity: Severity, message: string): void {
@@ -728,6 +735,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialMultichainStateViewReadiness", "uniswap:official-multichain:stateview:check"],
     ["officialMultichainSubgraphReadiness", "uniswap:official-multichain:subgraph:check"],
     ["officialMultichainQuoterReadiness", "uniswap:official-multichain:quoter:check"],
+    ["officialMultichainRouterReadiness", "uniswap:official-multichain:router:check"],
     ["officialArcStateViewReadiness", "uniswap:stateview:check"],
     ["subgraphReadiness", "uniswap:subgraph:check"],
     ["submissionEvidenceExport", "uniswap:evidence:export"],
@@ -1392,6 +1400,63 @@ function checkOfficialMultichainBlock(
     else fail(`official multichain Quoter verification checks must cover ${snippet}`);
   }
 
+  const router = block.routerExecutionVerification ?? {};
+  const routerScript = "scripts/check-official-multichain-router-readiness.ts";
+  if (existsSync(join(ROOT, routerScript))) {
+    pass(`official multichain router execution verifier exists at ${routerScript}`);
+  } else {
+    fail(`official multichain router execution verifier is missing at ${routerScript}`);
+  }
+
+  if (
+    typeof router.command === "string"
+    && router.command.includes("uniswap:official-multichain:router:check")
+  ) {
+    pass("official multichain router execution command is recorded");
+  } else {
+    fail("official multichain router execution command is missing");
+  }
+
+  if (
+    typeof router.currentResult === "string"
+    && router.currentResult.includes("WARN=4")
+    && router.currentResult.includes("FAIL=0")
+  ) {
+    pass("official multichain router execution result is recorded");
+  } else {
+    fail("official multichain router execution result is missing");
+  }
+
+  if (router.poolPublicationInputEnv === "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT") {
+    pass("official multichain router execution records pool-publication input env");
+  } else {
+    fail("official multichain router execution pool-publication input env is missing");
+  }
+
+  const routerContracts = new Set<string>(router.requiredContracts ?? []);
+  for (const contract of ["UniversalRouter", "Permit2", "PoolManager"]) {
+    if (routerContracts.has(contract)) pass(`official multichain router execution requires ${contract}`);
+    else fail(`official multichain router execution is missing ${contract}`);
+  }
+
+  const routerFields = new Set<string>(router.requiredPoolFields ?? []);
+  for (const field of routerRequiredPoolFields) {
+    if (routerFields.has(field)) pass(`official multichain router execution requires pool.${field}`);
+    else fail(`official multichain router execution is missing pool.${field}`);
+  }
+
+  const routerChecks = Array.isArray(router.requiredChecks) ? router.requiredChecks.join("\n") : "";
+  for (const snippet of [
+    "official Uniswap v4 deployments",
+    "Universal Router",
+    "Permit2",
+    "FxHedgeHook",
+    "custom-route caveat",
+  ]) {
+    if (routerChecks.includes(snippet)) pass(`official multichain router execution checks cover ${snippet}`);
+    else fail(`official multichain router execution checks must cover ${snippet}`);
+  }
+
   if (multichain.schemaVersion === 1) {
     pass("official multichain manifest schemaVersion is 1");
   } else {
@@ -1636,6 +1701,15 @@ function checkOfficialMultichainBlock(
     pass("indexing evidence snapshot official multichain Quoter result matches manifest");
   } else {
     fail("indexing evidence snapshot official multichain Quoter result does not match manifest");
+  }
+
+  if (
+    snapshot.officialMultichain?.routerExecutionVerification?.currentResult
+    === block.routerExecutionVerification?.currentResult
+  ) {
+    pass("indexing evidence snapshot official multichain router execution result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official multichain router execution result does not match manifest");
   }
 }
 
@@ -1905,7 +1979,7 @@ function checkSubmissionEvidenceSnapshot(
   }
 
   if (
-    requirementsSnapshot.summary?.pass === 12
+    requirementsSnapshot.summary?.pass === 13
     && requirementsSnapshot.summary?.warn === 9
     && requirementsSnapshot.summary?.fail === 0
   ) {
@@ -1945,6 +2019,12 @@ function checkSubmissionEvidenceSnapshot(
     pass("requirements matrix includes official multichain Quoter gate evidence");
   } else {
     fail("requirements matrix is missing official multichain Quoter gate evidence");
+  }
+
+  if (requirements.some((requirement: AnyRecord) => requirement.id === "official-multichain-router-gate")) {
+    pass("requirements matrix includes official multichain router execution gate evidence");
+  } else {
+    fail("requirements matrix is missing official multichain router execution gate evidence");
   }
 
   if (requirements.some((requirement: AnyRecord) => requirement.id === "avalanche-hook-pool-publication")) {
