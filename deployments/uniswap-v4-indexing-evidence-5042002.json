@@ -199,7 +199,20 @@
     "status": "official-addresses-known-for-avalanche-and-arbitrum-arc-and-fuji-pending",
     "manifest": "deployments/uniswap-v4-official-multichain-readiness.json",
     "command": "bun run uniswap:official-multichain:check",
-    "currentResult": "PASS=143 WARN=4 FAIL=0",
+    "currentResult": "PASS=153 WARN=4 FAIL=0",
+    "sourceFreshness": {
+      "source": "https://developers.uniswap.org/docs/protocols/v4/deployments.md",
+      "command": "bun run uniswap:official-multichain:docs:check",
+      "currentResult": "PASS=31 WARN=2 FAIL=0",
+      "requiredChecks": [
+        "Parse the official Uniswap v4 deployments Markdown by network section.",
+        "Avalanche C-Chain official contract addresses must match the local manifest.",
+        "Arbitrum One official contract addresses must match the local manifest.",
+        "Arc mainnet must remain pending unless the official docs list Arc.",
+        "Avalanche Fuji must remain pending unless the official docs list Fuji.",
+        "Any official contract address drift must fail the check."
+      ]
+    },
     "poolPublication": {
       "manifest": "deployments/uniswap-v4-official-multichain-pools.template.json",
       "command": "bun run uniswap:official-multichain:pools:check",
@@ -722,6 +735,7 @@
     "officialArcPoolPublicationCheck": "bun run uniswap:official-arc:pools:check",
     "officialArcPoolPublicationSelfTest": "bun run uniswap:official-arc:pools:self-test",
     "officialMultichainReadiness": "bun run uniswap:official-multichain:check",
+    "officialMultichainDocsFreshness": "bun run uniswap:official-multichain:docs:check",
     "officialMultichainPoolPublication": "bun run uniswap:official-multichain:pools:check",
     "officialMultichainPoolPublicationSelfTest": "bun run uniswap:official-multichain:pools:self-test",
     "officialArcStateViewReadiness": "bun run uniswap:stateview:check",

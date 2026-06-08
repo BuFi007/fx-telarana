@@ -16,6 +16,7 @@ const MANIFEST = "deployments/uniswap-v4-indexing-readiness-5042002.json";
 const EVIDENCE_SNAPSHOT = "deployments/uniswap-v4-indexing-evidence-5042002.json";
 const MULTICHAIN_MANIFEST = "deployments/uniswap-v4-official-multichain-readiness.json";
 const MULTICHAIN_POOL_PUBLICATION = "deployments/uniswap-v4-official-multichain-pools.template.json";
+const DEPLOYMENTS_MARKDOWN_URL = "https://developers.uniswap.org/docs/protocols/v4/deployments.md";
 const OFFICIAL_ARC_INPUT_TEMPLATE = "deployments/uniswap-v4-official-arc-input.template.json";
 const HEDGE_DEPLOYMENT = "deployments/fx-hedge-hook-5042002.json";
 const HEDGE_STABLE_DEPLOYMENT = "deployments/fx-hedge-stable-pools-5042002.json";
@@ -566,6 +567,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialArcPoolPublicationCheck", "uniswap:official-arc:pools:check"],
     ["officialArcPoolPublicationSelfTest", "uniswap:official-arc:pools:self-test"],
     ["officialMultichainReadiness", "uniswap:official-multichain:check"],
+    ["officialMultichainDocsFreshness", "uniswap:official-multichain:docs:check"],
     ["officialMultichainPoolPublication", "uniswap:official-multichain:pools:check"],
     ["officialMultichainPoolPublicationSelfTest", "uniswap:official-multichain:pools:self-test"],
     ["officialArcStateViewReadiness", "uniswap:stateview:check"],
@@ -631,6 +633,52 @@ function checkOfficialMultichainBlock(
     pass("official multichain readiness result is recorded");
   } else {
     fail("official multichain readiness result is missing");
+  }
+
+  const freshness = block.sourceFreshness ?? {};
+  if (freshness.source === DEPLOYMENTS_MARKDOWN_URL) {
+    pass("official multichain docs freshness source markdown URL is recorded");
+  } else {
+    fail("official multichain docs freshness source markdown URL is missing");
+  }
+
+  const freshnessScript = "scripts/check-official-uniswap-v4-deployments-docs.ts";
+  if (existsSync(join(ROOT, freshnessScript))) {
+    pass(`official multichain docs freshness verifier exists at ${freshnessScript}`);
+  } else {
+    fail(`official multichain docs freshness verifier is missing at ${freshnessScript}`);
+  }
+
+  if (
+    typeof freshness.command === "string"
+    && freshness.command.includes("uniswap:official-multichain:docs:check")
+  ) {
+    pass("official multichain docs freshness command is recorded");
+  } else {
+    fail("official multichain docs freshness command is missing");
+  }
+
+  if (
+    typeof freshness.currentResult === "string"
+    && freshness.currentResult.includes("WARN=2")
+    && freshness.currentResult.includes("FAIL=0")
+  ) {
+    pass("official multichain docs freshness result is recorded");
+  } else {
+    fail("official multichain docs freshness result is missing");
+  }
+
+  const freshnessChecks = Array.isArray(freshness.requiredChecks) ? freshness.requiredChecks.join("\n") : "";
+  for (const snippet of [
+    "official Uniswap v4 deployments Markdown",
+    "Avalanche C-Chain official contract addresses",
+    "Arbitrum One official contract addresses",
+    "Arc mainnet must remain pending",
+    "Avalanche Fuji must remain pending",
+    "official contract address drift",
+  ]) {
+    if (freshnessChecks.includes(snippet)) pass(`official multichain docs freshness checks cover ${snippet}`);
+    else fail(`official multichain docs freshness checks must cover ${snippet}`);
   }
 
   const publication = block.poolPublication ?? {};
@@ -792,6 +840,15 @@ function checkOfficialMultichainBlock(
     pass("indexing evidence snapshot official multichain result matches manifest");
   } else {
     fail("indexing evidence snapshot official multichain result does not match manifest");
+  }
+
+  if (
+    snapshot.officialMultichain?.sourceFreshness?.currentResult
+    === block.sourceFreshness?.currentResult
+  ) {
+    pass("indexing evidence snapshot official multichain docs freshness result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official multichain docs freshness result does not match manifest");
   }
 
   if (

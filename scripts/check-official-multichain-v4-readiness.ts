@@ -16,6 +16,7 @@ const MULTICHAIN_MANIFEST = "deployments/uniswap-v4-official-multichain-readines
 const MULTICHAIN_POOL_PUBLICATION = "deployments/uniswap-v4-official-multichain-pools.template.json";
 const ARC_READINESS_MANIFEST = "deployments/uniswap-v4-indexing-readiness-5042002.json";
 const DEPLOYMENTS_URL = "https://developers.uniswap.org/docs/protocols/v4/deployments";
+const DEPLOYMENTS_MARKDOWN_URL = "https://developers.uniswap.org/docs/protocols/v4/deployments.md";
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 const ZERO_ADDRESS_RE = /^0x0{40}$/i;
 const PERMIT2 = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
@@ -168,6 +169,54 @@ function checkRequiredEvidence(manifest: AnyRecord, target: AnyRecord): void {
   for (const snippet of ["PoolManager", "liquidity", "StateView", "subgraph"]) {
     if (actions.includes(snippet)) pass(`${target.network} next actions cover ${snippet}`);
     else fail(`${target.network} next actions must cover ${snippet}`);
+  }
+}
+
+function checkSourceFreshnessBlock(manifest: AnyRecord): void {
+  const freshness = manifest.sourceFreshness ?? {};
+  if (freshness.source === DEPLOYMENTS_MARKDOWN_URL) {
+    pass("official docs freshness source markdown URL is recorded");
+  } else {
+    fail("official docs freshness source markdown URL is missing");
+  }
+
+  const script = "scripts/check-official-uniswap-v4-deployments-docs.ts";
+  if (existsSync(join(ROOT, script))) {
+    pass(`official docs freshness verifier exists at ${script}`);
+  } else {
+    fail(`official docs freshness verifier is missing at ${script}`);
+  }
+
+  if (
+    typeof freshness.command === "string"
+    && freshness.command.includes("uniswap:official-multichain:docs:check")
+  ) {
+    pass("official docs freshness command is recorded");
+  } else {
+    fail("official docs freshness command is missing");
+  }
+
+  if (
+    typeof freshness.currentResult === "string"
+    && freshness.currentResult.includes("WARN=2")
+    && freshness.currentResult.includes("FAIL=0")
+  ) {
+    pass("official docs freshness result is recorded");
+  } else {
+    fail("official docs freshness result is missing");
+  }
+
+  const checks = Array.isArray(freshness.requiredChecks) ? freshness.requiredChecks.join("\n") : "";
+  for (const snippet of [
+    "official Uniswap v4 deployments Markdown",
+    "Avalanche C-Chain official contract addresses",
+    "Arbitrum One official contract addresses",
+    "Arc mainnet must remain pending",
+    "Avalanche Fuji must remain pending",
+    "official contract address drift",
+  ]) {
+    if (checks.includes(snippet)) pass(`official docs freshness checks cover ${snippet}`);
+    else fail(`official docs freshness checks must cover ${snippet}`);
   }
 }
 
@@ -407,6 +456,7 @@ async function main(): Promise<void> {
     else fail(`claim policy must cover ${snippet}`);
   }
 
+  checkSourceFreshnessBlock(manifest);
   checkPoolPublicationBlock(manifest);
 
   for (const target of targets) {
