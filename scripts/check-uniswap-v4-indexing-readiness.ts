@@ -742,6 +742,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialMultichainSubgraphReadiness", "uniswap:official-multichain:subgraph:check"],
     ["officialMultichainQuoterReadiness", "uniswap:official-multichain:quoter:check"],
     ["officialMultichainRouterReadiness", "uniswap:official-multichain:router:check"],
+    ["officialMultichainRouteReadinessSelfTest", "uniswap:official-multichain:routes:self-test"],
     ["officialArcStateViewReadiness", "uniswap:stateview:check"],
     ["subgraphReadiness", "uniswap:subgraph:check"],
     ["hookMetadataExport", "uniswap:hook-metadata:export"],
@@ -1362,6 +1363,13 @@ function checkOfficialMultichainBlock(
     fail(`official multichain Quoter verifier is missing at ${quoterScript}`);
   }
 
+  const routeSelfTestScript = "scripts/self-test-official-multichain-route-readiness.ts";
+  if (existsSync(join(ROOT, routeSelfTestScript))) {
+    pass(`official multichain route evidence self-test exists at ${routeSelfTestScript}`);
+  } else {
+    fail(`official multichain route evidence self-test is missing at ${routeSelfTestScript}`);
+  }
+
   if (
     typeof quoter.command === "string"
     && quoter.command.includes("uniswap:official-multichain:quoter:check")
@@ -1379,6 +1387,25 @@ function checkOfficialMultichainBlock(
     pass("official multichain Quoter verification result is recorded");
   } else {
     fail("official multichain Quoter verification result is missing");
+  }
+
+  if (
+    typeof quoter.selfTestCommand === "string"
+    && quoter.selfTestCommand.includes("uniswap:official-multichain:routes:self-test")
+  ) {
+    pass("official multichain Quoter route evidence self-test command is recorded");
+  } else {
+    fail("official multichain Quoter route evidence self-test command is missing");
+  }
+
+  if (
+    typeof quoter.currentSelfTestResult === "string"
+    && quoter.currentSelfTestResult.includes("PASS=21")
+    && quoter.currentSelfTestResult.includes("FAIL=0")
+  ) {
+    pass("official multichain Quoter route evidence self-test result is recorded");
+  } else {
+    fail("official multichain Quoter route evidence self-test result is missing");
   }
 
   if (quoter.poolPublicationInputEnv === "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT") {
@@ -1436,6 +1463,25 @@ function checkOfficialMultichainBlock(
     pass("official multichain router execution result is recorded");
   } else {
     fail("official multichain router execution result is missing");
+  }
+
+  if (
+    typeof router.selfTestCommand === "string"
+    && router.selfTestCommand.includes("uniswap:official-multichain:routes:self-test")
+  ) {
+    pass("official multichain router route evidence self-test command is recorded");
+  } else {
+    fail("official multichain router route evidence self-test command is missing");
+  }
+
+  if (
+    typeof router.currentSelfTestResult === "string"
+    && router.currentSelfTestResult.includes("PASS=21")
+    && router.currentSelfTestResult.includes("FAIL=0")
+  ) {
+    pass("official multichain router route evidence self-test result is recorded");
+  } else {
+    fail("official multichain router route evidence self-test result is missing");
   }
 
   if (router.poolPublicationInputEnv === "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT") {
@@ -1715,12 +1761,30 @@ function checkOfficialMultichainBlock(
   }
 
   if (
+    snapshot.officialMultichain?.quoterVerification?.currentSelfTestResult
+    === block.quoterVerification?.currentSelfTestResult
+  ) {
+    pass("indexing evidence snapshot official multichain Quoter route self-test result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official multichain Quoter route self-test result does not match manifest");
+  }
+
+  if (
     snapshot.officialMultichain?.routerExecutionVerification?.currentResult
     === block.routerExecutionVerification?.currentResult
   ) {
     pass("indexing evidence snapshot official multichain router execution result matches manifest");
   } else {
     fail("indexing evidence snapshot official multichain router execution result does not match manifest");
+  }
+
+  if (
+    snapshot.officialMultichain?.routerExecutionVerification?.currentSelfTestResult
+    === block.routerExecutionVerification?.currentSelfTestResult
+  ) {
+    pass("indexing evidence snapshot official multichain router route self-test result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official multichain router route self-test result does not match manifest");
   }
 }
 

@@ -83,7 +83,7 @@
       "status": "satisfied-with-caveat",
       "evidence": [
         "completionStatus: not-complete",
-        "result: PASS=19 WARN=6 FAIL=0"
+        "result: PASS=20 WARN=6 FAIL=0"
       ],
       "remainingWork": [
         "Flip only after official Arc contracts, official pool records, and liquidity/indexing evidence exist."

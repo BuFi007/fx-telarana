@@ -151,6 +151,10 @@ function executionEvidenceIsPopulated(value: unknown, target: AnyRecord, pool: A
 function routerExecutionEvidence(pool: AnyRecord, status: AnyRecord, target: AnyRecord, ready: boolean): boolean {
   const candidates = [
     pool.routerExecution,
+    pool.routerExecution?.universalRouterExecution,
+    pool.routerExecution?.universalRouterDiagnostic,
+    pool.routerExecution?.v4PlannerExecution,
+    pool.routerExecution?.routeExecutionDiagnostic,
     status.routerExecution,
     status.universalRouterExecution,
     status.universalRouterDiagnostic,

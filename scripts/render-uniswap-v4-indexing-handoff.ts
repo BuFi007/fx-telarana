@@ -97,6 +97,7 @@ function renderCommands(commands: AnyRecord, submission: AnyRecord): string[] {
     ["Multichain subgraph gate", commands.officialMultichainSubgraphReadiness],
     ["Multichain Quoter gate", commands.officialMultichainQuoterReadiness],
     ["Multichain router gate", commands.officialMultichainRouterReadiness],
+    ["Multichain route self-test", commands.officialMultichainRouteReadinessSelfTest],
     ["Evidence snapshot freshness", commands.submissionEvidenceFreshness],
     ["Requirements matrix", submission.requirementsMatrixCheckCommand ?? commands.requirementsFreshness],
     ["Submission audit", submission.indexingSubmissionAuditCommand ?? commands.submissionAudit],

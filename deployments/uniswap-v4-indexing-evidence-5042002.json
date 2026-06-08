@@ -339,6 +339,8 @@
       "status": "pending-official-multichain-quoter-and-official-poolids",
       "command": "bun run uniswap:official-multichain:quoter:check",
       "currentResult": "PASS=25 WARN=4 FAIL=0",
+      "selfTestCommand": "bun run uniswap:official-multichain:routes:self-test",
+      "currentSelfTestResult": "PASS=21 FAIL=0",
       "poolPublicationInputEnv": "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT",
       "requiredContract": "Quoter",
       "requiredPoolFields": [
@@ -359,6 +361,8 @@
       "status": "pending-official-multichain-router-and-official-poolids",
       "command": "bun run uniswap:official-multichain:router:check",
       "currentResult": "PASS=34 WARN=4 FAIL=0",
+      "selfTestCommand": "bun run uniswap:official-multichain:routes:self-test",
+      "currentSelfTestResult": "PASS=21 FAIL=0",
       "poolPublicationInputEnv": "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT",
       "requiredContracts": [
         "UniversalRouter",
@@ -906,6 +910,7 @@
     "officialMultichainSubgraphReadiness": "bun run uniswap:official-multichain:subgraph:check",
     "officialMultichainQuoterReadiness": "bun run uniswap:official-multichain:quoter:check",
     "officialMultichainRouterReadiness": "bun run uniswap:official-multichain:router:check",
+    "officialMultichainRouteReadinessSelfTest": "bun run uniswap:official-multichain:routes:self-test",
     "officialArcStateViewReadiness": "bun run uniswap:stateview:check",
     "subgraphReadiness": "bun run uniswap:subgraph:check",
     "hookMetadataExport": "bun run uniswap:hook-metadata:export",
@@ -955,8 +960,8 @@
     "indexingSubmissionAuditCommand": "bun run uniswap:submission:audit",
     "completionAuditCommand": "bun run uniswap:completion:audit",
     "completionStatus": "not-complete",
-    "currentCompletionAuditResult": "PASS=19 WARN=6 FAIL=0",
-    "currentSubmissionAuditResult": "CHECKS=40 PASS=40 WARN=88 FAIL=0",
+    "currentCompletionAuditResult": "PASS=20 WARN=6 FAIL=0",
+    "currentSubmissionAuditResult": "CHECKS=41 PASS=41 WARN=88 FAIL=0",
     "indexingEvidenceSnapshot": "deployments/uniswap-v4-indexing-evidence-5042002.json",
     "demoableToday": [
       "All six FxHedgeHook poolIds initialized and configured on the self-deployed Arc testnet PoolManager",
