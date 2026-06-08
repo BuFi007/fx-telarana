@@ -107,7 +107,7 @@
       "planCommand": "bun run uniswap:official-arc:pools:plan",
       "currentPlanResult": "PASS=58 WARN=1 FAIL=0",
       "selfTestCommand": "bun run uniswap:official-arc:pools:self-test",
-      "currentSelfTestResult": "PASS=7 FAIL=0",
+      "currentSelfTestResult": "PASS=9 FAIL=0",
       "expectedPoolTemplateCount": 11,
       "officialPools": [],
       "requiredPoolFields": [
@@ -137,6 +137,7 @@
         "Pool publication checker self-test proves populated draft mode passes offline and populated ready mode fails without official RPC receipt verification.",
         "Populated ready files require concrete StateView sqrtPriceX96 and nonzero liquidity evidence for every official pool.",
         "Populated ready files require concrete subgraph id, hooks, token0, token1, feeTier, tickSpacing, price state, and nonzero liquidity evidence for every official pool.",
+        "Populated ready files require official exact-input Quoter evidence for FxHedgeHook or an explicit custom-route caveat for non-generic hooks.",
         "When OFFICIAL_ARC_RPC_URL is set, initializeTx must emit the official PoolManager Initialize event for the published PoolKey.",
         "When OFFICIAL_ARC_RPC_URL is set, firstLiquidityTx must emit a positive official PoolManager ModifyLiquidity event for the published poolId."
       ]
@@ -267,7 +268,7 @@
       "planSnapshot": "deployments/uniswap-v4-official-multichain-pools-fill-plan.json",
       "currentPlanResult": "PASS=81 WARN=4 FAIL=0",
       "selfTestCommand": "bun run uniswap:official-multichain:pools:self-test",
-      "currentSelfTestResult": "PASS=12 FAIL=0",
+      "currentSelfTestResult": "PASS=14 FAIL=0",
       "requiredChecks": [
         "Each target chain status must match official v4 address availability.",
         "Official pool records must use the target chain official PoolManager.",
@@ -276,7 +277,7 @@
         "Official poolIds must derive from the target-chain official PoolKey.",
         "Fill plan must derive all target-chain publication records from the 11 source Arc testnet pool templates.",
         "Ready claims require initialize tx, first-liquidity tx, StateView evidence, subgraph evidence, exact-input Quoter evidence or a documented custom-route caveat, and live target-chain PoolManager receipt verification.",
-        "Self-test must prove populated draft Avalanche/Arbitrum fixtures validate per-target pool counts, ready mode requires live target-chain RPC receipts, and self-deployed PoolManagers are rejected."
+        "Self-test must prove populated draft Avalanche/Arbitrum fixtures validate per-target pool counts, ready mode requires live target-chain RPC receipts, self-deployed PoolManagers are rejected, and missing router/quoter evidence fails."
       ]
     },
     "source": "https://developers.uniswap.org/docs/protocols/v4/deployments",

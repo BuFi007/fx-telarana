@@ -151,6 +151,39 @@ function checkSourceTemplate(template: AnyRecord): void {
   else fail(`${label} source router/quoter status is missing`);
 }
 
+function targetRouterQuoterStatusFor(template: AnyRecord, target: AnyRecord): AnyRecord {
+  const sourceStatus = template.sourceRouterQuoterStatus ?? {};
+
+  if (template.family === "FxHedgeHook") {
+    return {
+      sourceRouterQuoterStatus: sourceStatus,
+      targetRequirement: "official exact-input V4Quoter diagnostic required before ready publication",
+      officialV4QuoterExactInputDiagnostic: {
+        status: "<passed>",
+        command: `<target RPC> quoteExactInputSingle through ${target.contracts?.Quoter ?? "<official Quoter>"}`,
+        quoter: target.contracts?.Quoter ?? "<official target-chain Quoter>",
+        poolManager: target.contracts?.PoolManager ?? "<official target-chain PoolManager>",
+        hookData: "0x",
+        result: "<target-chain exact-input quote result>",
+      },
+    };
+  }
+
+  if (template.family === "FxSwapHook") {
+    return {
+      sourceRouterQuoterStatus: sourceStatus,
+      targetRequirement: "custom-route caveat required before ready publication",
+      customRouteCaveat: "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim.",
+    };
+  }
+
+  return {
+    sourceRouterQuoterStatus: sourceStatus,
+    targetRequirement: "custom-route caveat required before ready publication",
+    customRouteCaveat: "hookData/attestation context required; generic empty-hookData V4Quoter is not a readiness claim.",
+  };
+}
+
 function plannedPoolRecord(template: AnyRecord, target: AnyRecord): AnyRecord {
   const sourceKey = template.sourcePoolKey ?? {};
   const officialPoolManager = target.contracts?.PoolManager ?? null;
@@ -175,7 +208,7 @@ function plannedPoolRecord(template: AnyRecord, target: AnyRecord): AnyRecord {
       initializeTx: "<official target-chain PoolManager.Initialize tx>",
       firstLiquidityTx: "<official target-chain positive PoolManager.ModifyLiquidity tx>",
       routerActiveClaim: false,
-      routerQuoterStatus: template.sourceRouterQuoterStatus,
+      routerQuoterStatus: targetRouterQuoterStatusFor(template, target),
       stateViewVerification: {
         status: "pending",
         sqrtPriceX96: "<StateView.getSlot0(poolId).sqrtPriceX96>",

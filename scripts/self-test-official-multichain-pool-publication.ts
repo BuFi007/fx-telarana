@@ -19,6 +19,7 @@ const TEMPLATE = "deployments/uniswap-v4-official-multichain-pools.template.json
 const TEMP_DRAFT_INPUT = "deployments/.tmp-official-multichain-pools-draft.self-test.json";
 const TEMP_READY_INPUT = "deployments/.tmp-official-multichain-pools-ready.self-test.json";
 const TEMP_BAD_PM_INPUT = "deployments/.tmp-official-multichain-pools-bad-pm.self-test.json";
+const TEMP_BAD_ROUTER_INPUT = "deployments/.tmp-official-multichain-pools-bad-router.self-test.json";
 const DEFAULT_SQRT_PRICE_X96 = "79228162514264337593543950336";
 const LOW_14_MASK = 0x3fffn;
 
@@ -53,7 +54,7 @@ function writeJson(relativePath: string, value: AnyRecord): void {
 }
 
 function cleanup(): void {
-  for (const relativePath of [TEMP_DRAFT_INPUT, TEMP_READY_INPUT, TEMP_BAD_PM_INPUT]) {
+  for (const relativePath of [TEMP_DRAFT_INPUT, TEMP_READY_INPUT, TEMP_BAD_PM_INPUT, TEMP_BAD_ROUTER_INPUT]) {
     const absolutePath = join(ROOT, relativePath);
     if (existsSync(absolutePath)) rmSync(absolutePath);
   }
@@ -104,6 +105,42 @@ function collectTemplates(manifest: AnyRecord): AnyRecord[] {
   return templates;
 }
 
+function routerQuoterStatusFor(
+  network: keyof typeof OFFICIAL_POOL_MANAGERS,
+  template: AnyRecord,
+  poolManager: string,
+): AnyRecord {
+  if (template.family === "FxHedgeHook") {
+    return {
+      exactInput: "fixture-passed",
+      officialV4QuoterExactInputDiagnostic: {
+        status: "passed",
+        command: "fixture: quoteExactInputSingle",
+        quoter: network === "avalanche"
+          ? "0xbe40675bb704506a3c2ccfb762dcfd1e979845c2"
+          : "0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+        poolManager,
+        hookData: "0x",
+        note: "Fixture only; production records must carry the real target-chain Quoter result.",
+      },
+    };
+  }
+
+  if (template.family === "FxSwapHook") {
+    return {
+      exactInput: "supported-via-direct-quote-and-protocol-router",
+      customRouteCaveat: "Fixture custom-route caveat for PMM-aware exact-input settlement.",
+      note: "Fixture only; production records must carry the real route result or caveat.",
+    };
+  }
+
+  return {
+    customRouteCaveat: "Fixture custom-route caveat for hookData or attestation-required routing.",
+    hookData: "Gateway route or trusted-router context required",
+    note: "Fixture only; production records must carry the real route result or caveat.",
+  };
+}
+
 function officialPoolFromTemplate(
   network: keyof typeof OFFICIAL_POOL_MANAGERS,
   template: AnyRecord,
@@ -140,11 +177,7 @@ function officialPoolFromTemplate(
     initializeTx: bytes32For(`${network}:${template.family}:${template.symbol}:initialize`),
     firstLiquidityTx: bytes32For(`${network}:${template.family}:${template.symbol}:first-liquidity`),
     routerActiveClaim: true,
-    routerQuoterStatus: {
-      status: "self-test-populated",
-      exactInput: "fixture-only",
-      note: "Fixture only; production records must carry the real route/quoter result.",
-    },
+    routerQuoterStatus: routerQuoterStatusFor(network, template, poolManager),
     sqrtPriceX96,
     liquidity,
     stateViewVerification: {
@@ -220,6 +253,17 @@ function buildBadPoolManagerPublication(officialPools: AnyRecord[]): AnyRecord {
   };
 }
 
+function withBadRouterEvidence(officialPools: AnyRecord[]): AnyRecord[] {
+  return officialPools.map((pool, index) => index === 0
+    ? {
+      ...pool,
+      routerQuoterStatus: {
+        note: "Fixture intentionally incomplete.",
+      },
+    }
+    : pool);
+}
+
 function runPoolPublicationCheck(inputPath: string): { status: number; stdout: string; stderr: string } {
   const env = {
     ...process.env,
@@ -276,6 +320,10 @@ function main(): void {
       "arbitrum-one": arbitrumPools,
     }));
     writeJson(TEMP_BAD_PM_INPUT, buildBadPoolManagerPublication(badAvalanchePools));
+    writeJson(TEMP_BAD_ROUTER_INPUT, buildPoolPublication("draft", {
+      avalanche: withBadRouterEvidence(avalanchePools),
+      "arbitrum-one": arbitrumPools,
+    }));
 
     expect(templates.length === 11, `generated ${templates.length} source pool templates`);
     expect(avalanchePools.length === 11, `generated ${avalanchePools.length} Avalanche official pool fixture records`);
@@ -321,6 +369,14 @@ function main(): void {
         && bad.stdout.includes("reuses self-deployed/rehearsal"),
       "self-deployed PoolManager fixture fails for the explicit reuse reasons",
       bad.stdout,
+    );
+
+    const badRouter = runPoolPublicationCheck(TEMP_BAD_ROUTER_INPUT);
+    expect(badRouter.status !== 0, "missing router/quoter evidence fixture fails", badRouter.stdout || badRouter.stderr);
+    expect(
+      badRouter.stdout.includes("router/quoter evidence must include exact-input proof or a custom-route caveat"),
+      "missing router/quoter fixture fails for the explicit evidence reason",
+      badRouter.stdout,
     );
   } finally {
     cleanup();

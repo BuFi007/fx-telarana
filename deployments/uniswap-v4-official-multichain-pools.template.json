@@ -74,6 +74,7 @@
     "Avalanche and Arbitrum have official Uniswap v4 contract addresses, but their official fx-Telarana hook pool records intentionally remain empty until chain-specific deployment evidence is populated.",
     "Avalanche Fuji is rehearsal-only until Uniswap publishes official Fuji v4 addresses.",
     "Use OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT=<populated-file> bun run uniswap:official-multichain:pools:check before claiming any target-chain hook pool is officially indexed.",
+    "Ready records must include official exact-input Quoter evidence for FxHedgeHook or an explicit custom-route caveat for non-generic hooks.",
     "Use target status=draft for populated offline preflight; use status=ready only when the target RPC env can verify official PoolManager Initialize and positive ModifyLiquidity receipts."
   ],
   "command": "bun run uniswap:official-multichain:pools:check",

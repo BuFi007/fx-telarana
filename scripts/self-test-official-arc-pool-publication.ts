@@ -19,6 +19,7 @@ const TEMPLATE = "deployments/uniswap-v4-official-arc-pools.template.json";
 const TEMP_DEPLOYMENT_INPUT = "deployments/.tmp-official-arc-input.self-test.json";
 const TEMP_DRAFT_INPUT = "deployments/.tmp-official-arc-pools-draft.self-test.json";
 const TEMP_READY_INPUT = "deployments/.tmp-official-arc-pools-ready.self-test.json";
+const TEMP_BAD_ROUTER_INPUT = "deployments/.tmp-official-arc-pools-bad-router.self-test.json";
 const OFFICIAL_PM = "0x1111111111111111111111111111111111111111";
 const DEFAULT_SQRT_PRICE_X96 = "79228162514264337593543950336";
 const SELF_TEST_CHAIN_ID = 999999;
@@ -48,7 +49,7 @@ function writeJson(relativePath: string, value: AnyRecord): void {
 }
 
 function cleanup(): void {
-  for (const relativePath of [TEMP_DEPLOYMENT_INPUT, TEMP_DRAFT_INPUT, TEMP_READY_INPUT]) {
+  for (const relativePath of [TEMP_DEPLOYMENT_INPUT, TEMP_DRAFT_INPUT, TEMP_READY_INPUT, TEMP_BAD_ROUTER_INPUT]) {
     const absolutePath = join(ROOT, relativePath);
     if (existsSync(absolutePath)) rmSync(absolutePath);
   }
@@ -102,6 +103,36 @@ function collectTemplates(manifest: AnyRecord): AnyRecord[] {
   return templates;
 }
 
+function routerQuoterStatusFor(template: AnyRecord): AnyRecord {
+  if (template.family === "FxHedgeHook") {
+    return {
+      exactInput: "fixture-passed",
+      officialV4QuoterExactInputDiagnostic: {
+        status: "passed",
+        command: "fixture: quoteExactInputSingle",
+        quoter: "0x4444444444444444444444444444444444444444",
+        poolManager: OFFICIAL_PM,
+        hookData: "0x",
+        note: "Fixture only; production records must carry the real target-chain Quoter result.",
+      },
+    };
+  }
+
+  if (template.family === "FxSwapHook") {
+    return {
+      exactInput: "supported-via-direct-quote-and-protocol-router",
+      customRouteCaveat: "Fixture custom-route caveat for PMM-aware exact-input settlement.",
+      note: "Fixture only; production records must carry the real route result or caveat.",
+    };
+  }
+
+  return {
+    customRouteCaveat: "Fixture custom-route caveat for hookData or attestation-required routing.",
+    hookData: "Gateway route or trusted-router context required",
+    note: "Fixture only; production records must carry the real route result or caveat.",
+  };
+}
+
 function officialPoolFromTemplate(template: AnyRecord, index: number): AnyRecord {
   const hookAddress = hookAddressFor(index, Number(template.expectedHookBits));
   const sourceKey = template.sourcePoolKey ?? {};
@@ -133,10 +164,7 @@ function officialPoolFromTemplate(template: AnyRecord, index: number): AnyRecord
     initializeTx: bytes32For(`${template.family}:${template.symbol}:initialize`),
     firstLiquidityTx: bytes32For(`${template.family}:${template.symbol}:first-liquidity`),
     routerActiveClaim: true,
-    routerQuoterStatus: {
-      status: "self-test-populated",
-      note: "Fixture only; production records must carry the real route/quoter result.",
-    },
+    routerQuoterStatus: routerQuoterStatusFor(template),
     sqrtPriceX96,
     liquidity,
     stateViewVerification: {
@@ -195,6 +223,17 @@ function buildPoolPublication(status: "draft" | "ready", officialPools: AnyRecor
   };
 }
 
+function withBadRouterEvidence(officialPools: AnyRecord[]): AnyRecord[] {
+  return officialPools.map((pool, index) => index === 0
+    ? {
+      ...pool,
+      routerQuoterStatus: {
+        note: "Fixture intentionally incomplete.",
+      },
+    }
+    : pool);
+}
+
 function runPoolPublicationCheck(inputPath: string): { status: number; stdout: string; stderr: string } {
   const env = {
     ...process.env,
@@ -239,6 +278,7 @@ function main(): void {
     writeJson(TEMP_DEPLOYMENT_INPUT, buildDeploymentInput());
     writeJson(TEMP_DRAFT_INPUT, buildPoolPublication("draft", officialPools));
     writeJson(TEMP_READY_INPUT, buildPoolPublication("ready", officialPools));
+    writeJson(TEMP_BAD_ROUTER_INPUT, buildPoolPublication("draft", withBadRouterEvidence(officialPools)));
 
     expect(officialPools.length > 0, `generated ${officialPools.length} official pool fixture records`);
 
@@ -263,6 +303,14 @@ function main(): void {
       ready.stdout,
     );
     expect(/summary PASS=\d+ WARN=0 FAIL=1/.test(ready.stdout), "ready populated fixture has exactly one expected failure", ready.stdout);
+
+    const badRouter = runPoolPublicationCheck(TEMP_BAD_ROUTER_INPUT);
+    expect(badRouter.status !== 0, "missing router/quoter evidence fixture fails", badRouter.stdout || badRouter.stderr);
+    expect(
+      badRouter.stdout.includes("router/quoter evidence must include exact-input proof or a custom-route caveat"),
+      "missing router/quoter fixture fails for the explicit evidence reason",
+      badRouter.stdout,
+    );
   } finally {
     cleanup();
   }

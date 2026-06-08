@@ -51,11 +51,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through <official Quoter>",
+                "quoter": "<official target-chain Quoter>",
+                "poolManager": "<official target-chain PoolManager>",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -106,11 +117,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through <official Quoter>",
+                "quoter": "<official target-chain Quoter>",
+                "poolManager": "<official target-chain PoolManager>",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -161,11 +183,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through <official Quoter>",
+                "quoter": "<official target-chain Quoter>",
+                "poolManager": "<official target-chain PoolManager>",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -216,11 +249,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through <official Quoter>",
+                "quoter": "<official target-chain Quoter>",
+                "poolManager": "<official target-chain PoolManager>",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -271,11 +315,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through <official Quoter>",
+                "quoter": "<official target-chain Quoter>",
+                "poolManager": "<official target-chain PoolManager>",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -326,11 +381,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through <official Quoter>",
+                "quoter": "<official target-chain Quoter>",
+                "poolManager": "<official target-chain PoolManager>",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -381,11 +447,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -436,11 +506,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -491,11 +565,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -546,11 +624,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -601,9 +683,13 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "not-generic-hookdata-required",
-              "hookData": "Gateway route and attestation context required",
-              "exactOutput": "unsupported"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "not-generic-hookdata-required",
+                "hookData": "Gateway route and attestation context required",
+                "exactOutput": "unsupported"
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "hookData/attestation context required; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -667,11 +753,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through <official Quoter>",
+                "quoter": "<official target-chain Quoter>",
+                "poolManager": "<official target-chain PoolManager>",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -722,11 +819,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through <official Quoter>",
+                "quoter": "<official target-chain Quoter>",
+                "poolManager": "<official target-chain PoolManager>",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -777,11 +885,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through <official Quoter>",
+                "quoter": "<official target-chain Quoter>",
+                "poolManager": "<official target-chain PoolManager>",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -832,11 +951,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through <official Quoter>",
+                "quoter": "<official target-chain Quoter>",
+                "poolManager": "<official target-chain PoolManager>",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -887,11 +1017,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through <official Quoter>",
+                "quoter": "<official target-chain Quoter>",
+                "poolManager": "<official target-chain PoolManager>",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -942,11 +1083,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through <official Quoter>",
+                "quoter": "<official target-chain Quoter>",
+                "poolManager": "<official target-chain PoolManager>",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -997,11 +1149,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1052,11 +1208,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1107,11 +1267,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1162,11 +1326,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1217,9 +1385,13 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "not-generic-hookdata-required",
-              "hookData": "Gateway route and attestation context required",
-              "exactOutput": "unsupported"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "not-generic-hookdata-required",
+                "hookData": "Gateway route and attestation context required",
+                "exactOutput": "unsupported"
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "hookData/attestation context required; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1283,11 +1455,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through 0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
+                "quoter": "0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
+                "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1338,11 +1521,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through 0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
+                "quoter": "0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
+                "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1393,11 +1587,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through 0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
+                "quoter": "0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
+                "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1448,11 +1653,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through 0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
+                "quoter": "0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
+                "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1503,11 +1719,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through 0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
+                "quoter": "0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
+                "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1558,11 +1785,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through 0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
+                "quoter": "0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
+                "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1613,11 +1851,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1668,11 +1910,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1723,11 +1969,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1778,11 +2028,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1833,9 +2087,13 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "not-generic-hookdata-required",
-              "hookData": "Gateway route and attestation context required",
-              "exactOutput": "unsupported"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "not-generic-hookdata-required",
+                "hookData": "Gateway route and attestation context required",
+                "exactOutput": "unsupported"
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "hookData/attestation context required; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1899,11 +2157,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through 0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+                "quoter": "0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+                "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -1954,11 +2223,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through 0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+                "quoter": "0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+                "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -2009,11 +2289,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through 0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+                "quoter": "0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+                "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -2064,11 +2355,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through 0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+                "quoter": "0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+                "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -2119,11 +2421,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through 0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+                "quoter": "0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+                "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -2174,11 +2487,22 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
-              "hookData": "0x",
-              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
-              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
-              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+                "hookData": "0x",
+                "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+                "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+                "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+              },
+              "targetRequirement": "official exact-input V4Quoter diagnostic required before ready publication",
+              "officialV4QuoterExactInputDiagnostic": {
+                "status": "<passed>",
+                "command": "<target RPC> quoteExactInputSingle through 0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+                "quoter": "0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+                "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+                "hookData": "0x",
+                "result": "<target-chain exact-input quote result>"
+              }
             },
             "stateViewVerification": {
               "status": "pending",
@@ -2229,11 +2553,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -2284,11 +2612,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -2339,11 +2671,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -2394,11 +2730,15 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
-              "supportedInternalQuote": "direct quote/exact-input protocol router",
-              "exactInput": "supported-via-direct-quote-and-protocol-router",
-              "exactOutput": "unsupported",
-              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+                "supportedInternalQuote": "direct quote/exact-input protocol router",
+                "exactInput": "supported-via-direct-quote-and-protocol-router",
+                "exactOutput": "unsupported",
+                "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "PMM-aware direct quote/exact-input protocol route; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",
@@ -2449,9 +2789,13 @@
             "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
             "routerActiveClaim": false,
             "routerQuoterStatus": {
-              "genericV4Quoter": "not-generic-hookdata-required",
-              "hookData": "Gateway route and attestation context required",
-              "exactOutput": "unsupported"
+              "sourceRouterQuoterStatus": {
+                "genericV4Quoter": "not-generic-hookdata-required",
+                "hookData": "Gateway route and attestation context required",
+                "exactOutput": "unsupported"
+              },
+              "targetRequirement": "custom-route caveat required before ready publication",
+              "customRouteCaveat": "hookData/attestation context required; generic empty-hookData V4Quoter is not a readiness claim."
             },
             "stateViewVerification": {
               "status": "pending",

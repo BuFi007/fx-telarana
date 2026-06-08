@@ -185,11 +185,13 @@ Official Arc pool publication checker self-test:
 bun run uniswap:official-arc:pools:self-test
 ```
 
-Current expected result: `PASS=7 FAIL=0`. This generates temporary populated
+Current expected result: `PASS=9 FAIL=0`. This generates temporary populated
 official-pool fixtures from the readiness manifest, confirms `status=draft`
 passes as offline preflight only, and confirms `status=ready` fails without
 `OFFICIAL_ARC_RPC_URL` because live official `PoolManager` receipt verification
-is required. The temporary files are removed before the command exits.
+is required. It also proves records missing exact-input Quoter evidence or a
+custom-route caveat fail. The temporary files are removed before the command
+exits.
 
 Official v4 StateView verification gate:
 
@@ -398,12 +400,13 @@ Official multichain pool-publication checker self-test:
 bun run uniswap:official-multichain:pools:self-test
 ```
 
-Current expected result: `PASS=12 FAIL=0`. This generates temporary populated
+Current expected result: `PASS=14 FAIL=0`. This generates temporary populated
 Avalanche and Arbitrum pool-publication fixtures from the readiness manifest,
 confirms `status=draft` passes as offline preflight with per-target pool
 counts, confirms `status=ready` fails without live target-chain RPC receipt
 verification, and confirms self-deployed/rehearsal PoolManagers are rejected.
-The temporary files are removed before the command exits.
+It also proves records missing exact-input Quoter evidence or a custom-route
+caveat fail. The temporary files are removed before the command exits.
 
 Indexer evidence export:
 
@@ -773,10 +776,10 @@ When Arc is listed, do this before claiming official indexing:
 22. Run `bun run uniswap:official-multichain:pools:plan:check` and confirm the
    fill-plan snapshot is fresh with `PASS=81 WARN=4 FAIL=0`.
 23. Run `bun run uniswap:official-multichain:pools:self-test` and confirm it
-   exits with `FAIL=0`; the current expected summary is `PASS=12 FAIL=0`.
+   exits with `FAIL=0`; the current expected summary is `PASS=14 FAIL=0`.
    Confirm populated draft Avalanche/Arbitrum fixtures pass offline, populated
    ready fixtures fail without `AVALANCHE_RPC_URL` and `ARBITRUM_RPC_URL`, and
-   self-deployed PoolManagers are rejected.
+   self-deployed PoolManagers plus missing router/quoter evidence are rejected.
 24. Run `bun run uniswap:stateview:check` with the same
    `OFFICIAL_ARC_POOL_PUBLICATION_INPUT` and the official Arc RPC, then verify
    `StateView.getSlot0(poolId)` plus `StateView.getLiquidity(poolId)`.
@@ -816,7 +819,7 @@ Ask Claude to verify these points:
    publication input exits with `FAIL=0`; the current expected summary is
    `PASS=31 WARN=1 FAIL=0`.
 11. Run `bun run uniswap:official-arc:pools:self-test` and confirm it exits with
-   `FAIL=0`; the current expected summary is `PASS=7 FAIL=0`.
+   `FAIL=0`; the current expected summary is `PASS=9 FAIL=0`.
 12. Run `bun run uniswap:official-multichain:docs:check` and confirm it exits
    with `FAIL=0`; the current expected summary is `PASS=31 WARN=2 FAIL=0`.
    Confirm the live official docs still list Avalanche and Arbitrum contracts
@@ -856,7 +859,7 @@ Ask Claude to verify these points:
 24. Run `bun run uniswap:official-multichain:pools:plan:check` and confirm the
    fill-plan snapshot is fresh with `PASS=81 WARN=4 FAIL=0`.
 25. Run `bun run uniswap:official-multichain:pools:self-test` and confirm it
-   exits with `FAIL=0`; the current expected summary is `PASS=12 FAIL=0`.
+   exits with `FAIL=0`; the current expected summary is `PASS=14 FAIL=0`.
 26. Run `bun run uniswap:stateview:check` and confirm the StateView gate exits
    with `FAIL=0`; the current expected summary is `PASS=13 WARN=1 FAIL=0`.
    In live official-Arc mode, rerun it with

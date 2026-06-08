@@ -140,6 +140,80 @@ function evidenceTokenAddress(value: unknown): unknown {
   return undefined;
 }
 
+function isFilledString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function diagnosticEvidenceIsPopulated(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+
+  const evidence = value as AnyRecord;
+  const status = String(evidence.status ?? evidence.result ?? "").toLowerCase();
+  const hasResult = /pass|passed|supported|proven/.test(status);
+  const hasContext = [
+    evidence.command,
+    evidence.quoter,
+    evidence.poolManager,
+    evidence.hookData,
+    evidence.note,
+  ].some(isFilledString);
+
+  return hasResult && hasContext;
+}
+
+function routerStatusHasExactInputEvidence(status: AnyRecord, ready: boolean): boolean {
+  const diagnosticEvidence = [
+    status.officialV4QuoterExactInputDiagnostic,
+    status.targetV4QuoterExactInputDiagnostic,
+    status.v4QuoterExactInputDiagnostic,
+    status.v4QuoterDiagnostic,
+    status.quoterDiagnostic,
+  ].some(diagnosticEvidenceIsPopulated);
+
+  if (diagnosticEvidence) return true;
+  if (ready) return false;
+
+  const exactInput = String(status.exactInput ?? status.officialExactInput ?? "").toLowerCase();
+  return /support|pass|proven|fixture/.test(exactInput) && !/unsupported|not-supported/.test(exactInput);
+}
+
+function routerStatusHasCustomRouteCaveat(status: AnyRecord): boolean {
+  return [
+    status.customRouteCaveat,
+    status.settlementCaveat,
+    status.hookData,
+    status.genericV4Quoter,
+  ]
+    .filter(isFilledString)
+    .some((value) => /not-generic|custom|required|attestation|gateway|settlement|protocol router|direct quote/i.test(value));
+}
+
+function checkRouterQuoterStatus(label: string, pool: AnyRecord, ready: boolean): void {
+  const status = pool.routerQuoterStatus;
+
+  if (status && typeof status === "object") {
+    pass(`${label} routerQuoterStatus is recorded`);
+  } else {
+    fail(`${label} routerQuoterStatus is missing`);
+    return;
+  }
+
+  const exactInputEvidence = routerStatusHasExactInputEvidence(status, ready);
+  const customRouteCaveat = routerStatusHasCustomRouteCaveat(status);
+
+  if (String(pool.family) === "FxHedgeHook" && ready) {
+    if (exactInputEvidence) pass(`${label} official exact-input Quoter evidence is recorded`);
+    else fail(`${label} ready publication requires official exact-input Quoter evidence`);
+    return;
+  }
+
+  if (exactInputEvidence || customRouteCaveat) {
+    pass(`${label} router/quoter evidence has exact-input proof or a custom-route caveat`);
+  } else {
+    fail(`${label} router/quoter evidence must include exact-input proof or a custom-route caveat`);
+  }
+}
+
 function targetKey(network: unknown, family: unknown, symbol: unknown): string {
   return `${String(network ?? "").toLowerCase()}::${String(family ?? "").toLowerCase()}::${String(symbol ?? "").toLowerCase()}`;
 }
@@ -383,8 +457,7 @@ function checkOfficialPool(
     fail(`${label} firstLiquidityTx is required before router-active claims`);
   }
 
-  if (pool.routerQuoterStatus != null) pass(`${label} routerQuoterStatus is recorded`);
-  else fail(`${label} routerQuoterStatus is missing`);
+  checkRouterQuoterStatus(label, pool, ready);
 
   if (stateView.status === "verified") pass(`${label} StateView verification is marked verified`);
   else fail(`${label} StateView verification must be verified`);
