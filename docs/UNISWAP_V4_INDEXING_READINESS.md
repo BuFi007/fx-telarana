@@ -359,13 +359,14 @@ Submission audit:
 bun run uniswap:submission:audit
 ```
 
-Current expected result: `CHECKS=23 PASS=23 WARN=33 FAIL=0`. This is the
+Current expected result: `CHECKS=26 PASS=26 WARN=36 FAIL=0`. This is the
 single reviewer-facing no-broadcast command for the indexing package. It
 re-runs official Uniswap deployment freshness, official Arc and multichain
-readiness gates, deployment-input and pool-publication self-tests,
-StateView/subgraph preflights, `FxHedgeHook` liquidity checks, live Arc
-PoolManager receipt verification, both local official `V4Quoter` diagnostics,
-and evidence snapshot freshness. The warnings are the documented pending
+readiness gates, deployment-input generation/checks, pool-publication self-tests,
+StateView/subgraph preflights, live `FxHedgeHook.poolConfigs` storage checks,
+`FxHedgeHook` liquidity checks, live Arc PoolManager receipt verification, both
+local official `V4Quoter` diagnostics, and evidence snapshot freshness. The
+warnings are the documented pending
 conditions: Arc/Fuji official addresses, official-chain pool publication,
 subgraph/StateView readiness before official pool records, and hedge first
 liquidity.
@@ -685,7 +686,7 @@ Ask Claude to verify these points:
 24. Run `bun run uniswap:evidence:check` and confirm the snapshot is fresh.
 25. Run `bun run uniswap:submission:audit` and confirm the executable
    submission audit exits with `FAIL=0`; the current expected summary is
-   `CHECKS=23 PASS=23 WARN=33 FAIL=0`.
+   `CHECKS=26 PASS=26 WARN=36 FAIL=0`.
 26. Run `bun run hedge:arc:plan-stables` and confirm all six hedge pools are
    live/configured; the current expected summary is `PASS=46 WARN=0 FAIL=0`.
 27. Run `bun run uniswap:hedge:liquidity` and confirm it reports zero liquidity

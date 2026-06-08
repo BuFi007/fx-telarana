@@ -789,7 +789,7 @@
     "indexingEvidenceSnapshotCommand": "bun run uniswap:evidence:write",
     "indexingEvidenceCheckCommand": "bun run uniswap:evidence:check",
     "indexingSubmissionAuditCommand": "bun run uniswap:submission:audit",
-    "currentSubmissionAuditResult": "CHECKS=23 PASS=23 WARN=33 FAIL=0",
+    "currentSubmissionAuditResult": "CHECKS=26 PASS=26 WARN=36 FAIL=0",
     "indexingEvidenceSnapshot": "deployments/uniswap-v4-indexing-evidence-5042002.json",
     "demoableToday": [
       "All six FxHedgeHook poolIds initialized and configured on the self-deployed Arc testnet PoolManager",
