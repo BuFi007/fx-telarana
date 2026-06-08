@@ -606,6 +606,13 @@ function checkOfficialMainnetBlock(manifest: AnyRecord): void {
   } else {
     fail(`indexing evidence exporter is missing at ${evidenceExportScript}`);
   }
+
+  const submissionAuditScript = "scripts/audit-uniswap-v4-indexing-submission.ts";
+  if (existsSync(join(ROOT, submissionAuditScript))) {
+    pass(`indexing submission audit runner exists at ${submissionAuditScript}`);
+  } else {
+    fail(`indexing submission audit runner is missing at ${submissionAuditScript}`);
+  }
 }
 
 function checkEvidenceCommands(manifest: AnyRecord): void {
@@ -634,6 +641,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["submissionEvidenceExport", "uniswap:evidence:export"],
     ["submissionEvidenceSnapshot", "uniswap:evidence:write"],
     ["submissionEvidenceFreshness", "uniswap:evidence:check"],
+    ["submissionAudit", "uniswap:submission:audit"],
     ["onchainReceiptVerifier", "uniswap:indexing:onchain"],
     ["hedgeHookLiquidityVerifier", "uniswap:hedge:liquidity"],
     ["hedgeHookLiquiditySeedPlan", "uniswap:hedge:liquidity:plan"],
@@ -1118,6 +1126,25 @@ function checkSubmissionEvidenceSnapshot(manifest: AnyRecord, snapshot: AnyRecor
     pass("submission package records the indexing evidence freshness command");
   } else {
     fail("submission package is missing the indexing evidence freshness command");
+  }
+
+  if (
+    typeof submission.indexingSubmissionAuditCommand === "string"
+    && submission.indexingSubmissionAuditCommand.includes("uniswap:submission:audit")
+  ) {
+    pass("submission package records the executable submission audit command");
+  } else {
+    fail("submission package is missing the executable submission audit command");
+  }
+
+  if (
+    typeof submission.currentSubmissionAuditResult === "string"
+    && submission.currentSubmissionAuditResult.includes("CHECKS=")
+    && submission.currentSubmissionAuditResult.includes("FAIL=0")
+  ) {
+    pass("submission package records the current submission audit result");
+  } else {
+    fail("submission package is missing the current submission audit result");
   }
 
   const doNotClaim = Array.isArray(submission.doNotClaimYet) ? submission.doNotClaimYet : [];

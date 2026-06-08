@@ -51,6 +51,7 @@
     "submissionEvidenceExport": "bun run uniswap:evidence:export",
     "submissionEvidenceSnapshot": "bun run uniswap:evidence:write",
     "submissionEvidenceFreshness": "bun run uniswap:evidence:check",
+    "submissionAudit": "bun run uniswap:submission:audit",
     "onchainReceiptVerifier": "bun run uniswap:indexing:onchain",
     "hedgeHookLiquidityVerifier": "bun run uniswap:hedge:liquidity",
     "hedgeHookLiquiditySeedPlan": "bun run uniswap:hedge:liquidity:plan",
@@ -643,6 +644,8 @@
     "indexingEvidenceCommand": "bun run uniswap:evidence:export",
     "indexingEvidenceSnapshotCommand": "bun run uniswap:evidence:write",
     "indexingEvidenceCheckCommand": "bun run uniswap:evidence:check",
+    "indexingSubmissionAuditCommand": "bun run uniswap:submission:audit",
+    "currentSubmissionAuditResult": "CHECKS=23 PASS=23 WARN=33 FAIL=0",
     "indexingEvidenceSnapshot": "deployments/uniswap-v4-indexing-evidence-5042002.json",
     "demoableToday": [
       "All six FxHedgeHook poolIds initialized and configured on the self-deployed Arc testnet PoolManager",
