@@ -231,7 +231,7 @@ Official multichain deployment/indexing gate:
 bun run uniswap:official-multichain:check
 ```
 
-Current expected result: `PASS=290 WARN=4 FAIL=0`. This validates the
+Current expected result: `PASS=291 WARN=4 FAIL=0`. This validates the
 machine-readable multichain manifest at
 `deployments/uniswap-v4-official-multichain-readiness.json`. The official
 Uniswap v4 deployments table lists Avalanche C-Chain (`43114`) and Arbitrum One
@@ -310,7 +310,8 @@ Uniswap v4 deployments Markdown, parses network sections, confirms Avalanche
 C-Chain and Arbitrum One addresses still match the local manifest, and confirms
 Arc mainnet plus Avalanche Fuji are still absent from the official deployments
 table. The two warnings are expected until Uniswap publishes official Arc and
-Fuji v4 addresses.
+Fuji v4 addresses. The fetch path retries transient official-docs HTTP failures
+before treating the source freshness gate as failed.
 
 Official multichain source freshness checker self-test:
 
@@ -893,7 +894,7 @@ When Arc is listed, do this before claiming official indexing:
    confirm it exits with `FAIL=0`; the current expected summary is
    `PASS=20 FAIL=0`.
 15. Run `bun run uniswap:official-multichain:check` and confirm it exits with
-   `FAIL=0`; the current expected summary is `PASS=290 WARN=4 FAIL=0`.
+   `FAIL=0`; the current expected summary is `PASS=291 WARN=4 FAIL=0`.
    Confirm Avalanche C-Chain and Arbitrum One have official v4 contract
    addresses with deployed bytecode on their recorded RPC fallbacks, while Arc
    mainnet and Avalanche Fuji stay pending. Also confirm Avalanche/Arbitrum
@@ -1002,7 +1003,7 @@ Ask Claude to verify these points:
    `PASS=20 FAIL=0`.
 17. Run `bun run uniswap:official-multichain:check` and confirm the
    multichain gate exits with `FAIL=0`; the current expected summary is
-   `PASS=290 WARN=4 FAIL=0`.
+   `PASS=291 WARN=4 FAIL=0`.
 18. Run `bun run uniswap:official-multichain:hooks:plan` and confirm the
    multichain hook redeploy plan exits with `FAIL=0`; the current expected
    summary is `PASS=50 WARN=4 FAIL=0`.
@@ -1053,7 +1054,7 @@ Ask Claude to verify these points:
    `officialArcMainnet.status=pending-official-uniswap-v4-addresses`, plus
    `officialArcMainnet.currentDeploymentInputGenerateResult=PASS=4 WARN=1 FAIL=0`,
    `officialArcMainnet.currentDeploymentInputGenerateSelfTestResult=PASS=10 FAIL=0`,
-   `officialMultichain.currentResult=PASS=290 WARN=4 FAIL=0`,
+   `officialMultichain.currentResult=PASS=291 WARN=4 FAIL=0`,
    `officialMultichain.hookRedeployPlan.currentResult=PASS=50 WARN=4 FAIL=0`,
    `officialMultichain.hookRedeployPlan.planSnapshot=deployments/uniswap-v4-official-multichain-hooks-redeploy-plan.json`,
    `officialMultichain.deploymentInputGeneration.currentCheckResult=PASS=75 WARN=2 FAIL=0`,

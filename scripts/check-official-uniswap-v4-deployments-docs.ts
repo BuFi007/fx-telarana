@@ -18,7 +18,9 @@ type DeploymentSection = {
 
 const ROOT = resolve(import.meta.dir, "..");
 const MULTICHAIN_MANIFEST = "deployments/uniswap-v4-official-multichain-readiness.json";
+const DEPLOYMENTS_PAGE_URL = "https://developers.uniswap.org/docs/protocols/v4/deployments";
 const DEPLOYMENTS_MARKDOWN_URL = "https://developers.uniswap.org/docs/protocols/v4/deployments.md";
+const FETCH_ATTEMPTS = 3;
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 
 const publishedTargets = [
@@ -109,6 +111,36 @@ function fixtureMarkdownPath(): string | undefined {
   return isAbsolute(value) ? value : join(ROOT, value);
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolveSleep) => {
+    setTimeout(resolveSleep, ms);
+  });
+}
+
+async function fetchOfficialMarkdown(): Promise<string> {
+  const failures: string[] = [];
+
+  for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(DEPLOYMENTS_MARKDOWN_URL);
+      if (response.ok) {
+        const markdown = await response.text();
+        pass("fetched official Uniswap v4 deployments markdown");
+        return markdown;
+      }
+
+      failures.push(`attempt ${attempt}: HTTP ${response.status}`);
+    } catch (error) {
+      failures.push(`attempt ${attempt}: ${String(error)}`);
+    }
+
+    if (attempt < FETCH_ATTEMPTS) await sleep(250 * attempt);
+  }
+
+  fail(`failed to fetch ${DEPLOYMENTS_MARKDOWN_URL} after ${FETCH_ATTEMPTS} attempts: ${failures.join("; ")}`);
+  return "";
+}
+
 async function loadMarkdown(): Promise<string> {
   const fixturePath = fixtureMarkdownPath();
   if (fixturePath) {
@@ -120,15 +152,7 @@ async function loadMarkdown(): Promise<string> {
     return readFileSync(fixturePath, "utf-8");
   }
 
-  const response = await fetch(DEPLOYMENTS_MARKDOWN_URL);
-  if (!response.ok) {
-    fail(`failed to fetch ${DEPLOYMENTS_MARKDOWN_URL}: ${response.status}`);
-    return "";
-  }
-
-  const markdown = await response.text();
-  pass("fetched official Uniswap v4 deployments markdown");
-  return markdown;
+  return fetchOfficialMarkdown();
 }
 
 function parseDeploymentSections(markdown: string): DeploymentSection[] {
@@ -240,7 +264,8 @@ function checkPendingTarget(manifest: AnyRecord, sections: DeploymentSection[], 
 
 async function main(): Promise<void> {
   console.log("Official Uniswap v4 deployments docs freshness check");
-  console.log(`source ${DEPLOYMENTS_MARKDOWN_URL}`);
+  console.log(`source ${DEPLOYMENTS_PAGE_URL}`);
+  console.log(`markdownSource ${DEPLOYMENTS_MARKDOWN_URL}`);
   console.log("mode read-only/no-broadcast");
   console.log("");
 

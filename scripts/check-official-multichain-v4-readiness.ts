@@ -289,6 +289,7 @@ function checkSourceFreshnessBlock(manifest: AnyRecord): void {
     "Arc mainnet must remain pending",
     "Avalanche Fuji must remain pending",
     "official contract address drift",
+    "Transient official docs HTTP failures",
     "Self-test",
   ]) {
     if (checks.includes(snippet)) pass(`official docs freshness checks cover ${snippet}`);

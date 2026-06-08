@@ -17,6 +17,7 @@
       "Arc mainnet must remain pending unless the official docs list Arc.",
       "Avalanche Fuji must remain pending unless the official docs list Fuji.",
       "Any official contract address drift must fail the check.",
+      "Transient official docs HTTP failures must be retried before failing the check.",
       "Self-test must prove fixture-based current docs pass, Arc/Fuji newly published fixtures fail, and official address drift fails."
     ]
   },
@@ -323,6 +324,6 @@
       ]
     }
   ],
-  "currentResult": "PASS=290 WARN=4 FAIL=0",
+  "currentResult": "PASS=291 WARN=4 FAIL=0",
   "command": "bun run uniswap:official-multichain:check"
 }

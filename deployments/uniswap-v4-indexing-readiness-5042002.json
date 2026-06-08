@@ -279,7 +279,7 @@
     "status": "official-addresses-known-for-avalanche-and-arbitrum-arc-and-fuji-pending",
     "manifest": "deployments/uniswap-v4-official-multichain-readiness.json",
     "command": "bun run uniswap:official-multichain:check",
-    "currentResult": "PASS=290 WARN=4 FAIL=0",
+    "currentResult": "PASS=291 WARN=4 FAIL=0",
     "deploymentInputGeneration": {
       "checkCommand": "bun run uniswap:official-multichain:input:check",
       "currentCheckResult": "PASS=75 WARN=2 FAIL=0",
@@ -325,6 +325,7 @@
         "Arc mainnet must remain pending unless the official docs list Arc.",
         "Avalanche Fuji must remain pending unless the official docs list Fuji.",
         "Any official contract address drift must fail the check.",
+        "Transient official docs HTTP failures must be retried before failing the check.",
         "Self-test must prove fixture-based current docs pass, Arc/Fuji newly published fixtures fail, and official address drift fails."
       ]
     },

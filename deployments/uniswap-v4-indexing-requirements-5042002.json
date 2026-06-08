@@ -28,7 +28,8 @@
       "evidence": [
         "command: bun run uniswap:official-multichain:docs:check",
         "result: PASS=31 WARN=2 FAIL=0",
-        "source: https://developers.uniswap.org/docs/protocols/v4/deployments.md"
+        "source: https://developers.uniswap.org/docs/protocols/v4/deployments.md",
+        "retry gate: recorded"
       ],
       "remainingWork": []
     },

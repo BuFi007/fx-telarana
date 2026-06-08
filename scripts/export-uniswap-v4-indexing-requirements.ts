@@ -99,6 +99,7 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
         `command: ${multichain.sourceFreshness?.command}`,
         `result: ${multichain.sourceFreshness?.currentResult}`,
         `source: ${multichain.sourceFreshness?.source}`,
+        `retry gate: ${Array.isArray(multichain.sourceFreshness?.requiredChecks) && multichain.sourceFreshness.requiredChecks.join("\n").includes("Transient official docs HTTP failures") ? "recorded" : "missing"}`,
       ],
       remainingWork: [],
     },

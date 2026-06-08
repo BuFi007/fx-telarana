@@ -895,6 +895,7 @@ function checkOfficialMultichainBlock(
     "Arc mainnet must remain pending",
     "Avalanche Fuji must remain pending",
     "official contract address drift",
+    "Transient official docs HTTP failures",
     "Self-test",
   ]) {
     if (freshnessChecks.includes(snippet)) pass(`official multichain docs freshness checks cover ${snippet}`);
