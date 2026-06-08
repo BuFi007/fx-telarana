@@ -567,6 +567,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialArcPoolPublicationSelfTest", "uniswap:official-arc:pools:self-test"],
     ["officialMultichainReadiness", "uniswap:official-multichain:check"],
     ["officialMultichainPoolPublication", "uniswap:official-multichain:pools:check"],
+    ["officialMultichainPoolPublicationSelfTest", "uniswap:official-multichain:pools:self-test"],
     ["officialArcStateViewReadiness", "uniswap:stateview:check"],
     ["subgraphReadiness", "uniswap:subgraph:check"],
     ["submissionEvidenceExport", "uniswap:evidence:export"],
@@ -652,6 +653,13 @@ function checkOfficialMultichainBlock(
     fail(`official multichain pool publication verifier is missing at ${publicationScript}`);
   }
 
+  const publicationSelfTest = "scripts/self-test-official-multichain-pool-publication.ts";
+  if (existsSync(join(ROOT, publicationSelfTest))) {
+    pass(`official multichain pool publication self-test exists at ${publicationSelfTest}`);
+  } else {
+    fail(`official multichain pool publication self-test is missing at ${publicationSelfTest}`);
+  }
+
   if (
     typeof publication.command === "string"
     && publication.command.includes("uniswap:official-multichain:pools:check")
@@ -659,6 +667,15 @@ function checkOfficialMultichainBlock(
     pass("official multichain pool publication command is recorded");
   } else {
     fail("official multichain pool publication command is missing");
+  }
+
+  if (
+    typeof publication.selfTestCommand === "string"
+    && publication.selfTestCommand.includes("uniswap:official-multichain:pools:self-test")
+  ) {
+    pass("official multichain pool publication self-test command is recorded");
+  } else {
+    fail("official multichain pool publication self-test command is missing");
   }
 
   if (
@@ -671,6 +688,15 @@ function checkOfficialMultichainBlock(
     fail("official multichain pool publication result is missing");
   }
 
+  if (
+    typeof publication.currentSelfTestResult === "string"
+    && publication.currentSelfTestResult.includes("FAIL=0")
+  ) {
+    pass("official multichain pool publication self-test result is recorded");
+  } else {
+    fail("official multichain pool publication self-test result is missing");
+  }
+
   const publicationChecks = Array.isArray(publication.requiredChecks) ? publication.requiredChecks.join("\n") : "";
   for (const snippet of [
     "target chain status",
@@ -679,6 +705,7 @@ function checkOfficialMultichainBlock(
     "low-14 permission bits",
     "poolIds must derive",
     "live target-chain PoolManager receipt verification",
+    "Self-test",
   ]) {
     if (publicationChecks.includes(snippet)) pass(`official multichain pool publication checks cover ${snippet}`);
     else fail(`official multichain pool publication checks must cover ${snippet}`);
@@ -774,6 +801,15 @@ function checkOfficialMultichainBlock(
     pass("indexing evidence snapshot official multichain pool publication result matches manifest");
   } else {
     fail("indexing evidence snapshot official multichain pool publication result does not match manifest");
+  }
+
+  if (
+    snapshot.officialMultichain?.poolPublication?.currentSelfTestResult
+    === block.poolPublication?.currentSelfTestResult
+  ) {
+    pass("indexing evidence snapshot official multichain pool publication self-test result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official multichain pool publication self-test result does not match manifest");
   }
 }
 

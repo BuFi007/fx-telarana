@@ -38,6 +38,7 @@
     "officialArcPoolPublicationSelfTest": "bun run uniswap:official-arc:pools:self-test",
     "officialMultichainReadiness": "bun run uniswap:official-multichain:check",
     "officialMultichainPoolPublication": "bun run uniswap:official-multichain:pools:check",
+    "officialMultichainPoolPublicationSelfTest": "bun run uniswap:official-multichain:pools:self-test",
     "officialArcStateViewReadiness": "bun run uniswap:stateview:check",
     "subgraphReadiness": "bun run uniswap:subgraph:check",
     "submissionEvidenceExport": "bun run uniswap:evidence:export",
@@ -230,18 +231,21 @@
     "status": "official-addresses-known-for-avalanche-and-arbitrum-arc-and-fuji-pending",
     "manifest": "deployments/uniswap-v4-official-multichain-readiness.json",
     "command": "bun run uniswap:official-multichain:check",
-    "currentResult": "PASS=139 WARN=4 FAIL=0",
+    "currentResult": "PASS=143 WARN=4 FAIL=0",
     "poolPublication": {
       "manifest": "deployments/uniswap-v4-official-multichain-pools.template.json",
       "command": "bun run uniswap:official-multichain:pools:check",
       "currentResult": "PASS=67 WARN=4 FAIL=0",
+      "selfTestCommand": "bun run uniswap:official-multichain:pools:self-test",
+      "currentSelfTestResult": "PASS=12 FAIL=0",
       "requiredChecks": [
         "Each target chain status must match official v4 address availability.",
         "Official pool records must use the target chain official PoolManager.",
         "Self-deployed Arc testnet and Fuji rehearsal PoolManagers must be rejected.",
         "Official hook addresses must preserve low-14 permission bits.",
         "Official poolIds must derive from the target-chain official PoolKey.",
-        "Ready claims require initialize tx, first-liquidity tx, StateView evidence, subgraph evidence, exact-input Quoter evidence or a documented custom-route caveat, and live target-chain PoolManager receipt verification."
+        "Ready claims require initialize tx, first-liquidity tx, StateView evidence, subgraph evidence, exact-input Quoter evidence or a documented custom-route caveat, and live target-chain PoolManager receipt verification.",
+        "Self-test must prove populated draft Avalanche/Arbitrum fixtures validate per-target pool counts, ready mode requires live target-chain RPC receipts, and self-deployed PoolManagers are rejected."
       ]
     },
     "source": "https://developers.uniswap.org/docs/protocols/v4/deployments",

@@ -192,6 +192,13 @@ function checkPoolPublicationBlock(manifest: AnyRecord): void {
     fail(`multichain pool publication verifier is missing at ${script}`);
   }
 
+  const selfTestScript = "scripts/self-test-official-multichain-pool-publication.ts";
+  if (existsSync(join(ROOT, selfTestScript))) {
+    pass(`multichain pool publication self-test exists at ${selfTestScript}`);
+  } else {
+    fail(`multichain pool publication self-test is missing at ${selfTestScript}`);
+  }
+
   if (
     typeof publication.command === "string"
     && publication.command.includes("uniswap:official-multichain:pools:check")
@@ -199,6 +206,15 @@ function checkPoolPublicationBlock(manifest: AnyRecord): void {
     pass("multichain pool publication command is recorded");
   } else {
     fail("multichain pool publication command is missing");
+  }
+
+  if (
+    typeof publication.selfTestCommand === "string"
+    && publication.selfTestCommand.includes("uniswap:official-multichain:pools:self-test")
+  ) {
+    pass("multichain pool publication self-test command is recorded");
+  } else {
+    fail("multichain pool publication self-test command is missing");
   }
 
   if (
@@ -211,6 +227,15 @@ function checkPoolPublicationBlock(manifest: AnyRecord): void {
     fail("multichain pool publication result is missing");
   }
 
+  if (
+    typeof publication.currentSelfTestResult === "string"
+    && publication.currentSelfTestResult.includes("FAIL=0")
+  ) {
+    pass("multichain pool publication self-test result is recorded");
+  } else {
+    fail("multichain pool publication self-test result is missing");
+  }
+
   const checks = Array.isArray(publication.requiredChecks) ? publication.requiredChecks.join("\n") : "";
   for (const snippet of [
     "target chain status",
@@ -219,6 +244,7 @@ function checkPoolPublicationBlock(manifest: AnyRecord): void {
     "low-14 permission bits",
     "poolIds must derive",
     "live target-chain PoolManager receipt verification",
+    "Self-test",
   ]) {
     if (checks.includes(snippet)) pass(`multichain pool publication checks cover ${snippet}`);
     else fail(`multichain pool publication checks must cover ${snippet}`);

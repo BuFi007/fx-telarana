@@ -144,6 +144,11 @@ function targetKey(network: unknown, family: unknown, symbol: unknown): string {
   return `${String(network ?? "").toLowerCase()}::${String(family ?? "").toLowerCase()}::${String(symbol ?? "").toLowerCase()}`;
 }
 
+function sourceTemplateCountForNetwork(sourceTemplateByLabel: Map<string, AnyRecord>, network: string): number {
+  const prefix = `${network.toLowerCase()}::`;
+  return [...sourceTemplateByLabel.keys()].filter((key) => key.startsWith(prefix)).length;
+}
+
 function collectSourcePoolTemplates(readiness: AnyRecord): AnyRecord[] {
   const templates: AnyRecord[] = [];
   for (const family of readiness.hookFamilies ?? []) {
@@ -546,10 +551,11 @@ async function checkTarget(
   if (target.status === "draft") warn(`${network} populated pool publication is draft-only and not a readiness claim`);
   if (target.status === "ready") pass(`${network} populated pool publication is marked ready`);
 
-  if (pools.length === sourceTemplateByLabel.size) {
+  const expectedPoolCount = sourceTemplateCountForNetwork(sourceTemplateByLabel, network);
+  if (pools.length === expectedPoolCount) {
     pass(`${network} official pool count matches source template count`);
   } else {
-    fail(`${network} official pool count ${pools.length} does not match ${sourceTemplateByLabel.size}`);
+    fail(`${network} official pool count ${pools.length} does not match ${expectedPoolCount}`);
   }
 
   const labels = new Set<string>();

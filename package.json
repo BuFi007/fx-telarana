@@ -51,6 +51,7 @@
     "uniswap:official-arc:pools:self-test": "bun scripts/self-test-official-arc-pool-publication.ts",
     "uniswap:official-multichain:check": "bun scripts/check-official-multichain-v4-readiness.ts",
     "uniswap:official-multichain:pools:check": "bun scripts/check-official-multichain-pool-publication.ts",
+    "uniswap:official-multichain:pools:self-test": "bun scripts/self-test-official-multichain-pool-publication.ts",
     "uniswap:stateview:check": "bun scripts/check-official-arc-stateview-readiness.ts",
     "uniswap:subgraph:check": "bun scripts/check-uniswap-v4-subgraph-readiness.ts",
     "uniswap:evidence:export": "bun scripts/export-uniswap-v4-indexing-evidence.ts",
