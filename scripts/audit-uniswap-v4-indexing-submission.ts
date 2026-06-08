@@ -60,6 +60,7 @@ const CHECKS: AuditCheck[] = [
   { key: "hedgeHookLiquidityVerifier", label: "FxHedgeHook liquidity readiness" },
   { key: "hedgeHookLiquiditySeedPlan", label: "FxHedgeHook liquidity seed plan" },
   { key: "onchainReceiptVerifier", label: "Arc testnet PoolManager receipt verifier" },
+  { key: "hookPermissionDiagnostic", label: "hook permission diagnostic" },
   { key: "hedgeHookV4QuoterDiagnostic", label: "FxHedgeHook official V4Quoter diagnostic" },
   { key: "fxSwapHookV4QuoterDiagnostic", label: "FxSwapHook V4Quoter diagnostic" },
   { key: "hookMetadataSelfTest", label: "hook indexer metadata self-test" },

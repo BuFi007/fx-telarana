@@ -767,6 +767,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["submissionAudit", "uniswap:submission:audit"],
     ["completionAudit", "uniswap:completion:audit"],
     ["onchainReceiptVerifier", "uniswap:indexing:onchain"],
+    ["hookPermissionDiagnostic", "uniswap:hook-permissions"],
     ["hedgeHookLiquidityVerifier", "uniswap:hedge:liquidity"],
     ["hedgeHookLiquiditySeedPlan", "uniswap:hedge:liquidity:plan"],
     ["hedgeHookLiquidityOperatorScript", "hedge:arc:seed-liquidity"],
@@ -2101,6 +2102,17 @@ function checkSubmissionEvidenceSnapshot(
     pass("submission package records the current indexing handoff result");
   } else {
     fail("submission package is missing the current indexing handoff result");
+  }
+
+  if (
+    typeof submission.hookPermissionDiagnosticCommand === "string"
+    && submission.hookPermissionDiagnosticCommand.includes("uniswap:hook-permissions")
+    && typeof submission.currentHookPermissionDiagnosticResult === "string"
+    && submission.currentHookPermissionDiagnosticResult.includes("4 forge tests passed")
+  ) {
+    pass("submission package records the hook permission diagnostic result");
+  } else {
+    fail("submission package is missing the hook permission diagnostic result");
   }
 
   if (

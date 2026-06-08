@@ -193,6 +193,15 @@ function main(): void {
   }
 
   if (
+    typeof readiness.submissionPackage?.currentHookPermissionDiagnosticResult === "string"
+    && readiness.submissionPackage.currentHookPermissionDiagnosticResult.includes("4 forge tests passed")
+  ) {
+    pass("hook permission diagnostic covers all four hook permission surfaces");
+  } else {
+    fail("hook permission diagnostic must cover all four hook permission surfaces");
+  }
+
+  if (
     hasFailZero(readiness.officialMultichain?.quoterVerification?.currentSelfTestResult)
     && hasFailZero(readiness.officialMultichain?.routerExecutionVerification?.currentSelfTestResult)
   ) {
