@@ -291,6 +291,7 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
         `poolPublicationStatus: ${avalanche.poolPublicationStatus}`,
         `publication template: ${multichainPoolPublication.manifest}`,
         `publication check: ${multichainPoolPublication.currentResult}`,
+        `publication fill plan: ${multichainPoolPublication.currentPlanResult}`,
       ],
       remainingWork: [
         "Run chain-specific hook remine/redeploy against Avalanche official PoolManager.",
@@ -326,6 +327,7 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
         `poolPublicationStatus: ${arbitrum.poolPublicationStatus}`,
         `publication template: ${multichainPoolPublication.manifest}`,
         `publication check: ${multichainPoolPublication.currentResult}`,
+        `publication fill plan: ${multichainPoolPublication.currentPlanResult}`,
       ],
       remainingWork: [
         "Run chain-specific hook remine/redeploy against Arbitrum One official PoolManager.",

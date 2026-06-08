@@ -199,7 +199,8 @@
         "indexingReadiness: official-contracts-known-hook-pool-publication-pending",
         "poolPublicationStatus: pending-poolmanager-initialize-and-first-liquidity",
         "publication template: deployments/uniswap-v4-official-multichain-pools.template.json",
-        "publication check: PASS=67 WARN=4 FAIL=0"
+        "publication check: PASS=67 WARN=4 FAIL=0",
+        "publication fill plan: PASS=81 WARN=4 FAIL=0"
       ],
       "remainingWork": [
         "Run chain-specific hook remine/redeploy against Avalanche official PoolManager.",
@@ -229,7 +230,8 @@
         "indexingReadiness: official-contracts-known-hook-pool-publication-pending",
         "poolPublicationStatus: pending-poolmanager-initialize-and-first-liquidity",
         "publication template: deployments/uniswap-v4-official-multichain-pools.template.json",
-        "publication check: PASS=67 WARN=4 FAIL=0"
+        "publication check: PASS=67 WARN=4 FAIL=0",
+        "publication fill plan: PASS=81 WARN=4 FAIL=0"
       ],
       "remainingWork": [
         "Run chain-specific hook remine/redeploy against Arbitrum One official PoolManager.",

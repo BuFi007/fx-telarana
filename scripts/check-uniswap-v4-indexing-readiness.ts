@@ -686,6 +686,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialMultichainDocsFreshness", "uniswap:official-multichain:docs:check"],
     ["officialMultichainDocsFreshnessSelfTest", "uniswap:official-multichain:docs:self-test"],
     ["officialMultichainPoolPublication", "uniswap:official-multichain:pools:check"],
+    ["officialMultichainPoolPublicationPlan", "uniswap:official-multichain:pools:plan"],
     ["officialMultichainPoolPublicationSelfTest", "uniswap:official-multichain:pools:self-test"],
     ["officialArcStateViewReadiness", "uniswap:stateview:check"],
     ["subgraphReadiness", "uniswap:subgraph:check"],
@@ -944,6 +945,13 @@ function checkOfficialMultichainBlock(
     fail(`official multichain pool publication verifier is missing at ${publicationScript}`);
   }
 
+  const publicationPlanScript = "scripts/plan-official-multichain-pool-publication.ts";
+  if (existsSync(join(ROOT, publicationPlanScript))) {
+    pass(`official multichain pool publication fill planner exists at ${publicationPlanScript}`);
+  } else {
+    fail(`official multichain pool publication fill planner is missing at ${publicationPlanScript}`);
+  }
+
   const publicationSelfTest = "scripts/self-test-official-multichain-pool-publication.ts";
   if (existsSync(join(ROOT, publicationSelfTest))) {
     pass(`official multichain pool publication self-test exists at ${publicationSelfTest}`);
@@ -970,6 +978,15 @@ function checkOfficialMultichainBlock(
   }
 
   if (
+    typeof publication.planCommand === "string"
+    && publication.planCommand.includes("uniswap:official-multichain:pools:plan")
+  ) {
+    pass("official multichain pool publication fill-plan command is recorded");
+  } else {
+    fail("official multichain pool publication fill-plan command is missing");
+  }
+
+  if (
     typeof publication.currentResult === "string"
     && publication.currentResult.includes("WARN=4")
     && publication.currentResult.includes("FAIL=0")
@@ -977,6 +994,16 @@ function checkOfficialMultichainBlock(
     pass("official multichain pool publication result is recorded");
   } else {
     fail("official multichain pool publication result is missing");
+  }
+
+  if (
+    typeof publication.currentPlanResult === "string"
+    && publication.currentPlanResult.includes("WARN=4")
+    && publication.currentPlanResult.includes("FAIL=0")
+  ) {
+    pass("official multichain pool publication fill-plan result is recorded");
+  } else {
+    fail("official multichain pool publication fill-plan result is missing");
   }
 
   if (
@@ -995,6 +1022,7 @@ function checkOfficialMultichainBlock(
     "Self-deployed Arc testnet",
     "low-14 permission bits",
     "poolIds must derive",
+    "Fill plan",
     "live target-chain PoolManager receipt verification",
     "Self-test",
   ]) {
@@ -1137,6 +1165,15 @@ function checkOfficialMultichainBlock(
     pass("indexing evidence snapshot official multichain pool publication result matches manifest");
   } else {
     fail("indexing evidence snapshot official multichain pool publication result does not match manifest");
+  }
+
+  if (
+    snapshot.officialMultichain?.poolPublication?.currentPlanResult
+    === block.poolPublication?.currentPlanResult
+  ) {
+    pass("indexing evidence snapshot official multichain pool publication fill-plan result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official multichain pool publication fill-plan result does not match manifest");
   }
 
   if (
