@@ -61,6 +61,17 @@ const requiredIndexingEvidence = [
   "routerQuoterCaveats",
 ] as const;
 
+const stateViewRequiredPoolFields = [
+  "poolId",
+  "currency0",
+  "currency1",
+  "fee",
+  "tickSpacing",
+  "hooks",
+  "sqrtPriceX96",
+  "liquidity",
+] as const;
+
 const counts: Record<Severity, number> = { PASS: 0, WARN: 0, FAIL: 0 };
 
 function record(severity: Severity, message: string): void {
@@ -547,6 +558,65 @@ function checkPoolPublicationBlock(manifest: AnyRecord): void {
   }
 }
 
+function checkStateViewVerificationBlock(manifest: AnyRecord): void {
+  const stateView = manifest.stateViewVerification ?? {};
+  const script = "scripts/check-official-multichain-stateview-readiness.ts";
+  if (existsSync(join(ROOT, script))) {
+    pass(`multichain StateView verifier exists at ${script}`);
+  } else {
+    fail(`multichain StateView verifier is missing at ${script}`);
+  }
+
+  if (
+    typeof stateView.command === "string"
+    && stateView.command.includes("uniswap:official-multichain:stateview:check")
+  ) {
+    pass("multichain StateView verification command is recorded");
+  } else {
+    fail("multichain StateView verification command is missing");
+  }
+
+  if (
+    typeof stateView.currentResult === "string"
+    && stateView.currentResult.includes("WARN=4")
+    && stateView.currentResult.includes("FAIL=0")
+  ) {
+    pass("multichain StateView verification result is recorded");
+  } else {
+    fail("multichain StateView verification result is missing");
+  }
+
+  if (stateView.poolPublicationInputEnv === "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT") {
+    pass("multichain StateView verification records pool-publication input env");
+  } else {
+    fail("multichain StateView verification pool-publication input env is missing");
+  }
+
+  if (stateView.requiredContract === "StateView") {
+    pass("multichain StateView verification requires StateView");
+  } else {
+    fail("multichain StateView verification requiredContract is missing");
+  }
+
+  const fields = new Set<string>(stateView.requiredPoolFields ?? []);
+  for (const field of stateViewRequiredPoolFields) {
+    if (fields.has(field)) pass(`multichain StateView verification requires pool.${field}`);
+    else fail(`multichain StateView verification is missing pool.${field}`);
+  }
+
+  const checks = Array.isArray(stateView.requiredChecks) ? stateView.requiredChecks.join("\n") : "";
+  for (const snippet of [
+    "official Uniswap v4 deployments",
+    "StateView.getSlot0",
+    "StateView.getLiquidity",
+    "sqrtPriceX96",
+    "Arc mainnet and Avalanche Fuji",
+  ]) {
+    if (checks.includes(snippet)) pass(`multichain StateView verification checks cover ${snippet}`);
+    else fail(`multichain StateView verification checks must cover ${snippet}`);
+  }
+}
+
 async function checkOptionalBytecode(target: AnyRecord): Promise<void> {
   const rpcEnv = target.rpcEnv;
   if (typeof rpcEnv !== "string" || rpcEnv.length === 0) {
@@ -729,6 +799,7 @@ async function main(): Promise<void> {
   checkDeploymentInputGenerationBlock(manifest);
   checkHookRedeployPlanBlock(manifest);
   checkPoolPublicationBlock(manifest);
+  checkStateViewVerificationBlock(manifest);
 
   for (const target of targets) {
     await checkTarget(manifest, target, selfPoolManagers);

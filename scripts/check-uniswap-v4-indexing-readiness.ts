@@ -31,6 +31,17 @@ const BYTES32_RE = /^0x[0-9a-fA-F]{64}$/;
 const ZERO_BYTES32 = /^0x0{64}$/i;
 const LOW_14_MASK = 0x3fffn;
 
+const stateViewRequiredPoolFields = [
+  "poolId",
+  "currency0",
+  "currency1",
+  "fee",
+  "tickSpacing",
+  "hooks",
+  "sqrtPriceX96",
+  "liquidity",
+] as const;
+
 const counts: Record<Severity, number> = { PASS: 0, WARN: 0, FAIL: 0 };
 
 function record(severity: Severity, message: string): void {
@@ -695,6 +706,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialMultichainPoolPublicationPlanSnapshot", "uniswap:official-multichain:pools:plan:write"],
     ["officialMultichainPoolPublicationPlanFreshness", "uniswap:official-multichain:pools:plan:check"],
     ["officialMultichainPoolPublicationSelfTest", "uniswap:official-multichain:pools:self-test"],
+    ["officialMultichainStateViewReadiness", "uniswap:official-multichain:stateview:check"],
     ["officialArcStateViewReadiness", "uniswap:stateview:check"],
     ["subgraphReadiness", "uniswap:subgraph:check"],
     ["submissionEvidenceExport", "uniswap:evidence:export"],
@@ -1182,6 +1194,63 @@ function checkOfficialMultichainBlock(
     else fail(`official multichain pool publication checks must cover ${snippet}`);
   }
 
+  const stateView = block.stateViewVerification ?? {};
+  const stateViewScript = "scripts/check-official-multichain-stateview-readiness.ts";
+  if (existsSync(join(ROOT, stateViewScript))) {
+    pass(`official multichain StateView verifier exists at ${stateViewScript}`);
+  } else {
+    fail(`official multichain StateView verifier is missing at ${stateViewScript}`);
+  }
+
+  if (
+    typeof stateView.command === "string"
+    && stateView.command.includes("uniswap:official-multichain:stateview:check")
+  ) {
+    pass("official multichain StateView verification command is recorded");
+  } else {
+    fail("official multichain StateView verification command is missing");
+  }
+
+  if (
+    typeof stateView.currentResult === "string"
+    && stateView.currentResult.includes("WARN=4")
+    && stateView.currentResult.includes("FAIL=0")
+  ) {
+    pass("official multichain StateView verification result is recorded");
+  } else {
+    fail("official multichain StateView verification result is missing");
+  }
+
+  if (stateView.poolPublicationInputEnv === "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT") {
+    pass("official multichain StateView verification records pool-publication input env");
+  } else {
+    fail("official multichain StateView verification pool-publication input env is missing");
+  }
+
+  if (stateView.requiredContract === "StateView") {
+    pass("official multichain StateView verification requires StateView");
+  } else {
+    fail("official multichain StateView verification requiredContract is missing");
+  }
+
+  const stateViewFields = new Set<string>(stateView.requiredPoolFields ?? []);
+  for (const field of stateViewRequiredPoolFields) {
+    if (stateViewFields.has(field)) pass(`official multichain StateView verification requires pool.${field}`);
+    else fail(`official multichain StateView verification is missing pool.${field}`);
+  }
+
+  const stateViewChecks = Array.isArray(stateView.requiredChecks) ? stateView.requiredChecks.join("\n") : "";
+  for (const snippet of [
+    "official Uniswap v4 deployments",
+    "StateView.getSlot0",
+    "StateView.getLiquidity",
+    "sqrtPriceX96",
+    "Arc mainnet and Avalanche Fuji",
+  ]) {
+    if (stateViewChecks.includes(snippet)) pass(`official multichain StateView verification checks cover ${snippet}`);
+    else fail(`official multichain StateView verification checks must cover ${snippet}`);
+  }
+
   if (multichain.schemaVersion === 1) {
     pass("official multichain manifest schemaVersion is 1");
   } else {
@@ -1399,6 +1468,15 @@ function checkOfficialMultichainBlock(
     pass("indexing evidence snapshot official multichain pool publication self-test result matches manifest");
   } else {
     fail("indexing evidence snapshot official multichain pool publication self-test result does not match manifest");
+  }
+
+  if (
+    snapshot.officialMultichain?.stateViewVerification?.currentResult
+    === block.stateViewVerification?.currentResult
+  ) {
+    pass("indexing evidence snapshot official multichain StateView result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official multichain StateView result does not match manifest");
   }
 }
 

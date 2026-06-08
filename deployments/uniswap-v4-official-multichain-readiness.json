@@ -105,6 +105,30 @@
       "Self-test must prove populated draft Avalanche/Arbitrum fixtures validate per-target pool counts, ready mode requires live target-chain RPC receipts, self-deployed PoolManagers are rejected, and missing router/quoter evidence fails."
     ]
   },
+  "stateViewVerification": {
+    "status": "pending-official-multichain-stateview-and-official-poolids",
+    "command": "bun run uniswap:official-multichain:stateview:check",
+    "currentResult": "PASS=29 WARN=4 FAIL=0",
+    "poolPublicationInputEnv": "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT",
+    "requiredContract": "StateView",
+    "requiredPoolFields": [
+      "poolId",
+      "currency0",
+      "currency1",
+      "fee",
+      "tickSpacing",
+      "hooks",
+      "sqrtPriceX96",
+      "liquidity"
+    ],
+    "requiredChecks": [
+      "Each target chain StateView address must come from official Uniswap v4 deployments.",
+      "Ready or populated target records must read StateView.getSlot0(poolId) for every official pool.",
+      "Ready or populated target records must read StateView.getLiquidity(poolId) for every official pool.",
+      "StateView sqrtPriceX96, tick, and liquidity must match published pool evidence when provided.",
+      "Arc mainnet and Avalanche Fuji remain pending until official Uniswap v4 addresses and official pool IDs exist."
+    ]
+  },
   "targets": [
     {
       "network": "arc-mainnet",
@@ -227,6 +251,6 @@
       ]
     }
   ],
-  "currentResult": "PASS=216 WARN=4 FAIL=0",
+  "currentResult": "PASS=234 WARN=4 FAIL=0",
   "command": "bun run uniswap:official-multichain:check"
 }

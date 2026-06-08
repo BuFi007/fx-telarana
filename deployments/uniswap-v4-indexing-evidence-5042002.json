@@ -209,7 +209,7 @@
     "status": "official-addresses-known-for-avalanche-and-arbitrum-arc-and-fuji-pending",
     "manifest": "deployments/uniswap-v4-official-multichain-readiness.json",
     "command": "bun run uniswap:official-multichain:check",
-    "currentResult": "PASS=216 WARN=4 FAIL=0",
+    "currentResult": "PASS=234 WARN=4 FAIL=0",
     "deploymentInputGeneration": {
       "checkCommand": "bun run uniswap:official-multichain:input:check",
       "currentCheckResult": "PASS=75 WARN=2 FAIL=0",
@@ -278,6 +278,30 @@
         "Fill plan must derive all target-chain publication records from the 11 source Arc testnet pool templates.",
         "Ready claims require initialize tx, first-liquidity tx, StateView evidence, subgraph evidence, exact-input Quoter evidence or a documented custom-route caveat, and live target-chain PoolManager receipt verification.",
         "Self-test must prove populated draft Avalanche/Arbitrum fixtures validate per-target pool counts, ready mode requires live target-chain RPC receipts, self-deployed PoolManagers are rejected, and missing router/quoter evidence fails."
+      ]
+    },
+    "stateViewVerification": {
+      "status": "pending-official-multichain-stateview-and-official-poolids",
+      "command": "bun run uniswap:official-multichain:stateview:check",
+      "currentResult": "PASS=29 WARN=4 FAIL=0",
+      "poolPublicationInputEnv": "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT",
+      "requiredContract": "StateView",
+      "requiredPoolFields": [
+        "poolId",
+        "currency0",
+        "currency1",
+        "fee",
+        "tickSpacing",
+        "hooks",
+        "sqrtPriceX96",
+        "liquidity"
+      ],
+      "requiredChecks": [
+        "Each target chain StateView address must come from official Uniswap v4 deployments.",
+        "Ready or populated target records must read StateView.getSlot0(poolId) for every official pool.",
+        "Ready or populated target records must read StateView.getLiquidity(poolId) for every official pool.",
+        "StateView sqrtPriceX96, tick, and liquidity must match published pool evidence when provided.",
+        "Arc mainnet and Avalanche Fuji remain pending until official Uniswap v4 addresses and official pool IDs exist."
       ]
     },
     "source": "https://developers.uniswap.org/docs/protocols/v4/deployments",
@@ -802,6 +826,7 @@
     "officialMultichainPoolPublicationPlanSnapshot": "bun run uniswap:official-multichain:pools:plan:write",
     "officialMultichainPoolPublicationPlanFreshness": "bun run uniswap:official-multichain:pools:plan:check",
     "officialMultichainPoolPublicationSelfTest": "bun run uniswap:official-multichain:pools:self-test",
+    "officialMultichainStateViewReadiness": "bun run uniswap:official-multichain:stateview:check",
     "officialArcStateViewReadiness": "bun run uniswap:stateview:check",
     "subgraphReadiness": "bun run uniswap:subgraph:check",
     "submissionEvidenceExport": "bun run uniswap:evidence:export",
@@ -842,7 +867,7 @@
     "completionAuditCommand": "bun run uniswap:completion:audit",
     "completionStatus": "not-complete",
     "currentCompletionAuditResult": "PASS=13 WARN=6 FAIL=0",
-    "currentSubmissionAuditResult": "CHECKS=34 PASS=34 WARN=72 FAIL=0",
+    "currentSubmissionAuditResult": "CHECKS=35 PASS=35 WARN=76 FAIL=0",
     "indexingEvidenceSnapshot": "deployments/uniswap-v4-indexing-evidence-5042002.json",
     "demoableToday": [
       "All six FxHedgeHook poolIds initialized and configured on the self-deployed Arc testnet PoolManager",
