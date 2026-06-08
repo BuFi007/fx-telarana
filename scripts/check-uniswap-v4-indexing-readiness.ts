@@ -1845,6 +1845,18 @@ function checkSubmissionEvidenceSnapshot(
     fail("submission package is missing the hook metadata freshness command");
   }
 
+  if (
+    typeof submission.hookMetadataSelfTestCommand === "string"
+    && submission.hookMetadataSelfTestCommand.includes("uniswap:hook-metadata:self-test")
+    && typeof submission.currentHookMetadataSelfTestResult === "string"
+    && submission.currentHookMetadataSelfTestResult.includes("PASS=8")
+    && submission.currentHookMetadataSelfTestResult.includes("FAIL=0")
+  ) {
+    pass("submission package records the hook metadata self-test result");
+  } else {
+    fail("submission package is missing the hook metadata self-test result");
+  }
+
   if (hookMetadataSnapshot.generatedFrom === MANIFEST) {
     pass("hook indexer metadata snapshot records its manifest source");
   } else {

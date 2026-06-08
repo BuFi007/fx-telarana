@@ -140,6 +140,16 @@ function main(): void {
     fail("hook indexer metadata snapshot must record the metadata regression self-test command");
   }
 
+  if (
+    typeof readiness.submissionPackage?.currentHookMetadataSelfTestResult === "string"
+    && readiness.submissionPackage.currentHookMetadataSelfTestResult.includes("PASS=8")
+    && readiness.submissionPackage.currentHookMetadataSelfTestResult.includes("FAIL=0")
+  ) {
+    pass("hook metadata regression self-test result records FAIL=0");
+  } else {
+    fail("hook metadata regression self-test result must record FAIL=0");
+  }
+
   if (hasFailZero(readiness.submissionPackage?.currentSubmissionAuditResult)) {
     pass("submission audit result records FAIL=0");
   } else {

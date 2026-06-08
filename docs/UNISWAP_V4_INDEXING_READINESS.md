@@ -43,7 +43,7 @@ Readiness check:
 bun run uniswap:indexing:check
 ```
 
-Current expected result: `PASS=580 WARN=1 FAIL=0`. The remaining warning is
+Current expected result: `PASS=581 WARN=1 FAIL=0`. The remaining warning is
 `FxHedgeHook` first liquidity, which is required before claiming router-active
 or liquid hedge markets.
 
@@ -620,7 +620,7 @@ Completion audit:
 bun run uniswap:completion:audit
 ```
 
-Current expected result: `PASS=18 WARN=6 FAIL=0`, with
+Current expected result: `PASS=19 WARN=6 FAIL=0`, with
 `completionStatus not-complete`. This audits the original goal directly rather
 than redefining completion around local rehearsal evidence. The warnings are the
 remaining completion blockers: official Arc contracts, official Fuji contracts,
@@ -642,8 +642,9 @@ fill plan, pool-publication self-tests, StateView/subgraph preflights,
 multichain StateView/subgraph/Quoter/router preflights, live
 `FxHedgeHook.poolConfigs` storage checks, `FxHedgeHook` liquidity checks, live
 Arc PoolManager receipt verification, both local official `V4Quoter`
-diagnostics, hook metadata self-test/freshness, evidence snapshot freshness, requirements matrix freshness,
-handoff snapshot freshness, and the completion audit. The warnings are the documented pending
+diagnostics, hook metadata self-test/freshness, evidence snapshot freshness,
+requirements matrix freshness, handoff snapshot freshness, and the completion
+audit. The warnings are the documented pending
 conditions: Arc/Fuji official addresses, official-chain pool publication,
 subgraph/StateView readiness before official pool records, and hedge first
 liquidity.
@@ -924,7 +925,7 @@ Ask Claude to verify these points:
 
 1. Run `bun run uniswap:indexing:check` from the `fx-telarana` repo.
 2. Confirm the check exits with `FAIL=0`; the current expected summary is
-   `PASS=580 WARN=1 FAIL=0`.
+   `PASS=581 WARN=1 FAIL=0`.
 3. Run `bun run uniswap:official-arc:check` and confirm official Arc is either
    fully populated from Uniswap docs or still pending with the expected warning;
    current expected summary is `PASS=9 WARN=1 FAIL=0`.
@@ -1062,7 +1063,7 @@ Ask Claude to verify these points:
 45. Run `bun run uniswap:completion:audit` and confirm the original-goal
    completion audit exits with `FAIL=0`, reports `completionStatus
    not-complete`, and has the current expected summary
-   `PASS=18 WARN=6 FAIL=0`.
+   `PASS=19 WARN=6 FAIL=0`.
 46. Run `bun run uniswap:submission:audit` and confirm the executable
    submission audit exits with `FAIL=0`; the current expected summary is
    `CHECKS=40 PASS=40 WARN=88 FAIL=0`.

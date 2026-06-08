@@ -944,6 +944,8 @@
     "hookMetadataCommand": "bun run uniswap:hook-metadata:export",
     "hookMetadataSnapshotCommand": "bun run uniswap:hook-metadata:write",
     "hookMetadataCheckCommand": "bun run uniswap:hook-metadata:check",
+    "hookMetadataSelfTestCommand": "bun run uniswap:hook-metadata:self-test",
+    "currentHookMetadataSelfTestResult": "PASS=8 FAIL=0",
     "hookMetadataSnapshot": "deployments/uniswap-v4-hook-indexer-metadata-5042002.json",
     "indexingHandoffCommand": "bun run uniswap:handoff:render",
     "indexingHandoffSnapshotCommand": "bun run uniswap:handoff:write",
@@ -953,7 +955,7 @@
     "indexingSubmissionAuditCommand": "bun run uniswap:submission:audit",
     "completionAuditCommand": "bun run uniswap:completion:audit",
     "completionStatus": "not-complete",
-    "currentCompletionAuditResult": "PASS=18 WARN=6 FAIL=0",
+    "currentCompletionAuditResult": "PASS=19 WARN=6 FAIL=0",
     "currentSubmissionAuditResult": "CHECKS=40 PASS=40 WARN=88 FAIL=0",
     "indexingEvidenceSnapshot": "deployments/uniswap-v4-indexing-evidence-5042002.json",
     "demoableToday": [
