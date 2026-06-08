@@ -747,6 +747,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["hookMetadataExport", "uniswap:hook-metadata:export"],
     ["hookMetadataSnapshot", "uniswap:hook-metadata:write"],
     ["hookMetadataFreshness", "uniswap:hook-metadata:check"],
+    ["hookMetadataSelfTest", "uniswap:hook-metadata:self-test"],
     ["submissionEvidenceExport", "uniswap:evidence:export"],
     ["submissionEvidenceSnapshot", "uniswap:evidence:write"],
     ["submissionEvidenceFreshness", "uniswap:evidence:check"],

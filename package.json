@@ -75,6 +75,7 @@
     "uniswap:hook-metadata:export": "bun scripts/export-uniswap-v4-hook-indexer-metadata.ts",
     "uniswap:hook-metadata:write": "bun scripts/export-uniswap-v4-hook-indexer-metadata.ts --out deployments/uniswap-v4-hook-indexer-metadata-5042002.json",
     "uniswap:hook-metadata:check": "bun scripts/export-uniswap-v4-hook-indexer-metadata.ts --check deployments/uniswap-v4-hook-indexer-metadata-5042002.json",
+    "uniswap:hook-metadata:self-test": "bun scripts/self-test-uniswap-v4-hook-indexer-metadata.ts",
     "uniswap:evidence:export": "bun scripts/export-uniswap-v4-indexing-evidence.ts",
     "uniswap:evidence:write": "bun scripts/export-uniswap-v4-indexing-evidence.ts --out deployments/uniswap-v4-indexing-evidence-5042002.json",
     "uniswap:evidence:check": "bun scripts/export-uniswap-v4-indexing-evidence.ts --check deployments/uniswap-v4-indexing-evidence-5042002.json",

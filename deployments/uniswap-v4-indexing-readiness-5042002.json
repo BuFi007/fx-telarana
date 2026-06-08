@@ -62,6 +62,7 @@
     "hookMetadataExport": "bun run uniswap:hook-metadata:export",
     "hookMetadataSnapshot": "bun run uniswap:hook-metadata:write",
     "hookMetadataFreshness": "bun run uniswap:hook-metadata:check",
+    "hookMetadataSelfTest": "bun run uniswap:hook-metadata:self-test",
     "submissionEvidenceExport": "bun run uniswap:evidence:export",
     "submissionEvidenceSnapshot": "bun run uniswap:evidence:write",
     "submissionEvidenceFreshness": "bun run uniswap:evidence:check",
@@ -809,7 +810,7 @@
     "completionAuditCommand": "bun run uniswap:completion:audit",
     "completionStatus": "not-complete",
     "currentCompletionAuditResult": "PASS=13 WARN=6 FAIL=0",
-    "currentSubmissionAuditResult": "CHECKS=39 PASS=39 WARN=88 FAIL=0",
+    "currentSubmissionAuditResult": "CHECKS=40 PASS=40 WARN=88 FAIL=0",
     "indexingEvidenceSnapshot": "deployments/uniswap-v4-indexing-evidence-5042002.json",
     "demoableToday": [
       "All six FxHedgeHook poolIds initialized and configured on the self-deployed Arc testnet PoolManager",

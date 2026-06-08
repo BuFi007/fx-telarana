@@ -60,6 +60,7 @@ const CHECKS: AuditCheck[] = [
   { key: "onchainReceiptVerifier", label: "Arc testnet PoolManager receipt verifier" },
   { key: "hedgeHookV4QuoterDiagnostic", label: "FxHedgeHook official V4Quoter diagnostic" },
   { key: "fxSwapHookV4QuoterDiagnostic", label: "FxSwapHook V4Quoter diagnostic" },
+  { key: "hookMetadataSelfTest", label: "hook indexer metadata self-test" },
   { key: "hookMetadataFreshness", label: "hook indexer metadata freshness" },
   { key: "submissionEvidenceFreshness", label: "indexing evidence snapshot freshness" },
   { key: "requirementsFreshness", label: "indexing requirements matrix freshness" },

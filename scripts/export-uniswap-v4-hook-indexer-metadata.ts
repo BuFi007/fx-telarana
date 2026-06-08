@@ -11,13 +11,27 @@ import { encodeAbiParameters, keccak256 } from "viem";
 type AnyRecord = Record<string, any>;
 
 const ROOT = resolve(import.meta.dir, "..");
-const MANIFEST = "deployments/uniswap-v4-indexing-readiness-5042002.json";
+const DEFAULT_MANIFEST = "deployments/uniswap-v4-indexing-readiness-5042002.json";
+const MANIFEST_ENV = "UNISWAP_HOOK_METADATA_MANIFEST";
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 const BYTES32_RE = /^0x[0-9a-fA-F]{64}$/;
 const LOW_14_MASK = 0x3fffn;
 
-function readManifest(): AnyRecord {
-  return JSON.parse(readFileSync(join(ROOT, MANIFEST), "utf-8"));
+function repoRelativePathForValue(label: string, value: string): string {
+  if (value.startsWith("/") || value.includes("..")) {
+    throw new Error(`${label} must stay inside the repository`);
+  }
+  return value;
+}
+
+function manifestPath(): string {
+  return process.env[MANIFEST_ENV]
+    ? repoRelativePathForValue(MANIFEST_ENV, process.env[MANIFEST_ENV]!)
+    : DEFAULT_MANIFEST;
+}
+
+function readManifest(relativeManifestPath: string): AnyRecord {
+  return JSON.parse(readFileSync(join(ROOT, relativeManifestPath), "utf-8"));
 }
 
 function isAddress(value: unknown): value is string {
@@ -132,13 +146,13 @@ function familyMetadata(family: AnyRecord): AnyRecord {
   };
 }
 
-function buildPacket(manifest: AnyRecord): AnyRecord {
+function buildPacket(manifest: AnyRecord, relativeManifestPath: string): AnyRecord {
   const hookFamilies = (manifest.hookFamilies ?? []).map((family: AnyRecord) => familyMetadata(family));
   const poolCount = hookFamilies.reduce((sum: number, family: AnyRecord) => sum + family.pools.length, 0);
 
   return {
     schemaVersion: 1,
-    generatedFrom: MANIFEST,
+    generatedFrom: relativeManifestPath,
     network: manifest.network,
     chainId: manifest.chainId,
     generatedAt: manifest.generatedAt,
@@ -165,6 +179,7 @@ function buildPacket(manifest: AnyRecord): AnyRecord {
       readiness: manifest.evidenceCommands?.offlineReadiness,
       metadataExport: manifest.evidenceCommands?.hookMetadataExport,
       metadataCheck: manifest.evidenceCommands?.hookMetadataFreshness,
+      metadataSelfTest: manifest.evidenceCommands?.hookMetadataSelfTest,
       officialArcPoolPublication: manifest.evidenceCommands?.officialArcPoolPublicationCheck,
       officialMultichainReadiness: manifest.evidenceCommands?.officialMultichainReadiness,
     },
@@ -177,15 +192,13 @@ function repoRelativePathFor(flag: string): string | undefined {
 
   const value = process.argv[index + 1];
   if (!value) throw new Error(`${flag} requires a relative path`);
-  if (value.startsWith("/") || value.includes("..")) {
-    throw new Error(`${flag} must stay inside the repository`);
-  }
-  return value;
+  return repoRelativePathForValue(flag, value);
 }
 
 function main(): void {
-  const manifest = readManifest();
-  const packet = buildPacket(manifest);
+  const relativeManifestPath = manifestPath();
+  const manifest = readManifest(relativeManifestPath);
+  const packet = buildPacket(manifest, relativeManifestPath);
   const json = `${JSON.stringify(packet, null, 2)}\n`;
   const outPath = repoRelativePathFor("--out");
   const checkPath = repoRelativePathFor("--check");

@@ -424,6 +424,7 @@
     "readiness": "bun run uniswap:indexing:check",
     "metadataExport": "bun run uniswap:hook-metadata:export",
     "metadataCheck": "bun run uniswap:hook-metadata:check",
+    "metadataSelfTest": "bun run uniswap:hook-metadata:self-test",
     "officialArcPoolPublication": "bun run uniswap:official-arc:pools:check",
     "officialMultichainReadiness": "bun run uniswap:official-multichain:check"
   }
