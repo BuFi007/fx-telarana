@@ -187,6 +187,13 @@ function checkSourceFreshnessBlock(manifest: AnyRecord): void {
     fail(`official docs freshness verifier is missing at ${script}`);
   }
 
+  const selfTestScript = "scripts/self-test-official-uniswap-v4-deployments-docs.ts";
+  if (existsSync(join(ROOT, selfTestScript))) {
+    pass(`official docs freshness self-test exists at ${selfTestScript}`);
+  } else {
+    fail(`official docs freshness self-test is missing at ${selfTestScript}`);
+  }
+
   if (
     typeof freshness.command === "string"
     && freshness.command.includes("uniswap:official-multichain:docs:check")
@@ -194,6 +201,15 @@ function checkSourceFreshnessBlock(manifest: AnyRecord): void {
     pass("official docs freshness command is recorded");
   } else {
     fail("official docs freshness command is missing");
+  }
+
+  if (
+    typeof freshness.selfTestCommand === "string"
+    && freshness.selfTestCommand.includes("uniswap:official-multichain:docs:self-test")
+  ) {
+    pass("official docs freshness self-test command is recorded");
+  } else {
+    fail("official docs freshness self-test command is missing");
   }
 
   if (
@@ -206,6 +222,15 @@ function checkSourceFreshnessBlock(manifest: AnyRecord): void {
     fail("official docs freshness result is missing");
   }
 
+  if (
+    typeof freshness.currentSelfTestResult === "string"
+    && freshness.currentSelfTestResult.includes("FAIL=0")
+  ) {
+    pass("official docs freshness self-test result is recorded");
+  } else {
+    fail("official docs freshness self-test result is missing");
+  }
+
   const checks = Array.isArray(freshness.requiredChecks) ? freshness.requiredChecks.join("\n") : "";
   for (const snippet of [
     "official Uniswap v4 deployments Markdown",
@@ -214,6 +239,7 @@ function checkSourceFreshnessBlock(manifest: AnyRecord): void {
     "Arc mainnet must remain pending",
     "Avalanche Fuji must remain pending",
     "official contract address drift",
+    "Self-test",
   ]) {
     if (checks.includes(snippet)) pass(`official docs freshness checks cover ${snippet}`);
     else fail(`official docs freshness checks must cover ${snippet}`);

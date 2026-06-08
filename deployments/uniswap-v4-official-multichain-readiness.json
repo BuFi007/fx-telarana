@@ -8,13 +8,16 @@
     "source": "https://developers.uniswap.org/docs/protocols/v4/deployments.md",
     "command": "bun run uniswap:official-multichain:docs:check",
     "currentResult": "PASS=31 WARN=2 FAIL=0",
+    "selfTestCommand": "bun run uniswap:official-multichain:docs:self-test",
+    "currentSelfTestResult": "PASS=8 FAIL=0",
     "requiredChecks": [
       "Parse the official Uniswap v4 deployments Markdown by network section.",
       "Avalanche C-Chain official contract addresses must match the local manifest.",
       "Arbitrum One official contract addresses must match the local manifest.",
       "Arc mainnet must remain pending unless the official docs list Arc.",
       "Avalanche Fuji must remain pending unless the official docs list Fuji.",
-      "Any official contract address drift must fail the check."
+      "Any official contract address drift must fail the check.",
+      "Self-test must prove fixture-based current docs pass, Arc/Fuji newly published fixtures fail, and official address drift fails."
     ]
   },
   "canonicalPermit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
@@ -184,6 +187,6 @@
       ]
     }
   ],
-  "currentResult": "PASS=153 WARN=4 FAIL=0",
+  "currentResult": "PASS=157 WARN=4 FAIL=0",
   "command": "bun run uniswap:official-multichain:check"
 }

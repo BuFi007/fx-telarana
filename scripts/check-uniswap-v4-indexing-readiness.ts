@@ -568,6 +568,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialArcPoolPublicationSelfTest", "uniswap:official-arc:pools:self-test"],
     ["officialMultichainReadiness", "uniswap:official-multichain:check"],
     ["officialMultichainDocsFreshness", "uniswap:official-multichain:docs:check"],
+    ["officialMultichainDocsFreshnessSelfTest", "uniswap:official-multichain:docs:self-test"],
     ["officialMultichainPoolPublication", "uniswap:official-multichain:pools:check"],
     ["officialMultichainPoolPublicationSelfTest", "uniswap:official-multichain:pools:self-test"],
     ["officialArcStateViewReadiness", "uniswap:stateview:check"],
@@ -649,6 +650,13 @@ function checkOfficialMultichainBlock(
     fail(`official multichain docs freshness verifier is missing at ${freshnessScript}`);
   }
 
+  const freshnessSelfTest = "scripts/self-test-official-uniswap-v4-deployments-docs.ts";
+  if (existsSync(join(ROOT, freshnessSelfTest))) {
+    pass(`official multichain docs freshness self-test exists at ${freshnessSelfTest}`);
+  } else {
+    fail(`official multichain docs freshness self-test is missing at ${freshnessSelfTest}`);
+  }
+
   if (
     typeof freshness.command === "string"
     && freshness.command.includes("uniswap:official-multichain:docs:check")
@@ -656,6 +664,15 @@ function checkOfficialMultichainBlock(
     pass("official multichain docs freshness command is recorded");
   } else {
     fail("official multichain docs freshness command is missing");
+  }
+
+  if (
+    typeof freshness.selfTestCommand === "string"
+    && freshness.selfTestCommand.includes("uniswap:official-multichain:docs:self-test")
+  ) {
+    pass("official multichain docs freshness self-test command is recorded");
+  } else {
+    fail("official multichain docs freshness self-test command is missing");
   }
 
   if (
@@ -668,6 +685,15 @@ function checkOfficialMultichainBlock(
     fail("official multichain docs freshness result is missing");
   }
 
+  if (
+    typeof freshness.currentSelfTestResult === "string"
+    && freshness.currentSelfTestResult.includes("FAIL=0")
+  ) {
+    pass("official multichain docs freshness self-test result is recorded");
+  } else {
+    fail("official multichain docs freshness self-test result is missing");
+  }
+
   const freshnessChecks = Array.isArray(freshness.requiredChecks) ? freshness.requiredChecks.join("\n") : "";
   for (const snippet of [
     "official Uniswap v4 deployments Markdown",
@@ -676,6 +702,7 @@ function checkOfficialMultichainBlock(
     "Arc mainnet must remain pending",
     "Avalanche Fuji must remain pending",
     "official contract address drift",
+    "Self-test",
   ]) {
     if (freshnessChecks.includes(snippet)) pass(`official multichain docs freshness checks cover ${snippet}`);
     else fail(`official multichain docs freshness checks must cover ${snippet}`);
@@ -849,6 +876,15 @@ function checkOfficialMultichainBlock(
     pass("indexing evidence snapshot official multichain docs freshness result matches manifest");
   } else {
     fail("indexing evidence snapshot official multichain docs freshness result does not match manifest");
+  }
+
+  if (
+    snapshot.officialMultichain?.sourceFreshness?.currentSelfTestResult
+    === block.sourceFreshness?.currentSelfTestResult
+  ) {
+    pass("indexing evidence snapshot official multichain docs freshness self-test result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official multichain docs freshness self-test result does not match manifest");
   }
 
   if (
