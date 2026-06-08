@@ -5,8 +5,8 @@
 // templates from Arc testnet evidence and shows the target-chain fields that
 // must be populated before claiming official indexing.
 
-import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 
 type AnyRecord = Record<string, any>;
 type Severity = "PASS" | "WARN" | "FAIL";
@@ -47,6 +47,19 @@ function fail(message: string): void {
 
 function inputPath(): string {
   return process.env[INPUT_ENV] || DEFAULT_POOL_PUBLICATION_INPUT;
+}
+
+function repoRelativePathFor(flag: string): string | undefined {
+  const index = process.argv.indexOf(flag);
+  if (index === -1) return undefined;
+
+  const value = process.argv[index + 1];
+  if (!value) throw new Error(`${flag} requires a relative path`);
+  if (value.startsWith("/") || value.includes("..")) {
+    throw new Error(`${flag} must stay inside the repository`);
+  }
+
+  return value;
 }
 
 function readJson(relativePath: string): AnyRecord {
@@ -242,8 +255,35 @@ function checkTargetPlan(network: string, multichain: AnyRecord, publicationInpu
   }
 }
 
+function buildFillPlanPacket(
+  relativeInputPath: string,
+  publicationInput: AnyRecord,
+  multichain: AnyRecord,
+  templates: AnyRecord[],
+): AnyRecord {
+  return {
+    schemaVersion: 1,
+    status: "fill-plan-not-a-readiness-claim",
+    sourceManifest: READINESS_MANIFEST,
+    sourceMultichainManifest: MULTICHAIN_MANIFEST,
+    poolPublicationInput: relativeInputPath,
+    expectedPoolTemplateCount: templates.length,
+    requiredReadyEvidence: publicationInput.requiredReadyEvidence ?? [],
+    validationSummary: {
+      pass: counts.PASS,
+      warn: counts.WARN,
+      fail: counts.FAIL,
+    },
+    targets: requiredNetworks.map((network) => targetPlan(network, multichain, publicationInput, templates)),
+  };
+}
+
 function main(): void {
   const relativeInputPath = inputPath();
+  const outPath = repoRelativePathFor("--out");
+  const checkPath = repoRelativePathFor("--check");
+  if (outPath && checkPath) throw new Error("use either --out or --check, not both");
+
   console.log("Official Uniswap v4 multichain pool-publication fill plan");
   console.log(`source ${READINESS_MANIFEST}`);
   console.log(`multichain ${MULTICHAIN_MANIFEST}`);
@@ -280,21 +320,38 @@ function main(): void {
   for (const template of templates) checkSourceTemplate(template);
   for (const network of requiredNetworks) checkTargetPlan(network, multichain, publicationInput);
 
-  console.log("");
-  console.log("publication fill matrix");
-  console.log(JSON.stringify({
-    schemaVersion: 1,
-    status: "fill-plan-not-a-readiness-claim",
-    sourceManifest: READINESS_MANIFEST,
-    sourceMultichainManifest: MULTICHAIN_MANIFEST,
-    poolPublicationInput: relativeInputPath,
-    expectedPoolTemplateCount: templates.length,
-    requiredReadyEvidence: publicationInput.requiredReadyEvidence ?? [],
-    targets: requiredNetworks.map((network) => targetPlan(network, multichain, publicationInput, templates)),
-  }, null, 2));
+  const packet = buildFillPlanPacket(relativeInputPath, publicationInput, multichain, templates);
+  const json = `${JSON.stringify(packet, null, 2)}\n`;
+  const summary = `summary PASS=${counts.PASS} WARN=${counts.WARN} FAIL=${counts.FAIL}`;
+
+  if (outPath) {
+    const absoluteOutPath = join(ROOT, outPath);
+    mkdirSync(dirname(absoluteOutPath), { recursive: true });
+    writeFileSync(absoluteOutPath, json);
+    console.log("");
+    console.log(`wrote ${outPath}`);
+    console.log(summary);
+    process.exit(counts.FAIL > 0 ? 1 : 0);
+  }
+
+  if (checkPath) {
+    const current = readFileSync(join(ROOT, checkPath), "utf-8");
+    if (current !== json) {
+      throw new Error(`${checkPath} is stale; run bun run uniswap:official-multichain:pools:plan:write`);
+    }
+
+    console.log("");
+    console.log(`${checkPath} is fresh`);
+    console.log(summary);
+    process.exit(counts.FAIL > 0 ? 1 : 0);
+  }
 
   console.log("");
-  console.log(`summary PASS=${counts.PASS} WARN=${counts.WARN} FAIL=${counts.FAIL}`);
+  console.log("publication fill matrix");
+  console.log(json.trimEnd());
+
+  console.log("");
+  console.log(summary);
   process.exit(counts.FAIL > 0 ? 1 : 0);
 }
 

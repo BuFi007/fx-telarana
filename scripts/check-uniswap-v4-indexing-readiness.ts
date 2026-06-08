@@ -18,6 +18,7 @@ const REQUIREMENTS_SNAPSHOT = "deployments/uniswap-v4-indexing-requirements-5042
 const HANDOFF_SNAPSHOT = "deployments/uniswap-v4-indexing-handoff-5042002.md";
 const MULTICHAIN_MANIFEST = "deployments/uniswap-v4-official-multichain-readiness.json";
 const MULTICHAIN_POOL_PUBLICATION = "deployments/uniswap-v4-official-multichain-pools.template.json";
+const MULTICHAIN_POOL_FILL_PLAN = "deployments/uniswap-v4-official-multichain-pools-fill-plan.json";
 const DEPLOYMENTS_MARKDOWN_URL = "https://developers.uniswap.org/docs/protocols/v4/deployments.md";
 const OFFICIAL_ARC_INPUT_TEMPLATE = "deployments/uniswap-v4-official-arc-input.template.json";
 const HEDGE_DEPLOYMENT = "deployments/fx-hedge-hook-5042002.json";
@@ -687,6 +688,8 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialMultichainDocsFreshnessSelfTest", "uniswap:official-multichain:docs:self-test"],
     ["officialMultichainPoolPublication", "uniswap:official-multichain:pools:check"],
     ["officialMultichainPoolPublicationPlan", "uniswap:official-multichain:pools:plan"],
+    ["officialMultichainPoolPublicationPlanSnapshot", "uniswap:official-multichain:pools:plan:write"],
+    ["officialMultichainPoolPublicationPlanFreshness", "uniswap:official-multichain:pools:plan:check"],
     ["officialMultichainPoolPublicationSelfTest", "uniswap:official-multichain:pools:self-test"],
     ["officialArcStateViewReadiness", "uniswap:stateview:check"],
     ["subgraphReadiness", "uniswap:subgraph:check"],
@@ -724,6 +727,7 @@ function checkOfficialMultichainBlock(
   manifest: AnyRecord,
   multichain: AnyRecord,
   snapshot: AnyRecord,
+  fillPlan: AnyRecord,
 ): void {
   const block = manifest.officialMultichain ?? {};
   if (block.manifest === MULTICHAIN_MANIFEST) {
@@ -938,6 +942,18 @@ function checkOfficialMultichainBlock(
     fail(`official multichain pool publication template is missing at ${MULTICHAIN_POOL_PUBLICATION}`);
   }
 
+  if (publication.planSnapshot === MULTICHAIN_POOL_FILL_PLAN) {
+    pass("official multichain pool publication fill-plan snapshot path is recorded");
+  } else {
+    fail("official multichain pool publication fill-plan snapshot path is missing");
+  }
+
+  if (existsSync(join(ROOT, MULTICHAIN_POOL_FILL_PLAN))) {
+    pass(`official multichain pool publication fill-plan snapshot exists at ${MULTICHAIN_POOL_FILL_PLAN}`);
+  } else {
+    fail(`official multichain pool publication fill-plan snapshot is missing at ${MULTICHAIN_POOL_FILL_PLAN}`);
+  }
+
   const publicationScript = "scripts/check-official-multichain-pool-publication.ts";
   if (existsSync(join(ROOT, publicationScript))) {
     pass(`official multichain pool publication verifier exists at ${publicationScript}`);
@@ -984,6 +1000,24 @@ function checkOfficialMultichainBlock(
     pass("official multichain pool publication fill-plan command is recorded");
   } else {
     fail("official multichain pool publication fill-plan command is missing");
+  }
+
+  if (
+    typeof publication.planSnapshotCommand === "string"
+    && publication.planSnapshotCommand.includes("uniswap:official-multichain:pools:plan:write")
+  ) {
+    pass("official multichain pool publication fill-plan snapshot command is recorded");
+  } else {
+    fail("official multichain pool publication fill-plan snapshot command is missing");
+  }
+
+  if (
+    typeof publication.planCheckCommand === "string"
+    && publication.planCheckCommand.includes("uniswap:official-multichain:pools:plan:check")
+  ) {
+    pass("official multichain pool publication fill-plan freshness command is recorded");
+  } else {
+    fail("official multichain pool publication fill-plan freshness command is missing");
   }
 
   if (
@@ -1174,6 +1208,46 @@ function checkOfficialMultichainBlock(
     pass("indexing evidence snapshot official multichain pool publication fill-plan result matches manifest");
   } else {
     fail("indexing evidence snapshot official multichain pool publication fill-plan result does not match manifest");
+  }
+
+  if (fillPlan.sourceManifest === MANIFEST) {
+    pass("official multichain fill-plan snapshot records the readiness manifest source");
+  } else {
+    fail("official multichain fill-plan snapshot readiness manifest source is wrong");
+  }
+
+  if (fillPlan.sourceMultichainManifest === MULTICHAIN_MANIFEST) {
+    pass("official multichain fill-plan snapshot records the multichain manifest source");
+  } else {
+    fail("official multichain fill-plan snapshot multichain manifest source is wrong");
+  }
+
+  if (fillPlan.poolPublicationInput === MULTICHAIN_POOL_PUBLICATION) {
+    pass("official multichain fill-plan snapshot records the pool publication template source");
+  } else {
+    fail("official multichain fill-plan snapshot pool publication source is wrong");
+  }
+
+  if (fillPlan.expectedPoolTemplateCount === 11) {
+    pass("official multichain fill-plan snapshot derives 11 source templates");
+  } else {
+    fail("official multichain fill-plan snapshot source template count is wrong");
+  }
+
+  if (
+    fillPlan.validationSummary?.pass === 81
+    && fillPlan.validationSummary?.warn === 4
+    && fillPlan.validationSummary?.fail === 0
+  ) {
+    pass("official multichain fill-plan snapshot validation summary is recorded");
+  } else {
+    fail("official multichain fill-plan snapshot validation summary is missing or stale");
+  }
+
+  const fillPlanTargets = new Set((fillPlan.targets ?? []).map((target: AnyRecord) => target.network));
+  for (const network of ["arc-mainnet", "avalanche-fuji", "avalanche", "arbitrum-one"]) {
+    if (fillPlanTargets.has(network)) pass(`official multichain fill-plan snapshot includes ${network}`);
+    else fail(`official multichain fill-plan snapshot is missing ${network}`);
   }
 
   if (
@@ -2141,6 +2215,7 @@ function main(): void {
   const evidenceSnapshot = readJson<AnyRecord>(EVIDENCE_SNAPSHOT);
   const requirementsSnapshot = readJson<AnyRecord>(REQUIREMENTS_SNAPSHOT);
   const multichainReadiness = readJson<AnyRecord>(MULTICHAIN_MANIFEST);
+  const multichainFillPlan = readJson<AnyRecord>(MULTICHAIN_POOL_FILL_PLAN);
 
   if (manifest.network === "arc-testnet" && manifest.chainId === 5042002) {
     pass("manifest targets arc-testnet chainId 5042002");
@@ -2157,7 +2232,7 @@ function main(): void {
 
   checkOfficialMainnetBlock(manifest);
   checkEvidenceCommands(manifest);
-  checkOfficialMultichainBlock(manifest, multichainReadiness, evidenceSnapshot);
+  checkOfficialMultichainBlock(manifest, multichainReadiness, evidenceSnapshot, multichainFillPlan);
   checkSubmissionEvidenceSnapshot(manifest, evidenceSnapshot, requirementsSnapshot);
 
   for (const family of manifest.hookFamilies ?? []) {

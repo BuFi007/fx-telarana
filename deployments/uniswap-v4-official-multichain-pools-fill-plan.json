@@ -1,0 +1,2486 @@
+{
+  "schemaVersion": 1,
+  "status": "fill-plan-not-a-readiness-claim",
+  "sourceManifest": "deployments/uniswap-v4-indexing-readiness-5042002.json",
+  "sourceMultichainManifest": "deployments/uniswap-v4-official-multichain-readiness.json",
+  "poolPublicationInput": "deployments/uniswap-v4-official-multichain-pools.template.json",
+  "expectedPoolTemplateCount": 11,
+  "requiredReadyEvidence": [
+    "PoolManager Initialize receipt emitted by the official target-chain PoolManager",
+    "positive PoolManager ModifyLiquidity receipt emitted by the official target-chain PoolManager",
+    "StateView slot0 sqrtPriceX96 and nonzero liquidity",
+    "Uniswap v4 subgraph pool entity with matching hooks, tokens, fee, tickSpacing, price state, and nonzero liquidity",
+    "official Quoter exact-input diagnostic or explicitly documented custom-route caveat"
+  ],
+  "validationSummary": {
+    "pass": 81,
+    "warn": 4,
+    "fail": 0
+  },
+  "targets": [
+    {
+      "network": "arc-mainnet",
+      "chainId": null,
+      "officialStatus": "pending-official-uniswap-v4-addresses",
+      "publicationStatus": "pending-official-uniswap-v4-addresses",
+      "officialPoolManager": null,
+      "rpcEnv": "OFFICIAL_ARC_RPC_URL",
+      "plannedPoolCount": 11,
+      "populatedPoolCount": 0,
+      "readyCommand": "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT=<populated-file> bun run uniswap:official-multichain:pools:check",
+      "plannedOfficialPools": [
+        {
+          "family": "FxHedgeHook",
+          "symbol": "JPYC/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0xd19440c05e5c0d9549187e01162e8aeab29c196c3177cde6360db740b8aa3504",
+          "sourceInitializeTx": "0xa2564c11072dddd7f56fa7150d2da815d6047f1cc6a8294782cd2ddb1687335e",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "cirBTC/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x33e42e1b20e3ea50b925963b583a033a8b959f53ffe76fb18cb97a6c6a171a8d",
+          "sourceInitializeTx": "0x1e662456f1979eb6362935cc0057fce66a37fdd188d941d0d3f8a631b5b7b22c",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF",
+              "fee": 3000,
+              "tickSpacing": 60,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF"
+              },
+              "feeTier": "3000",
+              "tickSpacing": "60",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "EURC/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x0a463f18e563a62ab306eb375452c3feebe9ccbdab822b3c3582ddd13443ce00",
+          "sourceInitializeTx": "0x1b7a1a38a1960319a8d60a6ddf3e04a2d9d6f1ebd4931c86eaddfc4fbbcd128e",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "AUDF/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x3d6aafb1d198968d10fb9d8596681979be57116efc7dda5f1e2694c6841a3e08",
+          "sourceInitializeTx": "0x879b7286dc07d64ff83258769a19c6709edcda3bf0851765e6979602c4270b1d",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "MXNB/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x5bd11000bfaa4f274a1cbc0b7d5c20f92ffc047738ac04963fcaac3221466946",
+          "sourceInitializeTx": "0x40589ff7072d44afaeb90bacfb3fa65d58a77eba255c2443db9e2e4b5fe2c554",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "QCAD/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x1ad04bd3b9be342b2c720b5bbde60569cea51b9c343cfb4848f342a45e061fd7",
+          "sourceInitializeTx": "0xd0594a7fa15d4eaa6e471a2b308739a2bf428650d70ce64d629e9e03cb82dc34",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+              "currency1": "0x3600000000000000000000000000000000000000",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d"
+              },
+              "token1": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "USDC/EURC",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x4d268583c6cefb4fb959761f3f733c22b6a0bd622a2e7fa04dd30fe6e35e2d9c",
+          "sourceInitializeTx": "0xba9982b907ade0bcb67acabeac7b8bd36628b4e321f8ab8110f9384ce38da72e",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "USDC/AUDF",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x7b1fbffcc973902a9cb09cb66f7322f7e750d0f54f953abdea910b2e21267de6",
+          "sourceInitializeTx": "0xc3c5c4379bf5a4eca36abb822f08af18dca121b4d4de9756f117a9e17984615f",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "USDC/MXNB",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x964b698844ab4699762ec07031a2dc953d7cfc17f567dc43faccf6dac23c1c39",
+          "sourceInitializeTx": "0x289fe08e3bb5f0d571b41a2699959cde5adeff3e318a34c0659ee34f0b7af55c",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "QCAD/USDC",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x5303c347ab8aa48a98f6738d4598bd3d8db7a9924143a990ad883cd54a7adb41",
+          "sourceInitializeTx": "0xb2d63cb96b38d981b9605013f88837b5ae614ae2088463a2beeeea15c63eaaf5",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+              "currency1": "0x3600000000000000000000000000000000000000",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d"
+              },
+              "token1": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "TelaranaGatewayHubHook",
+          "symbol": "USDC/EURC",
+          "expectedHookBits": 136,
+          "sourcePoolId": "0xf6b13fe5ae3115d159b3a844a56588d1549293fb6725040f01c54ba31827f711",
+          "sourceInitializeTx": "0x91f605e7556c5aec98fd2a93ea00777321b55cdaf501a371404b708d01ce2921",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "not-generic-hookdata-required",
+              "hookData": "Gateway route and attestation context required",
+              "exactOutput": "unsupported"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "network": "avalanche-fuji",
+      "chainId": 43113,
+      "officialStatus": "pending-official-uniswap-v4-addresses",
+      "publicationStatus": "pending-official-uniswap-v4-addresses",
+      "officialPoolManager": null,
+      "rpcEnv": "AVALANCHE_FUJI_RPC_URL",
+      "plannedPoolCount": 11,
+      "populatedPoolCount": 0,
+      "readyCommand": "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT=<populated-file> bun run uniswap:official-multichain:pools:check",
+      "plannedOfficialPools": [
+        {
+          "family": "FxHedgeHook",
+          "symbol": "JPYC/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0xd19440c05e5c0d9549187e01162e8aeab29c196c3177cde6360db740b8aa3504",
+          "sourceInitializeTx": "0xa2564c11072dddd7f56fa7150d2da815d6047f1cc6a8294782cd2ddb1687335e",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "cirBTC/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x33e42e1b20e3ea50b925963b583a033a8b959f53ffe76fb18cb97a6c6a171a8d",
+          "sourceInitializeTx": "0x1e662456f1979eb6362935cc0057fce66a37fdd188d941d0d3f8a631b5b7b22c",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF",
+              "fee": 3000,
+              "tickSpacing": 60,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF"
+              },
+              "feeTier": "3000",
+              "tickSpacing": "60",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "EURC/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x0a463f18e563a62ab306eb375452c3feebe9ccbdab822b3c3582ddd13443ce00",
+          "sourceInitializeTx": "0x1b7a1a38a1960319a8d60a6ddf3e04a2d9d6f1ebd4931c86eaddfc4fbbcd128e",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "AUDF/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x3d6aafb1d198968d10fb9d8596681979be57116efc7dda5f1e2694c6841a3e08",
+          "sourceInitializeTx": "0x879b7286dc07d64ff83258769a19c6709edcda3bf0851765e6979602c4270b1d",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "MXNB/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x5bd11000bfaa4f274a1cbc0b7d5c20f92ffc047738ac04963fcaac3221466946",
+          "sourceInitializeTx": "0x40589ff7072d44afaeb90bacfb3fa65d58a77eba255c2443db9e2e4b5fe2c554",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "QCAD/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x1ad04bd3b9be342b2c720b5bbde60569cea51b9c343cfb4848f342a45e061fd7",
+          "sourceInitializeTx": "0xd0594a7fa15d4eaa6e471a2b308739a2bf428650d70ce64d629e9e03cb82dc34",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+              "currency1": "0x3600000000000000000000000000000000000000",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d"
+              },
+              "token1": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "USDC/EURC",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x4d268583c6cefb4fb959761f3f733c22b6a0bd622a2e7fa04dd30fe6e35e2d9c",
+          "sourceInitializeTx": "0xba9982b907ade0bcb67acabeac7b8bd36628b4e321f8ab8110f9384ce38da72e",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "USDC/AUDF",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x7b1fbffcc973902a9cb09cb66f7322f7e750d0f54f953abdea910b2e21267de6",
+          "sourceInitializeTx": "0xc3c5c4379bf5a4eca36abb822f08af18dca121b4d4de9756f117a9e17984615f",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "USDC/MXNB",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x964b698844ab4699762ec07031a2dc953d7cfc17f567dc43faccf6dac23c1c39",
+          "sourceInitializeTx": "0x289fe08e3bb5f0d571b41a2699959cde5adeff3e318a34c0659ee34f0b7af55c",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "QCAD/USDC",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x5303c347ab8aa48a98f6738d4598bd3d8db7a9924143a990ad883cd54a7adb41",
+          "sourceInitializeTx": "0xb2d63cb96b38d981b9605013f88837b5ae614ae2088463a2beeeea15c63eaaf5",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+              "currency1": "0x3600000000000000000000000000000000000000",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d"
+              },
+              "token1": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "TelaranaGatewayHubHook",
+          "symbol": "USDC/EURC",
+          "expectedHookBits": 136,
+          "sourcePoolId": "0xf6b13fe5ae3115d159b3a844a56588d1549293fb6725040f01c54ba31827f711",
+          "sourceInitializeTx": "0x91f605e7556c5aec98fd2a93ea00777321b55cdaf501a371404b708d01ce2921",
+          "officialPoolManager": "<pending official PoolManager>",
+          "fieldsToPopulate": {
+            "poolManager": "<official target-chain PoolManager>",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "not-generic-hookdata-required",
+              "hookData": "Gateway route and attestation context required",
+              "exactOutput": "unsupported"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "network": "avalanche",
+      "chainId": 43114,
+      "officialStatus": "official-uniswap-v4-addresses-published",
+      "publicationStatus": "pending-official-hook-pool-publication",
+      "officialPoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+      "rpcEnv": "AVALANCHE_RPC_URL",
+      "plannedPoolCount": 11,
+      "populatedPoolCount": 0,
+      "readyCommand": "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT=<populated-file> bun run uniswap:official-multichain:pools:check",
+      "plannedOfficialPools": [
+        {
+          "family": "FxHedgeHook",
+          "symbol": "JPYC/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0xd19440c05e5c0d9549187e01162e8aeab29c196c3177cde6360db740b8aa3504",
+          "sourceInitializeTx": "0xa2564c11072dddd7f56fa7150d2da815d6047f1cc6a8294782cd2ddb1687335e",
+          "officialPoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+          "fieldsToPopulate": {
+            "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "cirBTC/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x33e42e1b20e3ea50b925963b583a033a8b959f53ffe76fb18cb97a6c6a171a8d",
+          "sourceInitializeTx": "0x1e662456f1979eb6362935cc0057fce66a37fdd188d941d0d3f8a631b5b7b22c",
+          "officialPoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+          "fieldsToPopulate": {
+            "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF",
+              "fee": 3000,
+              "tickSpacing": 60,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF"
+              },
+              "feeTier": "3000",
+              "tickSpacing": "60",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "EURC/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x0a463f18e563a62ab306eb375452c3feebe9ccbdab822b3c3582ddd13443ce00",
+          "sourceInitializeTx": "0x1b7a1a38a1960319a8d60a6ddf3e04a2d9d6f1ebd4931c86eaddfc4fbbcd128e",
+          "officialPoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+          "fieldsToPopulate": {
+            "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "AUDF/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x3d6aafb1d198968d10fb9d8596681979be57116efc7dda5f1e2694c6841a3e08",
+          "sourceInitializeTx": "0x879b7286dc07d64ff83258769a19c6709edcda3bf0851765e6979602c4270b1d",
+          "officialPoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+          "fieldsToPopulate": {
+            "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "MXNB/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x5bd11000bfaa4f274a1cbc0b7d5c20f92ffc047738ac04963fcaac3221466946",
+          "sourceInitializeTx": "0x40589ff7072d44afaeb90bacfb3fa65d58a77eba255c2443db9e2e4b5fe2c554",
+          "officialPoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+          "fieldsToPopulate": {
+            "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "QCAD/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x1ad04bd3b9be342b2c720b5bbde60569cea51b9c343cfb4848f342a45e061fd7",
+          "sourceInitializeTx": "0xd0594a7fa15d4eaa6e471a2b308739a2bf428650d70ce64d629e9e03cb82dc34",
+          "officialPoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+          "fieldsToPopulate": {
+            "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+              "currency1": "0x3600000000000000000000000000000000000000",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d"
+              },
+              "token1": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "USDC/EURC",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x4d268583c6cefb4fb959761f3f733c22b6a0bd622a2e7fa04dd30fe6e35e2d9c",
+          "sourceInitializeTx": "0xba9982b907ade0bcb67acabeac7b8bd36628b4e321f8ab8110f9384ce38da72e",
+          "officialPoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+          "fieldsToPopulate": {
+            "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "USDC/AUDF",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x7b1fbffcc973902a9cb09cb66f7322f7e750d0f54f953abdea910b2e21267de6",
+          "sourceInitializeTx": "0xc3c5c4379bf5a4eca36abb822f08af18dca121b4d4de9756f117a9e17984615f",
+          "officialPoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+          "fieldsToPopulate": {
+            "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "USDC/MXNB",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x964b698844ab4699762ec07031a2dc953d7cfc17f567dc43faccf6dac23c1c39",
+          "sourceInitializeTx": "0x289fe08e3bb5f0d571b41a2699959cde5adeff3e318a34c0659ee34f0b7af55c",
+          "officialPoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+          "fieldsToPopulate": {
+            "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "QCAD/USDC",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x5303c347ab8aa48a98f6738d4598bd3d8db7a9924143a990ad883cd54a7adb41",
+          "sourceInitializeTx": "0xb2d63cb96b38d981b9605013f88837b5ae614ae2088463a2beeeea15c63eaaf5",
+          "officialPoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+          "fieldsToPopulate": {
+            "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+              "currency1": "0x3600000000000000000000000000000000000000",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d"
+              },
+              "token1": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "TelaranaGatewayHubHook",
+          "symbol": "USDC/EURC",
+          "expectedHookBits": 136,
+          "sourcePoolId": "0xf6b13fe5ae3115d159b3a844a56588d1549293fb6725040f01c54ba31827f711",
+          "sourceInitializeTx": "0x91f605e7556c5aec98fd2a93ea00777321b55cdaf501a371404b708d01ce2921",
+          "officialPoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+          "fieldsToPopulate": {
+            "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "not-generic-hookdata-required",
+              "hookData": "Gateway route and attestation context required",
+              "exactOutput": "unsupported"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "network": "arbitrum-one",
+      "chainId": 42161,
+      "officialStatus": "official-uniswap-v4-addresses-published",
+      "publicationStatus": "pending-official-hook-pool-publication",
+      "officialPoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+      "rpcEnv": "ARBITRUM_RPC_URL",
+      "plannedPoolCount": 11,
+      "populatedPoolCount": 0,
+      "readyCommand": "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT=<populated-file> bun run uniswap:official-multichain:pools:check",
+      "plannedOfficialPools": [
+        {
+          "family": "FxHedgeHook",
+          "symbol": "JPYC/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0xd19440c05e5c0d9549187e01162e8aeab29c196c3177cde6360db740b8aa3504",
+          "sourceInitializeTx": "0xa2564c11072dddd7f56fa7150d2da815d6047f1cc6a8294782cd2ddb1687335e",
+          "officialPoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+          "fieldsToPopulate": {
+            "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "cirBTC/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x33e42e1b20e3ea50b925963b583a033a8b959f53ffe76fb18cb97a6c6a171a8d",
+          "sourceInitializeTx": "0x1e662456f1979eb6362935cc0057fce66a37fdd188d941d0d3f8a631b5b7b22c",
+          "officialPoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+          "fieldsToPopulate": {
+            "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF",
+              "fee": 3000,
+              "tickSpacing": 60,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF"
+              },
+              "feeTier": "3000",
+              "tickSpacing": "60",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "EURC/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x0a463f18e563a62ab306eb375452c3feebe9ccbdab822b3c3582ddd13443ce00",
+          "sourceInitializeTx": "0x1b7a1a38a1960319a8d60a6ddf3e04a2d9d6f1ebd4931c86eaddfc4fbbcd128e",
+          "officialPoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+          "fieldsToPopulate": {
+            "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "AUDF/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x3d6aafb1d198968d10fb9d8596681979be57116efc7dda5f1e2694c6841a3e08",
+          "sourceInitializeTx": "0x879b7286dc07d64ff83258769a19c6709edcda3bf0851765e6979602c4270b1d",
+          "officialPoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+          "fieldsToPopulate": {
+            "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "MXNB/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x5bd11000bfaa4f274a1cbc0b7d5c20f92ffc047738ac04963fcaac3221466946",
+          "sourceInitializeTx": "0x40589ff7072d44afaeb90bacfb3fa65d58a77eba255c2443db9e2e4b5fe2c554",
+          "officialPoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+          "fieldsToPopulate": {
+            "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxHedgeHook",
+          "symbol": "QCAD/USDC",
+          "expectedHookBits": 1344,
+          "sourcePoolId": "0x1ad04bd3b9be342b2c720b5bbde60569cea51b9c343cfb4848f342a45e061fd7",
+          "sourceInitializeTx": "0xd0594a7fa15d4eaa6e471a2b308739a2bf428650d70ce64d629e9e03cb82dc34",
+          "officialPoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+          "fieldsToPopulate": {
+            "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+              "currency1": "0x3600000000000000000000000000000000000000",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+              "hookData": "0x",
+              "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+              "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+              "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d"
+              },
+              "token1": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "USDC/EURC",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x4d268583c6cefb4fb959761f3f733c22b6a0bd622a2e7fa04dd30fe6e35e2d9c",
+          "sourceInitializeTx": "0xba9982b907ade0bcb67acabeac7b8bd36628b4e321f8ab8110f9384ce38da72e",
+          "officialPoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+          "fieldsToPopulate": {
+            "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "USDC/AUDF",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x7b1fbffcc973902a9cb09cb66f7322f7e750d0f54f953abdea910b2e21267de6",
+          "sourceInitializeTx": "0xc3c5c4379bf5a4eca36abb822f08af18dca121b4d4de9756f117a9e17984615f",
+          "officialPoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+          "fieldsToPopulate": {
+            "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "USDC/MXNB",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x964b698844ab4699762ec07031a2dc953d7cfc17f567dc43faccf6dac23c1c39",
+          "sourceInitializeTx": "0x289fe08e3bb5f0d571b41a2699959cde5adeff3e318a34c0659ee34f0b7af55c",
+          "officialPoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+          "fieldsToPopulate": {
+            "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "FxSwapHook",
+          "symbol": "QCAD/USDC",
+          "expectedHookBits": 2760,
+          "sourcePoolId": "0x5303c347ab8aa48a98f6738d4598bd3d8db7a9924143a990ad883cd54a7adb41",
+          "sourceInitializeTx": "0xb2d63cb96b38d981b9605013f88837b5ae614ae2088463a2beeeea15c63eaaf5",
+          "officialPoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+          "fieldsToPopulate": {
+            "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+              "currency1": "0x3600000000000000000000000000000000000000",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+              "supportedInternalQuote": "direct quote/exact-input protocol router",
+              "exactInput": "supported-via-direct-quote-and-protocol-router",
+              "exactOutput": "unsupported",
+              "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d"
+              },
+              "token1": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        },
+        {
+          "family": "TelaranaGatewayHubHook",
+          "symbol": "USDC/EURC",
+          "expectedHookBits": 136,
+          "sourcePoolId": "0xf6b13fe5ae3115d159b3a844a56588d1549293fb6725040f01c54ba31827f711",
+          "sourceInitializeTx": "0x91f605e7556c5aec98fd2a93ea00777321b55cdaf501a371404b708d01ce2921",
+          "officialPoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+          "fieldsToPopulate": {
+            "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+            "hookAddress": "<target-chain remine/redeploy hook address with matching low-14 bits>",
+            "poolKey": {
+              "currency0": "0x3600000000000000000000000000000000000000",
+              "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+              "fee": 100,
+              "tickSpacing": 1,
+              "hooks": "<target-chain hookAddress>"
+            },
+            "poolId": "<derive from official target-chain PoolKey>",
+            "initializeTx": "<official target-chain PoolManager.Initialize tx>",
+            "firstLiquidityTx": "<official target-chain positive PoolManager.ModifyLiquidity tx>",
+            "routerActiveClaim": false,
+            "routerQuoterStatus": {
+              "genericV4Quoter": "not-generic-hookdata-required",
+              "hookData": "Gateway route and attestation context required",
+              "exactOutput": "unsupported"
+            },
+            "stateViewVerification": {
+              "status": "pending",
+              "sqrtPriceX96": "<StateView.getSlot0(poolId).sqrtPriceX96>",
+              "liquidity": "<StateView.getLiquidity(poolId)>"
+            },
+            "subgraphVerification": {
+              "status": "pending",
+              "id": "<official v4 subgraph pool id>",
+              "hooks": "<target-chain hookAddress>",
+              "token0": {
+                "id": "0x3600000000000000000000000000000000000000"
+              },
+              "token1": {
+                "id": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
+              },
+              "feeTier": "100",
+              "tickSpacing": "1",
+              "sqrtPrice": "<official v4 subgraph sqrtPrice>",
+              "tick": "<official v4 subgraph tick>",
+              "liquidity": "<official v4 subgraph liquidity>"
+            },
+            "receiptVerification": {
+              "initializeTxVerified": false,
+              "firstLiquidityTxVerified": false
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

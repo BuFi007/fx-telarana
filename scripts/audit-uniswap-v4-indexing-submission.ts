@@ -46,6 +46,7 @@ const CHECKS: AuditCheck[] = [
   { key: "officialMultichainDeploymentInputGenerateSelfTest", label: "official multichain deployment input generator self-test" },
   { key: "officialMultichainPoolPublication", label: "official multichain pool publication" },
   { key: "officialMultichainPoolPublicationPlan", label: "official multichain pool-publication fill plan" },
+  { key: "officialMultichainPoolPublicationPlanFreshness", label: "official multichain pool-publication fill plan freshness" },
   { key: "officialMultichainPoolPublicationSelfTest", label: "official multichain pool publication self-test" },
   { key: "pendingHedgePoolsPlan", label: "live FxHedgeHook stable pool storage verifier" },
   { key: "hedgeHookLiquidityVerifier", label: "FxHedgeHook liquidity readiness" },
