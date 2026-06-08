@@ -85,6 +85,7 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
   const arbitrum = targetByNetwork(multichain, "arbitrum-one");
   const multichainPoolPublication = multichain.poolPublication ?? {};
   const multichainHookRedeployPlan = multichain.hookRedeployPlan ?? {};
+  const multichainStateView = multichain.stateViewVerification ?? {};
 
   return [
     {
@@ -233,6 +234,20 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
       ],
       remainingWork: [
         "Run with OFFICIAL_ARC_POOL_PUBLICATION_INPUT and OFFICIAL_ARC_RPC_URL once official pool IDs exist.",
+      ],
+    },
+    {
+      id: "official-multichain-stateview-gate",
+      requirement: "The official multichain publication package must have a StateView gate for Arc mainnet, Avalanche Fuji, Avalanche, and Arbitrum One before indexed pool claims are made.",
+      status: hasFailZero(multichainStateView.currentResult) ? "satisfied-with-caveat" : "failed",
+      evidence: [
+        `command: ${multichainStateView.command}`,
+        `result: ${multichainStateView.currentResult}`,
+        `pool input env: ${multichainStateView.poolPublicationInputEnv}`,
+        `required contract: ${multichainStateView.requiredContract}`,
+      ],
+      remainingWork: [
+        "After official pool publication records exist, run the gate against populated target-chain records and record StateView.getSlot0(poolId) plus StateView.getLiquidity(poolId) evidence for every official pool.",
       ],
     },
     {

@@ -12,11 +12,11 @@
   "completionStatus": "not-complete",
   "summary": {
     "satisfied": 5,
-    "satisfied-with-caveat": 4,
+    "satisfied-with-caveat": 5,
     "pending-external": 6,
     "pending-operator": 3,
     "failed": 0,
-    "pass": 9,
+    "pass": 10,
     "warn": 9,
     "fail": 0
   },
@@ -150,6 +150,20 @@
       ],
       "remainingWork": [
         "Run with OFFICIAL_ARC_POOL_PUBLICATION_INPUT and OFFICIAL_ARC_RPC_URL once official pool IDs exist."
+      ]
+    },
+    {
+      "id": "official-multichain-stateview-gate",
+      "requirement": "The official multichain publication package must have a StateView gate for Arc mainnet, Avalanche Fuji, Avalanche, and Arbitrum One before indexed pool claims are made.",
+      "status": "satisfied-with-caveat",
+      "evidence": [
+        "command: bun run uniswap:official-multichain:stateview:check",
+        "result: PASS=29 WARN=4 FAIL=0",
+        "pool input env: OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT",
+        "required contract: StateView"
+      ],
+      "remainingWork": [
+        "After official pool publication records exist, run the gate against populated target-chain records and record StateView.getSlot0(poolId) plus StateView.getLiquidity(poolId) evidence for every official pool."
       ]
     },
     {

@@ -1746,7 +1746,7 @@ function checkSubmissionEvidenceSnapshot(
   }
 
   if (
-    requirementsSnapshot.summary?.pass === 9
+    requirementsSnapshot.summary?.pass === 10
     && requirementsSnapshot.summary?.warn === 9
     && requirementsSnapshot.summary?.fail === 0
   ) {
@@ -1768,6 +1768,12 @@ function checkSubmissionEvidenceSnapshot(
     pass("requirements matrix includes official Arc contract blocker");
   } else {
     fail("requirements matrix is missing official Arc contract blocker");
+  }
+
+  if (requirements.some((requirement: AnyRecord) => requirement.id === "official-multichain-stateview-gate")) {
+    pass("requirements matrix includes official multichain StateView gate evidence");
+  } else {
+    fail("requirements matrix is missing official multichain StateView gate evidence");
   }
 
   if (requirements.some((requirement: AnyRecord) => requirement.id === "avalanche-hook-pool-publication")) {
