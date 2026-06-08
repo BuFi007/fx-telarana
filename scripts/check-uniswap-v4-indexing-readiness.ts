@@ -14,6 +14,7 @@ type Severity = "PASS" | "WARN" | "FAIL";
 const ROOT = resolve(import.meta.dir, "..");
 const MANIFEST = "deployments/uniswap-v4-indexing-readiness-5042002.json";
 const EVIDENCE_SNAPSHOT = "deployments/uniswap-v4-indexing-evidence-5042002.json";
+const HANDOFF_SNAPSHOT = "deployments/uniswap-v4-indexing-handoff-5042002.md";
 const MULTICHAIN_MANIFEST = "deployments/uniswap-v4-official-multichain-readiness.json";
 const MULTICHAIN_POOL_PUBLICATION = "deployments/uniswap-v4-official-multichain-pools.template.json";
 const DEPLOYMENTS_MARKDOWN_URL = "https://developers.uniswap.org/docs/protocols/v4/deployments.md";
@@ -634,6 +635,13 @@ function checkOfficialMainnetBlock(manifest: AnyRecord): void {
     fail(`indexing evidence exporter is missing at ${evidenceExportScript}`);
   }
 
+  const handoffRenderScript = "scripts/render-uniswap-v4-indexing-handoff.ts";
+  if (existsSync(join(ROOT, handoffRenderScript))) {
+    pass(`indexing handoff renderer exists at ${handoffRenderScript}`);
+  } else {
+    fail(`indexing handoff renderer is missing at ${handoffRenderScript}`);
+  }
+
   const submissionAuditScript = "scripts/audit-uniswap-v4-indexing-submission.ts";
   if (existsSync(join(ROOT, submissionAuditScript))) {
     pass(`indexing submission audit runner exists at ${submissionAuditScript}`);
@@ -669,6 +677,9 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["submissionEvidenceExport", "uniswap:evidence:export"],
     ["submissionEvidenceSnapshot", "uniswap:evidence:write"],
     ["submissionEvidenceFreshness", "uniswap:evidence:check"],
+    ["submissionHandoffRender", "uniswap:handoff:render"],
+    ["submissionHandoffSnapshot", "uniswap:handoff:write"],
+    ["submissionHandoffFreshness", "uniswap:handoff:check"],
     ["submissionAudit", "uniswap:submission:audit"],
     ["onchainReceiptVerifier", "uniswap:indexing:onchain"],
     ["hedgeHookLiquidityVerifier", "uniswap:hedge:liquidity"],
@@ -1156,6 +1167,46 @@ function checkSubmissionEvidenceSnapshot(manifest: AnyRecord, snapshot: AnyRecor
     fail("submission package is missing the indexing evidence freshness command");
   }
 
+  if (submission.indexingHandoffSnapshot === HANDOFF_SNAPSHOT) {
+    pass("submission package records the indexing handoff snapshot path");
+  } else {
+    fail("submission package is missing the indexing handoff snapshot path");
+  }
+
+  if (existsSync(join(ROOT, HANDOFF_SNAPSHOT))) {
+    pass(`indexing handoff snapshot exists at ${HANDOFF_SNAPSHOT}`);
+  } else {
+    fail(`indexing handoff snapshot is missing at ${HANDOFF_SNAPSHOT}`);
+  }
+
+  if (
+    typeof submission.indexingHandoffSnapshotCommand === "string"
+    && submission.indexingHandoffSnapshotCommand.includes("uniswap:handoff:write")
+  ) {
+    pass("submission package records the indexing handoff snapshot command");
+  } else {
+    fail("submission package is missing the indexing handoff snapshot command");
+  }
+
+  if (
+    typeof submission.indexingHandoffCheckCommand === "string"
+    && submission.indexingHandoffCheckCommand.includes("uniswap:handoff:check")
+  ) {
+    pass("submission package records the indexing handoff freshness command");
+  } else {
+    fail("submission package is missing the indexing handoff freshness command");
+  }
+
+  if (
+    typeof submission.currentHandoffResult === "string"
+    && submission.currentHandoffResult.includes("WARN=4")
+    && submission.currentHandoffResult.includes("FAIL=0")
+  ) {
+    pass("submission package records the current indexing handoff result");
+  } else {
+    fail("submission package is missing the current indexing handoff result");
+  }
+
   if (
     typeof submission.indexingSubmissionAuditCommand === "string"
     && submission.indexingSubmissionAuditCommand.includes("uniswap:submission:audit")
@@ -1186,6 +1237,24 @@ function checkSubmissionEvidenceSnapshot(manifest: AnyRecord, snapshot: AnyRecor
     pass("indexing evidence snapshot records its manifest source");
   } else {
     fail("indexing evidence snapshot does not point at the readiness manifest");
+  }
+
+  if (
+    snapshot.submissionPackage?.indexingHandoffSnapshot
+    === manifest.submissionPackage?.indexingHandoffSnapshot
+  ) {
+    pass("indexing evidence snapshot handoff snapshot path matches manifest");
+  } else {
+    fail("indexing evidence snapshot handoff snapshot path does not match manifest");
+  }
+
+  if (
+    snapshot.submissionPackage?.currentHandoffResult
+    === manifest.submissionPackage?.currentHandoffResult
+  ) {
+    pass("indexing evidence snapshot handoff result matches manifest");
+  } else {
+    fail("indexing evidence snapshot handoff result does not match manifest");
   }
 
   if (snapshot.network === manifest.network && snapshot.chainId === manifest.chainId) {

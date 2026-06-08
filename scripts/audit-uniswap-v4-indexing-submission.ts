@@ -53,6 +53,7 @@ const CHECKS: AuditCheck[] = [
   { key: "hedgeHookV4QuoterDiagnostic", label: "FxHedgeHook official V4Quoter diagnostic" },
   { key: "fxSwapHookV4QuoterDiagnostic", label: "FxSwapHook V4Quoter diagnostic" },
   { key: "submissionEvidenceFreshness", label: "indexing evidence snapshot freshness" },
+  { key: "submissionHandoffFreshness", label: "indexing handoff snapshot freshness" },
 ];
 
 function readJson(relativePath: string): AnyRecord {

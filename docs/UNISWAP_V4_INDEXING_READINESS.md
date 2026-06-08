@@ -43,7 +43,7 @@ Readiness check:
 bun run uniswap:indexing:check
 ```
 
-Current expected result: `PASS=393 WARN=1 FAIL=0`. The remaining warning is
+Current expected result: `PASS=404 WARN=1 FAIL=0`. The remaining warning is
 `FxHedgeHook` first liquidity, which is required before claiming router-active
 or liquid hedge markets.
 
@@ -368,20 +368,49 @@ bun run uniswap:evidence:check
 This regenerates the evidence packet in memory and fails if
 `deployments/uniswap-v4-indexing-evidence-5042002.json` is stale.
 
+Indexer handoff packet:
+
+```bash
+bun run uniswap:handoff:render
+```
+
+Current expected result: `PASS=9 WARN=4 FAIL=0`. This renders the committed
+JSON evidence snapshot into reviewer-facing Markdown with official multichain
+status, all 11 Arc testnet pool records, the exact reviewer commands, and the
+current do-not-claim caveats. The warnings are intentional: official Arc
+mainnet, official Fuji, and hedge first liquidity remain pending.
+
+Checked handoff snapshot:
+
+```bash
+bun run uniswap:handoff:write
+```
+
+This writes `deployments/uniswap-v4-indexing-handoff-5042002.md`.
+
+Handoff freshness check:
+
+```bash
+bun run uniswap:handoff:check
+```
+
+This regenerates the handoff packet in memory and fails if
+`deployments/uniswap-v4-indexing-handoff-5042002.md` is stale.
+
 Submission audit:
 
 ```bash
 bun run uniswap:submission:audit
 ```
 
-Current expected result: `CHECKS=27 PASS=27 WARN=37 FAIL=0`. This is the
+Current expected result: `CHECKS=28 PASS=28 WARN=41 FAIL=0`. This is the
 single reviewer-facing no-broadcast command for the indexing package. It
 re-runs official Uniswap deployment freshness, official Arc and multichain
 readiness gates, deployment-input generation/checks, the Arc pool-publication
 fill plan, pool-publication self-tests, StateView/subgraph preflights, live
 `FxHedgeHook.poolConfigs` storage checks, `FxHedgeHook` liquidity checks, live
 Arc PoolManager receipt verification, both local official `V4Quoter`
-diagnostics, and evidence snapshot freshness. The warnings are the documented pending
+diagnostics, evidence snapshot freshness, and handoff snapshot freshness. The warnings are the documented pending
 conditions: Arc/Fuji official addresses, official-chain pool publication,
 subgraph/StateView readiness before official pool records, and hedge first
 liquidity.
@@ -626,7 +655,7 @@ Ask Claude to verify these points:
 
 1. Run `bun run uniswap:indexing:check` from the `fx-telarana` repo.
 2. Confirm the check exits with `FAIL=0`; the current expected summary is
-   `PASS=393 WARN=1 FAIL=0`.
+   `PASS=404 WARN=1 FAIL=0`.
 3. Run `bun run uniswap:official-arc:check` and confirm official Arc is either
    fully populated from Uniswap docs or still pending with the expected warning;
    current expected summary is `PASS=9 WARN=1 FAIL=0`.
@@ -699,34 +728,42 @@ Ask Claude to verify these points:
    `deployments/uniswap-v4-indexing-evidence-5042002.json` with the same
    11-pool snapshot.
 24. Run `bun run uniswap:evidence:check` and confirm the snapshot is fresh.
-25. Run `bun run uniswap:submission:audit` and confirm the executable
+25. Run `bun run uniswap:handoff:render` and confirm it emits Markdown with
+   all 11 pool records, `officialMultichain` target status, reviewer commands,
+   and do-not-claim caveats; the current expected summary is
+   `PASS=9 WARN=4 FAIL=0`.
+26. Run `bun run uniswap:handoff:write` and confirm it refreshes
+   `deployments/uniswap-v4-indexing-handoff-5042002.md`.
+27. Run `bun run uniswap:handoff:check` and confirm the handoff snapshot is
+   fresh.
+28. Run `bun run uniswap:submission:audit` and confirm the executable
    submission audit exits with `FAIL=0`; the current expected summary is
-   `CHECKS=27 PASS=27 WARN=37 FAIL=0`.
-26. Run `bun run hedge:arc:plan-stables` and confirm all six hedge pools are
+   `CHECKS=28 PASS=28 WARN=41 FAIL=0`.
+29. Run `bun run hedge:arc:plan-stables` and confirm all six hedge pools are
    live/configured; the current expected summary is `PASS=46 WARN=0 FAIL=0`.
-27. Run `bun run uniswap:hedge:liquidity` and confirm it reports zero liquidity
+30. Run `bun run uniswap:hedge:liquidity` and confirm it reports zero liquidity
    as warnings, not failures; current expected summary is
    `PASS=1 WARN=13 FAIL=0`.
-28. Run `bun run uniswap:hedge:liquidity:plan` and confirm it reports
+31. Run `bun run uniswap:hedge:liquidity:plan` and confirm it reports
    `PASS=32 WARN=1 FAIL=0` and prints all six operator env groups.
-29. Run `bun run uniswap:hedge:v4quoter` and confirm the local diagnostic passes
+32. Run `bun run uniswap:hedge:v4quoter` and confirm the local diagnostic passes
    `2 passed; 0 failed`.
-30. Run `bun run uniswap:fxswap:v4quoter` and confirm the local diagnostic passes
+33. Run `bun run uniswap:fxswap:v4quoter` and confirm the local diagnostic passes
    `3 passed; 0 failed`.
-31. Run `bun run uniswap:indexing:onchain` and confirm live init/configure tx
+34. Run `bun run uniswap:indexing:onchain` and confirm live init/configure tx
    receipts verify against Arc RPC; the current expected summary is
    `PASS=142 WARN=0 FAIL=0`.
-32. Confirm expected readiness warnings are limited to official Arc addresses,
+35. Confirm expected readiness warnings are limited to official Arc addresses,
    official Fuji addresses, Avalanche/Arbitrum hook pool publication evidence,
    official hook redeploy PoolManager availability, official pool publication,
    StateView/subgraph/pool IDs, and FxHedgeHook first liquidity pending.
    `FxSwapHook` generic `V4Quoter` is no longer an untested pending harness; it
    has a local negative diagnostic.
-33. From the app repo, run `bun run --filter @bufi/hyper-mcp typecheck`.
-34. From the app repo, run
+36. From the app repo, run `bun run --filter @bufi/hyper-mcp typecheck`.
+37. From the app repo, run
     `bun test apps/hyper-mcp/test/app.test.ts -t "GET /api/hedge/pools surfaces deployed hedge pools"`
    and confirm `/api/hedge/pools` reports `liveCount=6`, `pendingCount=0`,
    and no zero placeholder pool IDs.
-35. Confirm `apps/hyper-mcp/src/routes/hedge.ts` in the app branch treats
+38. Confirm `apps/hyper-mcp/src/routes/hedge.ts` in the app branch treats
     FxHedgeHook and FxSwapHook as separate v4 pool surfaces.
-36. Confirm no ops, surveillance, or unrelated monitoring surfaces were added.
+39. Confirm no ops, surveillance, or unrelated monitoring surfaces were added.
