@@ -43,7 +43,7 @@ Readiness check:
 bun run uniswap:indexing:check
 ```
 
-Current expected result: `PASS=452 WARN=1 FAIL=0`. The remaining warning is
+Current expected result: `PASS=454 WARN=1 FAIL=0`. The remaining warning is
 `FxHedgeHook` first liquidity, which is required before claiming router-active
 or liquid hedge markets.
 
@@ -222,14 +222,17 @@ Official multichain deployment/indexing gate:
 bun run uniswap:official-multichain:check
 ```
 
-Current expected result: `PASS=173 WARN=4 FAIL=0`. This validates the
+Current expected result: `PASS=193 WARN=4 FAIL=0`. This validates the
 machine-readable multichain manifest at
 `deployments/uniswap-v4-official-multichain-readiness.json`. The official
 Uniswap v4 deployments table lists Avalanche C-Chain (`43114`) and Arbitrum One
 (`42161`) contract addresses, including `PoolManager`, `PositionManager`,
-`UniversalRouter`, `Quoter`, `StateView`, and canonical `Permit2`. The same
-table does not list Avalanche Fuji (`43113`) or Arc mainnet as of 2026-06-08,
-so both remain pending official addresses.
+`UniversalRouter`, `Quoter`, `StateView`, and canonical `Permit2`. The check now
+also verifies deployed bytecode for the published Avalanche/Arbitrum official
+contracts through recorded public RPC fallbacks, while env vars
+`AVALANCHE_RPC_URL` and `ARBITRUM_RPC_URL` can override those endpoints. The
+same table does not list Avalanche Fuji (`43113`) or Arc mainnet as of
+2026-06-08, so both remain pending official addresses.
 
 The four warnings are intentional:
 
@@ -707,11 +710,12 @@ When Arc is listed, do this before claiming official indexing:
    confirm it exits with `FAIL=0`; the current expected summary is
    `PASS=20 FAIL=0`.
 15. Run `bun run uniswap:official-multichain:check` and confirm it exits with
-   `FAIL=0`; the current expected summary is `PASS=173 WARN=4 FAIL=0`.
+   `FAIL=0`; the current expected summary is `PASS=193 WARN=4 FAIL=0`.
    Confirm Avalanche C-Chain and Arbitrum One have official v4 contract
-   addresses, while Arc mainnet and Avalanche Fuji stay pending. Also confirm
-   Avalanche/Arbitrum hook-pool indexing is not claimed until chain-specific
-   initialize, first-liquidity, StateView, subgraph, and Quoter evidence exists.
+   addresses with deployed bytecode on their recorded RPC fallbacks, while Arc
+   mainnet and Avalanche Fuji stay pending. Also confirm Avalanche/Arbitrum
+   hook-pool indexing is not claimed until chain-specific initialize,
+   first-liquidity, StateView, subgraph, and Quoter evidence exists.
 16. Run `bun run uniswap:official-multichain:pools:check` and confirm it exits
    with `FAIL=0`; the current expected summary is `PASS=67 WARN=4 FAIL=0`.
    Confirm the default template has empty official pool records for all targets
@@ -747,7 +751,7 @@ Ask Claude to verify these points:
 
 1. Run `bun run uniswap:indexing:check` from the `fx-telarana` repo.
 2. Confirm the check exits with `FAIL=0`; the current expected summary is
-   `PASS=452 WARN=1 FAIL=0`.
+   `PASS=454 WARN=1 FAIL=0`.
 3. Run `bun run uniswap:official-arc:check` and confirm official Arc is either
    fully populated from Uniswap docs or still pending with the expected warning;
    current expected summary is `PASS=9 WARN=1 FAIL=0`.
@@ -789,7 +793,7 @@ Ask Claude to verify these points:
    `PASS=20 FAIL=0`.
 17. Run `bun run uniswap:official-multichain:check` and confirm the
    multichain gate exits with `FAIL=0`; the current expected summary is
-   `PASS=173 WARN=4 FAIL=0`.
+   `PASS=193 WARN=4 FAIL=0`.
 18. Run `bun run uniswap:official-multichain:pools:check` and confirm the
    multichain pool-publication gate exits with `FAIL=0`; the current expected
    summary is `PASS=67 WARN=4 FAIL=0`.
@@ -816,7 +820,7 @@ Ask Claude to verify these points:
    `officialArcMainnet.status=pending-official-uniswap-v4-addresses`, plus
    `officialArcMainnet.currentDeploymentInputGenerateResult=PASS=4 WARN=1 FAIL=0`,
    `officialArcMainnet.currentDeploymentInputGenerateSelfTestResult=PASS=10 FAIL=0`,
-   `officialMultichain.currentResult=PASS=173 WARN=4 FAIL=0`,
+   `officialMultichain.currentResult=PASS=193 WARN=4 FAIL=0`,
    `officialMultichain.deploymentInputGeneration.currentCheckResult=PASS=75 WARN=2 FAIL=0`,
    `officialMultichain.deploymentInputGeneration.currentResult=PASS=36 WARN=2 FAIL=0`,
    `officialMultichain.deploymentInputGeneration.currentSelfTestResult=PASS=20 FAIL=0`,

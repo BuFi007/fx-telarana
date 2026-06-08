@@ -1125,6 +1125,12 @@ function checkOfficialMultichainBlock(
   }
 
   for (const target of [avalanche, arbitrum]) {
+    if (typeof target.publicRpcFallback === "string" && target.publicRpcFallback.startsWith("https://")) {
+      pass(`${target.network} records a public RPC fallback for official bytecode verification`);
+    } else {
+      fail(`${target.network} must record a public RPC fallback for official bytecode verification`);
+    }
+
     if (
       target.indexingReadiness === "official-contracts-known-hook-pool-publication-pending"
       && target.poolPublicationStatus === "pending-poolmanager-initialize-and-first-liquidity"

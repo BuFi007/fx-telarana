@@ -37,6 +37,17 @@ const requiredContracts = [
   "Permit2",
 ] as const;
 
+const bytecodeContracts = [
+  "PoolManager",
+  "PositionManager",
+  "UniversalRouter",
+  "UniversalRouter211",
+  "Quoter",
+  "StateView",
+  "PositionDescriptor",
+  "Permit2",
+] as const;
+
 const requiredIndexingEvidence = [
   "officialPoolManager",
   "officialHookRedeployOrRemine",
@@ -427,14 +438,36 @@ async function checkOptionalBytecode(target: AnyRecord): Promise<void> {
     return;
   }
 
-  const rpcUrl = process.env[rpcEnv];
+  const publicFallback = typeof target.publicRpcFallback === "string" ? target.publicRpcFallback : undefined;
+  if (target.status === "official-uniswap-v4-addresses-published") {
+    if (publicFallback?.startsWith("https://")) {
+      pass(`${target.network} public RPC fallback is recorded`);
+    } else {
+      fail(`${target.network} public RPC fallback is missing`);
+    }
+  }
+
+  const rpcUrl = process.env[rpcEnv] || publicFallback;
   if (!rpcUrl) {
     pass(`${target.network} optional bytecode check is documented by ${rpcEnv}`);
     return;
   }
 
+  if (process.env[rpcEnv]) {
+    pass(`${target.network} official bytecode RPC uses ${rpcEnv} override`);
+  } else {
+    pass(`${target.network} official bytecode RPC uses recorded public fallback`);
+  }
+
   const client = createPublicClient({ transport: http(rpcUrl) });
-  for (const name of requiredContracts) {
+  const chainId = await client.getChainId();
+  if (target.chainId === chainId) {
+    pass(`${target.network} official bytecode RPC chainId matches ${chainId}`);
+  } else {
+    fail(`${target.network} official bytecode RPC chainId ${chainId} does not match manifest ${target.chainId}`);
+  }
+
+  for (const name of bytecodeContracts) {
     const address = target.contracts?.[name];
     if (!isAddress(address)) continue;
 

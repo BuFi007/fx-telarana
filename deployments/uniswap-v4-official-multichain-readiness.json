@@ -158,6 +158,7 @@
       "officialDocsListedOn2026_06_08": true,
       "source": "https://developers.uniswap.org/docs/protocols/v4/deployments",
       "rpcEnv": "AVALANCHE_RPC_URL",
+      "publicRpcFallback": "https://api.avax.network/ext/bc/C/rpc",
       "contracts": {
         "PoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
         "PositionManager": "0xb74b1f14d2754acfcbbe1a221023a5cf50ab8acd",
@@ -187,6 +188,7 @@
       "officialDocsListedOn2026_06_08": true,
       "source": "https://developers.uniswap.org/docs/protocols/v4/deployments",
       "rpcEnv": "ARBITRUM_RPC_URL",
+      "publicRpcFallback": "https://arb1.arbitrum.io/rpc",
       "contracts": {
         "PoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
         "PositionManager": "0xd88f38f930b7952f2db2432cb002e7abbf3dd869",
@@ -209,6 +211,6 @@
       ]
     }
   ],
-  "currentResult": "PASS=173 WARN=4 FAIL=0",
+  "currentResult": "PASS=193 WARN=4 FAIL=0",
   "command": "bun run uniswap:official-multichain:check"
 }
