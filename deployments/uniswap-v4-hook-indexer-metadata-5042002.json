@@ -86,10 +86,87 @@
       "When OFFICIAL_ARC_RPC_URL is set, firstLiquidityTx must emit a positive official PoolManager ModifyLiquidity event for the published poolId."
     ]
   },
-  "officialMultichainTargets": [],
+  "officialMultichain": {
+    "generatedFrom": "deployments/uniswap-v4-official-multichain-readiness.json",
+    "source": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+    "status": "official-addresses-known-for-avalanche-and-arbitrum-arc-and-fuji-pending",
+    "claimPolicy": [
+      "Do not claim official Uniswap indexing for a chain until pools are initialized through the official PoolManager indexed by Uniswap for that chain.",
+      "Do not treat self-deployed or rehearsal PoolManagers as official Uniswap-indexed infrastructure.",
+      "Official contract addresses alone do not prove fx-Telarana hook indexing.",
+      "Router-active claims require first liquidity, nonzero current in-range liquidity, and a quote path proven against the official Quoter or an explicitly documented custom route."
+    ]
+  },
+  "officialMultichainTargets": [
+    {
+      "network": "arc-mainnet",
+      "displayName": "Arc Mainnet",
+      "chainId": null,
+      "status": "pending-official-uniswap-v4-addresses",
+      "indexingReadiness": "not-indexable-yet-official-uniswap-v4-addresses-pending",
+      "poolPublicationStatus": "pending-official-uniswap-v4-addresses",
+      "contracts": {
+        "PoolManager": null,
+        "PositionManager": null,
+        "UniversalRouter": null,
+        "Quoter": null,
+        "StateView": null,
+        "Permit2": null
+      }
+    },
+    {
+      "network": "avalanche-fuji",
+      "displayName": "Avalanche Fuji",
+      "chainId": 43113,
+      "status": "pending-official-uniswap-v4-addresses",
+      "indexingReadiness": "rehearsal-only-not-official-indexing",
+      "poolPublicationStatus": "pending-official-uniswap-v4-addresses",
+      "contracts": {
+        "PoolManager": null,
+        "PositionManager": null,
+        "UniversalRouter": null,
+        "Quoter": null,
+        "StateView": null,
+        "Permit2": null
+      }
+    },
+    {
+      "network": "avalanche",
+      "displayName": "Avalanche C-Chain",
+      "chainId": 43114,
+      "status": "official-uniswap-v4-addresses-published",
+      "indexingReadiness": "official-contracts-known-hook-pool-publication-pending",
+      "poolPublicationStatus": "pending-poolmanager-initialize-and-first-liquidity",
+      "contracts": {
+        "PoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+        "PositionManager": "0xb74b1f14d2754acfcbbe1a221023a5cf50ab8acd",
+        "UniversalRouter": "0x94b75331ae8d42c1b61065089b7d48fe14aa73b7",
+        "Quoter": "0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
+        "StateView": "0xc3c9e198c735a4b97e3e683f391ccbdd60b69286",
+        "Permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3"
+      }
+    },
+    {
+      "network": "arbitrum-one",
+      "displayName": "Arbitrum One",
+      "chainId": 42161,
+      "status": "official-uniswap-v4-addresses-published",
+      "indexingReadiness": "official-contracts-known-hook-pool-publication-pending",
+      "poolPublicationStatus": "pending-poolmanager-initialize-and-first-liquidity",
+      "contracts": {
+        "PoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+        "PositionManager": "0xd88f38f930b7952f2db2432cb002e7abbf3dd869",
+        "UniversalRouter": "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+        "Quoter": "0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+        "StateView": "0x76fd297e2d437cd7f76d50f01afe6160f86e9990",
+        "Permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3"
+      }
+    }
+  ],
   "summary": {
     "hookFamilyCount": 4,
-    "publishedArcTestnetPoolCount": 11
+    "publishedArcTestnetPoolCount": 11,
+    "officialMultichainTargetCount": 4
   },
   "hookFamilies": [
     {

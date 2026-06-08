@@ -48,7 +48,8 @@ function readJson(relativePath: string): AnyRecord {
 }
 
 function targetByNetwork(multichain: AnyRecord, network: string): AnyRecord {
-  return (multichain.targets ?? []).find((target: AnyRecord) => target.network === network) ?? {};
+  return (multichain.targets ?? multichain.officialMultichainTargets ?? [])
+    .find((target: AnyRecord) => target.network === network) ?? {};
 }
 
 function hasFailZero(result: unknown): boolean {
@@ -125,6 +126,41 @@ function main(): void {
     fail("hook indexer metadata snapshot pool count must match the evidence snapshot");
   }
 
+  if (hookMetadata.summary?.officialMultichainTargetCount === 4) {
+    pass("hook indexer metadata snapshot carries all four official multichain targets");
+  } else {
+    fail("hook indexer metadata snapshot must carry all four official multichain targets");
+  }
+
+  const metadataArc = targetByNetwork(hookMetadata, "arc-mainnet");
+  const metadataFuji = targetByNetwork(hookMetadata, "avalanche-fuji");
+  const metadataAvalanche = targetByNetwork(hookMetadata, "avalanche");
+  const metadataArbitrum = targetByNetwork(hookMetadata, "arbitrum-one");
+
+  if (metadataArc.status === "pending-official-uniswap-v4-addresses") {
+    pass("hook indexer metadata snapshot keeps official Arc mainnet pending");
+  } else {
+    fail("hook indexer metadata snapshot must keep official Arc mainnet pending");
+  }
+
+  if (metadataFuji.indexingReadiness === "rehearsal-only-not-official-indexing") {
+    pass("hook indexer metadata snapshot keeps Avalanche Fuji rehearsal-only");
+  } else {
+    fail("hook indexer metadata snapshot must keep Avalanche Fuji rehearsal-only");
+  }
+
+  if (hasAddress(metadataAvalanche.contracts?.PoolManager)) {
+    pass("hook indexer metadata snapshot carries Avalanche official PoolManager");
+  } else {
+    fail("hook indexer metadata snapshot must carry Avalanche official PoolManager");
+  }
+
+  if (hasAddress(metadataArbitrum.contracts?.PoolManager)) {
+    pass("hook indexer metadata snapshot carries Arbitrum One official PoolManager");
+  } else {
+    fail("hook indexer metadata snapshot must carry Arbitrum One official PoolManager");
+  }
+
   if (hookMetadata.officialIndexingCaveat?.selfDeployedArcTestnetIsOfficial === false) {
     pass("hook indexer metadata snapshot preserves the non-official Arc testnet caveat");
   } else {
@@ -142,7 +178,7 @@ function main(): void {
 
   if (
     typeof readiness.submissionPackage?.currentHookMetadataSelfTestResult === "string"
-    && readiness.submissionPackage.currentHookMetadataSelfTestResult.includes("PASS=8")
+    && readiness.submissionPackage.currentHookMetadataSelfTestResult.includes("PASS=13")
     && readiness.submissionPackage.currentHookMetadataSelfTestResult.includes("FAIL=0")
   ) {
     pass("hook metadata regression self-test result records FAIL=0");

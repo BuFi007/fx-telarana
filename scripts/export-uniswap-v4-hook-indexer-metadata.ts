@@ -12,6 +12,7 @@ type AnyRecord = Record<string, any>;
 
 const ROOT = resolve(import.meta.dir, "..");
 const DEFAULT_MANIFEST = "deployments/uniswap-v4-indexing-readiness-5042002.json";
+const DEFAULT_MULTICHAIN_MANIFEST = "deployments/uniswap-v4-official-multichain-readiness.json";
 const MANIFEST_ENV = "UNISWAP_HOOK_METADATA_MANIFEST";
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 const BYTES32_RE = /^0x[0-9a-fA-F]{64}$/;
@@ -32,6 +33,10 @@ function manifestPath(): string {
 
 function readManifest(relativeManifestPath: string): AnyRecord {
   return JSON.parse(readFileSync(join(ROOT, relativeManifestPath), "utf-8"));
+}
+
+function multichainManifestPath(manifest: AnyRecord): string {
+  return manifest.officialMultichain?.manifest ?? DEFAULT_MULTICHAIN_MANIFEST;
 }
 
 function isAddress(value: unknown): value is string {
@@ -146,9 +151,31 @@ function familyMetadata(family: AnyRecord): AnyRecord {
   };
 }
 
+function targetMetadata(target: AnyRecord): AnyRecord {
+  return {
+    network: target.network,
+    displayName: target.displayName ?? target.network,
+    chainId: target.chainId ?? null,
+    status: target.status,
+    indexingReadiness: target.indexingReadiness,
+    poolPublicationStatus: target.poolPublicationStatus ?? null,
+    contracts: {
+      PoolManager: target.contracts?.PoolManager ?? null,
+      PositionManager: target.contracts?.PositionManager ?? null,
+      UniversalRouter: target.contracts?.UniversalRouter ?? null,
+      Quoter: target.contracts?.Quoter ?? null,
+      StateView: target.contracts?.StateView ?? null,
+      Permit2: target.contracts?.Permit2 ?? null,
+    },
+  };
+}
+
 function buildPacket(manifest: AnyRecord, relativeManifestPath: string): AnyRecord {
+  const relativeMultichainPath = multichainManifestPath(manifest);
+  const multichain = readManifest(relativeMultichainPath);
   const hookFamilies = (manifest.hookFamilies ?? []).map((family: AnyRecord) => familyMetadata(family));
   const poolCount = hookFamilies.reduce((sum: number, family: AnyRecord) => sum + family.pools.length, 0);
+  const officialMultichainTargets = (multichain.targets ?? []).map((target: AnyRecord) => targetMetadata(target));
 
   return {
     schemaVersion: 1,
@@ -169,10 +196,17 @@ function buildPacket(manifest: AnyRecord, relativeManifestPath: string): AnyReco
     },
     uniswapIndexerModel: manifest.uniswapIndexerModel,
     officialArcPoolPublication: manifest.officialArcMainnet?.poolPublication,
-    officialMultichainTargets: manifest.officialMultichain?.targets ?? [],
+    officialMultichain: {
+      generatedFrom: relativeMultichainPath,
+      source: multichain.source ?? manifest.officialMultichain?.source ?? null,
+      status: manifest.officialMultichain?.status ?? null,
+      claimPolicy: multichain.claimPolicy ?? manifest.officialMultichain?.claimPolicy ?? [],
+    },
+    officialMultichainTargets,
     summary: {
       hookFamilyCount: hookFamilies.length,
       publishedArcTestnetPoolCount: poolCount,
+      officialMultichainTargetCount: officialMultichainTargets.length,
     },
     hookFamilies,
     evidenceCommands: {

@@ -43,7 +43,7 @@ Readiness check:
 bun run uniswap:indexing:check
 ```
 
-Current expected result: `PASS=597 WARN=1 FAIL=0`. The remaining warning is
+Current expected result: `PASS=603 WARN=1 FAIL=0`. The remaining warning is
 `FxHedgeHook` first liquidity, which is required before claiming router-active
 or liquid hedge markets.
 
@@ -567,8 +567,8 @@ bun run uniswap:hook-metadata:export
 
 This emits the compact, machine-readable hook/indexer handoff derived from the
 readiness manifest. It includes hook family identities, low-14 permission bits,
-PoolKeys, poolIds, initialize transactions, router/quoter status, and explicit
-official-indexing caveats.
+PoolKeys, poolIds, initialize transactions, router/quoter status, official
+multichain target status, and explicit official-indexing caveats.
 
 Checked hook metadata snapshot:
 
@@ -584,9 +584,11 @@ Hook metadata exporter self-test:
 bun run uniswap:hook-metadata:self-test
 ```
 
-Current expected result: `PASS=8 FAIL=0`. This proves the metadata exporter
+Current expected result: `PASS=13 FAIL=0`. This proves the metadata exporter
 accepts the manifest-derived fixture, rejects a valid-but-wrong `poolId` that
-does not derive from its `PoolKey`, and rejects bad hook low-14 permission bits.
+does not derive from its `PoolKey`, rejects bad hook low-14 permission bits,
+and preserves Arc/Fuji pending plus Avalanche/Arbitrum official-contract status
+in the compact handoff.
 
 Hook metadata freshness check:
 
@@ -633,7 +635,7 @@ Completion audit:
 bun run uniswap:completion:audit
 ```
 
-Current expected result: `PASS=21 WARN=6 FAIL=0`, with
+Current expected result: `PASS=26 WARN=6 FAIL=0`, with
 `completionStatus not-complete`. This audits the original goal directly rather
 than redefining completion around local rehearsal evidence. The warnings are the
 remaining completion blockers: official Arc contracts, official Fuji contracts,
@@ -940,7 +942,7 @@ Ask Claude to verify these points:
 
 1. Run `bun run uniswap:indexing:check` from the `fx-telarana` repo.
 2. Confirm the check exits with `FAIL=0`; the current expected summary is
-   `PASS=597 WARN=1 FAIL=0`.
+   `PASS=603 WARN=1 FAIL=0`.
 3. Run `bun run uniswap:official-arc:check` and confirm official Arc is either
    fully populated from Uniswap docs or still pending with the expected warning;
    current expected summary is `PASS=9 WARN=1 FAIL=0`.
@@ -1061,13 +1063,17 @@ Ask Claude to verify these points:
 36. Run `bun run uniswap:evidence:check` and confirm the snapshot is fresh.
 37. Run `bun run uniswap:hook-metadata:export` and confirm it emits JSON with
    `summary.publishedArcTestnetPoolCount=11`,
+   `summary.officialMultichainTargetCount=4`,
    `officialIndexingCaveat.selfDeployedArcTestnetIsOfficial=false`, and
    hook family metadata for `FxHedgeHook`, `FxSwapHook`,
-   `TelaranaGatewayHubHook`, and `FxGhostKycHook`.
+   `TelaranaGatewayHubHook`, and `FxGhostKycHook`. Confirm
+   `officialMultichainTargets` keeps Arc mainnet and Avalanche Fuji pending,
+   and carries Avalanche plus Arbitrum One official `PoolManager`, `Quoter`, and
+   `StateView` addresses.
 38. Run `bun run uniswap:hook-metadata:write` and confirm it refreshes
    `deployments/uniswap-v4-hook-indexer-metadata-5042002.json`.
 39. Run `bun run uniswap:hook-metadata:self-test` and confirm it exits with
-   `FAIL=0`; the current expected summary is `PASS=8 FAIL=0`.
+   `FAIL=0`; the current expected summary is `PASS=13 FAIL=0`.
 40. Run `bun run uniswap:hook-metadata:check` and confirm the hook metadata
    snapshot is fresh.
 41. Run `bun run uniswap:requirements:export` and confirm it emits the
@@ -1088,7 +1094,7 @@ Ask Claude to verify these points:
 47. Run `bun run uniswap:completion:audit` and confirm the original-goal
    completion audit exits with `FAIL=0`, reports `completionStatus
    not-complete`, and has the current expected summary
-   `PASS=21 WARN=6 FAIL=0`.
+   `PASS=26 WARN=6 FAIL=0`.
 48. Run `bun run uniswap:submission:audit` and confirm the executable
    submission audit exits with `FAIL=0`; the current expected summary is
    `CHECKS=42 PASS=42 WARN=88 FAIL=0`.

@@ -94,6 +94,10 @@ function withBadPermissionBits(manifest: AnyRecord): AnyRecord {
   return mutated;
 }
 
+function targetByNetwork(packet: AnyRecord, network: string): AnyRecord {
+  return (packet.officialMultichainTargets ?? []).find((target: AnyRecord) => target.network === network) ?? {};
+}
+
 function main(): void {
   console.log("Uniswap v4 hook indexer metadata exporter self-test");
   console.log(`root ${ROOT}`);
@@ -111,9 +115,30 @@ function main(): void {
     const packet = JSON.parse(good.stdout);
     expect(packet.generatedFrom === TEMP_GOOD, "valid fixture records source manifest path", good.stdout);
     expect(packet.summary?.publishedArcTestnetPoolCount === 11, "valid fixture exports all 11 Arc testnet pools", good.stdout);
+    expect(packet.summary?.officialMultichainTargetCount === 4, "valid fixture exports all four official multichain targets", good.stdout);
     expect(
       packet.officialIndexingCaveat?.selfDeployedArcTestnetIsOfficial === false,
       "valid fixture preserves the non-official Arc testnet caveat",
+      good.stdout,
+    );
+    expect(
+      targetByNetwork(packet, "arc-mainnet").status === "pending-official-uniswap-v4-addresses",
+      "valid fixture keeps Arc mainnet pending in hook metadata",
+      good.stdout,
+    );
+    expect(
+      targetByNetwork(packet, "avalanche-fuji").indexingReadiness === "rehearsal-only-not-official-indexing",
+      "valid fixture keeps Avalanche Fuji rehearsal-only in hook metadata",
+      good.stdout,
+    );
+    expect(
+      targetByNetwork(packet, "avalanche").contracts?.PoolManager === "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+      "valid fixture exports Avalanche official PoolManager in hook metadata",
+      good.stdout,
+    );
+    expect(
+      targetByNetwork(packet, "arbitrum-one").contracts?.PoolManager === "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+      "valid fixture exports Arbitrum One official PoolManager in hook metadata",
       good.stdout,
     );
 

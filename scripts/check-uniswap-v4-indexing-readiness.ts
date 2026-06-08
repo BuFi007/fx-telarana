@@ -103,6 +103,11 @@ function readJson<T extends AnyRecord>(relativePath: string): T {
   }
 }
 
+function targetByNetwork(source: AnyRecord, network: string): AnyRecord {
+  return (source.targets ?? source.officialMultichainTargets ?? [])
+    .find((target: AnyRecord) => target.network === network) ?? {};
+}
+
 function isAddress(value: unknown): value is string {
   return typeof value === "string" && ADDRESS_RE.test(value);
 }
@@ -1977,7 +1982,7 @@ function checkSubmissionEvidenceSnapshot(
     typeof submission.hookMetadataSelfTestCommand === "string"
     && submission.hookMetadataSelfTestCommand.includes("uniswap:hook-metadata:self-test")
     && typeof submission.currentHookMetadataSelfTestResult === "string"
-    && submission.currentHookMetadataSelfTestResult.includes("PASS=8")
+    && submission.currentHookMetadataSelfTestResult.includes("PASS=13")
     && submission.currentHookMetadataSelfTestResult.includes("FAIL=0")
   ) {
     pass("submission package records the hook metadata self-test result");
@@ -2007,6 +2012,55 @@ function checkSubmissionEvidenceSnapshot(
     pass("hook indexer metadata snapshot carries every published Arc testnet pool");
   } else {
     fail("hook indexer metadata snapshot pool count does not match the readiness manifest");
+  }
+
+  if (hookMetadataSnapshot.officialMultichain?.generatedFrom === MULTICHAIN_MANIFEST) {
+    pass("hook indexer metadata snapshot records its official multichain manifest source");
+  } else {
+    fail("hook indexer metadata snapshot is missing the official multichain manifest source");
+  }
+
+  if (hookMetadataSnapshot.summary?.officialMultichainTargetCount === 4) {
+    pass("hook indexer metadata snapshot carries all four official multichain targets");
+  } else {
+    fail("hook indexer metadata snapshot must carry all four official multichain targets");
+  }
+
+  const metadataArc = targetByNetwork(hookMetadataSnapshot, "arc-mainnet");
+  const metadataFuji = targetByNetwork(hookMetadataSnapshot, "avalanche-fuji");
+  const metadataAvalanche = targetByNetwork(hookMetadataSnapshot, "avalanche");
+  const metadataArbitrum = targetByNetwork(hookMetadataSnapshot, "arbitrum-one");
+
+  if (metadataArc.status === "pending-official-uniswap-v4-addresses") {
+    pass("hook indexer metadata snapshot keeps Arc mainnet pending official Uniswap v4 addresses");
+  } else {
+    fail("hook indexer metadata snapshot must keep Arc mainnet pending official Uniswap v4 addresses");
+  }
+
+  if (metadataFuji.indexingReadiness === "rehearsal-only-not-official-indexing") {
+    pass("hook indexer metadata snapshot keeps Avalanche Fuji rehearsal-only");
+  } else {
+    fail("hook indexer metadata snapshot must keep Avalanche Fuji rehearsal-only");
+  }
+
+  if (
+    isAddress(metadataAvalanche.contracts?.PoolManager)
+    && isAddress(metadataAvalanche.contracts?.Quoter)
+    && isAddress(metadataAvalanche.contracts?.StateView)
+  ) {
+    pass("hook indexer metadata snapshot carries Avalanche official v4 contracts");
+  } else {
+    fail("hook indexer metadata snapshot must carry Avalanche official v4 contracts");
+  }
+
+  if (
+    isAddress(metadataArbitrum.contracts?.PoolManager)
+    && isAddress(metadataArbitrum.contracts?.Quoter)
+    && isAddress(metadataArbitrum.contracts?.StateView)
+  ) {
+    pass("hook indexer metadata snapshot carries Arbitrum One official v4 contracts");
+  } else {
+    fail("hook indexer metadata snapshot must carry Arbitrum One official v4 contracts");
   }
 
   if (submission.indexingHandoffSnapshot === HANDOFF_SNAPSHOT) {
