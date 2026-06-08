@@ -19,6 +19,7 @@ const TEMP_BAD_DOCS = "deployments/.tmp-official-multichain-generator-bad.self-t
 const TEMP_CURRENT_OUTPUT = "deployments/.tmp-official-multichain-generated-current.self-test.json";
 const TEMP_ALL_OUTPUT = "deployments/.tmp-official-multichain-generated-all.self-test.json";
 const TEMP_BAD_OUTPUT = "deployments/.tmp-official-multichain-generated-bad.self-test.json";
+const TEMP_BAD_CHECKER_INPUT = "deployments/.tmp-official-multichain-checker-bad.self-test.json";
 const PERMIT2 = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
 
 const counts: Record<Severity, number> = { PASS: 0, FAIL: 0 };
@@ -59,6 +60,7 @@ function cleanup(): void {
     TEMP_CURRENT_OUTPUT,
     TEMP_ALL_OUTPUT,
     TEMP_BAD_OUTPUT,
+    TEMP_BAD_CHECKER_INPUT,
   ]) {
     const absolutePath = join(ROOT, relativePath);
     if (existsSync(absolutePath)) rmSync(absolutePath);
@@ -75,16 +77,16 @@ function firstSelfDeployedPoolManager(manifest: AnyRecord): string {
   throw new Error("multichain manifest has no self-deployed/rehearsal PoolManager");
 }
 
-function contractRows(poolManager: string): string {
+function contractRows(poolManager: string, contracts: AnyRecord = {}): string {
   const rows = [
-    ["PoolManager", poolManager],
-    ["PositionDescriptor", "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
-    ["PositionManager", "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
-    ["Quoter", "0xcccccccccccccccccccccccccccccccccccccccc"],
-    ["StateView", "0xdddddddddddddddddddddddddddddddddddddddd"],
-    ["Universal Router", "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"],
-    ["Universal Router 2.1.1", "0xffffffffffffffffffffffffffffffffffffffff"],
-    ["Permit2", PERMIT2],
+    ["PoolManager", contracts.PoolManager ?? poolManager],
+    ["PositionDescriptor", contracts.PositionDescriptor ?? "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+    ["PositionManager", contracts.PositionManager ?? "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
+    ["Quoter", contracts.Quoter ?? "0xcccccccccccccccccccccccccccccccccccccccc"],
+    ["StateView", contracts.StateView ?? "0xdddddddddddddddddddddddddddddddddddddddd"],
+    ["Universal Router", contracts.UniversalRouter ?? "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"],
+    ["Universal Router 2.1.1", contracts.UniversalRouter211 ?? "0xffffffffffffffffffffffffffffffffffffffff"],
+    ["Permit2", contracts.Permit2 ?? PERMIT2],
   ];
 
   return rows
@@ -92,24 +94,34 @@ function contractRows(poolManager: string): string {
     .join("\n");
 }
 
-function section(name: string, chainId: number, poolManager: string): string {
+function section(name: string, chainId: number, poolManager: string, contracts: AnyRecord = {}): string {
   return [
     `## ${name}: ${chainId}`,
     "| Contract | Address |",
     "| --- | --- |",
-    contractRows(poolManager),
+    contractRows(poolManager, contracts),
     "",
   ].join("\n");
 }
 
-function docsMarkdown(options: { includeArc: boolean; includeFuji: boolean; badAvalanchePoolManager?: string }): string {
+function docsMarkdown(
+  options: { includeArc: boolean; includeFuji: boolean; badAvalanchePoolManager?: string },
+  manifest: AnyRecord,
+): string {
+  const avalanche = targetByNetwork(manifest, "avalanche");
+  const arbitrum = targetByNetwork(manifest, "arbitrum-one");
   const sections = [
     "# Deployments",
     "",
     "Fixture for official multichain deployment input generation.",
     "",
-    section("Avalanche C-Chain", 43_114, options.badAvalanchePoolManager ?? poolManagers.avalanche),
-    section("Arbitrum One", 42_161, poolManagers.arbitrum),
+    section(
+      "Avalanche C-Chain",
+      43_114,
+      options.badAvalanchePoolManager ?? avalanche.contracts?.PoolManager ?? poolManagers.avalanche,
+      options.badAvalanchePoolManager ? {} : avalanche.contracts,
+    ),
+    section("Arbitrum One", 42_161, arbitrum.contracts?.PoolManager ?? poolManagers.arbitrum, arbitrum.contracts),
   ];
 
   if (options.includeArc) sections.push(section("Arc", 5_042_002, poolManagers.arc));
@@ -128,6 +140,23 @@ function runGenerator(inputPath: string, outPath: string): { status: number; std
     env: {
       ...process.env,
       UNISWAP_V4_DEPLOYMENTS_MARKDOWN_FILE: inputPath,
+    },
+    encoding: "utf8",
+  });
+
+  return {
+    status: result.status ?? 1,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+  };
+}
+
+function runDeploymentInputCheck(inputPath: string): { status: number; stdout: string; stderr: string } {
+  const result = spawnSync("bun", ["scripts/check-official-multichain-deployment-inputs.ts"], {
+    cwd: ROOT,
+    env: {
+      ...process.env,
+      OFFICIAL_MULTICHAIN_DEPLOYMENT_INPUT: inputPath,
     },
     encoding: "utf8",
   });
@@ -164,13 +193,13 @@ function main(): void {
     const manifest = readJson(MANIFEST);
     const selfDeployedPoolManager = firstSelfDeployedPoolManager(manifest);
 
-    writeFile(TEMP_CURRENT_DOCS, docsMarkdown({ includeArc: false, includeFuji: false }));
-    writeFile(TEMP_ALL_DOCS, docsMarkdown({ includeArc: true, includeFuji: true }));
+    writeFile(TEMP_CURRENT_DOCS, docsMarkdown({ includeArc: false, includeFuji: false }, manifest));
+    writeFile(TEMP_ALL_DOCS, docsMarkdown({ includeArc: true, includeFuji: true }, manifest));
     writeFile(TEMP_BAD_DOCS, docsMarkdown({
       includeArc: false,
       includeFuji: false,
       badAvalanchePoolManager: selfDeployedPoolManager,
-    }));
+    }, manifest));
 
     const current = runGenerator(TEMP_CURRENT_DOCS, TEMP_CURRENT_OUTPUT);
     expect(current.status === 0, "current-docs fixture generates warning-only bundle", current.stdout || current.stderr);
@@ -179,8 +208,18 @@ function main(): void {
     const currentBundle = readJson(TEMP_CURRENT_OUTPUT);
     expect(targetByNetwork(currentBundle, "arc-mainnet").status === "pending-official-uniswap-v4-addresses", "current-docs fixture keeps Arc pending");
     expect(targetByNetwork(currentBundle, "avalanche-fuji").status === "pending-official-uniswap-v4-addresses", "current-docs fixture keeps Fuji pending");
-    expect(targetByNetwork(currentBundle, "avalanche").contracts?.PoolManager === poolManagers.avalanche, "current-docs fixture populates Avalanche");
-    expect(targetByNetwork(currentBundle, "arbitrum-one").contracts?.PoolManager === poolManagers.arbitrum, "current-docs fixture populates Arbitrum");
+    expect(
+      targetByNetwork(currentBundle, "avalanche").contracts?.PoolManager === targetByNetwork(manifest, "avalanche").contracts?.PoolManager,
+      "current-docs fixture populates Avalanche from manifest-backed official docs fixture",
+    );
+    expect(
+      targetByNetwork(currentBundle, "arbitrum-one").contracts?.PoolManager === targetByNetwork(manifest, "arbitrum-one").contracts?.PoolManager,
+      "current-docs fixture populates Arbitrum from manifest-backed official docs fixture",
+    );
+
+    const currentCheck = runDeploymentInputCheck(TEMP_CURRENT_OUTPUT);
+    expect(currentCheck.status === 0, "current-docs generated bundle passes standalone input checker", currentCheck.stdout || currentCheck.stderr);
+    expect(/summary PASS=\d+ WARN=2 FAIL=0/.test(currentCheck.stdout), "current-docs standalone checker has Arc/Fuji pending warnings", currentCheck.stdout);
 
     const allTargets = runGenerator(TEMP_ALL_DOCS, TEMP_ALL_OUTPUT);
     expect(allTargets.status === 0, "all-targets fixture generates populated bundle", allTargets.stdout || allTargets.stderr);
@@ -191,12 +230,32 @@ function main(): void {
       expect(targetByNetwork(allBundle, network).status === "official-uniswap-v4-addresses-published", `all-targets fixture publishes ${network}`);
     }
 
+    const allTargetsCheck = runDeploymentInputCheck(TEMP_ALL_OUTPUT);
+    expect(allTargetsCheck.status !== 0, "all-targets generated bundle fails checker while manifest keeps Arc/Fuji pending", allTargetsCheck.stdout || allTargetsCheck.stderr);
+    expect(
+      allTargetsCheck.stdout.includes("must stay pending while the multichain manifest is pending"),
+      "all-targets checker failure explains manifest update requirement",
+      allTargetsCheck.stdout,
+    );
+
     const bad = runGenerator(TEMP_BAD_DOCS, TEMP_BAD_OUTPUT);
     expect(bad.status !== 0, "self-deployed PoolManager fixture fails generation", bad.stdout || bad.stderr);
     expect(
       bad.stdout.includes("PoolManager reuses self-deployed/rehearsal PoolManager"),
       "self-deployed PoolManager fixture fails for explicit reuse reason",
       bad.stdout,
+    );
+
+    const badCheckerBundle = currentBundle;
+    targetByNetwork(badCheckerBundle, "avalanche").contracts.PoolManager = selfDeployedPoolManager;
+    writeFile(TEMP_BAD_CHECKER_INPUT, `${JSON.stringify(badCheckerBundle, null, 2)}\n`);
+
+    const badChecker = runDeploymentInputCheck(TEMP_BAD_CHECKER_INPUT);
+    expect(badChecker.status !== 0, "self-deployed PoolManager bundle fails standalone checker", badChecker.stdout || badChecker.stderr);
+    expect(
+      badChecker.stdout.includes("PoolManager reuses self-deployed/rehearsal PoolManager"),
+      "standalone checker fails for explicit PoolManager reuse reason",
+      badChecker.stdout,
     );
   } finally {
     cleanup();

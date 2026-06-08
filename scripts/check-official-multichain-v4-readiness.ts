@@ -248,6 +248,13 @@ function checkSourceFreshnessBlock(manifest: AnyRecord): void {
 
 function checkDeploymentInputGenerationBlock(manifest: AnyRecord): void {
   const generation = manifest.deploymentInputGeneration ?? {};
+  const checkScript = "scripts/check-official-multichain-deployment-inputs.ts";
+  if (existsSync(join(ROOT, checkScript))) {
+    pass(`multichain deployment input checker exists at ${checkScript}`);
+  } else {
+    fail(`multichain deployment input checker is missing at ${checkScript}`);
+  }
+
   const script = "scripts/generate-official-multichain-deployment-inputs.ts";
   if (existsSync(join(ROOT, script))) {
     pass(`multichain deployment input generator exists at ${script}`);
@@ -260,6 +267,25 @@ function checkDeploymentInputGenerationBlock(manifest: AnyRecord): void {
     pass(`multichain deployment input generator self-test exists at ${selfTestScript}`);
   } else {
     fail(`multichain deployment input generator self-test is missing at ${selfTestScript}`);
+  }
+
+  if (
+    typeof generation.checkCommand === "string"
+    && generation.checkCommand.includes("uniswap:official-multichain:input:check")
+  ) {
+    pass("multichain deployment input checker command is recorded");
+  } else {
+    fail("multichain deployment input checker command is missing");
+  }
+
+  if (
+    typeof generation.currentCheckResult === "string"
+    && generation.currentCheckResult.includes("WARN=2")
+    && generation.currentCheckResult.includes("FAIL=0")
+  ) {
+    pass("multichain deployment input checker result is recorded");
+  } else {
+    fail("multichain deployment input checker result is missing");
   }
 
   if (
@@ -301,11 +327,13 @@ function checkDeploymentInputGenerationBlock(manifest: AnyRecord): void {
 
   const checks = Array.isArray(generation.requiredChecks) ? generation.requiredChecks.join("\n") : "";
   for (const snippet of [
+    "Standalone checker",
     "official Uniswap v4 deployments Markdown",
     "Arc mainnet and Avalanche Fuji pending",
     "Avalanche C-Chain and Arbitrum One",
     "self-deployed Arc testnet and Fuji rehearsal PoolManager",
-    "future all-target population",
+    "standalone checker compatibility",
+    "future all-target manifest-update failure",
   ]) {
     if (checks.includes(snippet)) pass(`multichain deployment input generator checks cover ${snippet}`);
     else fail(`multichain deployment input generator checks must cover ${snippet}`);

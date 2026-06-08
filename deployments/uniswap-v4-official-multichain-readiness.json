@@ -21,16 +21,19 @@
     ]
   },
   "deploymentInputGeneration": {
+    "checkCommand": "bun run uniswap:official-multichain:input:check",
+    "currentCheckResult": "PASS=75 WARN=2 FAIL=0",
     "command": "bun run uniswap:official-multichain:input:generate",
     "currentResult": "PASS=36 WARN=2 FAIL=0",
     "selfTestCommand": "bun run uniswap:official-multichain:input:generate:self-test",
-    "currentSelfTestResult": "PASS=14 FAIL=0",
+    "currentSelfTestResult": "PASS=20 FAIL=0",
     "requiredChecks": [
+      "Standalone checker must validate generated or hand-reviewed deployment input bundles before hook redeploy and pool publication.",
       "Generate target-chain official deployment inputs directly from the official Uniswap v4 deployments Markdown.",
       "Keep Arc mainnet and Avalanche Fuji pending while official deployments are absent.",
       "Populate Avalanche C-Chain and Arbitrum One from official deployments when present.",
       "Reject self-deployed Arc testnet and Fuji rehearsal PoolManager reuse.",
-      "Self-test must prove current-docs pending behavior, future all-target population, and self-deployed PoolManager rejection."
+      "Self-test must prove current-docs pending behavior, standalone checker compatibility, future all-target manifest-update failure, and self-deployed PoolManager rejection."
     ]
   },
   "canonicalPermit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
@@ -200,6 +203,6 @@
       ]
     }
   ],
-  "currentResult": "PASS=168 WARN=4 FAIL=0",
+  "currentResult": "PASS=173 WARN=4 FAIL=0",
   "command": "bun run uniswap:official-multichain:check"
 }

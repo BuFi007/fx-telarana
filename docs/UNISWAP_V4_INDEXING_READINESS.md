@@ -43,7 +43,7 @@ Readiness check:
 bun run uniswap:indexing:check
 ```
 
-Current expected result: `PASS=375 WARN=1 FAIL=0`. The remaining warning is
+Current expected result: `PASS=382 WARN=1 FAIL=0`. The remaining warning is
 `FxHedgeHook` first liquidity, which is required before claiming router-active
 or liquid hedge markets.
 
@@ -207,7 +207,7 @@ Official multichain deployment/indexing gate:
 bun run uniswap:official-multichain:check
 ```
 
-Current expected result: `PASS=168 WARN=4 FAIL=0`. This validates the
+Current expected result: `PASS=173 WARN=4 FAIL=0`. This validates the
 machine-readable multichain manifest at
 `deployments/uniswap-v4-official-multichain-readiness.json`. The official
 Uniswap v4 deployments table lists Avalanche C-Chain (`43114`) and Arbitrum One
@@ -227,6 +227,20 @@ The four warnings are intentional:
   liquidity, `StateView`, subgraph, and exact-input `Quoter` evidence.
 - Arbitrum One has official Uniswap v4 contracts, but fx-Telarana hook pools
   still need the same chain-specific publication evidence.
+
+Official multichain deployment input checker:
+
+```bash
+bun run uniswap:official-multichain:input:check
+```
+
+Current expected result: `PASS=75 WARN=2 FAIL=0`. This standalone checker
+validates generated or hand-reviewed multichain deployment-input bundles before
+hook redeploy and pool publication. By default it checks
+`deployments/uniswap-v4-official-multichain-readiness.json`; set
+`OFFICIAL_MULTICHAIN_DEPLOYMENT_INPUT=<generated-file>` to validate a generated
+bundle. The two warnings are expected while Arc and Fuji are absent from
+official Uniswap deployments.
 
 Official multichain deployment input generator:
 
@@ -248,10 +262,11 @@ Official multichain deployment input generator self-test:
 bun run uniswap:official-multichain:input:generate:self-test
 ```
 
-Current expected result: `PASS=14 FAIL=0`. This generates fixture deployments
+Current expected result: `PASS=20 FAIL=0`. This generates fixture deployments
 Markdown proving the current docs shape keeps Arc/Fuji pending, a future
-all-target docs shape populates all four targets, and self-deployed/rehearsal
-PoolManagers are rejected.
+all-target docs shape populates all four targets, current generated bundles pass
+the standalone checker, future all-target bundles fail until manifests are
+updated, and self-deployed/rehearsal PoolManagers are rejected.
 
 Official multichain source freshness gate:
 
@@ -537,34 +552,37 @@ When Arc is listed, do this before claiming official indexing:
    exits with `FAIL=0`; the current expected summary is `PASS=8 FAIL=0`.
    Confirm fixture cases fail when Arc/Fuji are newly listed or a published
    address drifts.
-12. Run `bun run uniswap:official-multichain:input:generate` and confirm it
+12. Run `bun run uniswap:official-multichain:input:check` and confirm it exits
+   with `FAIL=0`; the current expected summary is
+   `PASS=75 WARN=2 FAIL=0`.
+13. Run `bun run uniswap:official-multichain:input:generate` and confirm it
    exits with `FAIL=0`; the current expected summary is
    `PASS=36 WARN=2 FAIL=0`.
-13. Run `bun run uniswap:official-multichain:input:generate:self-test` and
+14. Run `bun run uniswap:official-multichain:input:generate:self-test` and
    confirm it exits with `FAIL=0`; the current expected summary is
-   `PASS=14 FAIL=0`.
-14. Run `bun run uniswap:official-multichain:check` and confirm it exits with
-   `FAIL=0`; the current expected summary is `PASS=168 WARN=4 FAIL=0`.
+   `PASS=20 FAIL=0`.
+15. Run `bun run uniswap:official-multichain:check` and confirm it exits with
+   `FAIL=0`; the current expected summary is `PASS=173 WARN=4 FAIL=0`.
    Confirm Avalanche C-Chain and Arbitrum One have official v4 contract
    addresses, while Arc mainnet and Avalanche Fuji stay pending. Also confirm
    Avalanche/Arbitrum hook-pool indexing is not claimed until chain-specific
    initialize, first-liquidity, StateView, subgraph, and Quoter evidence exists.
-15. Run `bun run uniswap:official-multichain:pools:check` and confirm it exits
+16. Run `bun run uniswap:official-multichain:pools:check` and confirm it exits
    with `FAIL=0`; the current expected summary is `PASS=67 WARN=4 FAIL=0`.
    Confirm the default template has empty official pool records for all targets
    and that ready-mode records would require official PoolManager receipt,
    StateView, subgraph, and Quoter/custom-route evidence.
-16. Run `bun run uniswap:official-multichain:pools:self-test` and confirm it
+17. Run `bun run uniswap:official-multichain:pools:self-test` and confirm it
    exits with `FAIL=0`; the current expected summary is `PASS=12 FAIL=0`.
    Confirm populated draft Avalanche/Arbitrum fixtures pass offline, populated
    ready fixtures fail without `AVALANCHE_RPC_URL` and `ARBITRUM_RPC_URL`, and
    self-deployed PoolManagers are rejected.
-17. Run `bun run uniswap:stateview:check` with the same
+18. Run `bun run uniswap:stateview:check` with the same
    `OFFICIAL_ARC_POOL_PUBLICATION_INPUT` and the official Arc RPC, then verify
    `StateView.getSlot0(poolId)` plus `StateView.getLiquidity(poolId)`.
-18. Query the official v4 subgraph by `poolId` and verify the pool `hooks`,
+19. Query the official v4 subgraph by `poolId` and verify the pool `hooks`,
    token0/token1, fee tier, tick spacing, price state, and liquidity fields.
-19. Run `bun run uniswap:subgraph:check` with the same
+20. Run `bun run uniswap:subgraph:check` with the same
    `OFFICIAL_ARC_POOL_PUBLICATION_INPUT` and the official v4 subgraph endpoint;
    fail the submission if any official pool is missing or has the wrong `hooks`
    address.
@@ -575,7 +593,7 @@ Ask Claude to verify these points:
 
 1. Run `bun run uniswap:indexing:check` from the `fx-telarana` repo.
 2. Confirm the check exits with `FAIL=0`; the current expected summary is
-   `PASS=375 WARN=1 FAIL=0`.
+   `PASS=382 WARN=1 FAIL=0`.
 3. Run `bun run uniswap:official-arc:check` and confirm official Arc is either
    fully populated from Uniswap docs or still pending with the expected warning;
    current expected summary is `PASS=9 WARN=1 FAIL=0`.
@@ -606,69 +624,73 @@ Ask Claude to verify these points:
    has been updated.
 13. Run `bun run uniswap:official-multichain:docs:self-test` and confirm it
    exits with `FAIL=0`; the current expected summary is `PASS=8 FAIL=0`.
-14. Run `bun run uniswap:official-multichain:input:generate` and confirm it
+14. Run `bun run uniswap:official-multichain:input:check` and confirm it exits
+   with `FAIL=0`; the current expected summary is
+   `PASS=75 WARN=2 FAIL=0`.
+15. Run `bun run uniswap:official-multichain:input:generate` and confirm it
    exits with `FAIL=0`; the current expected summary is
    `PASS=36 WARN=2 FAIL=0`.
-15. Run `bun run uniswap:official-multichain:input:generate:self-test` and
+16. Run `bun run uniswap:official-multichain:input:generate:self-test` and
    confirm it exits with `FAIL=0`; the current expected summary is
-   `PASS=14 FAIL=0`.
-16. Run `bun run uniswap:official-multichain:check` and confirm the
+   `PASS=20 FAIL=0`.
+17. Run `bun run uniswap:official-multichain:check` and confirm the
    multichain gate exits with `FAIL=0`; the current expected summary is
-   `PASS=168 WARN=4 FAIL=0`.
-17. Run `bun run uniswap:official-multichain:pools:check` and confirm the
+   `PASS=173 WARN=4 FAIL=0`.
+18. Run `bun run uniswap:official-multichain:pools:check` and confirm the
    multichain pool-publication gate exits with `FAIL=0`; the current expected
    summary is `PASS=67 WARN=4 FAIL=0`.
-18. Run `bun run uniswap:official-multichain:pools:self-test` and confirm it
+19. Run `bun run uniswap:official-multichain:pools:self-test` and confirm it
    exits with `FAIL=0`; the current expected summary is `PASS=12 FAIL=0`.
-19. Run `bun run uniswap:stateview:check` and confirm the StateView gate exits
+20. Run `bun run uniswap:stateview:check` and confirm the StateView gate exits
    with `FAIL=0`; the current expected summary is `PASS=13 WARN=1 FAIL=0`.
    In live official-Arc mode, rerun it with
    `OFFICIAL_ARC_POOL_PUBLICATION_INPUT=<populated-file>`.
-20. Run `bun run uniswap:subgraph:check` and confirm the subgraph gate exits
+21. Run `bun run uniswap:subgraph:check` and confirm the subgraph gate exits
    with `FAIL=0`; the current expected summary is `PASS=15 WARN=1 FAIL=0`.
    In live official-Arc mode, rerun it with
    `OFFICIAL_ARC_POOL_PUBLICATION_INPUT=<populated-file>`.
-21. Run `bun run uniswap:evidence:export` and confirm it emits JSON with
+22. Run `bun run uniswap:evidence:export` and confirm it emits JSON with
    `pools.length=11`, `network=arc-testnet`, `chainId=5042002`, and
    `officialArcMainnet.status=pending-official-uniswap-v4-addresses`, plus
    `officialArcMainnet.currentDeploymentInputGenerateResult=PASS=4 WARN=1 FAIL=0`,
    `officialArcMainnet.currentDeploymentInputGenerateSelfTestResult=PASS=10 FAIL=0`,
-   `officialMultichain.currentResult=PASS=168 WARN=4 FAIL=0`,
+   `officialMultichain.currentResult=PASS=173 WARN=4 FAIL=0`,
+   `officialMultichain.deploymentInputGeneration.currentCheckResult=PASS=75 WARN=2 FAIL=0`,
    `officialMultichain.deploymentInputGeneration.currentResult=PASS=36 WARN=2 FAIL=0`,
-   `officialMultichain.deploymentInputGeneration.currentSelfTestResult=PASS=14 FAIL=0`,
+   `officialMultichain.deploymentInputGeneration.currentSelfTestResult=PASS=20 FAIL=0`,
    `officialMultichain.sourceFreshness.currentResult=PASS=31 WARN=2 FAIL=0`,
    `officialMultichain.sourceFreshness.currentSelfTestResult=PASS=8 FAIL=0`,
    and
    `officialMultichain.poolPublication.currentResult=PASS=67 WARN=4 FAIL=0`.
-22. Run `bun run uniswap:evidence:write` and confirm it refreshes
+23. Run `bun run uniswap:evidence:write` and confirm it refreshes
    `deployments/uniswap-v4-indexing-evidence-5042002.json` with the same
    11-pool snapshot.
-23. Run `bun run uniswap:evidence:check` and confirm the snapshot is fresh.
-24. Run `bun run hedge:arc:plan-stables` and confirm all six hedge pools are
+24. Run `bun run uniswap:evidence:check` and confirm the snapshot is fresh.
+25. Run `bun run hedge:arc:plan-stables` and confirm all six hedge pools are
    live/configured; the current expected summary is `PASS=46 WARN=0 FAIL=0`.
-25. Run `bun run uniswap:hedge:liquidity` and confirm it reports zero liquidity
+26. Run `bun run uniswap:hedge:liquidity` and confirm it reports zero liquidity
    as warnings, not failures; current expected summary is
    `PASS=1 WARN=13 FAIL=0`.
-26. Run `bun run uniswap:hedge:liquidity:plan` and confirm it reports
+27. Run `bun run uniswap:hedge:liquidity:plan` and confirm it reports
    `PASS=32 WARN=1 FAIL=0` and prints all six operator env groups.
-27. Run `bun run uniswap:hedge:v4quoter` and confirm the local diagnostic passes
+28. Run `bun run uniswap:hedge:v4quoter` and confirm the local diagnostic passes
    `2 passed; 0 failed`.
-28. Run `bun run uniswap:fxswap:v4quoter` and confirm the local diagnostic passes
+29. Run `bun run uniswap:fxswap:v4quoter` and confirm the local diagnostic passes
    `3 passed; 0 failed`.
-29. Run `bun run uniswap:indexing:onchain` and confirm live init/configure tx
+30. Run `bun run uniswap:indexing:onchain` and confirm live init/configure tx
    receipts verify against Arc RPC; the current expected summary is
    `PASS=142 WARN=0 FAIL=0`.
-30. Confirm expected readiness warnings are limited to official Arc addresses,
+31. Confirm expected readiness warnings are limited to official Arc addresses,
    official Fuji addresses, Avalanche/Arbitrum hook pool publication evidence,
    official hook redeploy PoolManager availability, official pool publication,
    StateView/subgraph/pool IDs, and FxHedgeHook first liquidity pending.
    `FxSwapHook` generic `V4Quoter` is no longer an untested pending harness; it
    has a local negative diagnostic.
-31. From the app repo, run `bun run --filter @bufi/hyper-mcp typecheck`.
-32. From the app repo, run
+32. From the app repo, run `bun run --filter @bufi/hyper-mcp typecheck`.
+33. From the app repo, run
     `bun test apps/hyper-mcp/test/app.test.ts -t "GET /api/hedge/pools surfaces deployed hedge pools"`
    and confirm `/api/hedge/pools` reports `liveCount=6`, `pendingCount=0`,
    and no zero placeholder pool IDs.
-33. Confirm `apps/hyper-mcp/src/routes/hedge.ts` in the app branch treats
+34. Confirm `apps/hyper-mcp/src/routes/hedge.ts` in the app branch treats
     FxHedgeHook and FxSwapHook as separate v4 pool surfaces.
-34. Confirm no ops, surveillance, or unrelated monitoring surfaces were added.
+35. Confirm no ops, surveillance, or unrelated monitoring surfaces were added.
