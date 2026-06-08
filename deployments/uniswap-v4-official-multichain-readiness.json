@@ -87,14 +87,14 @@
   "poolPublication": {
     "manifest": "deployments/uniswap-v4-official-multichain-pools.template.json",
     "command": "bun run uniswap:official-multichain:pools:check",
-    "currentResult": "PASS=67 WARN=4 FAIL=0",
+    "currentResult": "PASS=68 WARN=4 FAIL=0",
     "planCommand": "bun run uniswap:official-multichain:pools:plan",
     "planSnapshotCommand": "bun run uniswap:official-multichain:pools:plan:write",
     "planCheckCommand": "bun run uniswap:official-multichain:pools:plan:check",
     "planSnapshot": "deployments/uniswap-v4-official-multichain-pools-fill-plan.json",
     "currentPlanResult": "PASS=81 WARN=4 FAIL=0",
     "selfTestCommand": "bun run uniswap:official-multichain:pools:self-test",
-    "currentSelfTestResult": "PASS=14 FAIL=0",
+    "currentSelfTestResult": "PASS=15 FAIL=0",
     "requiredChecks": [
       "Each target chain status must match official v4 address availability.",
       "Official pool records must use the target chain official PoolManager.",
@@ -323,6 +323,6 @@
       ]
     }
   ],
-  "currentResult": "PASS=284 WARN=4 FAIL=0",
+  "currentResult": "PASS=289 WARN=4 FAIL=0",
   "command": "bun run uniswap:official-multichain:check"
 }

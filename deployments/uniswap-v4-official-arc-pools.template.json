@@ -19,6 +19,7 @@
     "initializeTx",
     "firstLiquidityTx",
     "routerQuoterStatus",
+    "routerExecution",
     "stateViewVerification",
     "subgraphVerification"
   ],
@@ -29,6 +30,7 @@
     "The checker verifies populated pool count, unique family/symbol labels, unique poolIds, official PoolManager matching sourceDeploymentInput, and hook low-14 permission bits.",
     "Ready files must include concrete StateView and subgraph evidence fields for every official pool, not only status=verified labels.",
     "Ready files must include official exact-input Quoter evidence for FxHedgeHook or an explicit custom-route caveat for non-generic hooks.",
+    "Ready files must include official Universal Router execution evidence for FxHedgeHook or an explicit custom-route caveat for non-generic hook execution.",
     "When OFFICIAL_ARC_RPC_URL is set, the checker also verifies initializeTx emits PoolManager Initialize and firstLiquidityTx emits a positive PoolManager ModifyLiquidity event.",
     "Only set routerActiveClaim=true after firstLiquidityTx is published and StateView/subgraph liquidity checks pass.",
     "Run OFFICIAL_ARC_POOL_PUBLICATION_INPUT=<populated-file> bun run uniswap:official-arc:pools:check before claiming official Arc indexing readiness.",

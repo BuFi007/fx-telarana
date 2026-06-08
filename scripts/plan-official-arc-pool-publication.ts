@@ -4,7 +4,7 @@
 // the 11 source pool templates from the Arc testnet evidence manifest and shows
 // exactly which official fields must be populated after hook redeploys,
 // PoolManager.initialize, first liquidity, StateView reads, subgraph reads, and
-// route/quoter diagnostics exist.
+// route/quoter plus router execution diagnostics exist.
 
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -118,6 +118,34 @@ function checkSourceTemplate(template: AnyRecord): void {
   else fail(`${label} source router/quoter caveat is missing`);
 }
 
+function plannedRouterExecution(template: AnyRecord, officialPoolManager: string | null): AnyRecord {
+  if (template.family === "FxHedgeHook") {
+    return {
+      universalRouterExecution: {
+        status: "pending",
+        command: "<official Universal Router V4_SWAP exact-input execution or signed simulation>",
+        universalRouter: "<official UniversalRouter>",
+        permit2: "<official Permit2>",
+        poolManager: officialPoolManager ?? "<official PoolManager>",
+        poolId: "<official poolId>",
+        planner: "<V4Planner exact-input single-hop route>",
+        hookData: "0x",
+        note: "Required before claiming official generic Universal Router execution for FxHedgeHook.",
+      },
+    };
+  }
+
+  if (template.family === "FxSwapHook") {
+    return {
+      customRouteCaveat: "Populate protocol-router execution evidence or document PMM-aware settlement caveat before any generic Universal Router claim.",
+    };
+  }
+
+  return {
+    customRouteCaveat: "Populate execution evidence or document required hookData/Gateway attestation context before any generic Universal Router claim.",
+  };
+}
+
 function plannedPoolRecord(template: AnyRecord, officialPoolManager: string | null): AnyRecord {
   const sourceKey = template.sourcePoolKey ?? {};
   return {
@@ -141,6 +169,7 @@ function plannedPoolRecord(template: AnyRecord, officialPoolManager: string | nu
       firstLiquidityTx: "<official positive PoolManager.ModifyLiquidity tx>",
       routerActiveClaim: false,
       routerQuoterStatus: template.sourceRouterQuoterStatus,
+      routerExecution: plannedRouterExecution(template, officialPoolManager),
       stateViewVerification: {
         status: "pending",
         sqrtPriceX96: "<StateView.getSlot0(poolId)>",

@@ -10,7 +10,8 @@
     "positive PoolManager ModifyLiquidity receipt emitted by the official target-chain PoolManager",
     "StateView slot0 sqrtPriceX96 and nonzero liquidity",
     "Uniswap v4 subgraph pool entity with matching hooks, tokens, fee, tickSpacing, price state, and nonzero liquidity",
-    "official Quoter exact-input diagnostic or explicitly documented custom-route caveat"
+    "official Quoter exact-input diagnostic or explicitly documented custom-route caveat",
+    "Universal Router execution evidence or explicitly documented custom-route caveat"
   ],
   "validationSummary": {
     "pass": 81,

@@ -311,7 +311,7 @@ function checkTargetPlan(network: string, multichain: AnyRecord, publicationInpu
   }
 
   if (target.poolPublicationStatus === "pending-poolmanager-initialize-and-first-liquidity") {
-    warn(`${network} has official contracts but still needs hook redeploy, Initialize txs, first liquidity, StateView, subgraph, and route/quoter evidence`);
+    warn(`${network} has official contracts but still needs hook redeploy, Initialize txs, first liquidity, StateView, subgraph, route/quoter, and router execution evidence`);
   } else if (target.poolPublicationStatus === "ready") {
     pass(`${network} hook pool publication is marked ready`);
   } else {

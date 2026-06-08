@@ -127,7 +127,7 @@ function main(): void {
   }
 
   if (avalanche.poolPublicationStatus === "pending-poolmanager-initialize-and-first-liquidity") {
-    warn("completion remains pending for Avalanche: hook pools still need official Initialize, first liquidity, StateView, subgraph, and route/quoter evidence");
+    warn("completion remains pending for Avalanche: hook pools still need official Initialize, first liquidity, StateView, subgraph, route/quoter, and router execution evidence");
   } else if (avalanche.poolPublicationStatus === "ready") {
     pass("Avalanche hook pool publication is ready");
   } else {
@@ -147,7 +147,7 @@ function main(): void {
   }
 
   if (arbitrum.poolPublicationStatus === "pending-poolmanager-initialize-and-first-liquidity") {
-    warn("completion remains pending for Arbitrum One: hook pools still need official Initialize, first liquidity, StateView, subgraph, and route/quoter evidence");
+    warn("completion remains pending for Arbitrum One: hook pools still need official Initialize, first liquidity, StateView, subgraph, route/quoter, and router execution evidence");
   } else if (arbitrum.poolPublicationStatus === "ready") {
     pass("Arbitrum One hook pool publication is ready");
   } else {

@@ -141,6 +141,39 @@ function routerQuoterStatusFor(
   };
 }
 
+function routerExecutionFor(
+  network: keyof typeof OFFICIAL_POOL_MANAGERS,
+  template: AnyRecord,
+  poolManager: string,
+): AnyRecord {
+  if (template.family === "FxHedgeHook") {
+    return {
+      universalRouterExecution: {
+        status: "passed",
+        command: "fixture: Universal Router V4_SWAP exact-input execution",
+        universalRouter: network === "avalanche"
+          ? "0x94b75331ae8d42c1b61065089b7d48fe14aa73b7"
+          : "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+        permit2: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        poolManager,
+        planner: "fixture V4Planner exact-input single-hop",
+        hookData: "0x",
+        note: "Fixture only; production records must carry the real target-chain Universal Router result.",
+      },
+    };
+  }
+
+  if (template.family === "FxSwapHook") {
+    return {
+      customRouteCaveat: "Fixture custom-route caveat for PMM-aware protocol router execution.",
+    };
+  }
+
+  return {
+    customRouteCaveat: "Fixture custom-route caveat for hookData or attestation-required execution.",
+  };
+}
+
 function officialPoolFromTemplate(
   network: keyof typeof OFFICIAL_POOL_MANAGERS,
   template: AnyRecord,
@@ -178,6 +211,7 @@ function officialPoolFromTemplate(
     firstLiquidityTx: bytes32For(`${network}:${template.family}:${template.symbol}:first-liquidity`),
     routerActiveClaim: true,
     routerQuoterStatus: routerQuoterStatusFor(network, template, poolManager),
+    routerExecution: routerExecutionFor(network, template, poolManager),
     sqrtPriceX96,
     liquidity,
     stateViewVerification: {
@@ -258,6 +292,9 @@ function withBadRouterEvidence(officialPools: AnyRecord[]): AnyRecord[] {
     ? {
       ...pool,
       routerQuoterStatus: {
+        note: "Fixture intentionally incomplete.",
+      },
+      routerExecution: {
         note: "Fixture intentionally incomplete.",
       },
     }
@@ -376,6 +413,11 @@ function main(): void {
     expect(
       badRouter.stdout.includes("router/quoter evidence must include exact-input proof or a custom-route caveat"),
       "missing router/quoter fixture fails for the explicit evidence reason",
+      badRouter.stdout,
+    );
+    expect(
+      badRouter.stdout.includes("router execution must include Universal Router proof or a custom-route caveat"),
+      "missing router execution fixture fails for the explicit evidence reason",
       badRouter.stdout,
     );
   } finally {

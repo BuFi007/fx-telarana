@@ -151,11 +151,11 @@
       "status": "pending-official-uniswap-v4-addresses",
       "inputTemplate": "deployments/uniswap-v4-official-arc-pools.template.json",
       "command": "bun run uniswap:official-arc:pools:check",
-      "currentResult": "PASS=31 WARN=1 FAIL=0",
+      "currentResult": "PASS=32 WARN=1 FAIL=0",
       "planCommand": "bun run uniswap:official-arc:pools:plan",
       "currentPlanResult": "PASS=58 WARN=1 FAIL=0",
       "selfTestCommand": "bun run uniswap:official-arc:pools:self-test",
-      "currentSelfTestResult": "PASS=9 FAIL=0",
+      "currentSelfTestResult": "PASS=10 FAIL=0",
       "expectedPoolTemplateCount": 11,
       "officialPools": [],
       "requiredPoolFields": [
@@ -168,6 +168,7 @@
         "initializeTx",
         "firstLiquidityTx",
         "routerQuoterStatus",
+        "routerExecution",
         "stateViewVerification",
         "subgraphVerification"
       ],
@@ -186,6 +187,7 @@
         "Populated ready files require concrete StateView sqrtPriceX96 and nonzero liquidity evidence for every official pool.",
         "Populated ready files require concrete subgraph id, hooks, token0, token1, feeTier, tickSpacing, price state, and nonzero liquidity evidence for every official pool.",
         "Populated ready files require official exact-input Quoter evidence for FxHedgeHook or an explicit custom-route caveat for non-generic hooks.",
+        "Populated ready files require official Universal Router execution evidence for FxHedgeHook or an explicit custom-route caveat for non-generic hook execution.",
         "When OFFICIAL_ARC_RPC_URL is set, initializeTx must emit the official PoolManager Initialize event for the published PoolKey.",
         "When OFFICIAL_ARC_RPC_URL is set, firstLiquidityTx must emit a positive official PoolManager ModifyLiquidity event for the published poolId."
       ]
@@ -257,8 +259,8 @@
       "Redeploy or remine each hook against the official PoolManager constructor argument.",
       "Initialize pools with official PoolManager.initialize using the target PoolKey and published sqrtPriceX96.",
       "Mint/add liquidity through official periphery or a reviewed Universal Router-compatible path.",
-      "Populate the official Arc pool publication input with PoolKey, poolId, initialize tx, first liquidity tx, router/quoter status, StateView status, and subgraph status.",
-      "Publish PoolKey, poolId, initialize tx, first liquidity tx, hook address, hook permission flags, and router/quoter support status.",
+      "Populate the official Arc pool publication input with PoolKey, poolId, initialize tx, first liquidity tx, router/quoter status, router execution evidence, StateView status, and subgraph status.",
+      "Publish PoolKey, poolId, initialize tx, first liquidity tx, hook address, hook permission flags, router/quoter support status, and router execution evidence.",
       "Verify pool state through official StateView by poolId.",
       "Verify pools through the official v4 subgraph by poolId and hooks field."
     ]
@@ -267,7 +269,7 @@
     "status": "official-addresses-known-for-avalanche-and-arbitrum-arc-and-fuji-pending",
     "manifest": "deployments/uniswap-v4-official-multichain-readiness.json",
     "command": "bun run uniswap:official-multichain:check",
-    "currentResult": "PASS=284 WARN=4 FAIL=0",
+    "currentResult": "PASS=289 WARN=4 FAIL=0",
     "deploymentInputGeneration": {
       "checkCommand": "bun run uniswap:official-multichain:input:check",
       "currentCheckResult": "PASS=75 WARN=2 FAIL=0",
@@ -319,14 +321,14 @@
     "poolPublication": {
       "manifest": "deployments/uniswap-v4-official-multichain-pools.template.json",
       "command": "bun run uniswap:official-multichain:pools:check",
-      "currentResult": "PASS=67 WARN=4 FAIL=0",
+      "currentResult": "PASS=68 WARN=4 FAIL=0",
       "planCommand": "bun run uniswap:official-multichain:pools:plan",
       "planSnapshotCommand": "bun run uniswap:official-multichain:pools:plan:write",
       "planCheckCommand": "bun run uniswap:official-multichain:pools:plan:check",
       "planSnapshot": "deployments/uniswap-v4-official-multichain-pools-fill-plan.json",
       "currentPlanResult": "PASS=81 WARN=4 FAIL=0",
       "selfTestCommand": "bun run uniswap:official-multichain:pools:self-test",
-      "currentSelfTestResult": "PASS=14 FAIL=0",
+      "currentSelfTestResult": "PASS=15 FAIL=0",
       "requiredChecks": [
         "Each target chain status must match official v4 address availability.",
         "Official pool records must use the target chain official PoolManager.",

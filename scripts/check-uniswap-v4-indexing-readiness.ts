@@ -431,6 +431,7 @@ function checkOfficialMainnetBlock(manifest: AnyRecord): void {
     "initializeTx",
     "firstLiquidityTx",
     "routerQuoterStatus",
+    "routerExecution",
     "stateViewVerification",
     "subgraphVerification",
   ]) {
@@ -454,6 +455,7 @@ function checkOfficialMainnetBlock(manifest: AnyRecord): void {
     "self-test",
     "StateView sqrtPriceX96",
     "subgraph id",
+    "Universal Router execution evidence",
     "PoolManager Initialize",
     "PoolManager ModifyLiquidity",
   ]) {
@@ -1216,6 +1218,7 @@ function checkOfficialMultichainBlock(
     "low-14 permission bits",
     "poolIds must derive",
     "Fill plan",
+    "Universal Router execution evidence",
     "live target-chain PoolManager receipt verification",
     "Self-test",
   ]) {

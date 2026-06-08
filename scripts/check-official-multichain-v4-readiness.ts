@@ -58,6 +58,7 @@ const requiredIndexingEvidence = [
   "stateViewSlot0AndLiquidity",
   "subgraphPoolEntity",
   "v4QuoterExactInputDiagnostic",
+  "universalRouterExecutionEvidence",
   "routerQuoterCaveats",
 ] as const;
 
@@ -576,6 +577,7 @@ function checkPoolPublicationBlock(manifest: AnyRecord): void {
     "Self-deployed Arc testnet",
     "low-14 permission bits",
     "poolIds must derive",
+    "Universal Router execution evidence",
     "live target-chain PoolManager receipt verification",
     "Self-test",
   ]) {

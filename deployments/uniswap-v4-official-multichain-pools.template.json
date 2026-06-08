@@ -23,6 +23,7 @@
     "firstLiquidityTx",
     "routerActiveClaim",
     "routerQuoterStatus",
+    "routerExecution",
     "stateViewVerification",
     "subgraphVerification",
     "receiptVerification"
@@ -32,7 +33,8 @@
     "positive PoolManager ModifyLiquidity receipt emitted by the official target-chain PoolManager",
     "StateView slot0 sqrtPriceX96 and nonzero liquidity",
     "Uniswap v4 subgraph pool entity with matching hooks, tokens, fee, tickSpacing, price state, and nonzero liquidity",
-    "official Quoter exact-input diagnostic or explicitly documented custom-route caveat"
+    "official Quoter exact-input diagnostic or explicitly documented custom-route caveat",
+    "Universal Router execution evidence or explicitly documented custom-route caveat"
   ],
   "targets": [
     {
@@ -70,13 +72,13 @@
     }
   ],
   "notes": [
-    "Keep this template pending until target-chain hook redeploys, PoolManager initialize txs, first-liquidity txs, StateView evidence, subgraph evidence, and Quoter diagnostics exist.",
+    "Keep this template pending until target-chain hook redeploys, PoolManager initialize txs, first-liquidity txs, StateView evidence, subgraph evidence, Quoter diagnostics, and router execution evidence exist.",
     "Avalanche and Arbitrum have official Uniswap v4 contract addresses, but their official fx-Telarana hook pool records intentionally remain empty until chain-specific deployment evidence is populated.",
     "Avalanche Fuji is rehearsal-only until Uniswap publishes official Fuji v4 addresses.",
     "Use OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT=<populated-file> bun run uniswap:official-multichain:pools:check before claiming any target-chain hook pool is officially indexed.",
-    "Ready records must include official exact-input Quoter evidence for FxHedgeHook or an explicit custom-route caveat for non-generic hooks.",
+    "Ready records must include official exact-input Quoter and Universal Router execution evidence for FxHedgeHook or explicit custom-route caveats for non-generic hooks.",
     "Use target status=draft for populated offline preflight; use status=ready only when the target RPC env can verify official PoolManager Initialize and positive ModifyLiquidity receipts."
   ],
   "command": "bun run uniswap:official-multichain:pools:check",
-  "currentResult": "PASS=67 WARN=4 FAIL=0"
+  "currentResult": "PASS=68 WARN=4 FAIL=0"
 }

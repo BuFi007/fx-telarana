@@ -251,14 +251,14 @@
     },
     {
       "id": "avalanche-hook-pool-publication",
-      "requirement": "Avalanche C-Chain hook pools must be published with official PoolManager Initialize txs, first liquidity, StateView, subgraph, and route/quoter evidence before claiming indexing.",
+      "requirement": "Avalanche C-Chain hook pools must be published with official PoolManager Initialize txs, first liquidity, StateView, subgraph, route/quoter, and router execution evidence before claiming indexing.",
       "status": "pending-operator",
       "evidence": [
         "indexingReadiness: official-contracts-known-hook-pool-publication-pending",
         "poolPublicationStatus: pending-poolmanager-initialize-and-first-liquidity",
         "hook redeploy plan: PASS=50 WARN=4 FAIL=0",
         "publication template: deployments/uniswap-v4-official-multichain-pools.template.json",
-        "publication check: PASS=67 WARN=4 FAIL=0",
+        "publication check: PASS=68 WARN=4 FAIL=0",
         "publication fill plan: PASS=81 WARN=4 FAIL=0"
       ],
       "remainingWork": [
@@ -284,14 +284,14 @@
     },
     {
       "id": "arbitrum-hook-pool-publication",
-      "requirement": "Arbitrum One hook pools must be published with official PoolManager Initialize txs, first liquidity, StateView, subgraph, and route/quoter evidence before claiming indexing.",
+      "requirement": "Arbitrum One hook pools must be published with official PoolManager Initialize txs, first liquidity, StateView, subgraph, route/quoter, and router execution evidence before claiming indexing.",
       "status": "pending-operator",
       "evidence": [
         "indexingReadiness: official-contracts-known-hook-pool-publication-pending",
         "poolPublicationStatus: pending-poolmanager-initialize-and-first-liquidity",
         "hook redeploy plan: PASS=50 WARN=4 FAIL=0",
         "publication template: deployments/uniswap-v4-official-multichain-pools.template.json",
-        "publication check: PASS=67 WARN=4 FAIL=0",
+        "publication check: PASS=68 WARN=4 FAIL=0",
         "publication fill plan: PASS=81 WARN=4 FAIL=0"
       ],
       "remainingWork": [

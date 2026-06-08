@@ -347,7 +347,7 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
     },
     {
       id: "avalanche-hook-pool-publication",
-      requirement: "Avalanche C-Chain hook pools must be published with official PoolManager Initialize txs, first liquidity, StateView, subgraph, and route/quoter evidence before claiming indexing.",
+      requirement: "Avalanche C-Chain hook pools must be published with official PoolManager Initialize txs, first liquidity, StateView, subgraph, route/quoter, and router execution evidence before claiming indexing.",
       status: avalanche.poolPublicationStatus === "ready" ? "satisfied" : "pending-operator",
       evidence: [
         `indexingReadiness: ${avalanche.indexingReadiness}`,
@@ -385,7 +385,7 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
     },
     {
       id: "arbitrum-hook-pool-publication",
-      requirement: "Arbitrum One hook pools must be published with official PoolManager Initialize txs, first liquidity, StateView, subgraph, and route/quoter evidence before claiming indexing.",
+      requirement: "Arbitrum One hook pools must be published with official PoolManager Initialize txs, first liquidity, StateView, subgraph, route/quoter, and router execution evidence before claiming indexing.",
       status: arbitrum.poolPublicationStatus === "ready" ? "satisfied" : "pending-operator",
       evidence: [
         `indexingReadiness: ${arbitrum.indexingReadiness}`,
