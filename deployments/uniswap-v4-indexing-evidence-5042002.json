@@ -953,7 +953,7 @@
     "indexingSubmissionAuditCommand": "bun run uniswap:submission:audit",
     "completionAuditCommand": "bun run uniswap:completion:audit",
     "completionStatus": "not-complete",
-    "currentCompletionAuditResult": "PASS=13 WARN=6 FAIL=0",
+    "currentCompletionAuditResult": "PASS=18 WARN=6 FAIL=0",
     "currentSubmissionAuditResult": "CHECKS=40 PASS=40 WARN=88 FAIL=0",
     "indexingEvidenceSnapshot": "deployments/uniswap-v4-indexing-evidence-5042002.json",
     "demoableToday": [

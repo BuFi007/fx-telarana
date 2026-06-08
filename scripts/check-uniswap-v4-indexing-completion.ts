@@ -15,6 +15,7 @@ const ROOT = resolve(import.meta.dir, "..");
 const READINESS = "deployments/uniswap-v4-indexing-readiness-5042002.json";
 const EVIDENCE = "deployments/uniswap-v4-indexing-evidence-5042002.json";
 const HANDOFF = "deployments/uniswap-v4-indexing-handoff-5042002.md";
+const HOOK_METADATA = "deployments/uniswap-v4-hook-indexer-metadata-5042002.json";
 const MULTICHAIN = "deployments/uniswap-v4-official-multichain-readiness.json";
 
 const counts: Record<Severity, number> = { PASS: 0, WARN: 0, FAIL: 0 };
@@ -61,6 +62,7 @@ function hasAddress(value: unknown): boolean {
 function main(): void {
   const readiness = readJson(READINESS);
   const evidence = readJson(EVIDENCE);
+  const hookMetadata = readJson(HOOK_METADATA);
   const multichain = readJson(MULTICHAIN);
   const doNotClaim = readiness.submissionPackage?.doNotClaimYet ?? [];
   const pools = evidence.pools ?? [];
@@ -100,6 +102,42 @@ function main(): void {
     pass("handoff packet freshness result records FAIL=0");
   } else {
     fail("handoff packet freshness result must record FAIL=0");
+  }
+
+  if (
+    readiness.submissionPackage?.hookMetadataSnapshot === HOOK_METADATA
+    && existsSync(join(ROOT, HOOK_METADATA))
+  ) {
+    pass("hook indexer metadata snapshot exists and is recorded in the submission package");
+  } else {
+    fail("hook indexer metadata snapshot must exist and be recorded in the submission package");
+  }
+
+  if (hookMetadata.generatedFrom === READINESS) {
+    pass("hook indexer metadata snapshot derives from the readiness manifest");
+  } else {
+    fail("hook indexer metadata snapshot must derive from the readiness manifest");
+  }
+
+  if (hookMetadata.summary?.publishedArcTestnetPoolCount === pools.length) {
+    pass("hook indexer metadata snapshot carries every Arc testnet pool record");
+  } else {
+    fail("hook indexer metadata snapshot pool count must match the evidence snapshot");
+  }
+
+  if (hookMetadata.officialIndexingCaveat?.selfDeployedArcTestnetIsOfficial === false) {
+    pass("hook indexer metadata snapshot preserves the non-official Arc testnet caveat");
+  } else {
+    fail("hook indexer metadata snapshot must not claim self-deployed Arc testnet is official");
+  }
+
+  if (
+    typeof hookMetadata.evidenceCommands?.metadataSelfTest === "string"
+    && hookMetadata.evidenceCommands.metadataSelfTest.includes("uniswap:hook-metadata:self-test")
+  ) {
+    pass("hook indexer metadata snapshot records the metadata regression self-test command");
+  } else {
+    fail("hook indexer metadata snapshot must record the metadata regression self-test command");
   }
 
   if (hasFailZero(readiness.submissionPackage?.currentSubmissionAuditResult)) {
