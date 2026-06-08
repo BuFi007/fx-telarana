@@ -42,6 +42,18 @@ const stateViewRequiredPoolFields = [
   "liquidity",
 ] as const;
 
+const subgraphRequiredPoolFields = [
+  "id",
+  "hooks",
+  "liquidity",
+  "sqrtPrice",
+  "tick",
+  "tickSpacing",
+  "feeTier",
+  "token0",
+  "token1",
+] as const;
+
 const counts: Record<Severity, number> = { PASS: 0, WARN: 0, FAIL: 0 };
 
 function record(severity: Severity, message: string): void {
@@ -707,6 +719,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialMultichainPoolPublicationPlanFreshness", "uniswap:official-multichain:pools:plan:check"],
     ["officialMultichainPoolPublicationSelfTest", "uniswap:official-multichain:pools:self-test"],
     ["officialMultichainStateViewReadiness", "uniswap:official-multichain:stateview:check"],
+    ["officialMultichainSubgraphReadiness", "uniswap:official-multichain:subgraph:check"],
     ["officialArcStateViewReadiness", "uniswap:stateview:check"],
     ["subgraphReadiness", "uniswap:subgraph:check"],
     ["submissionEvidenceExport", "uniswap:evidence:export"],
@@ -1251,6 +1264,69 @@ function checkOfficialMultichainBlock(
     else fail(`official multichain StateView verification checks must cover ${snippet}`);
   }
 
+  const subgraph = block.subgraphVerification ?? {};
+  const subgraphScript = "scripts/check-official-multichain-subgraph-readiness.ts";
+  if (existsSync(join(ROOT, subgraphScript))) {
+    pass(`official multichain subgraph verifier exists at ${subgraphScript}`);
+  } else {
+    fail(`official multichain subgraph verifier is missing at ${subgraphScript}`);
+  }
+
+  if (
+    typeof subgraph.command === "string"
+    && subgraph.command.includes("uniswap:official-multichain:subgraph:check")
+  ) {
+    pass("official multichain subgraph verification command is recorded");
+  } else {
+    fail("official multichain subgraph verification command is missing");
+  }
+
+  if (
+    typeof subgraph.currentResult === "string"
+    && subgraph.currentResult.includes("WARN=4")
+    && subgraph.currentResult.includes("FAIL=0")
+  ) {
+    pass("official multichain subgraph verification result is recorded");
+  } else {
+    fail("official multichain subgraph verification result is missing");
+  }
+
+  if (subgraph.poolPublicationInputEnv === "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT") {
+    pass("official multichain subgraph verification records pool-publication input env");
+  } else {
+    fail("official multichain subgraph verification pool-publication input env is missing");
+  }
+
+  if (subgraph.endpointEnv === "UNISWAP_V4_SUBGRAPH_URL") {
+    pass("official multichain subgraph verification records endpoint env");
+  } else {
+    fail("official multichain subgraph verification endpoint env is missing");
+  }
+
+  if (subgraph.requiredSource === "Uniswap v4 subgraph pool entity") {
+    pass("official multichain subgraph verification requires v4 pool entities");
+  } else {
+    fail("official multichain subgraph verification required source is missing");
+  }
+
+  const subgraphFields = new Set<string>(subgraph.requiredPoolFields ?? []);
+  for (const field of subgraphRequiredPoolFields) {
+    if (subgraphFields.has(field)) pass(`official multichain subgraph verification requires pool.${field}`);
+    else fail(`official multichain subgraph verification is missing pool.${field}`);
+  }
+
+  const subgraphChecks = Array.isArray(subgraph.requiredChecks) ? subgraph.requiredChecks.join("\n") : "";
+  for (const snippet of [
+    "official Uniswap v4 addresses",
+    "Uniswap v4 subgraph pool entity",
+    "pool id, hooks, token0, token1",
+    "sqrtPrice, tick, and liquidity",
+    "Router-active indexed pool claims",
+  ]) {
+    if (subgraphChecks.includes(snippet)) pass(`official multichain subgraph verification checks cover ${snippet}`);
+    else fail(`official multichain subgraph verification checks must cover ${snippet}`);
+  }
+
   if (multichain.schemaVersion === 1) {
     pass("official multichain manifest schemaVersion is 1");
   } else {
@@ -1477,6 +1553,15 @@ function checkOfficialMultichainBlock(
     pass("indexing evidence snapshot official multichain StateView result matches manifest");
   } else {
     fail("indexing evidence snapshot official multichain StateView result does not match manifest");
+  }
+
+  if (
+    snapshot.officialMultichain?.subgraphVerification?.currentResult
+    === block.subgraphVerification?.currentResult
+  ) {
+    pass("indexing evidence snapshot official multichain subgraph result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official multichain subgraph result does not match manifest");
   }
 }
 
@@ -1746,7 +1831,7 @@ function checkSubmissionEvidenceSnapshot(
   }
 
   if (
-    requirementsSnapshot.summary?.pass === 10
+    requirementsSnapshot.summary?.pass === 11
     && requirementsSnapshot.summary?.warn === 9
     && requirementsSnapshot.summary?.fail === 0
   ) {
@@ -1774,6 +1859,12 @@ function checkSubmissionEvidenceSnapshot(
     pass("requirements matrix includes official multichain StateView gate evidence");
   } else {
     fail("requirements matrix is missing official multichain StateView gate evidence");
+  }
+
+  if (requirements.some((requirement: AnyRecord) => requirement.id === "official-multichain-subgraph-gate")) {
+    pass("requirements matrix includes official multichain subgraph gate evidence");
+  } else {
+    fail("requirements matrix is missing official multichain subgraph gate evidence");
   }
 
   if (requirements.some((requirement: AnyRecord) => requirement.id === "avalanche-hook-pool-publication")) {

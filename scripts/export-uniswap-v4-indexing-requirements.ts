@@ -86,6 +86,7 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
   const multichainPoolPublication = multichain.poolPublication ?? {};
   const multichainHookRedeployPlan = multichain.hookRedeployPlan ?? {};
   const multichainStateView = multichain.stateViewVerification ?? {};
+  const multichainSubgraph = multichain.subgraphVerification ?? {};
 
   return [
     {
@@ -262,6 +263,21 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
       ],
       remainingWork: [
         "Run with official pool publication input and the official v4 subgraph endpoint once official pool IDs exist.",
+      ],
+    },
+    {
+      id: "official-multichain-subgraph-gate",
+      requirement: "The official multichain publication package must have a subgraph gate for Arc mainnet, Avalanche Fuji, Avalanche, and Arbitrum One before indexed pool claims are made.",
+      status: hasFailZero(multichainSubgraph.currentResult) ? "satisfied-with-caveat" : "failed",
+      evidence: [
+        `command: ${multichainSubgraph.command}`,
+        `result: ${multichainSubgraph.currentResult}`,
+        `pool input env: ${multichainSubgraph.poolPublicationInputEnv}`,
+        `endpoint env: ${multichainSubgraph.endpointEnv}`,
+        `required source: ${multichainSubgraph.requiredSource}`,
+      ],
+      remainingWork: [
+        "After official pool publication records exist, run the gate against populated target-chain records and record Uniswap v4 subgraph pool entity evidence for every official pool.",
       ],
     },
     {

@@ -209,7 +209,7 @@
     "status": "official-addresses-known-for-avalanche-and-arbitrum-arc-and-fuji-pending",
     "manifest": "deployments/uniswap-v4-official-multichain-readiness.json",
     "command": "bun run uniswap:official-multichain:check",
-    "currentResult": "PASS=234 WARN=4 FAIL=0",
+    "currentResult": "PASS=254 WARN=4 FAIL=0",
     "deploymentInputGeneration": {
       "checkCommand": "bun run uniswap:official-multichain:input:check",
       "currentCheckResult": "PASS=75 WARN=2 FAIL=0",
@@ -302,6 +302,32 @@
         "Ready or populated target records must read StateView.getLiquidity(poolId) for every official pool.",
         "StateView sqrtPriceX96, tick, and liquidity must match published pool evidence when provided.",
         "Arc mainnet and Avalanche Fuji remain pending until official Uniswap v4 addresses and official pool IDs exist."
+      ]
+    },
+    "subgraphVerification": {
+      "status": "pending-official-multichain-subgraph-and-official-poolids",
+      "command": "bun run uniswap:official-multichain:subgraph:check",
+      "currentResult": "PASS=29 WARN=4 FAIL=0",
+      "poolPublicationInputEnv": "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT",
+      "endpointEnv": "UNISWAP_V4_SUBGRAPH_URL",
+      "requiredSource": "Uniswap v4 subgraph pool entity",
+      "requiredPoolFields": [
+        "id",
+        "hooks",
+        "liquidity",
+        "sqrtPrice",
+        "tick",
+        "tickSpacing",
+        "feeTier",
+        "token0",
+        "token1"
+      ],
+      "requiredChecks": [
+        "Each target chain must stay pending until official Uniswap v4 addresses and official PoolManager pool IDs exist.",
+        "Ready or populated target records must query the Uniswap v4 subgraph pool entity for every official pool.",
+        "Subgraph pool id, hooks, token0, token1, feeTier, and tickSpacing must match the target-chain PoolKey.",
+        "Subgraph sqrtPrice, tick, and liquidity must be present and match published evidence when provided.",
+        "Router-active indexed pool claims require nonzero subgraph liquidity unless the pool is explicitly not router-active."
       ]
     },
     "source": "https://developers.uniswap.org/docs/protocols/v4/deployments",
@@ -827,6 +853,7 @@
     "officialMultichainPoolPublicationPlanFreshness": "bun run uniswap:official-multichain:pools:plan:check",
     "officialMultichainPoolPublicationSelfTest": "bun run uniswap:official-multichain:pools:self-test",
     "officialMultichainStateViewReadiness": "bun run uniswap:official-multichain:stateview:check",
+    "officialMultichainSubgraphReadiness": "bun run uniswap:official-multichain:subgraph:check",
     "officialArcStateViewReadiness": "bun run uniswap:stateview:check",
     "subgraphReadiness": "bun run uniswap:subgraph:check",
     "submissionEvidenceExport": "bun run uniswap:evidence:export",
@@ -856,7 +883,7 @@
     "requirementsMatrixCommand": "bun run uniswap:requirements:export",
     "requirementsMatrixSnapshotCommand": "bun run uniswap:requirements:write",
     "requirementsMatrixCheckCommand": "bun run uniswap:requirements:check",
-    "currentRequirementsMatrixResult": "PASS=10 WARN=9 FAIL=0",
+    "currentRequirementsMatrixResult": "PASS=11 WARN=9 FAIL=0",
     "requirementsMatrixSnapshot": "deployments/uniswap-v4-indexing-requirements-5042002.json",
     "indexingHandoffCommand": "bun run uniswap:handoff:render",
     "indexingHandoffSnapshotCommand": "bun run uniswap:handoff:write",
@@ -867,7 +894,7 @@
     "completionAuditCommand": "bun run uniswap:completion:audit",
     "completionStatus": "not-complete",
     "currentCompletionAuditResult": "PASS=13 WARN=6 FAIL=0",
-    "currentSubmissionAuditResult": "CHECKS=35 PASS=35 WARN=76 FAIL=0",
+    "currentSubmissionAuditResult": "CHECKS=36 PASS=36 WARN=80 FAIL=0",
     "indexingEvidenceSnapshot": "deployments/uniswap-v4-indexing-evidence-5042002.json",
     "demoableToday": [
       "All six FxHedgeHook poolIds initialized and configured on the self-deployed Arc testnet PoolManager",

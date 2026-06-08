@@ -93,6 +93,8 @@ function renderCommands(commands: AnyRecord, submission: AnyRecord): string[] {
     ["Arc pool publication fill plan", commands.officialArcPoolPublicationPlan],
     ["StateView gate", commands.officialArcStateViewReadiness],
     ["Subgraph gate", commands.subgraphReadiness],
+    ["Multichain StateView gate", commands.officialMultichainStateViewReadiness],
+    ["Multichain subgraph gate", commands.officialMultichainSubgraphReadiness],
     ["Evidence snapshot freshness", commands.submissionEvidenceFreshness],
     ["Requirements matrix", submission.requirementsMatrixCheckCommand ?? commands.requirementsFreshness],
     ["Submission audit", submission.indexingSubmissionAuditCommand ?? commands.submissionAudit],

@@ -12,11 +12,11 @@
   "completionStatus": "not-complete",
   "summary": {
     "satisfied": 5,
-    "satisfied-with-caveat": 5,
+    "satisfied-with-caveat": 6,
     "pending-external": 6,
     "pending-operator": 3,
     "failed": 0,
-    "pass": 10,
+    "pass": 11,
     "warn": 9,
     "fail": 0
   },
@@ -176,6 +176,21 @@
       ],
       "remainingWork": [
         "Run with official pool publication input and the official v4 subgraph endpoint once official pool IDs exist."
+      ]
+    },
+    {
+      "id": "official-multichain-subgraph-gate",
+      "requirement": "The official multichain publication package must have a subgraph gate for Arc mainnet, Avalanche Fuji, Avalanche, and Arbitrum One before indexed pool claims are made.",
+      "status": "satisfied-with-caveat",
+      "evidence": [
+        "command: bun run uniswap:official-multichain:subgraph:check",
+        "result: PASS=29 WARN=4 FAIL=0",
+        "pool input env: OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT",
+        "endpoint env: UNISWAP_V4_SUBGRAPH_URL",
+        "required source: Uniswap v4 subgraph pool entity"
+      ],
+      "remainingWork": [
+        "After official pool publication records exist, run the gate against populated target-chain records and record Uniswap v4 subgraph pool entity evidence for every official pool."
       ]
     },
     {

@@ -72,6 +72,18 @@ const stateViewRequiredPoolFields = [
   "liquidity",
 ] as const;
 
+const subgraphRequiredPoolFields = [
+  "id",
+  "hooks",
+  "liquidity",
+  "sqrtPrice",
+  "tick",
+  "tickSpacing",
+  "feeTier",
+  "token0",
+  "token1",
+] as const;
+
 const counts: Record<Severity, number> = { PASS: 0, WARN: 0, FAIL: 0 };
 
 function record(severity: Severity, message: string): void {
@@ -617,6 +629,71 @@ function checkStateViewVerificationBlock(manifest: AnyRecord): void {
   }
 }
 
+function checkSubgraphVerificationBlock(manifest: AnyRecord): void {
+  const subgraph = manifest.subgraphVerification ?? {};
+  const script = "scripts/check-official-multichain-subgraph-readiness.ts";
+  if (existsSync(join(ROOT, script))) {
+    pass(`multichain subgraph verifier exists at ${script}`);
+  } else {
+    fail(`multichain subgraph verifier is missing at ${script}`);
+  }
+
+  if (
+    typeof subgraph.command === "string"
+    && subgraph.command.includes("uniswap:official-multichain:subgraph:check")
+  ) {
+    pass("multichain subgraph verification command is recorded");
+  } else {
+    fail("multichain subgraph verification command is missing");
+  }
+
+  if (
+    typeof subgraph.currentResult === "string"
+    && subgraph.currentResult.includes("WARN=4")
+    && subgraph.currentResult.includes("FAIL=0")
+  ) {
+    pass("multichain subgraph verification result is recorded");
+  } else {
+    fail("multichain subgraph verification result is missing");
+  }
+
+  if (subgraph.poolPublicationInputEnv === "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT") {
+    pass("multichain subgraph verification records pool-publication input env");
+  } else {
+    fail("multichain subgraph verification pool-publication input env is missing");
+  }
+
+  if (subgraph.endpointEnv === "UNISWAP_V4_SUBGRAPH_URL") {
+    pass("multichain subgraph verification records endpoint env");
+  } else {
+    fail("multichain subgraph verification endpoint env is missing");
+  }
+
+  if (subgraph.requiredSource === "Uniswap v4 subgraph pool entity") {
+    pass("multichain subgraph verification requires v4 pool entities");
+  } else {
+    fail("multichain subgraph verification required source is missing");
+  }
+
+  const fields = new Set<string>(subgraph.requiredPoolFields ?? []);
+  for (const field of subgraphRequiredPoolFields) {
+    if (fields.has(field)) pass(`multichain subgraph verification requires pool.${field}`);
+    else fail(`multichain subgraph verification is missing pool.${field}`);
+  }
+
+  const checks = Array.isArray(subgraph.requiredChecks) ? subgraph.requiredChecks.join("\n") : "";
+  for (const snippet of [
+    "official Uniswap v4 addresses",
+    "Uniswap v4 subgraph pool entity",
+    "pool id, hooks, token0, token1",
+    "sqrtPrice, tick, and liquidity",
+    "Router-active indexed pool claims",
+  ]) {
+    if (checks.includes(snippet)) pass(`multichain subgraph verification checks cover ${snippet}`);
+    else fail(`multichain subgraph verification checks must cover ${snippet}`);
+  }
+}
+
 async function checkOptionalBytecode(target: AnyRecord): Promise<void> {
   const rpcEnv = target.rpcEnv;
   if (typeof rpcEnv !== "string" || rpcEnv.length === 0) {
@@ -800,6 +877,7 @@ async function main(): Promise<void> {
   checkHookRedeployPlanBlock(manifest);
   checkPoolPublicationBlock(manifest);
   checkStateViewVerificationBlock(manifest);
+  checkSubgraphVerificationBlock(manifest);
 
   for (const target of targets) {
     await checkTarget(manifest, target, selfPoolManagers);

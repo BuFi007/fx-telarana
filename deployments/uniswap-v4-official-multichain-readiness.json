@@ -129,6 +129,32 @@
       "Arc mainnet and Avalanche Fuji remain pending until official Uniswap v4 addresses and official pool IDs exist."
     ]
   },
+  "subgraphVerification": {
+    "status": "pending-official-multichain-subgraph-and-official-poolids",
+    "command": "bun run uniswap:official-multichain:subgraph:check",
+    "currentResult": "PASS=29 WARN=4 FAIL=0",
+    "poolPublicationInputEnv": "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT",
+    "endpointEnv": "UNISWAP_V4_SUBGRAPH_URL",
+    "requiredSource": "Uniswap v4 subgraph pool entity",
+    "requiredPoolFields": [
+      "id",
+      "hooks",
+      "liquidity",
+      "sqrtPrice",
+      "tick",
+      "tickSpacing",
+      "feeTier",
+      "token0",
+      "token1"
+    ],
+    "requiredChecks": [
+      "Each target chain must stay pending until official Uniswap v4 addresses and official PoolManager pool IDs exist.",
+      "Ready or populated target records must query the Uniswap v4 subgraph pool entity for every official pool.",
+      "Subgraph pool id, hooks, token0, token1, feeTier, and tickSpacing must match the target-chain PoolKey.",
+      "Subgraph sqrtPrice, tick, and liquidity must be present and match published evidence when provided.",
+      "Router-active indexed pool claims require nonzero subgraph liquidity unless the pool is explicitly not router-active."
+    ]
+  },
   "targets": [
     {
       "network": "arc-mainnet",
@@ -251,6 +277,6 @@
       ]
     }
   ],
-  "currentResult": "PASS=234 WARN=4 FAIL=0",
+  "currentResult": "PASS=254 WARN=4 FAIL=0",
   "command": "bun run uniswap:official-multichain:check"
 }
