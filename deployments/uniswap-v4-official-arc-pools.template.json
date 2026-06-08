@@ -18,10 +18,12 @@
     "poolKey",
     "initializeTx",
     "firstLiquidityTx",
+    "routerActiveClaim",
     "routerQuoterStatus",
     "routerExecution",
     "stateViewVerification",
-    "subgraphVerification"
+    "subgraphVerification",
+    "receiptVerification"
   ],
   "notes": [
     "Keep this template pending until Uniswap publishes official Arc v4 addresses and the project initializes official pools.",
@@ -31,6 +33,7 @@
     "Ready files must include concrete StateView and subgraph evidence fields for every official pool, not only status=verified labels.",
     "Ready files must include official exact-input Quoter evidence for FxHedgeHook or an explicit custom-route caveat for non-generic hooks.",
     "Ready files must include official Universal Router execution evidence for FxHedgeHook or an explicit custom-route caveat for non-generic hook execution.",
+    "Ready files must include receiptVerification.initializeTxVerified=true and receiptVerification.firstLiquidityTxVerified=true after live receipt checks.",
     "When OFFICIAL_ARC_RPC_URL is set, the checker also verifies initializeTx emits PoolManager Initialize and firstLiquidityTx emits a positive PoolManager ModifyLiquidity event.",
     "Only set routerActiveClaim=true after firstLiquidityTx is published and StateView/subgraph liquidity checks pass.",
     "Run OFFICIAL_ARC_POOL_PUBLICATION_INPUT=<populated-file> bun run uniswap:official-arc:pools:check before claiming official Arc indexing readiness.",

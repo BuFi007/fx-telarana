@@ -38,10 +38,12 @@ const requiredPoolFields = [
   "poolKey",
   "initializeTx",
   "firstLiquidityTx",
+  "routerActiveClaim",
   "routerQuoterStatus",
   "routerExecution",
   "stateViewVerification",
   "subgraphVerification",
+  "receiptVerification",
 ] as const;
 
 const counts: Record<Severity, number> = { PASS: 0, WARN: 0, FAIL: 0 };
@@ -396,6 +398,7 @@ function checkOfficialPool(
   const key = pool.poolKey ?? {};
   const stateViewEvidence = pool.stateViewVerification ?? {};
   const subgraphEvidence = pool.subgraphVerification ?? {};
+  const receiptEvidence = pool.receiptVerification ?? {};
 
   if (typeof pool.family === "string" && pool.family.length > 0) pass(`${label} family is recorded`);
   else fail(`${label} family is missing`);
@@ -541,6 +544,12 @@ function checkOfficialPool(
 
     if (isPositiveBigIntLike(subgraphEvidence.liquidity)) pass(`${label} subgraph evidence has nonzero liquidity`);
     else fail(`${label} ready publication requires nonzero subgraph liquidity evidence`);
+
+    if (receiptEvidence.initializeTxVerified === true) pass(`${label} initialize receipt verification flag is true`);
+    else fail(`${label} ready publication requires initialize receipt verification`);
+
+    if (receiptEvidence.firstLiquidityTxVerified === true) pass(`${label} first-liquidity receipt verification flag is true`);
+    else fail(`${label} ready publication requires first-liquidity receipt verification`);
   }
 }
 

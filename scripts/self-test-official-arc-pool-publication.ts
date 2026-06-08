@@ -20,6 +20,7 @@ const TEMP_DEPLOYMENT_INPUT = "deployments/.tmp-official-arc-input.self-test.jso
 const TEMP_DRAFT_INPUT = "deployments/.tmp-official-arc-pools-draft.self-test.json";
 const TEMP_READY_INPUT = "deployments/.tmp-official-arc-pools-ready.self-test.json";
 const TEMP_BAD_ROUTER_INPUT = "deployments/.tmp-official-arc-pools-bad-router.self-test.json";
+const TEMP_BAD_RECEIPT_INPUT = "deployments/.tmp-official-arc-pools-bad-receipt.self-test.json";
 const OFFICIAL_PM = "0x1111111111111111111111111111111111111111";
 const DEFAULT_SQRT_PRICE_X96 = "79228162514264337593543950336";
 const SELF_TEST_CHAIN_ID = 999999;
@@ -49,7 +50,13 @@ function writeJson(relativePath: string, value: AnyRecord): void {
 }
 
 function cleanup(): void {
-  for (const relativePath of [TEMP_DEPLOYMENT_INPUT, TEMP_DRAFT_INPUT, TEMP_READY_INPUT, TEMP_BAD_ROUTER_INPUT]) {
+  for (const relativePath of [
+    TEMP_DEPLOYMENT_INPUT,
+    TEMP_DRAFT_INPUT,
+    TEMP_READY_INPUT,
+    TEMP_BAD_ROUTER_INPUT,
+    TEMP_BAD_RECEIPT_INPUT,
+  ]) {
     const absolutePath = join(ROOT, relativePath);
     if (existsSync(absolutePath)) rmSync(absolutePath);
   }
@@ -216,6 +223,10 @@ function officialPoolFromTemplate(template: AnyRecord, index: number): AnyRecord
       tick,
       liquidity,
     },
+    receiptVerification: {
+      initializeTxVerified: true,
+      firstLiquidityTxVerified: true,
+    },
   };
 }
 
@@ -260,6 +271,18 @@ function withBadRouterEvidence(officialPools: AnyRecord[]): AnyRecord[] {
       },
       routerExecution: {
         note: "Fixture intentionally incomplete.",
+      },
+    }
+    : pool);
+}
+
+function withBadReceiptEvidence(officialPools: AnyRecord[]): AnyRecord[] {
+  return officialPools.map((pool, index) => index === 0
+    ? {
+      ...pool,
+      receiptVerification: {
+        initializeTxVerified: false,
+        firstLiquidityTxVerified: false,
       },
     }
     : pool);
@@ -310,6 +333,7 @@ function main(): void {
     writeJson(TEMP_DRAFT_INPUT, buildPoolPublication("draft", officialPools));
     writeJson(TEMP_READY_INPUT, buildPoolPublication("ready", officialPools));
     writeJson(TEMP_BAD_ROUTER_INPUT, buildPoolPublication("draft", withBadRouterEvidence(officialPools)));
+    writeJson(TEMP_BAD_RECEIPT_INPUT, buildPoolPublication("ready", withBadReceiptEvidence(officialPools)));
 
     expect(officialPools.length > 0, `generated ${officialPools.length} official pool fixture records`);
 
@@ -346,6 +370,15 @@ function main(): void {
       badRouter.stdout.includes("router execution must include Universal Router proof or a custom-route caveat"),
       "missing router execution fixture fails for the explicit evidence reason",
       badRouter.stdout,
+    );
+
+    const badReceipt = runPoolPublicationCheck(TEMP_BAD_RECEIPT_INPUT);
+    expect(badReceipt.status !== 0, "missing receipt verification fixture fails", badReceipt.stdout || badReceipt.stderr);
+    expect(
+      badReceipt.stdout.includes("ready publication requires initialize receipt verification")
+        && badReceipt.stdout.includes("ready publication requires first-liquidity receipt verification"),
+      "missing receipt fixture fails for the explicit evidence reasons",
+      badReceipt.stdout,
     );
   } finally {
     cleanup();

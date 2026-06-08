@@ -43,7 +43,7 @@ Readiness check:
 bun run uniswap:indexing:check
 ```
 
-Current expected result: `PASS=565 WARN=1 FAIL=0`. The remaining warning is
+Current expected result: `PASS=568 WARN=1 FAIL=0`. The remaining warning is
 `FxHedgeHook` first liquidity, which is required before claiming router-active
 or liquid hedge markets.
 
@@ -147,12 +147,12 @@ Official Arc pool publication input:
 bun run uniswap:official-arc:pools:check
 ```
 
-Current expected result: `PASS=32 WARN=1 FAIL=0`. The warning is expected while
+Current expected result: `PASS=34 WARN=1 FAIL=0`. The warning is expected while
 `deployments/uniswap-v4-official-arc-pools.template.json` is still pending.
 When official pools are initialized and liquid, populate an official pool file
 with each `PoolKey`, `poolId`, init tx, first liquidity tx, router/quoter
-status, router execution evidence, `StateView` status, and subgraph status,
-then rerun with
+status, router execution evidence, `routerActiveClaim`, `StateView` status,
+subgraph status, and receipt verification flags, then rerun with
 `OFFICIAL_ARC_POOL_PUBLICATION_INPUT` pointing at that file. The checker also
 requires the official PoolManager from `sourceDeploymentInput`, no reuse of the
 self-deployed Arc testnet PoolManagers, unique family/symbol labels, unique
@@ -160,7 +160,9 @@ poolIds, and official hook low-14 permission bits matching the source hook
 family. Use `status=draft` for offline populated preflight. Use `status=ready`
 only when `OFFICIAL_ARC_RPC_URL` is set; ready mode requires concrete StateView
 sqrt price/liquidity evidence, concrete subgraph id/hooks/token/fee/liquidity
-evidence, and live receipt checks proving that `initializeTx` emits the official
+evidence, `receiptVerification.initializeTxVerified=true`,
+`receiptVerification.firstLiquidityTxVerified=true`, and live receipt checks
+proving that `initializeTx` emits the official
 `PoolManager.Initialize` event and `firstLiquidityTx` emits a positive official
 `PoolManager.ModifyLiquidity` event. Use the same populated file for the
 StateView and subgraph checks below so official pool records are not duplicated
@@ -188,14 +190,15 @@ Official Arc pool publication checker self-test:
 bun run uniswap:official-arc:pools:self-test
 ```
 
-Current expected result: `PASS=10 FAIL=0`. This generates temporary populated
+Current expected result: `PASS=12 FAIL=0`. This generates temporary populated
 official-pool fixtures from the readiness manifest, confirms `status=draft`
 passes as offline preflight only, and confirms `status=ready` fails without
 `OFFICIAL_ARC_RPC_URL` because live official `PoolManager` receipt verification
 is required. It also proves records missing exact-input Quoter evidence or a
 custom-route caveat fail, and records missing Universal Router execution
-evidence or a custom-route caveat fail. The temporary files are removed before
-the command exits.
+evidence or a custom-route caveat fail. It also proves records missing ready
+receipt verification flags fail. The temporary files are removed before the
+command exits.
 
 Official v4 StateView verification gate:
 
@@ -883,7 +886,7 @@ Ask Claude to verify these points:
 
 1. Run `bun run uniswap:indexing:check` from the `fx-telarana` repo.
 2. Confirm the check exits with `FAIL=0`; the current expected summary is
-   `PASS=565 WARN=1 FAIL=0`.
+   `PASS=568 WARN=1 FAIL=0`.
 3. Run `bun run uniswap:official-arc:check` and confirm official Arc is either
    fully populated from Uniswap docs or still pending with the expected warning;
    current expected summary is `PASS=9 WARN=1 FAIL=0`.
@@ -904,9 +907,9 @@ Ask Claude to verify these points:
    `FAIL=0`; the current expected summary is `PASS=8 FAIL=0`.
 10. Run `bun run uniswap:official-arc:pools:check` and confirm the pending pool
    publication input exits with `FAIL=0`; the current expected summary is
-   `PASS=32 WARN=1 FAIL=0`.
+   `PASS=34 WARN=1 FAIL=0`.
 11. Run `bun run uniswap:official-arc:pools:self-test` and confirm it exits with
-   `FAIL=0`; the current expected summary is `PASS=10 FAIL=0`.
+   `FAIL=0`; the current expected summary is `PASS=12 FAIL=0`.
 12. Run `bun run uniswap:official-multichain:docs:check` and confirm it exits
    with `FAIL=0`; the current expected summary is `PASS=31 WARN=2 FAIL=0`.
    Confirm the live official docs still list Avalanche and Arbitrum contracts

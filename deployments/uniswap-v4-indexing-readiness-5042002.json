@@ -151,11 +151,11 @@
       "status": "pending-official-uniswap-v4-addresses",
       "inputTemplate": "deployments/uniswap-v4-official-arc-pools.template.json",
       "command": "bun run uniswap:official-arc:pools:check",
-      "currentResult": "PASS=32 WARN=1 FAIL=0",
+      "currentResult": "PASS=34 WARN=1 FAIL=0",
       "planCommand": "bun run uniswap:official-arc:pools:plan",
       "currentPlanResult": "PASS=58 WARN=1 FAIL=0",
       "selfTestCommand": "bun run uniswap:official-arc:pools:self-test",
-      "currentSelfTestResult": "PASS=10 FAIL=0",
+      "currentSelfTestResult": "PASS=12 FAIL=0",
       "expectedPoolTemplateCount": 11,
       "officialPools": [],
       "requiredPoolFields": [
@@ -167,10 +167,12 @@
         "poolKey",
         "initializeTx",
         "firstLiquidityTx",
+        "routerActiveClaim",
         "routerQuoterStatus",
         "routerExecution",
         "stateViewVerification",
-        "subgraphVerification"
+        "subgraphVerification",
+        "receiptVerification"
       ],
       "requiredChecks": [
         "Official pool count matches the manifest-derived source pool template count.",
@@ -188,6 +190,7 @@
         "Populated ready files require concrete subgraph id, hooks, token0, token1, feeTier, tickSpacing, price state, and nonzero liquidity evidence for every official pool.",
         "Populated ready files require official exact-input Quoter evidence for FxHedgeHook or an explicit custom-route caveat for non-generic hooks.",
         "Populated ready files require official Universal Router execution evidence for FxHedgeHook or an explicit custom-route caveat for non-generic hook execution.",
+        "Populated ready files require receiptVerification.initializeTxVerified=true and receiptVerification.firstLiquidityTxVerified=true after live receipt checks.",
         "When OFFICIAL_ARC_RPC_URL is set, initializeTx must emit the official PoolManager Initialize event for the published PoolKey.",
         "When OFFICIAL_ARC_RPC_URL is set, firstLiquidityTx must emit a positive official PoolManager ModifyLiquidity event for the published poolId."
       ]

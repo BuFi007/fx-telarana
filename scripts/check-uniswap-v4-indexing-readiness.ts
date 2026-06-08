@@ -430,10 +430,12 @@ function checkOfficialMainnetBlock(manifest: AnyRecord): void {
     "poolKey",
     "initializeTx",
     "firstLiquidityTx",
+    "routerActiveClaim",
     "routerQuoterStatus",
     "routerExecution",
     "stateViewVerification",
     "subgraphVerification",
+    "receiptVerification",
   ]) {
     if (publicationFields.has(field)) pass(`official pool publication requires ${field}`);
     else fail(`official pool publication is missing ${field}`);
@@ -456,6 +458,7 @@ function checkOfficialMainnetBlock(manifest: AnyRecord): void {
     "StateView sqrtPriceX96",
     "subgraph id",
     "Universal Router execution evidence",
+    "receiptVerification",
     "PoolManager Initialize",
     "PoolManager ModifyLiquidity",
   ]) {
