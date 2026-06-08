@@ -68,6 +68,7 @@
     "uniswap:official-multichain:pools:self-test": "bun scripts/self-test-official-multichain-pool-publication.ts",
     "uniswap:official-multichain:stateview:check": "bun scripts/check-official-multichain-stateview-readiness.ts",
     "uniswap:official-multichain:subgraph:check": "bun scripts/check-official-multichain-subgraph-readiness.ts",
+    "uniswap:official-multichain:indexing:self-test": "bun scripts/self-test-official-multichain-indexing-readiness.ts",
     "uniswap:official-multichain:quoter:check": "bun scripts/check-official-multichain-quoter-readiness.ts",
     "uniswap:official-multichain:router:check": "bun scripts/check-official-multichain-router-readiness.ts",
     "uniswap:official-multichain:routes:self-test": "bun scripts/self-test-official-multichain-route-readiness.ts",

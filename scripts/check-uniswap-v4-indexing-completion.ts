@@ -165,6 +165,15 @@ function main(): void {
     fail("official multichain route evidence self-test must record FAIL=0");
   }
 
+  if (
+    hasFailZero(readiness.officialMultichain?.stateViewVerification?.currentSelfTestResult)
+    && hasFailZero(readiness.officialMultichain?.subgraphVerification?.currentSelfTestResult)
+  ) {
+    pass("official multichain indexed-state self-test records FAIL=0");
+  } else {
+    fail("official multichain indexed-state self-test must record FAIL=0");
+  }
+
   if (hasFailZero(readiness.officialMultichain?.sourceFreshness?.currentResult)) {
     pass("official Uniswap deployment docs freshness result records FAIL=0");
   } else {

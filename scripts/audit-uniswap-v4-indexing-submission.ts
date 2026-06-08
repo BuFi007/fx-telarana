@@ -52,6 +52,7 @@ const CHECKS: AuditCheck[] = [
   { key: "officialMultichainPoolPublicationSelfTest", label: "official multichain pool publication self-test" },
   { key: "officialMultichainStateViewReadiness", label: "official multichain StateView readiness" },
   { key: "officialMultichainSubgraphReadiness", label: "official multichain subgraph readiness" },
+  { key: "officialMultichainIndexingReadinessSelfTest", label: "official multichain indexed-state self-test" },
   { key: "officialMultichainQuoterReadiness", label: "official multichain Quoter readiness" },
   { key: "officialMultichainRouterReadiness", label: "official multichain router execution readiness" },
   { key: "officialMultichainRouteReadinessSelfTest", label: "official multichain route evidence self-test" },

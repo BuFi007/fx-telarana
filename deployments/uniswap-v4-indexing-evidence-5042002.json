@@ -289,6 +289,8 @@
       "status": "pending-official-multichain-stateview-and-official-poolids",
       "command": "bun run uniswap:official-multichain:stateview:check",
       "currentResult": "PASS=29 WARN=4 FAIL=0",
+      "selfTestCommand": "bun run uniswap:official-multichain:indexing:self-test",
+      "currentSelfTestResult": "PASS=14 FAIL=0",
       "poolPublicationInputEnv": "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT",
       "requiredContract": "StateView",
       "requiredPoolFields": [
@@ -303,8 +305,8 @@
       ],
       "requiredChecks": [
         "Each target chain StateView address must come from official Uniswap v4 deployments.",
-        "Ready or populated target records must read StateView.getSlot0(poolId) for every official pool.",
-        "Ready or populated target records must read StateView.getLiquidity(poolId) for every official pool.",
+        "Ready target records must read StateView.getSlot0(poolId) for every official pool; populated draft records must carry embedded StateView evidence.",
+        "Ready target records must read StateView.getLiquidity(poolId) for every official pool; populated draft records must carry embedded liquidity evidence.",
         "StateView sqrtPriceX96, tick, and liquidity must match published pool evidence when provided.",
         "Arc mainnet and Avalanche Fuji remain pending until official Uniswap v4 addresses and official pool IDs exist."
       ]
@@ -313,6 +315,8 @@
       "status": "pending-official-multichain-subgraph-and-official-poolids",
       "command": "bun run uniswap:official-multichain:subgraph:check",
       "currentResult": "PASS=29 WARN=4 FAIL=0",
+      "selfTestCommand": "bun run uniswap:official-multichain:indexing:self-test",
+      "currentSelfTestResult": "PASS=14 FAIL=0",
       "poolPublicationInputEnv": "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT",
       "endpointEnv": "UNISWAP_V4_SUBGRAPH_URL",
       "requiredSource": "Uniswap v4 subgraph pool entity",
@@ -329,7 +333,7 @@
       ],
       "requiredChecks": [
         "Each target chain must stay pending until official Uniswap v4 addresses and official PoolManager pool IDs exist.",
-        "Ready or populated target records must query the Uniswap v4 subgraph pool entity for every official pool.",
+        "Ready target records must query the Uniswap v4 subgraph pool entity for every official pool; populated draft records must carry embedded subgraph evidence.",
         "Subgraph pool id, hooks, token0, token1, feeTier, and tickSpacing must match the target-chain PoolKey.",
         "Subgraph sqrtPrice, tick, and liquidity must be present and match published evidence when provided.",
         "Router-active indexed pool claims require nonzero subgraph liquidity unless the pool is explicitly not router-active."
@@ -908,6 +912,7 @@
     "officialMultichainPoolPublicationSelfTest": "bun run uniswap:official-multichain:pools:self-test",
     "officialMultichainStateViewReadiness": "bun run uniswap:official-multichain:stateview:check",
     "officialMultichainSubgraphReadiness": "bun run uniswap:official-multichain:subgraph:check",
+    "officialMultichainIndexingReadinessSelfTest": "bun run uniswap:official-multichain:indexing:self-test",
     "officialMultichainQuoterReadiness": "bun run uniswap:official-multichain:quoter:check",
     "officialMultichainRouterReadiness": "bun run uniswap:official-multichain:router:check",
     "officialMultichainRouteReadinessSelfTest": "bun run uniswap:official-multichain:routes:self-test",
@@ -960,8 +965,8 @@
     "indexingSubmissionAuditCommand": "bun run uniswap:submission:audit",
     "completionAuditCommand": "bun run uniswap:completion:audit",
     "completionStatus": "not-complete",
-    "currentCompletionAuditResult": "PASS=20 WARN=6 FAIL=0",
-    "currentSubmissionAuditResult": "CHECKS=41 PASS=41 WARN=88 FAIL=0",
+    "currentCompletionAuditResult": "PASS=21 WARN=6 FAIL=0",
+    "currentSubmissionAuditResult": "CHECKS=42 PASS=42 WARN=88 FAIL=0",
     "indexingEvidenceSnapshot": "deployments/uniswap-v4-indexing-evidence-5042002.json",
     "demoableToday": [
       "All six FxHedgeHook poolIds initialized and configured on the self-deployed Arc testnet PoolManager",

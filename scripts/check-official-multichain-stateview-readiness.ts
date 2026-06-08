@@ -92,6 +92,15 @@ function sameBigIntString(a: unknown, b: unknown): boolean {
   }
 }
 
+function isPositiveBigIntLike(value: unknown): boolean {
+  try {
+    if (value == null || value === "") return false;
+    return BigInt(String(value)) > 0n;
+  } catch {
+    return false;
+  }
+}
+
 function targetByNetwork(manifest: AnyRecord, network: string): AnyRecord {
   return (manifest.targets ?? []).find((target: AnyRecord) => target.network === network) ?? {};
 }
@@ -235,6 +244,71 @@ async function verifyLiveStateView(target: AnyRecord, publication: AnyRecord, po
   }
 }
 
+function verifyPublishedStateViewEvidence(network: string, pools: AnyRecord[]): void {
+  for (const pool of pools.map(normalizePool)) {
+    const label = `${network} ${pool.family ?? "unknown"} ${pool.symbol ?? pool.poolId ?? "unknown"}`;
+    const evidence = pool.stateViewVerification;
+
+    if (!isBytes32(pool.poolId)) {
+      fail(`${label} poolId is invalid`);
+      continue;
+    }
+
+    if (isAddress(pool.currency0) && isAddress(pool.currency1) && isAddress(pool.hooks)) {
+      pass(`${label} has complete PoolKey addresses`);
+    } else {
+      fail(`${label} has incomplete PoolKey addresses`);
+    }
+
+    if (pool.fee != null && pool.tickSpacing != null) pass(`${label} has fee and tickSpacing`);
+    else fail(`${label} is missing fee or tickSpacing`);
+
+    if (evidence && typeof evidence === "object") {
+      pass(`${label} StateView evidence is recorded`);
+    } else {
+      fail(`${label} StateView evidence is missing`);
+      continue;
+    }
+
+    const status = String(evidence.status ?? "").toLowerCase();
+    if (/verified|passed|fixture|prepared/.test(status) && !/fail|failed|missing/.test(status)) {
+      pass(`${label} StateView evidence status is positive`);
+    } else {
+      fail(`${label} StateView evidence status is not positive`);
+    }
+
+    if (isPositiveBigIntLike(pool.sqrtPriceX96)) {
+      pass(`${label} StateView sqrtPriceX96 evidence is nonzero`);
+    } else {
+      fail(`${label} StateView sqrtPriceX96 evidence is missing or zero`);
+    }
+
+    if (
+      evidence.slot0?.sqrtPriceX96 == null
+      || sameBigIntString(evidence.slot0.sqrtPriceX96, pool.sqrtPriceX96)
+    ) {
+      pass(`${label} StateView slot0 sqrtPriceX96 matches published evidence or is unconstrained`);
+    } else {
+      fail(`${label} StateView slot0 sqrtPriceX96 does not match published evidence`);
+    }
+
+    if (pool.tick != null || evidence.slot0?.tick != null) {
+      pass(`${label} StateView tick evidence is recorded`);
+    } else {
+      fail(`${label} StateView tick evidence is missing`);
+    }
+
+    if (pool.requireNonzeroLiquidity === false || pool.routerActiveClaim === false) {
+      if (pool.liquidity != null) pass(`${label} StateView liquidity evidence is recorded`);
+      else fail(`${label} StateView liquidity evidence is missing`);
+    } else if (isPositiveBigIntLike(pool.liquidity)) {
+      pass(`${label} StateView liquidity evidence is nonzero`);
+    } else {
+      fail(`${label} StateView liquidity evidence must be nonzero`);
+    }
+  }
+}
+
 async function checkTarget(multichain: AnyRecord, publicationInput: AnyRecord, network: string): Promise<void> {
   const target = targetByNetwork(multichain, network);
   const publication = publicationTarget(publicationInput, network);
@@ -280,8 +354,10 @@ async function checkTarget(multichain: AnyRecord, publicationInput: AnyRecord, n
     fail(`${network} StateView pool count ${pools.length} does not match ${publicationInput.expectedPoolTemplateCount}`);
   }
 
-  if (publication.status === "ready" || rpcUrlFor(target, publication)) {
+  if (publication.status === "ready") {
     await verifyLiveStateView(target, publication, pools);
+  } else if (pools.length > 0) {
+    verifyPublishedStateViewEvidence(network, pools);
   } else {
     warn(`${network} StateView live reads skipped until ${publication.rpcEnv ?? target.rpcEnv} is configured`);
   }

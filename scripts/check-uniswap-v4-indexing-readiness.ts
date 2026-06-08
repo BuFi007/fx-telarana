@@ -740,6 +740,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialMultichainPoolPublicationSelfTest", "uniswap:official-multichain:pools:self-test"],
     ["officialMultichainStateViewReadiness", "uniswap:official-multichain:stateview:check"],
     ["officialMultichainSubgraphReadiness", "uniswap:official-multichain:subgraph:check"],
+    ["officialMultichainIndexingReadinessSelfTest", "uniswap:official-multichain:indexing:self-test"],
     ["officialMultichainQuoterReadiness", "uniswap:official-multichain:quoter:check"],
     ["officialMultichainRouterReadiness", "uniswap:official-multichain:router:check"],
     ["officialMultichainRouteReadinessSelfTest", "uniswap:official-multichain:routes:self-test"],
@@ -1262,6 +1263,32 @@ function checkOfficialMultichainBlock(
     fail("official multichain StateView verification result is missing");
   }
 
+  const indexedStateSelfTestScript = "scripts/self-test-official-multichain-indexing-readiness.ts";
+  if (existsSync(join(ROOT, indexedStateSelfTestScript))) {
+    pass(`official multichain indexed-state self-test exists at ${indexedStateSelfTestScript}`);
+  } else {
+    fail(`official multichain indexed-state self-test is missing at ${indexedStateSelfTestScript}`);
+  }
+
+  if (
+    typeof stateView.selfTestCommand === "string"
+    && stateView.selfTestCommand.includes("uniswap:official-multichain:indexing:self-test")
+  ) {
+    pass("official multichain StateView indexed-state self-test command is recorded");
+  } else {
+    fail("official multichain StateView indexed-state self-test command is missing");
+  }
+
+  if (
+    typeof stateView.currentSelfTestResult === "string"
+    && stateView.currentSelfTestResult.includes("PASS=14")
+    && stateView.currentSelfTestResult.includes("FAIL=0")
+  ) {
+    pass("official multichain StateView indexed-state self-test result is recorded");
+  } else {
+    fail("official multichain StateView indexed-state self-test result is missing");
+  }
+
   if (stateView.poolPublicationInputEnv === "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT") {
     pass("official multichain StateView verification records pool-publication input env");
   } else {
@@ -1317,6 +1344,25 @@ function checkOfficialMultichainBlock(
     pass("official multichain subgraph verification result is recorded");
   } else {
     fail("official multichain subgraph verification result is missing");
+  }
+
+  if (
+    typeof subgraph.selfTestCommand === "string"
+    && subgraph.selfTestCommand.includes("uniswap:official-multichain:indexing:self-test")
+  ) {
+    pass("official multichain subgraph indexed-state self-test command is recorded");
+  } else {
+    fail("official multichain subgraph indexed-state self-test command is missing");
+  }
+
+  if (
+    typeof subgraph.currentSelfTestResult === "string"
+    && subgraph.currentSelfTestResult.includes("PASS=14")
+    && subgraph.currentSelfTestResult.includes("FAIL=0")
+  ) {
+    pass("official multichain subgraph indexed-state self-test result is recorded");
+  } else {
+    fail("official multichain subgraph indexed-state self-test result is missing");
   }
 
   if (subgraph.poolPublicationInputEnv === "OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT") {
@@ -1743,12 +1789,30 @@ function checkOfficialMultichainBlock(
   }
 
   if (
+    snapshot.officialMultichain?.stateViewVerification?.currentSelfTestResult
+    === block.stateViewVerification?.currentSelfTestResult
+  ) {
+    pass("indexing evidence snapshot official multichain StateView indexed-state self-test result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official multichain StateView indexed-state self-test result does not match manifest");
+  }
+
+  if (
     snapshot.officialMultichain?.subgraphVerification?.currentResult
     === block.subgraphVerification?.currentResult
   ) {
     pass("indexing evidence snapshot official multichain subgraph result matches manifest");
   } else {
     fail("indexing evidence snapshot official multichain subgraph result does not match manifest");
+  }
+
+  if (
+    snapshot.officialMultichain?.subgraphVerification?.currentSelfTestResult
+    === block.subgraphVerification?.currentSelfTestResult
+  ) {
+    pass("indexing evidence snapshot official multichain subgraph indexed-state self-test result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official multichain subgraph indexed-state self-test result does not match manifest");
   }
 
   if (

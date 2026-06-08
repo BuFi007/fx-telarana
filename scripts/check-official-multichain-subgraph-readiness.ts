@@ -282,6 +282,92 @@ async function verifyLiveSubgraph(endpoint: string, network: string, pools: AnyR
   }
 }
 
+function verifyPublishedSubgraphEvidence(network: string, pools: AnyRecord[]): void {
+  for (const pool of pools.map(normalizePool)) {
+    const label = `${network} ${pool.family ?? "unknown"} ${pool.symbol ?? pool.poolId ?? "unknown"}`;
+    const evidence = pool.subgraphVerification;
+
+    if (
+      !isBytes32(pool.poolId)
+      || !isAddress(pool.hooks)
+      || !isAddress(pool.currency0)
+      || !isAddress(pool.currency1)
+      || pool.fee == null
+      || pool.tickSpacing == null
+    ) {
+      fail(`${label} has incomplete subgraph verification input`);
+      continue;
+    }
+
+    if (evidence && typeof evidence === "object") {
+      pass(`${label} subgraph evidence is recorded`);
+    } else {
+      fail(`${label} subgraph evidence is missing`);
+      continue;
+    }
+
+    const indexed = {
+      id: evidence.id,
+      hooks: evidence.hooks,
+      liquidity: evidence.liquidity,
+      sqrtPrice: evidence.sqrtPrice,
+      tick: evidence.tick,
+      tickSpacing: evidence.tickSpacing,
+      feeTier: evidence.feeTier,
+      token0: evidence.token0,
+      token1: evidence.token1,
+    };
+
+    if (String(indexed.id).toLowerCase() === String(pool.subgraphId ?? pool.poolId).toLowerCase()) {
+      pass(`${label} subgraph id matches poolId`);
+    } else {
+      fail(`${label} subgraph id mismatch`);
+    }
+
+    if (sameAddress(indexed.hooks, pool.hooks)) {
+      pass(`${label} subgraph hooks match PoolKey`);
+    } else {
+      fail(`${label} subgraph hooks ${indexed.hooks} do not match ${pool.hooks}`);
+    }
+
+    if (sameAddress(indexed.token0?.id, pool.currency0)) pass(`${label} subgraph token0 matches PoolKey`);
+    else fail(`${label} subgraph token0 ${indexed.token0?.id} does not match ${pool.currency0}`);
+
+    if (sameAddress(indexed.token1?.id, pool.currency1)) pass(`${label} subgraph token1 matches PoolKey`);
+    else fail(`${label} subgraph token1 ${indexed.token1?.id} does not match ${pool.currency1}`);
+
+    if (sameBigIntString(indexed.feeTier, pool.fee)) pass(`${label} subgraph feeTier matches PoolKey`);
+    else fail(`${label} subgraph feeTier ${indexed.feeTier} does not match ${pool.fee}`);
+
+    if (sameBigIntString(indexed.tickSpacing, pool.tickSpacing)) pass(`${label} subgraph tickSpacing matches PoolKey`);
+    else fail(`${label} subgraph tickSpacing ${indexed.tickSpacing} does not match ${pool.tickSpacing}`);
+
+    if (indexed.sqrtPrice != null && indexed.tick != null) pass(`${label} subgraph exposes price state`);
+    else fail(`${label} subgraph price state is incomplete`);
+
+    if (pool.sqrtPrice == null || sameBigIntString(indexed.sqrtPrice, pool.sqrtPrice)) {
+      pass(`${label} subgraph sqrtPrice matches published evidence or is unconstrained`);
+    } else {
+      fail(`${label} subgraph sqrtPrice does not match published evidence`);
+    }
+
+    if (pool.tick == null || sameBigIntString(indexed.tick, pool.tick)) {
+      pass(`${label} subgraph tick matches published evidence or is unconstrained`);
+    } else {
+      fail(`${label} subgraph tick does not match published evidence`);
+    }
+
+    if (pool.requireNonzeroLiquidity === false || pool.routerActiveClaim === false) {
+      if (indexed.liquidity != null) pass(`${label} subgraph liquidity field is readable`);
+      else fail(`${label} subgraph liquidity field is missing`);
+    } else if (isPositiveBigIntLike(indexed.liquidity)) {
+      pass(`${label} subgraph liquidity is nonzero`);
+    } else {
+      fail(`${label} subgraph liquidity is not nonzero`);
+    }
+  }
+}
+
 async function checkTarget(multichain: AnyRecord, publicationInput: AnyRecord, network: string): Promise<void> {
   const target = targetByNetwork(multichain, network);
   const publication = publicationTarget(publicationInput, network);
@@ -329,6 +415,8 @@ async function checkTarget(multichain: AnyRecord, publicationInput: AnyRecord, n
     fail(`${network} ready subgraph verification requires ${ENDPOINT_ENV} or a chain endpoint`);
   } else if (endpoint) {
     await verifyLiveSubgraph(endpoint, network, pools);
+  } else if (pools.length > 0) {
+    verifyPublishedSubgraphEvidence(network, pools);
   } else {
     warn(`${network} subgraph live reads skipped until ${ENDPOINT_ENV} is configured`);
   }
