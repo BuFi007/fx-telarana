@@ -246,6 +246,72 @@ function checkSourceFreshnessBlock(manifest: AnyRecord): void {
   }
 }
 
+function checkDeploymentInputGenerationBlock(manifest: AnyRecord): void {
+  const generation = manifest.deploymentInputGeneration ?? {};
+  const script = "scripts/generate-official-multichain-deployment-inputs.ts";
+  if (existsSync(join(ROOT, script))) {
+    pass(`multichain deployment input generator exists at ${script}`);
+  } else {
+    fail(`multichain deployment input generator is missing at ${script}`);
+  }
+
+  const selfTestScript = "scripts/self-test-official-multichain-deployment-input-generator.ts";
+  if (existsSync(join(ROOT, selfTestScript))) {
+    pass(`multichain deployment input generator self-test exists at ${selfTestScript}`);
+  } else {
+    fail(`multichain deployment input generator self-test is missing at ${selfTestScript}`);
+  }
+
+  if (
+    typeof generation.command === "string"
+    && generation.command.includes("uniswap:official-multichain:input:generate")
+  ) {
+    pass("multichain deployment input generator command is recorded");
+  } else {
+    fail("multichain deployment input generator command is missing");
+  }
+
+  if (
+    typeof generation.currentResult === "string"
+    && generation.currentResult.includes("WARN=2")
+    && generation.currentResult.includes("FAIL=0")
+  ) {
+    pass("multichain deployment input generator result is recorded");
+  } else {
+    fail("multichain deployment input generator result is missing");
+  }
+
+  if (
+    typeof generation.selfTestCommand === "string"
+    && generation.selfTestCommand.includes("uniswap:official-multichain:input:generate:self-test")
+  ) {
+    pass("multichain deployment input generator self-test command is recorded");
+  } else {
+    fail("multichain deployment input generator self-test command is missing");
+  }
+
+  if (
+    typeof generation.currentSelfTestResult === "string"
+    && generation.currentSelfTestResult.includes("FAIL=0")
+  ) {
+    pass("multichain deployment input generator self-test result is recorded");
+  } else {
+    fail("multichain deployment input generator self-test result is missing");
+  }
+
+  const checks = Array.isArray(generation.requiredChecks) ? generation.requiredChecks.join("\n") : "";
+  for (const snippet of [
+    "official Uniswap v4 deployments Markdown",
+    "Arc mainnet and Avalanche Fuji pending",
+    "Avalanche C-Chain and Arbitrum One",
+    "self-deployed Arc testnet and Fuji rehearsal PoolManager",
+    "future all-target population",
+  ]) {
+    if (checks.includes(snippet)) pass(`multichain deployment input generator checks cover ${snippet}`);
+    else fail(`multichain deployment input generator checks must cover ${snippet}`);
+  }
+}
+
 function checkPoolPublicationBlock(manifest: AnyRecord): void {
   const publication = manifest.poolPublication ?? {};
   if (publication.manifest === MULTICHAIN_POOL_PUBLICATION) {
@@ -483,6 +549,7 @@ async function main(): Promise<void> {
   }
 
   checkSourceFreshnessBlock(manifest);
+  checkDeploymentInputGenerationBlock(manifest);
   checkPoolPublicationBlock(manifest);
 
   for (const target of targets) {
