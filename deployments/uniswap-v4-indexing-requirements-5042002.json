@@ -14,10 +14,10 @@
     "satisfied": 5,
     "satisfied-with-caveat": 4,
     "pending-external": 6,
-    "pending-operator": 1,
+    "pending-operator": 3,
     "failed": 0,
     "pass": 9,
-    "warn": 7,
+    "warn": 9,
     "fail": 0
   },
   "requirements": [
@@ -192,6 +192,22 @@
       ]
     },
     {
+      "id": "avalanche-hook-pool-publication",
+      "requirement": "Avalanche C-Chain hook pools must be published with official PoolManager Initialize txs, first liquidity, StateView, subgraph, and route/quoter evidence before claiming indexing.",
+      "status": "pending-operator",
+      "evidence": [
+        "indexingReadiness: official-contracts-known-hook-pool-publication-pending",
+        "poolPublicationStatus: pending-poolmanager-initialize-and-first-liquidity",
+        "publication template: deployments/uniswap-v4-official-multichain-pools.template.json",
+        "publication check: PASS=67 WARN=4 FAIL=0"
+      ],
+      "remainingWork": [
+        "Run chain-specific hook remine/redeploy against Avalanche official PoolManager.",
+        "Initialize official Avalanche PoolKeys, add first liquidity, and populate official multichain pool publication records.",
+        "Verify Avalanche StateView, subgraph, exact-input Quoter or documented custom-route evidence, and live PoolManager receipts."
+      ]
+    },
+    {
       "id": "arbitrum-official-contracts",
       "requirement": "Arbitrum One official v4 contract addresses must be tracked while hook pool indexing remains pending.",
       "status": "satisfied-with-caveat",
@@ -203,6 +219,22 @@
       ],
       "remainingWork": [
         "Remine/redeploy hooks, initialize pools, add first liquidity, and publish StateView/subgraph/quoter evidence on Arbitrum One."
+      ]
+    },
+    {
+      "id": "arbitrum-hook-pool-publication",
+      "requirement": "Arbitrum One hook pools must be published with official PoolManager Initialize txs, first liquidity, StateView, subgraph, and route/quoter evidence before claiming indexing.",
+      "status": "pending-operator",
+      "evidence": [
+        "indexingReadiness: official-contracts-known-hook-pool-publication-pending",
+        "poolPublicationStatus: pending-poolmanager-initialize-and-first-liquidity",
+        "publication template: deployments/uniswap-v4-official-multichain-pools.template.json",
+        "publication check: PASS=67 WARN=4 FAIL=0"
+      ],
+      "remainingWork": [
+        "Run chain-specific hook remine/redeploy against Arbitrum One official PoolManager.",
+        "Initialize official Arbitrum One PoolKeys, add first liquidity, and populate official multichain pool publication records.",
+        "Verify Arbitrum One StateView, subgraph, exact-input Quoter or documented custom-route evidence, and live PoolManager receipts."
       ]
     },
     {

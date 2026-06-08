@@ -1231,7 +1231,7 @@ function checkSubmissionEvidenceSnapshot(
 
   if (
     typeof submission.currentRequirementsMatrixResult === "string"
-    && submission.currentRequirementsMatrixResult.includes("WARN=7")
+    && submission.currentRequirementsMatrixResult.includes("WARN=9")
     && submission.currentRequirementsMatrixResult.includes("FAIL=0")
   ) {
     pass("submission package records the current requirements matrix result");
@@ -1416,7 +1416,7 @@ function checkSubmissionEvidenceSnapshot(
 
   if (
     requirementsSnapshot.summary?.pass === 9
-    && requirementsSnapshot.summary?.warn === 7
+    && requirementsSnapshot.summary?.warn === 9
     && requirementsSnapshot.summary?.fail === 0
   ) {
     pass("requirements matrix summary is recorded with expected caveats");
@@ -1437,6 +1437,18 @@ function checkSubmissionEvidenceSnapshot(
     pass("requirements matrix includes official Arc contract blocker");
   } else {
     fail("requirements matrix is missing official Arc contract blocker");
+  }
+
+  if (requirements.some((requirement: AnyRecord) => requirement.id === "avalanche-hook-pool-publication")) {
+    pass("requirements matrix includes Avalanche hook pool publication blocker");
+  } else {
+    fail("requirements matrix is missing Avalanche hook pool publication blocker");
+  }
+
+  if (requirements.some((requirement: AnyRecord) => requirement.id === "arbitrum-hook-pool-publication")) {
+    pass("requirements matrix includes Arbitrum One hook pool publication blocker");
+  } else {
+    fail("requirements matrix is missing Arbitrum One hook pool publication blocker");
   }
 
   if (snapshot.officialArcMainnet?.status === manifest.officialArcMainnet?.status) {

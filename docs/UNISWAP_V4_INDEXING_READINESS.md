@@ -43,7 +43,7 @@ Readiness check:
 bun run uniswap:indexing:check
 ```
 
-Current expected result: `PASS=429 WARN=1 FAIL=0`. The remaining warning is
+Current expected result: `PASS=431 WARN=1 FAIL=0`. The remaining warning is
 `FxHedgeHook` first liquidity, which is required before claiming router-active
 or liquid hedge markets.
 
@@ -374,7 +374,7 @@ Requirements matrix:
 bun run uniswap:requirements:export
 ```
 
-Current expected result: `PASS=9 WARN=7 FAIL=0`. This exports a
+Current expected result: `PASS=9 WARN=9 FAIL=0`. This exports a
 requirement-by-requirement evidence matrix for the original indexing goal. The
 passes cover official docs freshness, Arc testnet pool evidence, six live hedge
 pools, router/quoter diagnostics, the handoff packet, completion-audit gating,
@@ -382,7 +382,8 @@ Avalanche and Arbitrum official v4 contract tracking, and the no-ops-surface
 caveat. The warnings are the still-open official or operator conditions: Arc
 official contracts, Fuji official contracts, official Arc hook redeploy,
 official Arc pool publication, official Arc StateView, official Arc subgraph,
-and first liquidity.
+first liquidity, Avalanche hook-pool publication, and Arbitrum One hook-pool
+publication.
 
 Checked requirements snapshot:
 
@@ -450,7 +451,7 @@ Submission audit:
 bun run uniswap:submission:audit
 ```
 
-Current expected result: `CHECKS=30 PASS=30 WARN=52 FAIL=0`. This is the
+Current expected result: `CHECKS=30 PASS=30 WARN=54 FAIL=0`. This is the
 single reviewer-facing no-broadcast command for the indexing package. It
 re-runs official Uniswap deployment freshness, official Arc and multichain
 readiness gates, deployment-input generation/checks, the Arc pool-publication
@@ -703,7 +704,7 @@ Ask Claude to verify these points:
 
 1. Run `bun run uniswap:indexing:check` from the `fx-telarana` repo.
 2. Confirm the check exits with `FAIL=0`; the current expected summary is
-   `PASS=429 WARN=1 FAIL=0`.
+   `PASS=431 WARN=1 FAIL=0`.
 3. Run `bun run uniswap:official-arc:check` and confirm official Arc is either
    fully populated from Uniswap docs or still pending with the expected warning;
    current expected summary is `PASS=9 WARN=1 FAIL=0`.
@@ -778,7 +779,7 @@ Ask Claude to verify these points:
 24. Run `bun run uniswap:evidence:check` and confirm the snapshot is fresh.
 25. Run `bun run uniswap:requirements:export` and confirm it emits the
    requirement-by-requirement matrix with the current expected summary
-   `PASS=9 WARN=7 FAIL=0`.
+   `PASS=9 WARN=9 FAIL=0`.
 26. Run `bun run uniswap:requirements:write` and confirm it refreshes
    `deployments/uniswap-v4-indexing-requirements-5042002.json`.
 27. Run `bun run uniswap:requirements:check` and confirm the requirements
@@ -797,7 +798,7 @@ Ask Claude to verify these points:
    `PASS=13 WARN=4 FAIL=0`.
 32. Run `bun run uniswap:submission:audit` and confirm the executable
    submission audit exits with `FAIL=0`; the current expected summary is
-   `CHECKS=30 PASS=30 WARN=52 FAIL=0`.
+   `CHECKS=30 PASS=30 WARN=54 FAIL=0`.
 33. Run `bun run hedge:arc:plan-stables` and confirm all six hedge pools are
    live/configured; the current expected summary is `PASS=46 WARN=0 FAIL=0`.
 34. Run `bun run uniswap:hedge:liquidity` and confirm it reports zero liquidity

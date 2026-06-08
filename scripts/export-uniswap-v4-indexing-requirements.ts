@@ -83,6 +83,7 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
   const fuji = targetByNetwork(multichain, "avalanche-fuji");
   const avalanche = targetByNetwork(multichain, "avalanche");
   const arbitrum = targetByNetwork(multichain, "arbitrum-one");
+  const multichainPoolPublication = multichain.poolPublication ?? {};
 
   return [
     {
@@ -282,6 +283,22 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
       ],
     },
     {
+      id: "avalanche-hook-pool-publication",
+      requirement: "Avalanche C-Chain hook pools must be published with official PoolManager Initialize txs, first liquidity, StateView, subgraph, and route/quoter evidence before claiming indexing.",
+      status: avalanche.poolPublicationStatus === "ready" ? "satisfied" : "pending-operator",
+      evidence: [
+        `indexingReadiness: ${avalanche.indexingReadiness}`,
+        `poolPublicationStatus: ${avalanche.poolPublicationStatus}`,
+        `publication template: ${multichainPoolPublication.manifest}`,
+        `publication check: ${multichainPoolPublication.currentResult}`,
+      ],
+      remainingWork: [
+        "Run chain-specific hook remine/redeploy against Avalanche official PoolManager.",
+        "Initialize official Avalanche PoolKeys, add first liquidity, and populate official multichain pool publication records.",
+        "Verify Avalanche StateView, subgraph, exact-input Quoter or documented custom-route evidence, and live PoolManager receipts.",
+      ],
+    },
+    {
       id: "arbitrum-official-contracts",
       requirement: "Arbitrum One official v4 contract addresses must be tracked while hook pool indexing remains pending.",
       status: arbitrum.status === "official-uniswap-v4-addresses-published"
@@ -298,6 +315,22 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
       ],
       remainingWork: [
         "Remine/redeploy hooks, initialize pools, add first liquidity, and publish StateView/subgraph/quoter evidence on Arbitrum One.",
+      ],
+    },
+    {
+      id: "arbitrum-hook-pool-publication",
+      requirement: "Arbitrum One hook pools must be published with official PoolManager Initialize txs, first liquidity, StateView, subgraph, and route/quoter evidence before claiming indexing.",
+      status: arbitrum.poolPublicationStatus === "ready" ? "satisfied" : "pending-operator",
+      evidence: [
+        `indexingReadiness: ${arbitrum.indexingReadiness}`,
+        `poolPublicationStatus: ${arbitrum.poolPublicationStatus}`,
+        `publication template: ${multichainPoolPublication.manifest}`,
+        `publication check: ${multichainPoolPublication.currentResult}`,
+      ],
+      remainingWork: [
+        "Run chain-specific hook remine/redeploy against Arbitrum One official PoolManager.",
+        "Initialize official Arbitrum One PoolKeys, add first liquidity, and populate official multichain pool publication records.",
+        "Verify Arbitrum One StateView, subgraph, exact-input Quoter or documented custom-route evidence, and live PoolManager receipts.",
       ],
     },
     {
