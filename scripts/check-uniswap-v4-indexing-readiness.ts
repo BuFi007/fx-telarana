@@ -19,6 +19,7 @@ const HANDOFF_SNAPSHOT = "deployments/uniswap-v4-indexing-handoff-5042002.md";
 const MULTICHAIN_MANIFEST = "deployments/uniswap-v4-official-multichain-readiness.json";
 const MULTICHAIN_POOL_PUBLICATION = "deployments/uniswap-v4-official-multichain-pools.template.json";
 const MULTICHAIN_POOL_FILL_PLAN = "deployments/uniswap-v4-official-multichain-pools-fill-plan.json";
+const MULTICHAIN_HOOK_REDEPLOY_PLAN = "deployments/uniswap-v4-official-multichain-hooks-redeploy-plan.json";
 const DEPLOYMENTS_MARKDOWN_URL = "https://developers.uniswap.org/docs/protocols/v4/deployments.md";
 const OFFICIAL_ARC_INPUT_TEMPLATE = "deployments/uniswap-v4-official-arc-input.template.json";
 const HEDGE_DEPLOYMENT = "deployments/fx-hedge-hook-5042002.json";
@@ -687,6 +688,8 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialMultichainDocsFreshness", "uniswap:official-multichain:docs:check"],
     ["officialMultichainDocsFreshnessSelfTest", "uniswap:official-multichain:docs:self-test"],
     ["officialMultichainHookRedeployPlan", "uniswap:official-multichain:hooks:plan"],
+    ["officialMultichainHookRedeployPlanSnapshot", "uniswap:official-multichain:hooks:plan:write"],
+    ["officialMultichainHookRedeployPlanFreshness", "uniswap:official-multichain:hooks:plan:check"],
     ["officialMultichainPoolPublication", "uniswap:official-multichain:pools:check"],
     ["officialMultichainPoolPublicationPlan", "uniswap:official-multichain:pools:plan"],
     ["officialMultichainPoolPublicationPlanSnapshot", "uniswap:official-multichain:pools:plan:write"],
@@ -729,6 +732,7 @@ function checkOfficialMultichainBlock(
   multichain: AnyRecord,
   snapshot: AnyRecord,
   fillPlan: AnyRecord,
+  hookRedeployPlanSnapshot: AnyRecord,
 ): void {
   const block = manifest.officialMultichain ?? {};
   if (block.manifest === MULTICHAIN_MANIFEST) {
@@ -955,6 +959,78 @@ function checkOfficialMultichainBlock(
     pass("official multichain hook redeploy planner result is recorded");
   } else {
     fail("official multichain hook redeploy planner result is missing");
+  }
+
+  if (
+    typeof hookRedeployPlan.snapshotCommand === "string"
+    && hookRedeployPlan.snapshotCommand.includes("uniswap:official-multichain:hooks:plan:write")
+  ) {
+    pass("official multichain hook redeploy plan snapshot command is recorded");
+  } else {
+    fail("official multichain hook redeploy plan snapshot command is missing");
+  }
+
+  if (
+    typeof hookRedeployPlan.freshnessCommand === "string"
+    && hookRedeployPlan.freshnessCommand.includes("uniswap:official-multichain:hooks:plan:check")
+  ) {
+    pass("official multichain hook redeploy plan freshness command is recorded");
+  } else {
+    fail("official multichain hook redeploy plan freshness command is missing");
+  }
+
+  if (hookRedeployPlan.planSnapshot === MULTICHAIN_HOOK_REDEPLOY_PLAN) {
+    pass("official multichain hook redeploy plan snapshot path is recorded");
+  } else {
+    fail("official multichain hook redeploy plan snapshot path is missing");
+  }
+
+  if (existsSync(join(ROOT, MULTICHAIN_HOOK_REDEPLOY_PLAN))) {
+    pass(`official multichain hook redeploy plan snapshot exists at ${MULTICHAIN_HOOK_REDEPLOY_PLAN}`);
+  } else {
+    fail(`official multichain hook redeploy plan snapshot is missing at ${MULTICHAIN_HOOK_REDEPLOY_PLAN}`);
+  }
+
+  if (hookRedeployPlanSnapshot.sourceManifest === MANIFEST) {
+    pass("official multichain hook redeploy snapshot records the readiness manifest source");
+  } else {
+    fail("official multichain hook redeploy snapshot readiness manifest source is wrong");
+  }
+
+  if (hookRedeployPlanSnapshot.sourceMultichainManifest === MULTICHAIN_MANIFEST) {
+    pass("official multichain hook redeploy snapshot records the multichain manifest source");
+  } else {
+    fail("official multichain hook redeploy snapshot multichain manifest source is wrong");
+  }
+
+  if (
+    hookRedeployPlanSnapshot.validationSummary?.pass === 50
+    && hookRedeployPlanSnapshot.validationSummary?.warn === 4
+    && hookRedeployPlanSnapshot.validationSummary?.fail === 0
+  ) {
+    pass("official multichain hook redeploy snapshot validation summary is recorded");
+  } else {
+    fail("official multichain hook redeploy snapshot validation summary is missing or stale");
+  }
+
+  const redeployTargets = new Map<string, AnyRecord>(
+    (hookRedeployPlanSnapshot.targets ?? []).map((target: AnyRecord) => [target.network, target]),
+  );
+  for (const network of ["arc-mainnet", "avalanche-fuji", "avalanche", "arbitrum-one"]) {
+    const target = redeployTargets.get(network);
+    if (target) pass(`official multichain hook redeploy snapshot includes ${network}`);
+    else {
+      fail(`official multichain hook redeploy snapshot is missing ${network}`);
+      continue;
+    }
+
+    if (["avalanche", "arbitrum-one"].includes(network)) {
+      if ((target.commandTemplates ?? []).length === 3) {
+        pass(`official multichain hook redeploy snapshot includes three ${network} command templates`);
+      } else {
+        fail(`official multichain hook redeploy snapshot must include three ${network} command templates`);
+      }
+    }
   }
 
   const hookRedeployChecks = Array.isArray(hookRedeployPlan.requiredChecks) ? hookRedeployPlan.requiredChecks.join("\n") : "";
@@ -1247,6 +1323,15 @@ function checkOfficialMultichainBlock(
     pass("indexing evidence snapshot official multichain hook redeploy plan result matches manifest");
   } else {
     fail("indexing evidence snapshot official multichain hook redeploy plan result does not match manifest");
+  }
+
+  if (
+    snapshot.officialMultichain?.hookRedeployPlan?.planSnapshot
+    === block.hookRedeployPlan?.planSnapshot
+  ) {
+    pass("indexing evidence snapshot official multichain hook redeploy snapshot path matches manifest");
+  } else {
+    fail("indexing evidence snapshot official multichain hook redeploy snapshot path does not match manifest");
   }
 
   if (
@@ -2273,6 +2358,7 @@ function main(): void {
   const requirementsSnapshot = readJson<AnyRecord>(REQUIREMENTS_SNAPSHOT);
   const multichainReadiness = readJson<AnyRecord>(MULTICHAIN_MANIFEST);
   const multichainFillPlan = readJson<AnyRecord>(MULTICHAIN_POOL_FILL_PLAN);
+  const multichainHookRedeployPlan = readJson<AnyRecord>(MULTICHAIN_HOOK_REDEPLOY_PLAN);
 
   if (manifest.network === "arc-testnet" && manifest.chainId === 5042002) {
     pass("manifest targets arc-testnet chainId 5042002");
@@ -2289,7 +2375,7 @@ function main(): void {
 
   checkOfficialMainnetBlock(manifest);
   checkEvidenceCommands(manifest);
-  checkOfficialMultichainBlock(manifest, multichainReadiness, evidenceSnapshot, multichainFillPlan);
+  checkOfficialMultichainBlock(manifest, multichainReadiness, evidenceSnapshot, multichainFillPlan, multichainHookRedeployPlan);
   checkSubmissionEvidenceSnapshot(manifest, evidenceSnapshot, requirementsSnapshot);
 
   for (const family of manifest.hookFamilies ?? []) {

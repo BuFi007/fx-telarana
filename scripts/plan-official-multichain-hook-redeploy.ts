@@ -3,8 +3,8 @@
 // Read-only preflight for remine/redeploying the hook package against official
 // Uniswap v4 PoolManagers on every tracked target chain. It never broadcasts.
 
-import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 
 type AnyRecord = Record<string, any>;
 type Severity = "PASS" | "WARN" | "FAIL";
@@ -49,6 +49,19 @@ function readJson(relativePath: string): AnyRecord {
 
 function readText(relativePath: string): string {
   return readFileSync(join(ROOT, relativePath), "utf-8");
+}
+
+function repoRelativePathFor(flag: string): string | undefined {
+  const index = process.argv.indexOf(flag);
+  if (index === -1) return undefined;
+
+  const value = process.argv[index + 1];
+  if (!value) throw new Error(`${flag} requires a relative path`);
+  if (value.startsWith("/") || value.includes("..")) {
+    throw new Error(`${flag} must stay inside the repository`);
+  }
+
+  return value;
 }
 
 function isAddress(value: unknown): value is string {
@@ -264,7 +277,71 @@ function printTargetCommands(targets: AnyRecord[]): void {
   console.log("All commands above simulate unless the operator explicitly adds --broadcast.");
 }
 
+function commandTemplatesFor(target: AnyRecord): AnyRecord[] {
+  if (target.status !== "official-uniswap-v4-addresses-published") return [];
+
+  const rpc = `\${${target.rpcEnv}}`;
+  const poolManager = target.contracts.PoolManager;
+  return [
+    {
+      family: "FxHedgeHook",
+      command: `POOL_MANAGER=${poolManager} forge script contracts/script/DeployFxHedgeHookAndPools.s.sol:DeployFxHedgeHookAndPools --root contracts --rpc-url ${rpc} -vv`,
+      broadcastMode: "simulate-unless-operator-adds---broadcast",
+    },
+    {
+      family: "FxSwapHook",
+      command: `POOL_MANAGER=${poolManager} FX_VAULT=<target-chain SharedFxVault> forge script contracts/script/DeployFxSwapHook.s.sol:DeployFxSwapHook --root contracts --rpc-url ${rpc} -vv`,
+      broadcastMode: "simulate-unless-operator-adds---broadcast",
+      note: "run once per vault-backed pair",
+    },
+    {
+      family: "TelaranaGatewayHubHook",
+      command: `POOL_MANAGER=${poolManager} forge script contracts/script/DeployTelaranaGatewayHubHook.s.sol:DeployTelaranaGatewayHubHook --sig 'runCreate2()' --root contracts --rpc-url ${rpc} -vv`,
+      broadcastMode: "simulate-unless-operator-adds---broadcast",
+    },
+  ];
+}
+
+function buildRedeployPacket(targets: AnyRecord[]): AnyRecord {
+  return {
+    schemaVersion: 1,
+    status: "redeploy-plan-not-a-readiness-claim",
+    sourceManifest: READINESS_MANIFEST,
+    sourceMultichainManifest: MULTICHAIN_MANIFEST,
+    expectedHookFamilies: Object.keys(expectedHookBits),
+    validationSummary: {
+      pass: counts.PASS,
+      warn: counts.WARN,
+      fail: counts.FAIL,
+    },
+    targets: targets.map((target) => ({
+      network: target.network,
+      displayName: target.displayName ?? null,
+      chainId: target.chainId ?? null,
+      status: target.status ?? null,
+      poolManager: target.contracts?.PoolManager ?? null,
+      rpcEnv: target.rpcEnv ?? null,
+      publicRpcFallback: target.publicRpcFallback ?? null,
+      hookRedeployStatus: target.hookRedeployStatus ?? null,
+      poolPublicationStatus: target.poolPublicationStatus ?? null,
+      commandTemplates: commandTemplatesFor(target),
+      requiredPostRedeployEvidence: [
+        "officialHookAddressWithMatchingLow14Bits",
+        "poolManagerInitializeTx",
+        "firstLiquidityTx",
+        "stateViewSlot0AndLiquidity",
+        "subgraphPoolEntity",
+        "v4QuoterExactInputDiagnosticOrCustomRouteCaveat",
+      ],
+    })),
+  };
+}
+
 function main(): void {
+  const outPath = repoRelativePathFor("--out");
+  const checkPath = repoRelativePathFor("--check");
+  if (outPath && checkPath) throw new Error("use either --out or --check, not both");
+
   console.log("Official Uniswap v4 multichain hook remine/redeploy plan");
   console.log(`source ${READINESS_MANIFEST}`);
   console.log(`multichain ${MULTICHAIN_MANIFEST}`);
@@ -299,10 +376,37 @@ function main(): void {
   });
 
   for (const target of targets) checkTarget(target, selfPoolManagers);
+
+  const packet = buildRedeployPacket(targets);
+  const json = `${JSON.stringify(packet, null, 2)}\n`;
+  const summary = `summary PASS=${counts.PASS} WARN=${counts.WARN} FAIL=${counts.FAIL}`;
+
+  if (outPath) {
+    const absoluteOutPath = join(ROOT, outPath);
+    mkdirSync(dirname(absoluteOutPath), { recursive: true });
+    writeFileSync(absoluteOutPath, json);
+    console.log("");
+    console.log(`wrote ${outPath}`);
+    console.log(summary);
+    process.exit(counts.FAIL > 0 ? 1 : 0);
+  }
+
+  if (checkPath) {
+    const current = readFileSync(join(ROOT, checkPath), "utf-8");
+    if (current !== json) {
+      throw new Error(`${checkPath} is stale; run bun run uniswap:official-multichain:hooks:plan:write`);
+    }
+
+    console.log("");
+    console.log(`${checkPath} is fresh`);
+    console.log(summary);
+    process.exit(counts.FAIL > 0 ? 1 : 0);
+  }
+
   printTargetCommands(targets);
 
   console.log("");
-  console.log(`summary PASS=${counts.PASS} WARN=${counts.WARN} FAIL=${counts.FAIL}`);
+  console.log(summary);
   process.exit(counts.FAIL > 0 ? 1 : 0);
 }
 

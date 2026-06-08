@@ -39,6 +39,9 @@
   "hookRedeployPlan": {
     "command": "bun run uniswap:official-multichain:hooks:plan",
     "currentResult": "PASS=50 WARN=4 FAIL=0",
+    "snapshotCommand": "bun run uniswap:official-multichain:hooks:plan:write",
+    "freshnessCommand": "bun run uniswap:official-multichain:hooks:plan:check",
+    "planSnapshot": "deployments/uniswap-v4-official-multichain-hooks-redeploy-plan.json",
     "requiredChecks": [
       "Validate source hook low-14 permission bits before target-chain remine/redeploy.",
       "Validate FxHedgeHook, FxSwapHook, and TelaranaGatewayHubHook deploy script prerequisites.",
@@ -224,6 +227,6 @@
       ]
     }
   ],
-  "currentResult": "PASS=203 WARN=4 FAIL=0",
+  "currentResult": "PASS=216 WARN=4 FAIL=0",
   "command": "bun run uniswap:official-multichain:check"
 }

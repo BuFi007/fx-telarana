@@ -14,6 +14,7 @@ type Severity = "PASS" | "WARN" | "FAIL";
 const ROOT = resolve(import.meta.dir, "..");
 const MULTICHAIN_MANIFEST = "deployments/uniswap-v4-official-multichain-readiness.json";
 const MULTICHAIN_POOL_PUBLICATION = "deployments/uniswap-v4-official-multichain-pools.template.json";
+const MULTICHAIN_HOOK_REDEPLOY_PLAN = "deployments/uniswap-v4-official-multichain-hooks-redeploy-plan.json";
 const ARC_READINESS_MANIFEST = "deployments/uniswap-v4-indexing-readiness-5042002.json";
 const DEPLOYMENTS_URL = "https://developers.uniswap.org/docs/protocols/v4/deployments";
 const DEPLOYMENTS_MARKDOWN_URL = "https://developers.uniswap.org/docs/protocols/v4/deployments.md";
@@ -377,6 +378,78 @@ function checkHookRedeployPlanBlock(manifest: AnyRecord): void {
     pass("multichain hook redeploy planner result is recorded");
   } else {
     fail("multichain hook redeploy planner result is missing");
+  }
+
+  if (
+    typeof plan.snapshotCommand === "string"
+    && plan.snapshotCommand.includes("uniswap:official-multichain:hooks:plan:write")
+  ) {
+    pass("multichain hook redeploy plan snapshot command is recorded");
+  } else {
+    fail("multichain hook redeploy plan snapshot command is missing");
+  }
+
+  if (
+    typeof plan.freshnessCommand === "string"
+    && plan.freshnessCommand.includes("uniswap:official-multichain:hooks:plan:check")
+  ) {
+    pass("multichain hook redeploy plan freshness command is recorded");
+  } else {
+    fail("multichain hook redeploy plan freshness command is missing");
+  }
+
+  if (plan.planSnapshot === MULTICHAIN_HOOK_REDEPLOY_PLAN) {
+    pass("multichain hook redeploy plan snapshot path is recorded");
+  } else {
+    fail("multichain hook redeploy plan snapshot path is missing");
+  }
+
+  let snapshot: AnyRecord = {};
+  if (existsSync(join(ROOT, MULTICHAIN_HOOK_REDEPLOY_PLAN))) {
+    pass(`multichain hook redeploy plan snapshot exists at ${MULTICHAIN_HOOK_REDEPLOY_PLAN}`);
+    snapshot = readJson(MULTICHAIN_HOOK_REDEPLOY_PLAN);
+  } else {
+    fail(`multichain hook redeploy plan snapshot is missing at ${MULTICHAIN_HOOK_REDEPLOY_PLAN}`);
+  }
+
+  if (snapshot.sourceManifest === ARC_READINESS_MANIFEST) {
+    pass("multichain hook redeploy plan snapshot records the source readiness manifest");
+  } else {
+    fail("multichain hook redeploy plan snapshot source readiness manifest is wrong");
+  }
+
+  if (snapshot.sourceMultichainManifest === MULTICHAIN_MANIFEST) {
+    pass("multichain hook redeploy plan snapshot records the multichain manifest");
+  } else {
+    fail("multichain hook redeploy plan snapshot multichain manifest is wrong");
+  }
+
+  if (
+    snapshot.validationSummary?.pass === 50
+    && snapshot.validationSummary?.warn === 4
+    && snapshot.validationSummary?.fail === 0
+  ) {
+    pass("multichain hook redeploy plan snapshot validation summary is recorded");
+  } else {
+    fail("multichain hook redeploy plan snapshot validation summary is missing or stale");
+  }
+
+  const snapshotTargets = new Map<string, AnyRecord>((snapshot.targets ?? []).map((target: AnyRecord) => [target.network, target]));
+  for (const network of requiredNetworks) {
+    const target = snapshotTargets.get(network);
+    if (target) pass(`multichain hook redeploy plan snapshot includes ${network}`);
+    else {
+      fail(`multichain hook redeploy plan snapshot is missing ${network}`);
+      continue;
+    }
+
+    if (["avalanche", "arbitrum-one"].includes(network)) {
+      if ((target.commandTemplates ?? []).length === 3) {
+        pass(`multichain hook redeploy plan snapshot includes three ${network} command templates`);
+      } else {
+        fail(`multichain hook redeploy plan snapshot must include three ${network} command templates`);
+      }
+    }
   }
 
   const checks = Array.isArray(plan.requiredChecks) ? plan.requiredChecks.join("\n") : "";

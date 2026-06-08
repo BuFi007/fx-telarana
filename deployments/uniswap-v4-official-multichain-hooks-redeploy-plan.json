@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "status": "redeploy-plan-not-a-readiness-claim",
+  "sourceManifest": "deployments/uniswap-v4-indexing-readiness-5042002.json",
+  "sourceMultichainManifest": "deployments/uniswap-v4-official-multichain-readiness.json",
+  "expectedHookFamilies": [
+    "FxHedgeHook",
+    "FxSwapHook",
+    "TelaranaGatewayHubHook"
+  ],
+  "validationSummary": {
+    "pass": 50,
+    "warn": 4,
+    "fail": 0
+  },
+  "targets": [
+    {
+      "network": "arc-mainnet",
+      "displayName": "Arc Mainnet",
+      "chainId": null,
+      "status": "pending-official-uniswap-v4-addresses",
+      "poolManager": null,
+      "rpcEnv": "OFFICIAL_ARC_RPC_URL",
+      "publicRpcFallback": null,
+      "hookRedeployStatus": null,
+      "poolPublicationStatus": "pending-official-uniswap-v4-addresses",
+      "commandTemplates": [],
+      "requiredPostRedeployEvidence": [
+        "officialHookAddressWithMatchingLow14Bits",
+        "poolManagerInitializeTx",
+        "firstLiquidityTx",
+        "stateViewSlot0AndLiquidity",
+        "subgraphPoolEntity",
+        "v4QuoterExactInputDiagnosticOrCustomRouteCaveat"
+      ]
+    },
+    {
+      "network": "avalanche-fuji",
+      "displayName": "Avalanche Fuji",
+      "chainId": 43113,
+      "status": "pending-official-uniswap-v4-addresses",
+      "poolManager": null,
+      "rpcEnv": "AVALANCHE_FUJI_RPC_URL",
+      "publicRpcFallback": null,
+      "hookRedeployStatus": null,
+      "poolPublicationStatus": "pending-official-uniswap-v4-addresses",
+      "commandTemplates": [],
+      "requiredPostRedeployEvidence": [
+        "officialHookAddressWithMatchingLow14Bits",
+        "poolManagerInitializeTx",
+        "firstLiquidityTx",
+        "stateViewSlot0AndLiquidity",
+        "subgraphPoolEntity",
+        "v4QuoterExactInputDiagnosticOrCustomRouteCaveat"
+      ]
+    },
+    {
+      "network": "avalanche",
+      "displayName": "Avalanche C-Chain",
+      "chainId": 43114,
+      "status": "official-uniswap-v4-addresses-published",
+      "poolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+      "rpcEnv": "AVALANCHE_RPC_URL",
+      "publicRpcFallback": "https://api.avax.network/ext/bc/C/rpc",
+      "hookRedeployStatus": "pending-official-hook-redeploy",
+      "poolPublicationStatus": "pending-poolmanager-initialize-and-first-liquidity",
+      "commandTemplates": [
+        {
+          "family": "FxHedgeHook",
+          "command": "POOL_MANAGER=0x06380c0e0912312b5150364b9dc4542ba0dbbc85 forge script contracts/script/DeployFxHedgeHookAndPools.s.sol:DeployFxHedgeHookAndPools --root contracts --rpc-url ${AVALANCHE_RPC_URL} -vv",
+          "broadcastMode": "simulate-unless-operator-adds---broadcast"
+        },
+        {
+          "family": "FxSwapHook",
+          "command": "POOL_MANAGER=0x06380c0e0912312b5150364b9dc4542ba0dbbc85 FX_VAULT=<target-chain SharedFxVault> forge script contracts/script/DeployFxSwapHook.s.sol:DeployFxSwapHook --root contracts --rpc-url ${AVALANCHE_RPC_URL} -vv",
+          "broadcastMode": "simulate-unless-operator-adds---broadcast",
+          "note": "run once per vault-backed pair"
+        },
+        {
+          "family": "TelaranaGatewayHubHook",
+          "command": "POOL_MANAGER=0x06380c0e0912312b5150364b9dc4542ba0dbbc85 forge script contracts/script/DeployTelaranaGatewayHubHook.s.sol:DeployTelaranaGatewayHubHook --sig 'runCreate2()' --root contracts --rpc-url ${AVALANCHE_RPC_URL} -vv",
+          "broadcastMode": "simulate-unless-operator-adds---broadcast"
+        }
+      ],
+      "requiredPostRedeployEvidence": [
+        "officialHookAddressWithMatchingLow14Bits",
+        "poolManagerInitializeTx",
+        "firstLiquidityTx",
+        "stateViewSlot0AndLiquidity",
+        "subgraphPoolEntity",
+        "v4QuoterExactInputDiagnosticOrCustomRouteCaveat"
+      ]
+    },
+    {
+      "network": "arbitrum-one",
+      "displayName": "Arbitrum One",
+      "chainId": 42161,
+      "status": "official-uniswap-v4-addresses-published",
+      "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+      "rpcEnv": "ARBITRUM_RPC_URL",
+      "publicRpcFallback": "https://arb1.arbitrum.io/rpc",
+      "hookRedeployStatus": "pending-official-hook-redeploy",
+      "poolPublicationStatus": "pending-poolmanager-initialize-and-first-liquidity",
+      "commandTemplates": [
+        {
+          "family": "FxHedgeHook",
+          "command": "POOL_MANAGER=0x360e68faccca8ca495c1b759fd9eee466db9fb32 forge script contracts/script/DeployFxHedgeHookAndPools.s.sol:DeployFxHedgeHookAndPools --root contracts --rpc-url ${ARBITRUM_RPC_URL} -vv",
+          "broadcastMode": "simulate-unless-operator-adds---broadcast"
+        },
+        {
+          "family": "FxSwapHook",
+          "command": "POOL_MANAGER=0x360e68faccca8ca495c1b759fd9eee466db9fb32 FX_VAULT=<target-chain SharedFxVault> forge script contracts/script/DeployFxSwapHook.s.sol:DeployFxSwapHook --root contracts --rpc-url ${ARBITRUM_RPC_URL} -vv",
+          "broadcastMode": "simulate-unless-operator-adds---broadcast",
+          "note": "run once per vault-backed pair"
+        },
+        {
+          "family": "TelaranaGatewayHubHook",
+          "command": "POOL_MANAGER=0x360e68faccca8ca495c1b759fd9eee466db9fb32 forge script contracts/script/DeployTelaranaGatewayHubHook.s.sol:DeployTelaranaGatewayHubHook --sig 'runCreate2()' --root contracts --rpc-url ${ARBITRUM_RPC_URL} -vv",
+          "broadcastMode": "simulate-unless-operator-adds---broadcast"
+        }
+      ],
+      "requiredPostRedeployEvidence": [
+        "officialHookAddressWithMatchingLow14Bits",
+        "poolManagerInitializeTx",
+        "firstLiquidityTx",
+        "stateViewSlot0AndLiquidity",
+        "subgraphPoolEntity",
+        "v4QuoterExactInputDiagnosticOrCustomRouteCaveat"
+      ]
+    }
+  ]
+}

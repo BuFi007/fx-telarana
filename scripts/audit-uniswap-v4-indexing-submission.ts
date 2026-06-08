@@ -42,6 +42,7 @@ const CHECKS: AuditCheck[] = [
   { key: "subgraphReadiness", label: "official subgraph readiness" },
   { key: "officialMultichainReadiness", label: "official multichain readiness" },
   { key: "officialMultichainHookRedeployPlan", label: "official multichain hook redeploy plan" },
+  { key: "officialMultichainHookRedeployPlanFreshness", label: "official multichain hook redeploy plan freshness" },
   { key: "officialMultichainDeploymentInputCheck", label: "official multichain deployment input" },
   { key: "officialMultichainDeploymentInputGenerate", label: "official multichain deployment input generator" },
   { key: "officialMultichainDeploymentInputGenerateSelfTest", label: "official multichain deployment input generator self-test" },
