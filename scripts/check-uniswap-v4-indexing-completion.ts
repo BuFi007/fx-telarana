@@ -17,6 +17,7 @@ const EVIDENCE = "deployments/uniswap-v4-indexing-evidence-5042002.json";
 const HANDOFF = "deployments/uniswap-v4-indexing-handoff-5042002.md";
 const HOOK_METADATA = "deployments/uniswap-v4-hook-indexer-metadata-5042002.json";
 const MULTICHAIN = "deployments/uniswap-v4-official-multichain-readiness.json";
+const MULTICHAIN_HOOK_REDEPLOY_PLAN = "deployments/uniswap-v4-official-multichain-hooks-redeploy-plan.json";
 
 const counts: Record<Severity, number> = { PASS: 0, WARN: 0, FAIL: 0 };
 
@@ -65,6 +66,7 @@ function main(): void {
   const evidence = readJson(EVIDENCE);
   const hookMetadata = readJson(HOOK_METADATA);
   const multichain = readJson(MULTICHAIN);
+  const hookRedeployPlan = readJson(MULTICHAIN_HOOK_REDEPLOY_PLAN);
   const doNotClaim = readiness.submissionPackage?.doNotClaimYet ?? [];
   const pools = evidence.pools ?? [];
   const hedgePools = pools.filter((pool: AnyRecord) => pool.family === "FxHedgeHook");
@@ -208,6 +210,19 @@ function main(): void {
     pass("official multichain route evidence self-test records FAIL=0");
   } else {
     fail("official multichain route evidence self-test must record FAIL=0");
+  }
+
+  const hookRedeployTargets = Array.isArray(hookRedeployPlan.targets) ? hookRedeployPlan.targets : [];
+  if (
+    hookRedeployTargets.length === 4
+    && hookRedeployTargets.every((target: AnyRecord) =>
+      Array.isArray(target.requiredPostRedeployEvidence)
+      && target.requiredPostRedeployEvidence.includes("universalRouterExecutionEvidenceOrCustomRouteCaveat")
+    )
+  ) {
+    pass("official multichain hook redeploy plan requires Universal Router execution evidence");
+  } else {
+    fail("official multichain hook redeploy plan must require Universal Router execution evidence");
   }
 
   if (

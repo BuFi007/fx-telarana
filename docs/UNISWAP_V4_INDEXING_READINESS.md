@@ -649,7 +649,7 @@ Completion audit:
 bun run uniswap:completion:audit
 ```
 
-Current expected result: `PASS=27 WARN=6 FAIL=0`, with
+Current expected result: `PASS=28 WARN=6 FAIL=0`, with
 `completionStatus not-complete`. This audits the original goal directly rather
 than redefining completion around local rehearsal evidence. The warnings are the
 remaining completion blockers: official Arc contracts, official Fuji contracts,
@@ -1111,7 +1111,7 @@ Ask Claude to verify these points:
 48. Run `bun run uniswap:completion:audit` and confirm the original-goal
    completion audit exits with `FAIL=0`, reports `completionStatus
    not-complete`, and has the current expected summary
-   `PASS=27 WARN=6 FAIL=0`.
+   `PASS=28 WARN=6 FAIL=0`.
 49. Run `bun run uniswap:submission:audit` and confirm the executable
    submission audit exits with `FAIL=0`; the current expected summary is
    `CHECKS=43 PASS=43 WARN=88 FAIL=0`.
