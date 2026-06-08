@@ -686,6 +686,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialMultichainDeploymentInputGenerateSelfTest", "uniswap:official-multichain:input:generate:self-test"],
     ["officialMultichainDocsFreshness", "uniswap:official-multichain:docs:check"],
     ["officialMultichainDocsFreshnessSelfTest", "uniswap:official-multichain:docs:self-test"],
+    ["officialMultichainHookRedeployPlan", "uniswap:official-multichain:hooks:plan"],
     ["officialMultichainPoolPublication", "uniswap:official-multichain:pools:check"],
     ["officialMultichainPoolPublicationPlan", "uniswap:official-multichain:pools:plan"],
     ["officialMultichainPoolPublicationPlanSnapshot", "uniswap:official-multichain:pools:plan:write"],
@@ -927,6 +928,47 @@ function checkOfficialMultichainBlock(
   ]) {
     if (generationChecks.includes(snippet)) pass(`official multichain deployment input generator checks cover ${snippet}`);
     else fail(`official multichain deployment input generator checks must cover ${snippet}`);
+  }
+
+  const hookRedeployPlan = block.hookRedeployPlan ?? {};
+  const hookRedeployScript = "scripts/plan-official-multichain-hook-redeploy.ts";
+  if (existsSync(join(ROOT, hookRedeployScript))) {
+    pass(`official multichain hook redeploy planner exists at ${hookRedeployScript}`);
+  } else {
+    fail(`official multichain hook redeploy planner is missing at ${hookRedeployScript}`);
+  }
+
+  if (
+    typeof hookRedeployPlan.command === "string"
+    && hookRedeployPlan.command.includes("uniswap:official-multichain:hooks:plan")
+  ) {
+    pass("official multichain hook redeploy planner command is recorded");
+  } else {
+    fail("official multichain hook redeploy planner command is missing");
+  }
+
+  if (
+    typeof hookRedeployPlan.currentResult === "string"
+    && hookRedeployPlan.currentResult.includes("WARN=4")
+    && hookRedeployPlan.currentResult.includes("FAIL=0")
+  ) {
+    pass("official multichain hook redeploy planner result is recorded");
+  } else {
+    fail("official multichain hook redeploy planner result is missing");
+  }
+
+  const hookRedeployChecks = Array.isArray(hookRedeployPlan.requiredChecks) ? hookRedeployPlan.requiredChecks.join("\n") : "";
+  for (const snippet of [
+    "source hook low-14 permission bits",
+    "deploy script prerequisites",
+    "Arc mainnet and Avalanche Fuji pending",
+    "official Uniswap PoolManager",
+    "self-deployed Arc testnet and Fuji rehearsal PoolManager",
+    "no-broadcast target-chain command templates",
+    "target-chain hook pool indexing pending",
+  ]) {
+    if (hookRedeployChecks.includes(snippet)) pass(`official multichain hook redeploy plan checks cover ${snippet}`);
+    else fail(`official multichain hook redeploy plan checks must cover ${snippet}`);
   }
 
   const publication = block.poolPublication ?? {};
@@ -1196,6 +1238,15 @@ function checkOfficialMultichainBlock(
     pass("indexing evidence snapshot official multichain deployment input generator self-test result matches manifest");
   } else {
     fail("indexing evidence snapshot official multichain deployment input generator self-test result does not match manifest");
+  }
+
+  if (
+    snapshot.officialMultichain?.hookRedeployPlan?.currentResult
+    === block.hookRedeployPlan?.currentResult
+  ) {
+    pass("indexing evidence snapshot official multichain hook redeploy plan result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official multichain hook redeploy plan result does not match manifest");
   }
 
   if (

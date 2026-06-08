@@ -84,6 +84,7 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
   const avalanche = targetByNetwork(multichain, "avalanche");
   const arbitrum = targetByNetwork(multichain, "arbitrum-one");
   const multichainPoolPublication = multichain.poolPublication ?? {};
+  const multichainHookRedeployPlan = multichain.hookRedeployPlan ?? {};
 
   return [
     {
@@ -276,6 +277,7 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
         `PoolManager: ${avalanche.contracts?.PoolManager}`,
         `Quoter: ${avalanche.contracts?.Quoter}`,
         `StateView: ${avalanche.contracts?.StateView}`,
+        `hook redeploy plan: ${multichainHookRedeployPlan.currentResult}`,
         `poolPublicationStatus: ${avalanche.poolPublicationStatus}`,
       ],
       remainingWork: [
@@ -289,6 +291,7 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
       evidence: [
         `indexingReadiness: ${avalanche.indexingReadiness}`,
         `poolPublicationStatus: ${avalanche.poolPublicationStatus}`,
+        `hook redeploy plan: ${multichainHookRedeployPlan.currentResult}`,
         `publication template: ${multichainPoolPublication.manifest}`,
         `publication check: ${multichainPoolPublication.currentResult}`,
         `publication fill plan: ${multichainPoolPublication.currentPlanResult}`,
@@ -312,6 +315,7 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
         `PoolManager: ${arbitrum.contracts?.PoolManager}`,
         `Quoter: ${arbitrum.contracts?.Quoter}`,
         `StateView: ${arbitrum.contracts?.StateView}`,
+        `hook redeploy plan: ${multichainHookRedeployPlan.currentResult}`,
         `poolPublicationStatus: ${arbitrum.poolPublicationStatus}`,
       ],
       remainingWork: [
@@ -325,6 +329,7 @@ function buildRequirements(readiness: AnyRecord, evidence: AnyRecord, multichain
       evidence: [
         `indexingReadiness: ${arbitrum.indexingReadiness}`,
         `poolPublicationStatus: ${arbitrum.poolPublicationStatus}`,
+        `hook redeploy plan: ${multichainHookRedeployPlan.currentResult}`,
         `publication template: ${multichainPoolPublication.manifest}`,
         `publication check: ${multichainPoolPublication.currentResult}`,
         `publication fill plan: ${multichainPoolPublication.currentPlanResult}`,

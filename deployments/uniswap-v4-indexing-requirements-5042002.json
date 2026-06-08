@@ -185,6 +185,7 @@
         "PoolManager: 0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
         "Quoter: 0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
         "StateView: 0xc3c9e198c735a4b97e3e683f391ccbdd60b69286",
+        "hook redeploy plan: PASS=50 WARN=4 FAIL=0",
         "poolPublicationStatus: pending-poolmanager-initialize-and-first-liquidity"
       ],
       "remainingWork": [
@@ -198,6 +199,7 @@
       "evidence": [
         "indexingReadiness: official-contracts-known-hook-pool-publication-pending",
         "poolPublicationStatus: pending-poolmanager-initialize-and-first-liquidity",
+        "hook redeploy plan: PASS=50 WARN=4 FAIL=0",
         "publication template: deployments/uniswap-v4-official-multichain-pools.template.json",
         "publication check: PASS=67 WARN=4 FAIL=0",
         "publication fill plan: PASS=81 WARN=4 FAIL=0"
@@ -216,6 +218,7 @@
         "PoolManager: 0x360e68faccca8ca495c1b759fd9eee466db9fb32",
         "Quoter: 0x3972c00f7ed4885e145823eb7c655375d275a1c5",
         "StateView: 0x76fd297e2d437cd7f76d50f01afe6160f86e9990",
+        "hook redeploy plan: PASS=50 WARN=4 FAIL=0",
         "poolPublicationStatus: pending-poolmanager-initialize-and-first-liquidity"
       ],
       "remainingWork": [
@@ -229,6 +232,7 @@
       "evidence": [
         "indexingReadiness: official-contracts-known-hook-pool-publication-pending",
         "poolPublicationStatus: pending-poolmanager-initialize-and-first-liquidity",
+        "hook redeploy plan: PASS=50 WARN=4 FAIL=0",
         "publication template: deployments/uniswap-v4-official-multichain-pools.template.json",
         "publication check: PASS=67 WARN=4 FAIL=0",
         "publication fill plan: PASS=81 WARN=4 FAIL=0"

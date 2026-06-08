@@ -45,6 +45,7 @@
     "officialMultichainDeploymentInputGenerateSelfTest": "bun run uniswap:official-multichain:input:generate:self-test",
     "officialMultichainDocsFreshness": "bun run uniswap:official-multichain:docs:check",
     "officialMultichainDocsFreshnessSelfTest": "bun run uniswap:official-multichain:docs:self-test",
+    "officialMultichainHookRedeployPlan": "bun run uniswap:official-multichain:hooks:plan",
     "officialMultichainPoolPublication": "bun run uniswap:official-multichain:pools:check",
     "officialMultichainPoolPublicationPlan": "bun run uniswap:official-multichain:pools:plan",
     "officialMultichainPoolPublicationPlanSnapshot": "bun run uniswap:official-multichain:pools:plan:write",
@@ -259,7 +260,7 @@
     "status": "official-addresses-known-for-avalanche-and-arbitrum-arc-and-fuji-pending",
     "manifest": "deployments/uniswap-v4-official-multichain-readiness.json",
     "command": "bun run uniswap:official-multichain:check",
-    "currentResult": "PASS=193 WARN=4 FAIL=0",
+    "currentResult": "PASS=203 WARN=4 FAIL=0",
     "deploymentInputGeneration": {
       "checkCommand": "bun run uniswap:official-multichain:input:check",
       "currentCheckResult": "PASS=75 WARN=2 FAIL=0",
@@ -274,6 +275,19 @@
         "Populate Avalanche C-Chain and Arbitrum One from official deployments when present.",
         "Reject self-deployed Arc testnet and Fuji rehearsal PoolManager reuse.",
         "Self-test must prove current-docs pending behavior, standalone checker compatibility, future all-target manifest-update failure, and self-deployed PoolManager rejection."
+      ]
+    },
+    "hookRedeployPlan": {
+      "command": "bun run uniswap:official-multichain:hooks:plan",
+      "currentResult": "PASS=50 WARN=4 FAIL=0",
+      "requiredChecks": [
+        "Validate source hook low-14 permission bits before target-chain remine/redeploy.",
+        "Validate FxHedgeHook, FxSwapHook, and TelaranaGatewayHubHook deploy script prerequisites.",
+        "Keep Arc mainnet and Avalanche Fuji pending while official PoolManager addresses are absent.",
+        "For Avalanche and Arbitrum One, use only the official Uniswap PoolManager from the manifest.",
+        "Reject self-deployed Arc testnet and Fuji rehearsal PoolManager reuse.",
+        "Print no-broadcast target-chain command templates for the hook redeploy operator.",
+        "Keep target-chain hook pool indexing pending until broadcast, initialize, first-liquidity, StateView, subgraph, and Quoter evidence exists."
       ]
     },
     "sourceFreshness": {
@@ -678,7 +692,7 @@
     "completionAuditCommand": "bun run uniswap:completion:audit",
     "completionStatus": "not-complete",
     "currentCompletionAuditResult": "PASS=13 WARN=6 FAIL=0",
-    "currentSubmissionAuditResult": "CHECKS=32 PASS=32 WARN=64 FAIL=0",
+    "currentSubmissionAuditResult": "CHECKS=33 PASS=33 WARN=68 FAIL=0",
     "indexingEvidenceSnapshot": "deployments/uniswap-v4-indexing-evidence-5042002.json",
     "demoableToday": [
       "All six FxHedgeHook poolIds initialized and configured on the self-deployed Arc testnet PoolManager",

@@ -351,6 +351,49 @@ function checkDeploymentInputGenerationBlock(manifest: AnyRecord): void {
   }
 }
 
+function checkHookRedeployPlanBlock(manifest: AnyRecord): void {
+  const plan = manifest.hookRedeployPlan ?? {};
+  const script = "scripts/plan-official-multichain-hook-redeploy.ts";
+  if (existsSync(join(ROOT, script))) {
+    pass(`multichain hook redeploy planner exists at ${script}`);
+  } else {
+    fail(`multichain hook redeploy planner is missing at ${script}`);
+  }
+
+  if (
+    typeof plan.command === "string"
+    && plan.command.includes("uniswap:official-multichain:hooks:plan")
+  ) {
+    pass("multichain hook redeploy planner command is recorded");
+  } else {
+    fail("multichain hook redeploy planner command is missing");
+  }
+
+  if (
+    typeof plan.currentResult === "string"
+    && plan.currentResult.includes("WARN=4")
+    && plan.currentResult.includes("FAIL=0")
+  ) {
+    pass("multichain hook redeploy planner result is recorded");
+  } else {
+    fail("multichain hook redeploy planner result is missing");
+  }
+
+  const checks = Array.isArray(plan.requiredChecks) ? plan.requiredChecks.join("\n") : "";
+  for (const snippet of [
+    "source hook low-14 permission bits",
+    "deploy script prerequisites",
+    "Arc mainnet and Avalanche Fuji pending",
+    "official Uniswap PoolManager",
+    "self-deployed Arc testnet and Fuji rehearsal PoolManager",
+    "no-broadcast target-chain command templates",
+    "target-chain hook pool indexing pending",
+  ]) {
+    if (checks.includes(snippet)) pass(`multichain hook redeploy plan checks cover ${snippet}`);
+    else fail(`multichain hook redeploy plan checks must cover ${snippet}`);
+  }
+}
+
 function checkPoolPublicationBlock(manifest: AnyRecord): void {
   const publication = manifest.poolPublication ?? {};
   if (publication.manifest === MULTICHAIN_POOL_PUBLICATION) {
@@ -611,6 +654,7 @@ async function main(): Promise<void> {
 
   checkSourceFreshnessBlock(manifest);
   checkDeploymentInputGenerationBlock(manifest);
+  checkHookRedeployPlanBlock(manifest);
   checkPoolPublicationBlock(manifest);
 
   for (const target of targets) {
