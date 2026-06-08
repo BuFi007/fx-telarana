@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": {
+    "readiness": "deployments/uniswap-v4-indexing-readiness-5042002.json",
+    "evidence": "deployments/uniswap-v4-indexing-evidence-5042002.json",
+    "multichain": "deployments/uniswap-v4-official-multichain-readiness.json",
+    "handoff": "deployments/uniswap-v4-indexing-handoff-5042002.md"
+  },
+  "generatedAt": "2026-06-08",
+  "network": "arc-testnet",
+  "chainId": 5042002,
+  "completionStatus": "not-complete",
+  "summary": {
+    "satisfied": 5,
+    "satisfied-with-caveat": 4,
+    "pending-external": 6,
+    "pending-operator": 1,
+    "failed": 0,
+    "pass": 9,
+    "warn": 7,
+    "fail": 0
+  },
+  "requirements": [
+    {
+      "id": "official-docs-freshness",
+      "requirement": "Official Uniswap v4 deployment addresses must be checked against the current official deployments source.",
+      "status": "satisfied",
+      "evidence": [
+        "command: bun run uniswap:official-multichain:docs:check",
+        "result: PASS=31 WARN=2 FAIL=0",
+        "source: https://developers.uniswap.org/docs/protocols/v4/deployments.md"
+      ],
+      "remainingWork": []
+    },
+    {
+      "id": "arc-testnet-pool-evidence",
+      "requirement": "Arc testnet setup must publish concrete PoolManager, PoolKey, poolId, and initialize transaction evidence.",
+      "status": "satisfied",
+      "evidence": [
+        "evidence snapshot: deployments/uniswap-v4-indexing-evidence-5042002.json",
+        "network: arc-testnet",
+        "chainId: 5042002",
+        "pool records: 11"
+      ],
+      "remainingWork": []
+    },
+    {
+      "id": "fx-hedge-live-pools",
+      "requirement": "All six FxHedgeHook stable hedge pools must be live in Arc testnet evidence.",
+      "status": "satisfied",
+      "evidence": [
+        "FxHedgeHook pools: JPYC/USDC, cirBTC/USDC, EURC/USDC, AUDF/USDC, MXNB/USDC, QCAD/USDC",
+        "storage verifier: bun run hedge:arc:plan-stables"
+      ],
+      "remainingWork": []
+    },
+    {
+      "id": "router-quoter-diagnostics",
+      "requirement": "Router/quoter behavior must be proven or explicitly caveated per hook family.",
+      "status": "satisfied-with-caveat",
+      "evidence": [
+        "FxHedgeHook: 2 passed; 0 failed",
+        "FxSwapHook: 3 passed; 0 failed",
+        "TelaranaGatewayHubHook: not-generic-hookdata-required"
+      ],
+      "remainingWork": [
+        "Rerun diagnostics against official Arc PoolManager/Quoter after Uniswap publishes Arc v4 addresses."
+      ]
+    },
+    {
+      "id": "handoff-packet",
+      "requirement": "Reviewer handoff must be generated from committed evidence and kept fresh.",
+      "status": "satisfied",
+      "evidence": [
+        "handoff snapshot: deployments/uniswap-v4-indexing-handoff-5042002.md",
+        "result: PASS=9 WARN=4 FAIL=0"
+      ],
+      "remainingWork": []
+    },
+    {
+      "id": "completion-audit",
+      "requirement": "The package must include a completion audit that refuses to mark the goal complete while required official evidence is missing.",
+      "status": "satisfied-with-caveat",
+      "evidence": [
+        "completionStatus: not-complete",
+        "result: PASS=13 WARN=4 FAIL=0"
+      ],
+      "remainingWork": [
+        "Flip only after official Arc contracts, official pool records, and liquidity/indexing evidence exist."
+      ]
+    },
+    {
+      "id": "official-arc-contracts",
+      "requirement": "Official Arc mainnet v4 PoolManager, PositionManager, UniversalRouter, Quoter, StateView, and Permit2 addresses must be published by Uniswap.",
+      "status": "pending-external",
+      "evidence": [
+        "status: pending-official-uniswap-v4-addresses",
+        "docsListed: false"
+      ],
+      "remainingWork": [
+        "Wait for the official Uniswap deployments page to list Arc mainnet v4 contracts."
+      ]
+    },
+    {
+      "id": "official-fuji-contracts",
+      "requirement": "Official Avalanche Fuji v4 contracts must stay pending unless Uniswap publishes them.",
+      "status": "pending-external",
+      "evidence": [
+        "status: pending-official-uniswap-v4-addresses",
+        "rehearsal PoolManager: 0x5A517f51edca02880542effb8b6a3bdFaAcaD8B2"
+      ],
+      "remainingWork": [
+        "Do not reuse the rehearsal PoolManager for official indexing claims."
+      ]
+    },
+    {
+      "id": "official-arc-hook-redeploy",
+      "requirement": "Hooks must be remined/redeployed against the official Arc PoolManager.",
+      "status": "pending-external",
+      "evidence": [
+        "status: pending-official-uniswap-v4-addresses",
+        "plan: bun run uniswap:official-arc:hooks:plan",
+        "result: PASS=28 WARN=1 FAIL=0"
+      ],
+      "remainingWork": [
+        "Populate official Arc deployment input, then remine/redeploy hooks against the official PoolManager."
+      ]
+    },
+    {
+      "id": "official-arc-pool-publication",
+      "requirement": "Official Arc PoolManager pool records must include official PoolKeys, poolIds, initialize txs, first liquidity txs, StateView, subgraph, and router/quoter evidence.",
+      "status": "pending-external",
+      "evidence": [
+        "status: pending-official-uniswap-v4-addresses",
+        "officialPools: 0",
+        "fill plan: bun run uniswap:official-arc:pools:plan",
+        "fill plan result: PASS=58 WARN=1 FAIL=0"
+      ],
+      "remainingWork": [
+        "After official hook redeploy, initialize official PoolKeys and populate the official pool publication input."
+      ]
+    },
+    {
+      "id": "official-stateview",
+      "requirement": "Official Arc StateView evidence must verify nonzero sqrtPriceX96 and liquidity for official pool IDs.",
+      "status": "pending-external",
+      "evidence": [
+        "status: pending-official-arc-stateview-and-official-poolids",
+        "result: PASS=13 WARN=1 FAIL=0"
+      ],
+      "remainingWork": [
+        "Run with OFFICIAL_ARC_POOL_PUBLICATION_INPUT and OFFICIAL_ARC_RPC_URL once official pool IDs exist."
+      ]
+    },
+    {
+      "id": "official-subgraph",
+      "requirement": "Official v4 subgraph evidence must verify pool entity id, hooks, token0/token1, fee tier, price state, and liquidity.",
+      "status": "pending-external",
+      "evidence": [
+        "status: pending-official-arc-subgraph-and-official-poolids",
+        "result: PASS=15 WARN=1 FAIL=0"
+      ],
+      "remainingWork": [
+        "Run with official pool publication input and the official v4 subgraph endpoint once official pool IDs exist."
+      ]
+    },
+    {
+      "id": "first-liquidity",
+      "requirement": "Router-active hedge market claims require first liquidity txs and nonzero current in-range liquidity.",
+      "status": "pending-operator",
+      "evidence": [
+        "status: pending-first-liquidity",
+        "result: PASS=1 WARN=13 FAIL=0",
+        "operator plan: bun run uniswap:hedge:liquidity:plan"
+      ],
+      "remainingWork": [
+        "Seed first liquidity and publish the firstLiquidityTx for each router-active hedge pool claim."
+      ]
+    },
+    {
+      "id": "avalanche-official-contracts",
+      "requirement": "Avalanche C-Chain official v4 contract addresses must be tracked while hook pool indexing remains pending.",
+      "status": "satisfied-with-caveat",
+      "evidence": [
+        "PoolManager: 0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+        "Quoter: 0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
+        "StateView: 0xc3c9e198c735a4b97e3e683f391ccbdd60b69286",
+        "poolPublicationStatus: pending-poolmanager-initialize-and-first-liquidity"
+      ],
+      "remainingWork": [
+        "Remine/redeploy hooks, initialize pools, add first liquidity, and publish StateView/subgraph/quoter evidence on Avalanche."
+      ]
+    },
+    {
+      "id": "arbitrum-official-contracts",
+      "requirement": "Arbitrum One official v4 contract addresses must be tracked while hook pool indexing remains pending.",
+      "status": "satisfied-with-caveat",
+      "evidence": [
+        "PoolManager: 0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+        "Quoter: 0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+        "StateView: 0x76fd297e2d437cd7f76d50f01afe6160f86e9990",
+        "poolPublicationStatus: pending-poolmanager-initialize-and-first-liquidity"
+      ],
+      "remainingWork": [
+        "Remine/redeploy hooks, initialize pools, add first liquidity, and publish StateView/subgraph/quoter evidence on Arbitrum One."
+      ]
+    },
+    {
+      "id": "no-unrelated-ops-surface",
+      "requirement": "The readiness package must stay limited to read-only evidence and avoid unrelated ops, daemon, alert, or wallet-tracking surfaces.",
+      "status": "satisfied",
+      "evidence": [
+        "Generated scripts are read-only/no-broadcast evidence renderers or validators.",
+        "deployments/uniswap-v4-indexing-handoff-5042002.md records that it adds no cron jobs, monitors, daemons, alerts, or wallet tracking."
+      ],
+      "remainingWork": []
+    }
+  ]
+}

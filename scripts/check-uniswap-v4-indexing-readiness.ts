@@ -14,6 +14,7 @@ type Severity = "PASS" | "WARN" | "FAIL";
 const ROOT = resolve(import.meta.dir, "..");
 const MANIFEST = "deployments/uniswap-v4-indexing-readiness-5042002.json";
 const EVIDENCE_SNAPSHOT = "deployments/uniswap-v4-indexing-evidence-5042002.json";
+const REQUIREMENTS_SNAPSHOT = "deployments/uniswap-v4-indexing-requirements-5042002.json";
 const HANDOFF_SNAPSHOT = "deployments/uniswap-v4-indexing-handoff-5042002.md";
 const MULTICHAIN_MANIFEST = "deployments/uniswap-v4-official-multichain-readiness.json";
 const MULTICHAIN_POOL_PUBLICATION = "deployments/uniswap-v4-official-multichain-pools.template.json";
@@ -635,6 +636,13 @@ function checkOfficialMainnetBlock(manifest: AnyRecord): void {
     fail(`indexing evidence exporter is missing at ${evidenceExportScript}`);
   }
 
+  const requirementsExportScript = "scripts/export-uniswap-v4-indexing-requirements.ts";
+  if (existsSync(join(ROOT, requirementsExportScript))) {
+    pass(`indexing requirements matrix exporter exists at ${requirementsExportScript}`);
+  } else {
+    fail(`indexing requirements matrix exporter is missing at ${requirementsExportScript}`);
+  }
+
   const handoffRenderScript = "scripts/render-uniswap-v4-indexing-handoff.ts";
   if (existsSync(join(ROOT, handoffRenderScript))) {
     pass(`indexing handoff renderer exists at ${handoffRenderScript}`);
@@ -684,6 +692,9 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["submissionEvidenceExport", "uniswap:evidence:export"],
     ["submissionEvidenceSnapshot", "uniswap:evidence:write"],
     ["submissionEvidenceFreshness", "uniswap:evidence:check"],
+    ["requirementsExport", "uniswap:requirements:export"],
+    ["requirementsSnapshot", "uniswap:requirements:write"],
+    ["requirementsFreshness", "uniswap:requirements:check"],
     ["submissionHandoffRender", "uniswap:handoff:render"],
     ["submissionHandoffSnapshot", "uniswap:handoff:write"],
     ["submissionHandoffFreshness", "uniswap:handoff:check"],
@@ -1149,7 +1160,11 @@ function manifestPoolIds(manifest: AnyRecord): Set<string> {
   return ids;
 }
 
-function checkSubmissionEvidenceSnapshot(manifest: AnyRecord, snapshot: AnyRecord): void {
+function checkSubmissionEvidenceSnapshot(
+  manifest: AnyRecord,
+  snapshot: AnyRecord,
+  requirementsSnapshot: AnyRecord,
+): void {
   const submission = manifest.submissionPackage ?? {};
   if (submission.indexingEvidenceSnapshot === EVIDENCE_SNAPSHOT) {
     pass("submission package records the indexing evidence snapshot path");
@@ -1173,6 +1188,55 @@ function checkSubmissionEvidenceSnapshot(manifest: AnyRecord, snapshot: AnyRecor
     pass("submission package records the indexing evidence freshness command");
   } else {
     fail("submission package is missing the indexing evidence freshness command");
+  }
+
+  if (submission.requirementsMatrixSnapshot === REQUIREMENTS_SNAPSHOT) {
+    pass("submission package records the requirements matrix snapshot path");
+  } else {
+    fail("submission package is missing the requirements matrix snapshot path");
+  }
+
+  if (existsSync(join(ROOT, REQUIREMENTS_SNAPSHOT))) {
+    pass(`requirements matrix snapshot exists at ${REQUIREMENTS_SNAPSHOT}`);
+  } else {
+    fail(`requirements matrix snapshot is missing at ${REQUIREMENTS_SNAPSHOT}`);
+  }
+
+  if (
+    typeof submission.requirementsMatrixCommand === "string"
+    && submission.requirementsMatrixCommand.includes("uniswap:requirements:export")
+  ) {
+    pass("submission package records the requirements matrix export command");
+  } else {
+    fail("submission package is missing the requirements matrix export command");
+  }
+
+  if (
+    typeof submission.requirementsMatrixSnapshotCommand === "string"
+    && submission.requirementsMatrixSnapshotCommand.includes("uniswap:requirements:write")
+  ) {
+    pass("submission package records the requirements matrix snapshot command");
+  } else {
+    fail("submission package is missing the requirements matrix snapshot command");
+  }
+
+  if (
+    typeof submission.requirementsMatrixCheckCommand === "string"
+    && submission.requirementsMatrixCheckCommand.includes("uniswap:requirements:check")
+  ) {
+    pass("submission package records the requirements matrix freshness command");
+  } else {
+    fail("submission package is missing the requirements matrix freshness command");
+  }
+
+  if (
+    typeof submission.currentRequirementsMatrixResult === "string"
+    && submission.currentRequirementsMatrixResult.includes("WARN=7")
+    && submission.currentRequirementsMatrixResult.includes("FAIL=0")
+  ) {
+    pass("submission package records the current requirements matrix result");
+  } else {
+    fail("submission package is missing the current requirements matrix result");
   }
 
   if (submission.indexingHandoffSnapshot === HANDOFF_SNAPSHOT) {
@@ -1282,6 +1346,24 @@ function checkSubmissionEvidenceSnapshot(manifest: AnyRecord, snapshot: AnyRecor
   }
 
   if (
+    snapshot.submissionPackage?.requirementsMatrixSnapshot
+    === manifest.submissionPackage?.requirementsMatrixSnapshot
+  ) {
+    pass("indexing evidence snapshot requirements matrix path matches manifest");
+  } else {
+    fail("indexing evidence snapshot requirements matrix path does not match manifest");
+  }
+
+  if (
+    snapshot.submissionPackage?.currentRequirementsMatrixResult
+    === manifest.submissionPackage?.currentRequirementsMatrixResult
+  ) {
+    pass("indexing evidence snapshot requirements matrix result matches manifest");
+  } else {
+    fail("indexing evidence snapshot requirements matrix result does not match manifest");
+  }
+
+  if (
     snapshot.submissionPackage?.currentHandoffResult
     === manifest.submissionPackage?.currentHandoffResult
   ) {
@@ -1312,6 +1394,49 @@ function checkSubmissionEvidenceSnapshot(manifest: AnyRecord, snapshot: AnyRecor
     pass("indexing evidence snapshot network and chainId match manifest");
   } else {
     fail("indexing evidence snapshot network or chainId does not match manifest");
+  }
+
+  if (requirementsSnapshot.generatedFrom?.readiness === MANIFEST) {
+    pass("requirements matrix records its readiness manifest source");
+  } else {
+    fail("requirements matrix does not point at the readiness manifest");
+  }
+
+  if (requirementsSnapshot.generatedFrom?.evidence === EVIDENCE_SNAPSHOT) {
+    pass("requirements matrix records its evidence snapshot source");
+  } else {
+    fail("requirements matrix does not point at the evidence snapshot");
+  }
+
+  if (requirementsSnapshot.completionStatus === manifest.submissionPackage?.completionStatus) {
+    pass("requirements matrix completion status matches manifest");
+  } else {
+    fail("requirements matrix completion status does not match manifest");
+  }
+
+  if (
+    requirementsSnapshot.summary?.pass === 9
+    && requirementsSnapshot.summary?.warn === 7
+    && requirementsSnapshot.summary?.fail === 0
+  ) {
+    pass("requirements matrix summary is recorded with expected caveats");
+  } else {
+    fail("requirements matrix summary is missing or stale");
+  }
+
+  const requirements = Array.isArray(requirementsSnapshot.requirements)
+    ? requirementsSnapshot.requirements
+    : [];
+  if (requirements.some((requirement: AnyRecord) => requirement.id === "router-quoter-diagnostics")) {
+    pass("requirements matrix includes router/quoter diagnostic evidence");
+  } else {
+    fail("requirements matrix is missing router/quoter diagnostic evidence");
+  }
+
+  if (requirements.some((requirement: AnyRecord) => requirement.id === "official-arc-contracts")) {
+    pass("requirements matrix includes official Arc contract blocker");
+  } else {
+    fail("requirements matrix is missing official Arc contract blocker");
   }
 
   if (snapshot.officialArcMainnet?.status === manifest.officialArcMainnet?.status) {
@@ -1965,6 +2090,7 @@ function main(): void {
   const fxswapDeployment = readJson<AnyRecord>(FXSWAP_DEPLOYMENT);
   const arcDeployment = readJson<AnyRecord>(ARC_DEPLOYMENT);
   const evidenceSnapshot = readJson<AnyRecord>(EVIDENCE_SNAPSHOT);
+  const requirementsSnapshot = readJson<AnyRecord>(REQUIREMENTS_SNAPSHOT);
   const multichainReadiness = readJson<AnyRecord>(MULTICHAIN_MANIFEST);
 
   if (manifest.network === "arc-testnet" && manifest.chainId === 5042002) {
@@ -1983,7 +2109,7 @@ function main(): void {
   checkOfficialMainnetBlock(manifest);
   checkEvidenceCommands(manifest);
   checkOfficialMultichainBlock(manifest, multichainReadiness, evidenceSnapshot);
-  checkSubmissionEvidenceSnapshot(manifest, evidenceSnapshot);
+  checkSubmissionEvidenceSnapshot(manifest, evidenceSnapshot, requirementsSnapshot);
 
   for (const family of manifest.hookFamilies ?? []) {
     checkHookFlags(family);

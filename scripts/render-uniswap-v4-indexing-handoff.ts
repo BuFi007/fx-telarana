@@ -94,6 +94,7 @@ function renderCommands(commands: AnyRecord, submission: AnyRecord): string[] {
     ["StateView gate", commands.officialArcStateViewReadiness],
     ["Subgraph gate", commands.subgraphReadiness],
     ["Evidence snapshot freshness", commands.submissionEvidenceFreshness],
+    ["Requirements matrix", submission.requirementsMatrixCheckCommand ?? commands.requirementsFreshness],
     ["Submission audit", submission.indexingSubmissionAuditCommand ?? commands.submissionAudit],
     ["Completion audit", submission.completionAuditCommand ?? commands.completionAudit],
   ];

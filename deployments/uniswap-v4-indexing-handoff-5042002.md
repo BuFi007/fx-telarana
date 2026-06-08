@@ -47,6 +47,7 @@ Arc testnet is demoable on self-deployed Uniswap v4 infrastructure, with 11 publ
 | StateView gate | `bun run uniswap:stateview:check` |
 | Subgraph gate | `bun run uniswap:subgraph:check` |
 | Evidence snapshot freshness | `bun run uniswap:evidence:check` |
+| Requirements matrix | `bun run uniswap:requirements:check` |
 | Submission audit | `bun run uniswap:submission:audit` |
 | Completion audit | `bun run uniswap:completion:audit` |
 
