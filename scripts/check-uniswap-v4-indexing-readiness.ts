@@ -16,6 +16,7 @@ const MANIFEST = "deployments/uniswap-v4-indexing-readiness-5042002.json";
 const EVIDENCE_SNAPSHOT = "deployments/uniswap-v4-indexing-evidence-5042002.json";
 const REQUIREMENTS_SNAPSHOT = "deployments/uniswap-v4-indexing-requirements-5042002.json";
 const HANDOFF_SNAPSHOT = "deployments/uniswap-v4-indexing-handoff-5042002.md";
+const HOOK_METADATA_SNAPSHOT = "deployments/uniswap-v4-hook-indexer-metadata-5042002.json";
 const MULTICHAIN_MANIFEST = "deployments/uniswap-v4-official-multichain-readiness.json";
 const MULTICHAIN_POOL_PUBLICATION = "deployments/uniswap-v4-official-multichain-pools.template.json";
 const MULTICHAIN_POOL_FILL_PLAN = "deployments/uniswap-v4-official-multichain-pools-fill-plan.json";
@@ -743,6 +744,9 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialMultichainRouterReadiness", "uniswap:official-multichain:router:check"],
     ["officialArcStateViewReadiness", "uniswap:stateview:check"],
     ["subgraphReadiness", "uniswap:subgraph:check"],
+    ["hookMetadataExport", "uniswap:hook-metadata:export"],
+    ["hookMetadataSnapshot", "uniswap:hook-metadata:write"],
+    ["hookMetadataFreshness", "uniswap:hook-metadata:check"],
     ["submissionEvidenceExport", "uniswap:evidence:export"],
     ["submissionEvidenceSnapshot", "uniswap:evidence:write"],
     ["submissionEvidenceFreshness", "uniswap:evidence:check"],
@@ -1734,6 +1738,7 @@ function checkSubmissionEvidenceSnapshot(
   manifest: AnyRecord,
   snapshot: AnyRecord,
   requirementsSnapshot: AnyRecord,
+  hookMetadataSnapshot: AnyRecord,
 ): void {
   const submission = manifest.submissionPackage ?? {};
   if (submission.indexingEvidenceSnapshot === EVIDENCE_SNAPSHOT) {
@@ -1807,6 +1812,60 @@ function checkSubmissionEvidenceSnapshot(
     pass("submission package records the current requirements matrix result");
   } else {
     fail("submission package is missing the current requirements matrix result");
+  }
+
+  if (submission.hookMetadataSnapshot === HOOK_METADATA_SNAPSHOT) {
+    pass("submission package records the hook indexer metadata snapshot path");
+  } else {
+    fail("submission package is missing the hook indexer metadata snapshot path");
+  }
+
+  if (existsSync(join(ROOT, HOOK_METADATA_SNAPSHOT))) {
+    pass(`hook indexer metadata snapshot exists at ${HOOK_METADATA_SNAPSHOT}`);
+  } else {
+    fail(`hook indexer metadata snapshot is missing at ${HOOK_METADATA_SNAPSHOT}`);
+  }
+
+  if (
+    typeof submission.hookMetadataSnapshotCommand === "string"
+    && submission.hookMetadataSnapshotCommand.includes("uniswap:hook-metadata:write")
+  ) {
+    pass("submission package records the hook metadata snapshot command");
+  } else {
+    fail("submission package is missing the hook metadata snapshot command");
+  }
+
+  if (
+    typeof submission.hookMetadataCheckCommand === "string"
+    && submission.hookMetadataCheckCommand.includes("uniswap:hook-metadata:check")
+  ) {
+    pass("submission package records the hook metadata freshness command");
+  } else {
+    fail("submission package is missing the hook metadata freshness command");
+  }
+
+  if (hookMetadataSnapshot.generatedFrom === MANIFEST) {
+    pass("hook indexer metadata snapshot records its manifest source");
+  } else {
+    fail("hook indexer metadata snapshot does not point at the readiness manifest");
+  }
+
+  if (hookMetadataSnapshot.network === manifest.network && hookMetadataSnapshot.chainId === manifest.chainId) {
+    pass("hook indexer metadata snapshot network and chainId match manifest");
+  } else {
+    fail("hook indexer metadata snapshot network or chainId does not match manifest");
+  }
+
+  if (hookMetadataSnapshot.officialIndexingCaveat?.selfDeployedArcTestnetIsOfficial === false) {
+    pass("hook indexer metadata snapshot marks self-deployed Arc testnet as non-official");
+  } else {
+    fail("hook indexer metadata snapshot must not claim self-deployed Arc testnet is official");
+  }
+
+  if (hookMetadataSnapshot.summary?.publishedArcTestnetPoolCount === manifestPoolIds(manifest).size) {
+    pass("hook indexer metadata snapshot carries every published Arc testnet pool");
+  } else {
+    fail("hook indexer metadata snapshot pool count does not match the readiness manifest");
   }
 
   if (submission.indexingHandoffSnapshot === HANDOFF_SNAPSHOT) {
@@ -2697,6 +2756,7 @@ function main(): void {
   const arcDeployment = readJson<AnyRecord>(ARC_DEPLOYMENT);
   const evidenceSnapshot = readJson<AnyRecord>(EVIDENCE_SNAPSHOT);
   const requirementsSnapshot = readJson<AnyRecord>(REQUIREMENTS_SNAPSHOT);
+  const hookMetadataSnapshot = readJson<AnyRecord>(HOOK_METADATA_SNAPSHOT);
   const multichainReadiness = readJson<AnyRecord>(MULTICHAIN_MANIFEST);
   const multichainFillPlan = readJson<AnyRecord>(MULTICHAIN_POOL_FILL_PLAN);
   const multichainHookRedeployPlan = readJson<AnyRecord>(MULTICHAIN_HOOK_REDEPLOY_PLAN);
@@ -2717,7 +2777,7 @@ function main(): void {
   checkOfficialMainnetBlock(manifest);
   checkEvidenceCommands(manifest);
   checkOfficialMultichainBlock(manifest, multichainReadiness, evidenceSnapshot, multichainFillPlan, multichainHookRedeployPlan);
-  checkSubmissionEvidenceSnapshot(manifest, evidenceSnapshot, requirementsSnapshot);
+  checkSubmissionEvidenceSnapshot(manifest, evidenceSnapshot, requirementsSnapshot, hookMetadataSnapshot);
 
   for (const family of manifest.hookFamilies ?? []) {
     checkHookFlags(family);

@@ -43,7 +43,7 @@ Readiness check:
 bun run uniswap:indexing:check
 ```
 
-Current expected result: `PASS=568 WARN=1 FAIL=0`. The remaining warning is
+Current expected result: `PASS=579 WARN=1 FAIL=0`. The remaining warning is
 `FxHedgeHook` first liquidity, which is required before claiming router-active
 or liquid hedge markets.
 
@@ -547,6 +547,34 @@ bun run uniswap:requirements:check
 This regenerates the requirements matrix in memory and fails if
 `deployments/uniswap-v4-indexing-requirements-5042002.json` is stale.
 
+Hook indexer metadata packet:
+
+```bash
+bun run uniswap:hook-metadata:export
+```
+
+This emits the compact, machine-readable hook/indexer handoff derived from the
+readiness manifest. It includes hook family identities, low-14 permission bits,
+PoolKeys, poolIds, initialize transactions, router/quoter status, and explicit
+official-indexing caveats.
+
+Checked hook metadata snapshot:
+
+```bash
+bun run uniswap:hook-metadata:write
+```
+
+This writes `deployments/uniswap-v4-hook-indexer-metadata-5042002.json`.
+
+Hook metadata freshness check:
+
+```bash
+bun run uniswap:hook-metadata:check
+```
+
+This regenerates the metadata packet in memory and fails if
+`deployments/uniswap-v4-hook-indexer-metadata-5042002.json` is stale.
+
 Indexer handoff packet:
 
 ```bash
@@ -596,7 +624,7 @@ Submission audit:
 bun run uniswap:submission:audit
 ```
 
-Current expected result: `CHECKS=38 PASS=38 WARN=88 FAIL=0`. This is the
+Current expected result: `CHECKS=39 PASS=39 WARN=88 FAIL=0`. This is the
 single reviewer-facing no-broadcast command for the indexing package. It
 re-runs official Uniswap deployment freshness, official Arc and multichain
 readiness gates, deployment-input generation/checks, the Arc pool-publication
@@ -604,7 +632,7 @@ fill plan, pool-publication self-tests, StateView/subgraph preflights,
 multichain StateView/subgraph/Quoter/router preflights, live
 `FxHedgeHook.poolConfigs` storage checks, `FxHedgeHook` liquidity checks, live
 Arc PoolManager receipt verification, both local official `V4Quoter`
-diagnostics, evidence snapshot freshness, requirements matrix freshness,
+diagnostics, hook metadata freshness, evidence snapshot freshness, requirements matrix freshness,
 handoff snapshot freshness, and the completion audit. The warnings are the documented pending
 conditions: Arc/Fuji official addresses, official-chain pool publication,
 subgraph/StateView readiness before official pool records, and hedge first
@@ -886,7 +914,7 @@ Ask Claude to verify these points:
 
 1. Run `bun run uniswap:indexing:check` from the `fx-telarana` repo.
 2. Confirm the check exits with `FAIL=0`; the current expected summary is
-   `PASS=568 WARN=1 FAIL=0`.
+   `PASS=579 WARN=1 FAIL=0`.
 3. Run `bun run uniswap:official-arc:check` and confirm official Arc is either
    fully populated from Uniswap docs or still pending with the expected warning;
    current expected summary is `PASS=9 WARN=1 FAIL=0`.
@@ -995,34 +1023,43 @@ Ask Claude to verify these points:
    `deployments/uniswap-v4-indexing-evidence-5042002.json` with the same
    11-pool snapshot.
 34. Run `bun run uniswap:evidence:check` and confirm the snapshot is fresh.
-35. Run `bun run uniswap:requirements:export` and confirm it emits the
+35. Run `bun run uniswap:hook-metadata:export` and confirm it emits JSON with
+   `summary.publishedArcTestnetPoolCount=11`,
+   `officialIndexingCaveat.selfDeployedArcTestnetIsOfficial=false`, and
+   hook family metadata for `FxHedgeHook`, `FxSwapHook`,
+   `TelaranaGatewayHubHook`, and `FxGhostKycHook`.
+36. Run `bun run uniswap:hook-metadata:write` and confirm it refreshes
+   `deployments/uniswap-v4-hook-indexer-metadata-5042002.json`.
+37. Run `bun run uniswap:hook-metadata:check` and confirm the hook metadata
+   snapshot is fresh.
+38. Run `bun run uniswap:requirements:export` and confirm it emits the
    requirement-by-requirement matrix with the current expected summary
    `PASS=13 WARN=9 FAIL=0`.
-36. Run `bun run uniswap:requirements:write` and confirm it refreshes
+39. Run `bun run uniswap:requirements:write` and confirm it refreshes
    `deployments/uniswap-v4-indexing-requirements-5042002.json`.
-37. Run `bun run uniswap:requirements:check` and confirm the requirements
+40. Run `bun run uniswap:requirements:check` and confirm the requirements
    snapshot is fresh.
-38. Run `bun run uniswap:handoff:render` and confirm it emits Markdown with
+41. Run `bun run uniswap:handoff:render` and confirm it emits Markdown with
    all 11 pool records, `officialMultichain` target status, reviewer commands,
    and do-not-claim caveats; the current expected summary is
    `PASS=9 WARN=4 FAIL=0`.
-39. Run `bun run uniswap:handoff:write` and confirm it refreshes
+42. Run `bun run uniswap:handoff:write` and confirm it refreshes
    `deployments/uniswap-v4-indexing-handoff-5042002.md`.
-40. Run `bun run uniswap:handoff:check` and confirm the handoff snapshot is
+43. Run `bun run uniswap:handoff:check` and confirm the handoff snapshot is
    fresh.
-41. Run `bun run uniswap:completion:audit` and confirm the original-goal
+44. Run `bun run uniswap:completion:audit` and confirm the original-goal
    completion audit exits with `FAIL=0`, reports `completionStatus
    not-complete`, and has the current expected summary
    `PASS=13 WARN=6 FAIL=0`.
-42. Run `bun run uniswap:submission:audit` and confirm the executable
+45. Run `bun run uniswap:submission:audit` and confirm the executable
    submission audit exits with `FAIL=0`; the current expected summary is
-   `CHECKS=38 PASS=38 WARN=88 FAIL=0`.
-43. Run `bun run hedge:arc:plan-stables` and confirm all six hedge pools are
+   `CHECKS=39 PASS=39 WARN=88 FAIL=0`.
+46. Run `bun run hedge:arc:plan-stables` and confirm all six hedge pools are
    live/configured; the current expected summary is `PASS=46 WARN=0 FAIL=0`.
-44. Run `bun run uniswap:hedge:liquidity` and confirm it reports zero liquidity
+47. Run `bun run uniswap:hedge:liquidity` and confirm it reports zero liquidity
    as warnings, not failures; current expected summary is
    `PASS=1 WARN=13 FAIL=0`.
-45. Run `bun run uniswap:hedge:liquidity:plan` and confirm it reports
+48. Run `bun run uniswap:hedge:liquidity:plan` and confirm it reports
    `PASS=32 WARN=1 FAIL=0` and prints all six operator env groups.
 46. Run `bun run uniswap:hedge:v4quoter` and confirm the local diagnostic passes
    `2 passed; 0 failed`.
