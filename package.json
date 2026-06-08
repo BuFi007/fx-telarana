@@ -46,6 +46,8 @@
     "uniswap:official-arc:plan": "bun scripts/plan-official-arc-mainnet-migration.ts",
     "uniswap:official-arc:hooks:plan": "bun scripts/plan-official-arc-hook-redeploy.ts",
     "uniswap:official-arc:input:check": "bun scripts/check-official-arc-deployment-input.ts",
+    "uniswap:official-arc:input:generate": "bun scripts/generate-official-arc-deployment-input.ts",
+    "uniswap:official-arc:input:generate:self-test": "bun scripts/self-test-official-arc-deployment-input-generator.ts",
     "uniswap:official-arc:input:self-test": "bun scripts/self-test-official-arc-deployment-input.ts",
     "uniswap:official-arc:pools:check": "bun scripts/check-official-arc-pool-publication.ts",
     "uniswap:official-arc:pools:self-test": "bun scripts/self-test-official-arc-pool-publication.ts",

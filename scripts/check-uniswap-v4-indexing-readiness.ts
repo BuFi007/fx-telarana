@@ -224,6 +224,43 @@ function checkOfficialMainnetBlock(manifest: AnyRecord): void {
   }
 
   if (
+    typeof official.deploymentInputGenerateCommand === "string"
+    && official.deploymentInputGenerateCommand.includes("uniswap:official-arc:input:generate")
+  ) {
+    pass("official Arc deployment input generator command is recorded");
+  } else {
+    fail("official Arc deployment input generator command is missing");
+  }
+
+  if (
+    typeof official.currentDeploymentInputGenerateResult === "string"
+    && official.currentDeploymentInputGenerateResult.includes("WARN=1")
+    && official.currentDeploymentInputGenerateResult.includes("FAIL=0")
+  ) {
+    pass("official Arc deployment input generator result is recorded");
+  } else {
+    fail("official Arc deployment input generator result is missing");
+  }
+
+  if (
+    typeof official.deploymentInputGenerateSelfTestCommand === "string"
+    && official.deploymentInputGenerateSelfTestCommand.includes("uniswap:official-arc:input:generate:self-test")
+  ) {
+    pass("official Arc deployment input generator self-test command is recorded");
+  } else {
+    fail("official Arc deployment input generator self-test command is missing");
+  }
+
+  if (
+    typeof official.currentDeploymentInputGenerateSelfTestResult === "string"
+    && official.currentDeploymentInputGenerateSelfTestResult.includes("FAIL=0")
+  ) {
+    pass("official Arc deployment input generator self-test result is recorded");
+  } else {
+    fail("official Arc deployment input generator self-test result is missing");
+  }
+
+  if (
     typeof official.deploymentInputCheckCommand === "string"
     && official.deploymentInputCheckCommand.includes("uniswap:official-arc:input:check")
   ) {
@@ -265,6 +302,8 @@ function checkOfficialMainnetBlock(manifest: AnyRecord): void {
     : "";
   for (const snippet of [
     "all official contract addresses unset",
+    "Generator",
+    "validator-compatible input",
     "official Uniswap v4 deployments page",
     "self-deployed Arc testnet PoolManager",
     "canonical Permit2",
@@ -505,6 +544,20 @@ function checkOfficialMainnetBlock(manifest: AnyRecord): void {
     fail(`official Arc deployment input verifier is missing at ${officialArcInputScript}`);
   }
 
+  const officialArcInputGenerator = "scripts/generate-official-arc-deployment-input.ts";
+  if (existsSync(join(ROOT, officialArcInputGenerator))) {
+    pass(`official Arc deployment input generator exists at ${officialArcInputGenerator}`);
+  } else {
+    fail(`official Arc deployment input generator is missing at ${officialArcInputGenerator}`);
+  }
+
+  const officialArcInputGeneratorSelfTest = "scripts/self-test-official-arc-deployment-input-generator.ts";
+  if (existsSync(join(ROOT, officialArcInputGeneratorSelfTest))) {
+    pass(`official Arc deployment input generator self-test exists at ${officialArcInputGeneratorSelfTest}`);
+  } else {
+    fail(`official Arc deployment input generator self-test is missing at ${officialArcInputGeneratorSelfTest}`);
+  }
+
   const officialArcInputSelfTest = "scripts/self-test-official-arc-deployment-input.ts";
   if (existsSync(join(ROOT, officialArcInputSelfTest))) {
     pass(`official Arc deployment input self-test exists at ${officialArcInputSelfTest}`);
@@ -562,6 +615,8 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialArcReadiness", "uniswap:official-arc:check"],
     ["officialArcMigrationPlan", "uniswap:official-arc:plan"],
     ["officialArcHookRedeployPlan", "uniswap:official-arc:hooks:plan"],
+    ["officialArcDeploymentInputGenerate", "uniswap:official-arc:input:generate"],
+    ["officialArcDeploymentInputGenerateSelfTest", "uniswap:official-arc:input:generate:self-test"],
     ["officialArcDeploymentInputCheck", "uniswap:official-arc:input:check"],
     ["officialArcDeploymentInputSelfTest", "uniswap:official-arc:input:self-test"],
     ["officialArcPoolPublicationCheck", "uniswap:official-arc:pools:check"],
@@ -972,6 +1027,42 @@ function checkSubmissionEvidenceSnapshot(manifest: AnyRecord, snapshot: AnyRecor
     pass("indexing evidence snapshot official Arc deployment input template matches manifest");
   } else {
     fail("indexing evidence snapshot official Arc deployment input template does not match manifest");
+  }
+
+  if (
+    snapshot.officialArcMainnet?.deploymentInputGenerateCommand
+    === manifest.officialArcMainnet?.deploymentInputGenerateCommand
+  ) {
+    pass("indexing evidence snapshot official Arc deployment input generator command matches manifest");
+  } else {
+    fail("indexing evidence snapshot official Arc deployment input generator command does not match manifest");
+  }
+
+  if (
+    snapshot.officialArcMainnet?.currentDeploymentInputGenerateResult
+    === manifest.officialArcMainnet?.currentDeploymentInputGenerateResult
+  ) {
+    pass("indexing evidence snapshot official Arc deployment input generator result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official Arc deployment input generator result does not match manifest");
+  }
+
+  if (
+    snapshot.officialArcMainnet?.deploymentInputGenerateSelfTestCommand
+    === manifest.officialArcMainnet?.deploymentInputGenerateSelfTestCommand
+  ) {
+    pass("indexing evidence snapshot official Arc deployment input generator self-test command matches manifest");
+  } else {
+    fail("indexing evidence snapshot official Arc deployment input generator self-test command does not match manifest");
+  }
+
+  if (
+    snapshot.officialArcMainnet?.currentDeploymentInputGenerateSelfTestResult
+    === manifest.officialArcMainnet?.currentDeploymentInputGenerateSelfTestResult
+  ) {
+    pass("indexing evidence snapshot official Arc deployment input generator self-test result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official Arc deployment input generator self-test result does not match manifest");
   }
 
   if (
