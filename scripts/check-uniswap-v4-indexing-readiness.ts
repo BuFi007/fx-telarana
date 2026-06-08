@@ -642,6 +642,13 @@ function checkOfficialMainnetBlock(manifest: AnyRecord): void {
     fail(`indexing handoff renderer is missing at ${handoffRenderScript}`);
   }
 
+  const completionAuditScript = "scripts/check-uniswap-v4-indexing-completion.ts";
+  if (existsSync(join(ROOT, completionAuditScript))) {
+    pass(`indexing completion audit exists at ${completionAuditScript}`);
+  } else {
+    fail(`indexing completion audit is missing at ${completionAuditScript}`);
+  }
+
   const submissionAuditScript = "scripts/audit-uniswap-v4-indexing-submission.ts";
   if (existsSync(join(ROOT, submissionAuditScript))) {
     pass(`indexing submission audit runner exists at ${submissionAuditScript}`);
@@ -681,6 +688,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["submissionHandoffSnapshot", "uniswap:handoff:write"],
     ["submissionHandoffFreshness", "uniswap:handoff:check"],
     ["submissionAudit", "uniswap:submission:audit"],
+    ["completionAudit", "uniswap:completion:audit"],
     ["onchainReceiptVerifier", "uniswap:indexing:onchain"],
     ["hedgeHookLiquidityVerifier", "uniswap:hedge:liquidity"],
     ["hedgeHookLiquiditySeedPlan", "uniswap:hedge:liquidity:plan"],
@@ -1217,6 +1225,31 @@ function checkSubmissionEvidenceSnapshot(manifest: AnyRecord, snapshot: AnyRecor
   }
 
   if (
+    typeof submission.completionAuditCommand === "string"
+    && submission.completionAuditCommand.includes("uniswap:completion:audit")
+  ) {
+    pass("submission package records the completion audit command");
+  } else {
+    fail("submission package is missing the completion audit command");
+  }
+
+  if (submission.completionStatus === "not-complete") {
+    pass("submission package records completionStatus=not-complete");
+  } else {
+    fail("submission package must keep completionStatus=not-complete until official Arc evidence exists");
+  }
+
+  if (
+    typeof submission.currentCompletionAuditResult === "string"
+    && submission.currentCompletionAuditResult.includes("WARN=4")
+    && submission.currentCompletionAuditResult.includes("FAIL=0")
+  ) {
+    pass("submission package records the current completion audit result");
+  } else {
+    fail("submission package is missing the current completion audit result");
+  }
+
+  if (
     typeof submission.currentSubmissionAuditResult === "string"
     && submission.currentSubmissionAuditResult.includes("CHECKS=")
     && submission.currentSubmissionAuditResult.includes("FAIL=0")
@@ -1255,6 +1288,24 @@ function checkSubmissionEvidenceSnapshot(manifest: AnyRecord, snapshot: AnyRecor
     pass("indexing evidence snapshot handoff result matches manifest");
   } else {
     fail("indexing evidence snapshot handoff result does not match manifest");
+  }
+
+  if (
+    snapshot.submissionPackage?.completionStatus
+    === manifest.submissionPackage?.completionStatus
+  ) {
+    pass("indexing evidence snapshot completion status matches manifest");
+  } else {
+    fail("indexing evidence snapshot completion status does not match manifest");
+  }
+
+  if (
+    snapshot.submissionPackage?.currentCompletionAuditResult
+    === manifest.submissionPackage?.currentCompletionAuditResult
+  ) {
+    pass("indexing evidence snapshot completion audit result matches manifest");
+  } else {
+    fail("indexing evidence snapshot completion audit result does not match manifest");
   }
 
   if (snapshot.network === manifest.network && snapshot.chainId === manifest.chainId) {

@@ -69,6 +69,7 @@
     "uniswap:handoff:write": "bun scripts/render-uniswap-v4-indexing-handoff.ts --out deployments/uniswap-v4-indexing-handoff-5042002.md",
     "uniswap:handoff:check": "bun scripts/render-uniswap-v4-indexing-handoff.ts --check deployments/uniswap-v4-indexing-handoff-5042002.md",
     "uniswap:submission:audit": "bun scripts/audit-uniswap-v4-indexing-submission.ts",
+    "uniswap:completion:audit": "bun scripts/check-uniswap-v4-indexing-completion.ts",
     "uniswap:hedge:liquidity:plan": "bun scripts/plan-fx-hedge-liquidity-seeding.ts",
     "uniswap:hedge:liquidity": "bun scripts/check-fx-hedge-liquidity-readiness.ts",
     "uniswap:hedge:v4quoter": "forge test --root contracts --match-path test/FxHedgeHookV4Quoter.t.sol -vv",

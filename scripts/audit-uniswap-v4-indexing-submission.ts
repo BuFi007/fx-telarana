@@ -54,6 +54,7 @@ const CHECKS: AuditCheck[] = [
   { key: "fxSwapHookV4QuoterDiagnostic", label: "FxSwapHook V4Quoter diagnostic" },
   { key: "submissionEvidenceFreshness", label: "indexing evidence snapshot freshness" },
   { key: "submissionHandoffFreshness", label: "indexing handoff snapshot freshness" },
+  { key: "completionAudit", label: "indexing goal completion audit" },
 ];
 
 function readJson(relativePath: string): AnyRecord {

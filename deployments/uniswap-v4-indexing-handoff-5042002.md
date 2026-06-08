@@ -4,6 +4,7 @@ Generated from: `deployments/uniswap-v4-indexing-evidence-5042002.json`
 Generated at: `2026-06-08`
 Network: `arc-testnet`
 Chain ID: `5042002`
+Completion status: `not-complete`
 Official Uniswap deployments source: https://developers.uniswap.org/docs/protocols/v4/deployments
 
 ## Current Conclusion
@@ -47,6 +48,7 @@ Arc testnet is demoable on self-deployed Uniswap v4 infrastructure, with 11 publ
 | Subgraph gate | `bun run uniswap:subgraph:check` |
 | Evidence snapshot freshness | `bun run uniswap:evidence:check` |
 | Submission audit | `bun run uniswap:submission:audit` |
+| Completion audit | `bun run uniswap:completion:audit` |
 
 ## Do Not Claim Yet
 

@@ -95,6 +95,7 @@ function renderCommands(commands: AnyRecord, submission: AnyRecord): string[] {
     ["Subgraph gate", commands.subgraphReadiness],
     ["Evidence snapshot freshness", commands.submissionEvidenceFreshness],
     ["Submission audit", submission.indexingSubmissionAuditCommand ?? commands.submissionAudit],
+    ["Completion audit", submission.completionAuditCommand ?? commands.completionAudit],
   ];
 
   return [
@@ -122,6 +123,7 @@ function buildMarkdown(evidence: AnyRecord, multichain: AnyRecord): string {
     `Generated at: \`${evidence.generatedAt ?? "unknown"}\``,
     `Network: \`${evidence.network}\``,
     `Chain ID: \`${evidence.chainId}\``,
+    `Completion status: \`${submission.completionStatus ?? "not-complete"}\``,
     `Official Uniswap deployments source: ${evidence.officialUniswapReferences?.deployments ?? multichain.source}`,
     "",
     "## Current Conclusion",
