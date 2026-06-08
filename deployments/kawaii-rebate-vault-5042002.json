@@ -1,0 +1,14 @@
+{
+  "chainId": 5042002,
+  "network": "arc-testnet",
+  "KawaiiRebateVault": "0x962d4e6958c6cd6884f8919089e7ceb0f11e45ea",
+  "deployTx": "0x84e4d2e4fc77ce85f7ea2d7c075398aaf72a1ce5d8a26a1ff8d25eefcf2d748f",
+  "deployer": "0xcA02Be6cDBb806d4a327FC92E094D1A44EC37445",
+  "USDC": "0x3600000000000000000000000000000000000000",
+  "vestDuration": 604800,
+  "admin": "0xcA02Be6cDBb806d4a327FC92E094D1A44EC37445",
+  "allocator": "0xcA02Be6cDBb806d4a327FC92E094D1A44EC37445",
+  "funder": "0xcA02Be6cDBb806d4a327FC92E094D1A44EC37445",
+  "pauser": "0xcA02Be6cDBb806d4a327FC92E094D1A44EC37445",
+  "note": "TurboFeeVault P3 vested rebates. Deployed via cast (Arc keeper-nonce contention breaks forge multi-tx broadcast). Roles ALLOCATOR/FUNDER/PAUSER granted to keeper; DEFAULT_ADMIN = keeper."
+}
