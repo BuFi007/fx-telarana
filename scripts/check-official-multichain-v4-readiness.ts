@@ -473,12 +473,21 @@ function checkHookRedeployPlanBlock(manifest: AnyRecord): void {
   }
 
   const snapshotTargets = new Map<string, AnyRecord>((snapshot.targets ?? []).map((target: AnyRecord) => [target.network, target]));
+  let targetsRequireRouterExecutionEvidence = true;
   for (const network of requiredNetworks) {
     const target = snapshotTargets.get(network);
     if (target) pass(`multichain hook redeploy plan snapshot includes ${network}`);
     else {
       fail(`multichain hook redeploy plan snapshot is missing ${network}`);
+      targetsRequireRouterExecutionEvidence = false;
       continue;
+    }
+
+    if (
+      !Array.isArray(target.requiredPostRedeployEvidence)
+      || !target.requiredPostRedeployEvidence.includes("universalRouterExecutionEvidenceOrCustomRouteCaveat")
+    ) {
+      targetsRequireRouterExecutionEvidence = false;
     }
 
     if (["avalanche", "arbitrum-one"].includes(network)) {
@@ -488,6 +497,12 @@ function checkHookRedeployPlanBlock(manifest: AnyRecord): void {
         fail(`multichain hook redeploy plan snapshot must include three ${network} command templates`);
       }
     }
+  }
+
+  if (targetsRequireRouterExecutionEvidence) {
+    pass("multichain hook redeploy plan snapshot requires Universal Router execution evidence");
+  } else {
+    fail("multichain hook redeploy plan snapshot must require Universal Router execution evidence");
   }
 
   const checks = Array.isArray(plan.requiredChecks) ? plan.requiredChecks.join("\n") : "";

@@ -214,7 +214,7 @@
     "status": "official-addresses-known-for-avalanche-and-arbitrum-arc-and-fuji-pending",
     "manifest": "deployments/uniswap-v4-official-multichain-readiness.json",
     "command": "bun run uniswap:official-multichain:check",
-    "currentResult": "PASS=289 WARN=4 FAIL=0",
+    "currentResult": "PASS=290 WARN=4 FAIL=0",
     "deploymentInputGeneration": {
       "checkCommand": "bun run uniswap:official-multichain:input:check",
       "currentCheckResult": "PASS=75 WARN=2 FAIL=0",

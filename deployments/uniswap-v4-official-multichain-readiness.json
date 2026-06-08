@@ -323,6 +323,6 @@
       ]
     }
   ],
-  "currentResult": "PASS=289 WARN=4 FAIL=0",
+  "currentResult": "PASS=290 WARN=4 FAIL=0",
   "command": "bun run uniswap:official-multichain:check"
 }
