@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-08",
+  "purpose": "Read-only Uniswap v4 official deployment and indexing readiness gate for Arc, Avalanche Fuji, Avalanche, and Arbitrum. This records official contract availability separately from protocol hook indexing claims.",
+  "source": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+  "sourceSnapshotDate": "2026-06-08",
+  "canonicalPermit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+  "selfDeployedPoolManagers": {
+    "arcTestnet": [
+      "0x403Aa1347a77195FB4dEddc362758AA9e0a48D2E",
+      "0x3FA22b7Aeda9ebBe34732ea394f1711887363B34"
+    ],
+    "avalancheFujiRehearsalPoolManager": "0x5A517f51edca02880542effb8b6a3bdFaAcaD8B2"
+  },
+  "requiredTargets": [
+    "arc-mainnet",
+    "avalanche-fuji",
+    "avalanche",
+    "arbitrum-one"
+  ],
+  "claimPolicy": [
+    "Do not claim official Uniswap indexing for a chain until pools are initialized through the official PoolManager indexed by Uniswap for that chain.",
+    "Do not treat self-deployed or rehearsal PoolManagers as official Uniswap-indexed infrastructure.",
+    "Official contract addresses alone do not prove fx-Telarana hook indexing.",
+    "Router-active claims require first liquidity, nonzero current in-range liquidity, and a quote path proven against the official Quoter or an explicitly documented custom route."
+  ],
+  "requiredIndexingEvidence": [
+    "officialPoolManager",
+    "officialHookRedeployOrRemine",
+    "officialPoolKeyAndPoolId",
+    "poolManagerInitializeTx",
+    "firstLiquidityTx",
+    "stateViewSlot0AndLiquidity",
+    "subgraphPoolEntity",
+    "v4QuoterExactInputDiagnostic",
+    "routerQuoterCaveats"
+  ],
+  "targets": [
+    {
+      "network": "arc-mainnet",
+      "displayName": "Arc Mainnet",
+      "chainId": null,
+      "status": "pending-official-uniswap-v4-addresses",
+      "officialDocsListedOn2026_06_08": false,
+      "source": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "rpcEnv": "OFFICIAL_ARC_RPC_URL",
+      "contracts": {
+        "PoolManager": null,
+        "PositionManager": null,
+        "UniversalRouter": null,
+        "UniversalRouter211": null,
+        "Quoter": null,
+        "StateView": null,
+        "PositionDescriptor": null,
+        "Permit2": null
+      },
+      "indexingReadiness": "not-indexable-yet-official-uniswap-v4-addresses-pending",
+      "poolPublicationStatus": "pending-official-uniswap-v4-addresses",
+      "nextRequiredActions": [
+        "Wait for Uniswap to publish official Arc v4 contract addresses.",
+        "Populate deployments/uniswap-v4-official-arc-input.template.json from the official table.",
+        "Remine and redeploy hooks against the official PoolManager.",
+        "Initialize official PoolKeys, add first liquidity, and publish StateView/subgraph/quoter evidence."
+      ]
+    },
+    {
+      "network": "avalanche-fuji",
+      "displayName": "Avalanche Fuji",
+      "chainId": 43113,
+      "status": "pending-official-uniswap-v4-addresses",
+      "officialDocsListedOn2026_06_08": false,
+      "source": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "rpcEnv": "AVALANCHE_FUJI_RPC_URL",
+      "contracts": {
+        "PoolManager": null,
+        "PositionManager": null,
+        "UniversalRouter": null,
+        "UniversalRouter211": null,
+        "Quoter": null,
+        "StateView": null,
+        "PositionDescriptor": null,
+        "Permit2": null
+      },
+      "rehearsal": {
+        "status": "self-deployed-testnet-only",
+        "poolManager": "0x5A517f51edca02880542effb8b6a3bdFaAcaD8B2",
+        "source": "contracts/script/DeployFxHedgeHookAndPools.s.sol",
+        "indexingClaim": "not-official-uniswap-indexed"
+      },
+      "indexingReadiness": "rehearsal-only-not-official-indexing",
+      "poolPublicationStatus": "pending-official-uniswap-v4-addresses",
+      "nextRequiredActions": [
+        "Keep Fuji as a rehearsal chain until the official Uniswap deployments page lists Fuji v4 addresses.",
+        "Do not reuse the rehearsal PoolManager for official indexing claims.",
+        "If official Fuji v4 addresses are published, populate a chain-specific official deployment input before hook redeploy.",
+        "Initialize official PoolKeys, add first liquidity, and publish StateView/subgraph/quoter evidence."
+      ]
+    },
+    {
+      "network": "avalanche",
+      "displayName": "Avalanche C-Chain",
+      "chainId": 43114,
+      "status": "official-uniswap-v4-addresses-published",
+      "officialDocsListedOn2026_06_08": true,
+      "source": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "rpcEnv": "AVALANCHE_RPC_URL",
+      "contracts": {
+        "PoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+        "PositionManager": "0xb74b1f14d2754acfcbbe1a221023a5cf50ab8acd",
+        "UniversalRouter": "0x94b75331ae8d42c1b61065089b7d48fe14aa73b7",
+        "UniversalRouter211": "0x8b844f885672f333bc0042cb669255f93a4c1e6b",
+        "Quoter": "0xbe40675bb704506a3c2ccfb762dcfd1e979845c2",
+        "StateView": "0xc3c9e198c735a4b97e3e683f391ccbdd60b69286",
+        "PositionDescriptor": "0x2b1aed9445b05ac1a3b203eccc1e25dd9351f0a9",
+        "Permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3"
+      },
+      "indexingReadiness": "official-contracts-known-hook-pool-publication-pending",
+      "hookRedeployStatus": "pending-official-hook-redeploy",
+      "poolPublicationStatus": "pending-poolmanager-initialize-and-first-liquidity",
+      "nextRequiredActions": [
+        "Remine and redeploy target hooks against the Avalanche official PoolManager.",
+        "Initialize official PoolKeys through the Avalanche official PoolManager.",
+        "Add first liquidity and verify nonzero current in-range liquidity.",
+        "Run exact-input official Quoter diagnostics and publish custom-route caveats for non-generic hooks.",
+        "Verify every published pool through Avalanche StateView and the Uniswap v4 subgraph."
+      ]
+    },
+    {
+      "network": "arbitrum-one",
+      "displayName": "Arbitrum One",
+      "chainId": 42161,
+      "status": "official-uniswap-v4-addresses-published",
+      "officialDocsListedOn2026_06_08": true,
+      "source": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+      "rpcEnv": "ARBITRUM_RPC_URL",
+      "contracts": {
+        "PoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+        "PositionManager": "0xd88f38f930b7952f2db2432cb002e7abbf3dd869",
+        "UniversalRouter": "0xa51afafe0263b40edaef0df8781ea9aa03e381a3",
+        "UniversalRouter211": "0x8b844f885672f333bc0042cb669255f93a4c1e6b",
+        "Quoter": "0x3972c00f7ed4885e145823eb7c655375d275a1c5",
+        "StateView": "0x76fd297e2d437cd7f76d50f01afe6160f86e9990",
+        "PositionDescriptor": "0xe2023f3fa515cf070e07fd9d51c1d236e07843f4",
+        "Permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3"
+      },
+      "indexingReadiness": "official-contracts-known-hook-pool-publication-pending",
+      "hookRedeployStatus": "pending-official-hook-redeploy",
+      "poolPublicationStatus": "pending-poolmanager-initialize-and-first-liquidity",
+      "nextRequiredActions": [
+        "Remine and redeploy target hooks against the Arbitrum One official PoolManager.",
+        "Initialize official PoolKeys through the Arbitrum One official PoolManager.",
+        "Add first liquidity and verify nonzero current in-range liquidity.",
+        "Run exact-input official Quoter diagnostics and publish custom-route caveats for non-generic hooks.",
+        "Verify every published pool through Arbitrum StateView and the Uniswap v4 subgraph."
+      ]
+    }
+  ],
+  "currentResult": "PASS=128 WARN=4 FAIL=0",
+  "command": "bun run uniswap:official-multichain:check"
+}

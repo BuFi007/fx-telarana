@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "network": "arc-mainnet",
+  "source": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+  "status": "pending-official-uniswap-v4-addresses",
+  "chainId": null,
+  "retrievedAt": null,
+  "contracts": {
+    "PoolManager": null,
+    "PositionManager": null,
+    "UniversalRouter": null,
+    "Quoter": null,
+    "StateView": null,
+    "Permit2": null
+  },
+  "notes": [
+    "Copy Arc addresses only from the official Uniswap v4 deployments page.",
+    "Do not reuse self-deployed Arc testnet PoolManagers for official Uniswap indexing.",
+    "After replacing nulls with official addresses, run bun run uniswap:official-arc:input:check with OFFICIAL_ARC_DEPLOYMENT_INPUT pointing at the populated file."
+  ]
+}

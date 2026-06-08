@@ -17,6 +17,7 @@ import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 ///   FX_ORACLE             — already-deployed FxOracle address
 ///   FX_MARKET_REGISTRY    — already-deployed FxMarketRegistry
 ///   MORPHO_BLUE           — Morpho Blue address on the target chain
+///   FX_VAULT              — SharedFxVault address for hook-owned liquidity
 ///   HOOK_OWNER            — initial owner of the hook (e.g. deployer or timelock)
 ///   POOL_TOKEN0           — sorted-lower token (USDC on Arc + Base Sepolia)
 ///   POOL_TOKEN1           — sorted-higher token (EURC)
@@ -34,6 +35,7 @@ contract DeployFxSwapHook is Script {
         address oracle      = vm.envAddress("FX_ORACLE");
         address registry    = vm.envAddress("FX_MARKET_REGISTRY");
         address morpho      = vm.envAddress("MORPHO_BLUE");
+        address vault       = vm.envAddress("FX_VAULT");
         address hookOwner   = vm.envAddress("HOOK_OWNER");
         address token0      = vm.envAddress("POOL_TOKEN0");
         address token1      = vm.envAddress("POOL_TOKEN1");
@@ -42,7 +44,7 @@ contract DeployFxSwapHook is Script {
         // 1) Pack constructor args + creation code
         bytes memory creationCode = abi.encodePacked(
             type(FxSwapHook).creationCode,
-            abi.encode(poolManager, oracle, registry, hookOwner, token0, token1, morpho)
+            abi.encode(poolManager, oracle, registry, hookOwner, token0, token1, morpho, vault)
         );
 
         // 2) Compute target flags from FxSwapHook.getHookPermissions() (mirror in code)
@@ -81,6 +83,7 @@ contract DeployFxSwapHook is Script {
         console2.log("pool manager:          ", poolManager);
         console2.log("oracle:                ", oracle);
         console2.log("registry:              ", registry);
+        console2.log("vault:                 ", vault);
         console2.log("owner:                 ", hookOwner);
         console2.log("=================================");
         console2.log("Next: create a v4 pool with hook = above address (Universal Router or PoolManager.initialize).");

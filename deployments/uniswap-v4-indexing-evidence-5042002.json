@@ -1,0 +1,741 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": "deployments/uniswap-v4-indexing-readiness-5042002.json",
+  "network": "arc-testnet",
+  "chainId": 5042002,
+  "generatedAt": "2026-06-08",
+  "officialUniswapReferences": {
+    "deployments": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+    "v4SubgraphQueries": "https://developers.uniswap.org/docs/ecosystem/subgraphs/concepts/v4/queries",
+    "createPool": "https://developers.uniswap.org/docs/sdks/v4/guides/create-pool",
+    "hooks": "https://developers.uniswap.org/contracts/v4/concepts/hooks"
+  },
+  "indexerModel": {
+    "sourceOfTruth": "PoolManager events",
+    "poolIdentity": "bytes32 poolId derived from PoolKey(currency0, currency1, fee, tickSpacing, hooks)",
+    "hookField": "Pool entities expose the single hook address from PoolKey.hooks",
+    "oneHookPerPool": true,
+    "requiredForPoolEntityIndexing": [
+      "Pool initialized through the PoolManager that Uniswap's Arc subgraph indexes",
+      "PoolKey has the intended hook address",
+      "PoolId, PoolKey, initialize transaction, and hook permissions are published",
+      "Hook address low 14 bits match getHookPermissions flags"
+    ],
+    "requiredForRouterActiveMarket": [
+      "First liquidity transaction is published",
+      "Current in-range liquidity is nonzero",
+      "Quote path is proven against the official Quoter or an explicitly documented custom route"
+    ]
+  },
+  "arcTestnet": {
+    "status": "self-deployed-uniswap-v4",
+    "note": "These PoolManagers are valid for local Arc testnet dogfood but will not be indexed by an official Uniswap Arc mainnet subgraph unless Uniswap adopts those exact contracts. Treat them as rehearsal infrastructure.",
+    "poolManagers": {
+      "hedgeHookPoolManager": {
+        "address": "0x403Aa1347a77195FB4dEddc362758AA9e0a48D2E",
+        "manifest": "deployments/fx-hedge-hook-5042002.json",
+        "hookFamilies": [
+          "FxHedgeHook"
+        ]
+      },
+      "fxSwapPoolManager": {
+        "address": "0x3FA22b7Aeda9ebBe34732ea394f1711887363B34",
+        "manifest": "deployments/fxswap-vault-backed-v2-5042002.json",
+        "hookFamilies": [
+          "FxSwapHook",
+          "TelaranaGatewayHubHook"
+        ]
+      }
+    }
+  },
+  "officialArcMainnet": {
+    "status": "pending-official-uniswap-v4-addresses",
+    "chainId": null,
+    "contracts": {
+      "PoolManager": null,
+      "PositionManager": null,
+      "UniversalRouter": null,
+      "Quoter": null,
+      "StateView": null,
+      "Permit2": null
+    },
+    "requiredContracts": [
+      "PoolManager",
+      "PositionManager",
+      "UniversalRouter",
+      "Quoter",
+      "StateView",
+      "Permit2"
+    ],
+    "hookRedeployPlan": {
+      "status": "pending-official-uniswap-v4-addresses",
+      "command": "bun run uniswap:official-arc:hooks:plan",
+      "currentResult": "PASS=28 WARN=1 FAIL=0",
+      "requiredChecks": [
+        "Official PoolManager comes from the populated official Arc deployment input.",
+        "Official PoolManager does not reuse a self-deployed Arc testnet PoolManager.",
+        "FxHedgeHook deploy script mines against an env-provided POOL_MANAGER and has six source pool templates.",
+        "FxSwapHook deploy script and salt miner include the current vault-backed FX_VAULT constructor argument.",
+        "FxSwapHook batch deploy script remains explicitly vault-backed.",
+        "TelaranaGatewayHubHook official deployment uses the CREATE2 runCreate2 permission-bit path.",
+        "Each source hook address low-14 bits match the family permission flags before remine/redeploy."
+      ]
+    },
+    "deploymentInputTemplate": "deployments/uniswap-v4-official-arc-input.template.json",
+    "deploymentInputCheckCommand": "bun run uniswap:official-arc:input:check",
+    "currentDeploymentInputResult": "PASS=11 WARN=1 FAIL=0",
+    "deploymentInputSelfTestCommand": "bun run uniswap:official-arc:input:self-test",
+    "currentDeploymentInputSelfTestResult": "PASS=8 FAIL=0",
+    "deploymentInputRequiredChecks": [
+      "Default template stays pending with all official contract addresses unset.",
+      "Populated official input must source addresses from the official Uniswap v4 deployments page.",
+      "Populated official PoolManager must not reuse a self-deployed Arc testnet PoolManager.",
+      "Populated official Permit2 must match the canonical Permit2 address.",
+      "When OFFICIAL_ARC_RPC_URL is set, every populated official contract address must have deployed bytecode."
+    ],
+    "poolPublication": {
+      "status": "pending-official-uniswap-v4-addresses",
+      "inputTemplate": "deployments/uniswap-v4-official-arc-pools.template.json",
+      "command": "bun run uniswap:official-arc:pools:check",
+      "currentResult": "PASS=31 WARN=1 FAIL=0",
+      "selfTestCommand": "bun run uniswap:official-arc:pools:self-test",
+      "currentSelfTestResult": "PASS=7 FAIL=0",
+      "expectedPoolTemplateCount": 11,
+      "officialPools": [],
+      "requiredPoolFields": [
+        "family",
+        "symbol",
+        "poolManager",
+        "hookAddress",
+        "poolId",
+        "poolKey",
+        "initializeTx",
+        "firstLiquidityTx",
+        "routerQuoterStatus",
+        "stateViewVerification",
+        "subgraphVerification"
+      ],
+      "requiredChecks": [
+        "Official pool count matches the manifest-derived source pool template count.",
+        "Each official pool PoolManager equals sourceDeploymentInput.contracts.PoolManager.",
+        "No official pool reuses a self-deployed Arc testnet PoolManager.",
+        "Official hook address low-14 permission bits match the source hook family.",
+        "Each official poolId is unique and derives from its official PoolKey.",
+        "Each official family/symbol publication label is unique.",
+        "Router-active claims require firstLiquidityTx, StateView verification, and subgraph verification.",
+        "Populated draft files may run offline preflight but cannot be used for official indexing readiness claims.",
+        "Populated ready files require OFFICIAL_ARC_RPC_URL and live official PoolManager receipt verification.",
+        "Pool publication checker self-test proves populated draft mode passes offline and populated ready mode fails without official RPC receipt verification.",
+        "Populated ready files require concrete StateView sqrtPriceX96 and nonzero liquidity evidence for every official pool.",
+        "Populated ready files require concrete subgraph id, hooks, token0, token1, feeTier, tickSpacing, price state, and nonzero liquidity evidence for every official pool.",
+        "When OFFICIAL_ARC_RPC_URL is set, initializeTx must emit the official PoolManager Initialize event for the published PoolKey.",
+        "When OFFICIAL_ARC_RPC_URL is set, firstLiquidityTx must emit a positive official PoolManager ModifyLiquidity event for the published poolId."
+      ]
+    },
+    "migrationChecklist": [
+      "Fetch official Arc PoolManager, PositionManager, UniversalRouter, Quoter, StateView, and Permit2 addresses from Uniswap deployments docs.",
+      "Run the official hook remine/redeploy planner and verify all deploy scripts still match the current hook constructors.",
+      "Redeploy or remine each hook against the official PoolManager constructor argument.",
+      "Initialize pools with official PoolManager.initialize using the target PoolKey and published sqrtPriceX96.",
+      "Mint/add liquidity through official periphery or a reviewed Universal Router-compatible path.",
+      "Populate the official Arc pool publication input with PoolKey, poolId, initialize tx, first liquidity tx, router/quoter status, StateView status, and subgraph status.",
+      "Publish PoolKey, poolId, initialize tx, first liquidity tx, hook address, hook permission flags, and router/quoter support status.",
+      "Verify pool state through official StateView by poolId.",
+      "Verify pools through the official v4 subgraph by poolId and hooks field."
+    ],
+    "stateViewVerification": {
+      "status": "pending-official-arc-stateview-and-official-poolids",
+      "command": "bun run uniswap:stateview:check",
+      "currentResult": "PASS=13 WARN=1 FAIL=0",
+      "rpcEnv": "OFFICIAL_ARC_RPC_URL",
+      "poolPublicationInputEnv": "OFFICIAL_ARC_POOL_PUBLICATION_INPUT",
+      "requiredContract": "StateView",
+      "requiredPoolFields": [
+        "poolId",
+        "currency0",
+        "currency1",
+        "fee",
+        "tickSpacing",
+        "hooks",
+        "sqrtPriceX96",
+        "liquidity"
+      ],
+      "officialPools": [],
+      "requiredChecks": [
+        "StateView bytecode exists at the official address",
+        "StateView.getSlot0(poolId) returns nonzero sqrtPriceX96 for each official pool",
+        "StateView.getLiquidity(poolId) is nonzero before router-active/liquid-market claims",
+        "PoolKey fields match published official PoolKey evidence"
+      ]
+    },
+    "subgraphVerification": {
+      "status": "pending-official-arc-subgraph-and-official-poolids",
+      "command": "bun run uniswap:subgraph:check",
+      "currentResult": "PASS=15 WARN=1 FAIL=0",
+      "endpointEnv": "UNISWAP_V4_SUBGRAPH_URL",
+      "poolPublicationInputEnv": "OFFICIAL_ARC_POOL_PUBLICATION_INPUT",
+      "requiredPoolFields": [
+        "id",
+        "hooks",
+        "liquidity",
+        "sqrtPrice",
+        "tick",
+        "tickSpacing",
+        "feeTier",
+        "token0",
+        "token1"
+      ],
+      "officialPools": [],
+      "requiredChecks": [
+        "pool entity exists by official poolId",
+        "pool.hooks equals the official hook address",
+        "pool token0/token1/feeTier match the official PoolKey",
+        "pool tickSpacing matches the official PoolKey",
+        "pool liquidity is nonzero before router-active/liquid-market claims"
+      ]
+    }
+  },
+  "officialMultichain": {
+    "status": "official-addresses-known-for-avalanche-and-arbitrum-arc-and-fuji-pending",
+    "manifest": "deployments/uniswap-v4-official-multichain-readiness.json",
+    "command": "bun run uniswap:official-multichain:check",
+    "currentResult": "PASS=128 WARN=4 FAIL=0",
+    "source": "https://developers.uniswap.org/docs/protocols/v4/deployments",
+    "requiredTargets": [
+      "arc-mainnet",
+      "avalanche-fuji",
+      "avalanche",
+      "arbitrum-one"
+    ],
+    "claimPolicy": [
+      "Avalanche and Arbitrum have official Uniswap v4 contract addresses, but fx-Telarana hook indexing still requires hook redeploy, PoolManager Initialize txs, first liquidity, StateView verification, subgraph verification, and exact-input Quoter diagnostics.",
+      "Avalanche Fuji is rehearsal-only until the official Uniswap deployments page lists Fuji v4 addresses.",
+      "Arc mainnet remains pending until the official Uniswap deployments page lists Arc v4 addresses.",
+      "Self-deployed Arc testnet and Fuji rehearsal PoolManagers must not be used for official Uniswap indexing claims."
+    ]
+  },
+  "pools": [
+    {
+      "family": "FxHedgeHook",
+      "symbol": "JPYC/USDC",
+      "status": "live",
+      "poolManager": "0x403Aa1347a77195FB4dEddc362758AA9e0a48D2E",
+      "poolId": "0xd19440c05e5c0d9549187e01162e8aeab29c196c3177cde6360db740b8aa3504",
+      "poolKey": {
+        "currency0": "0x3600000000000000000000000000000000000000",
+        "currency1": "0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29",
+        "fee": 100,
+        "tickSpacing": 1,
+        "hooks": "0x466e2BBFbF3D2Ca1a90eCf25fFF1e275b548C540"
+      },
+      "initializeTx": "0xa2564c11072dddd7f56fa7150d2da815d6047f1cc6a8294782cd2ddb1687335e",
+      "initializeBlock": 44167775,
+      "configureTx": "0xc47673efe48919516cbc22772b73f7c9be0240b60e4b412c6c7a598ccac6c9d4",
+      "configureBlock": 44167922,
+      "bindGatewayRouteTx": null,
+      "sqrtPriceX96": "970342857091245926266988841461028654",
+      "hookPermissions": {
+        "low14Bits": 1344,
+        "flags": [
+          "afterAddLiquidity",
+          "afterRemoveLiquidity",
+          "afterSwap"
+        ],
+        "customDeltas": false
+      },
+      "liquidityReadiness": {
+        "status": "pending-first-liquidity",
+        "command": "bun run uniswap:hedge:liquidity",
+        "currentResult": "PASS=1 WARN=13 FAIL=0",
+        "currentInRangeLiquidity": "0 for all six live FxHedgeHook pools",
+        "firstLiquidityTx": null,
+        "operatorPlanCommand": "bun run uniswap:hedge:liquidity:plan",
+        "operatorPlanScript": "scripts/plan-fx-hedge-liquidity-seeding.ts",
+        "currentOperatorPlanResult": "PASS=32 WARN=1 FAIL=0",
+        "operatorCommand": "bun run hedge:arc:seed-liquidity",
+        "operatorScript": "contracts/script/SeedFxHedgeHookLiquidity.s.sol",
+        "routerActiveClaim": "Do not claim router-active/liquid hedge markets until first liquidity txs are published and current in-range liquidity is nonzero."
+      },
+      "routerQuoterStatus": {
+        "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+        "hookData": "0x",
+        "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+        "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+        "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+      }
+    },
+    {
+      "family": "FxHedgeHook",
+      "symbol": "cirBTC/USDC",
+      "status": "live",
+      "poolManager": "0x403Aa1347a77195FB4dEddc362758AA9e0a48D2E",
+      "poolId": "0x33e42e1b20e3ea50b925963b583a033a8b959f53ffe76fb18cb97a6c6a171a8d",
+      "poolKey": {
+        "currency0": "0x3600000000000000000000000000000000000000",
+        "currency1": "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF",
+        "fee": 3000,
+        "tickSpacing": 60,
+        "hooks": "0x466e2BBFbF3D2Ca1a90eCf25fFF1e275b548C540"
+      },
+      "initializeTx": "0x1e662456f1979eb6362935cc0057fce66a37fdd188d941d0d3f8a631b5b7b22c",
+      "initializeBlock": 44167774,
+      "configureTx": "0xfae6941012283969cdfd0d943bb5aedb5a1fd427980afc4c642f58d30c04e99b",
+      "configureBlock": 44167917,
+      "bindGatewayRouteTx": null,
+      "sqrtPriceX96": "2505414483750479311864138015",
+      "hookPermissions": {
+        "low14Bits": 1344,
+        "flags": [
+          "afterAddLiquidity",
+          "afterRemoveLiquidity",
+          "afterSwap"
+        ],
+        "customDeltas": false
+      },
+      "liquidityReadiness": {
+        "status": "pending-first-liquidity",
+        "command": "bun run uniswap:hedge:liquidity",
+        "currentResult": "PASS=1 WARN=13 FAIL=0",
+        "currentInRangeLiquidity": "0 for all six live FxHedgeHook pools",
+        "firstLiquidityTx": null,
+        "operatorPlanCommand": "bun run uniswap:hedge:liquidity:plan",
+        "operatorPlanScript": "scripts/plan-fx-hedge-liquidity-seeding.ts",
+        "currentOperatorPlanResult": "PASS=32 WARN=1 FAIL=0",
+        "operatorCommand": "bun run hedge:arc:seed-liquidity",
+        "operatorScript": "contracts/script/SeedFxHedgeHookLiquidity.s.sol",
+        "routerActiveClaim": "Do not claim router-active/liquid hedge markets until first liquidity txs are published and current in-range liquidity is nonzero."
+      },
+      "routerQuoterStatus": {
+        "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+        "hookData": "0x",
+        "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+        "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+        "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+      }
+    },
+    {
+      "family": "FxHedgeHook",
+      "symbol": "EURC/USDC",
+      "status": "live",
+      "poolManager": "0x403Aa1347a77195FB4dEddc362758AA9e0a48D2E",
+      "poolId": "0x0a463f18e563a62ab306eb375452c3feebe9ccbdab822b3c3582ddd13443ce00",
+      "poolKey": {
+        "currency0": "0x3600000000000000000000000000000000000000",
+        "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+        "fee": 100,
+        "tickSpacing": 1,
+        "hooks": "0x466e2BBFbF3D2Ca1a90eCf25fFF1e275b548C540"
+      },
+      "initializeTx": "0x1b7a1a38a1960319a8d60a6ddf3e04a2d9d6f1ebd4931c86eaddfc4fbbcd128e",
+      "initializeBlock": 45516459,
+      "configureTx": "0xd1da69388c0228c2a265172ecd05f9164bf7e63b9239373518ceb057915721ed",
+      "configureBlock": 45516471,
+      "bindGatewayRouteTx": null,
+      "sqrtPriceX96": "73498970354238122789021336980",
+      "hookPermissions": {
+        "low14Bits": 1344,
+        "flags": [
+          "afterAddLiquidity",
+          "afterRemoveLiquidity",
+          "afterSwap"
+        ],
+        "customDeltas": false
+      },
+      "liquidityReadiness": {
+        "status": "pending-first-liquidity",
+        "command": "bun run uniswap:hedge:liquidity",
+        "currentResult": "PASS=1 WARN=13 FAIL=0",
+        "currentInRangeLiquidity": "0 for all six live FxHedgeHook pools",
+        "firstLiquidityTx": null,
+        "operatorPlanCommand": "bun run uniswap:hedge:liquidity:plan",
+        "operatorPlanScript": "scripts/plan-fx-hedge-liquidity-seeding.ts",
+        "currentOperatorPlanResult": "PASS=32 WARN=1 FAIL=0",
+        "operatorCommand": "bun run hedge:arc:seed-liquidity",
+        "operatorScript": "contracts/script/SeedFxHedgeHookLiquidity.s.sol",
+        "routerActiveClaim": "Do not claim router-active/liquid hedge markets until first liquidity txs are published and current in-range liquidity is nonzero."
+      },
+      "routerQuoterStatus": {
+        "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+        "hookData": "0x",
+        "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+        "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+        "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+      }
+    },
+    {
+      "family": "FxHedgeHook",
+      "symbol": "AUDF/USDC",
+      "status": "live",
+      "poolManager": "0x403Aa1347a77195FB4dEddc362758AA9e0a48D2E",
+      "poolId": "0x3d6aafb1d198968d10fb9d8596681979be57116efc7dda5f1e2694c6841a3e08",
+      "poolKey": {
+        "currency0": "0x3600000000000000000000000000000000000000",
+        "currency1": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+        "fee": 100,
+        "tickSpacing": 1,
+        "hooks": "0x466e2BBFbF3D2Ca1a90eCf25fFF1e275b548C540"
+      },
+      "initializeTx": "0x879b7286dc07d64ff83258769a19c6709edcda3bf0851765e6979602c4270b1d",
+      "initializeBlock": 45516481,
+      "configureTx": "0xdbf97dd4b1cc12dbd7c6fb2c2c9556c81a25de4a25462d26346ea6dc44cda8b3",
+      "configureBlock": 45516485,
+      "bindGatewayRouteTx": null,
+      "sqrtPriceX96": "93772316753045717403388867293",
+      "hookPermissions": {
+        "low14Bits": 1344,
+        "flags": [
+          "afterAddLiquidity",
+          "afterRemoveLiquidity",
+          "afterSwap"
+        ],
+        "customDeltas": false
+      },
+      "liquidityReadiness": {
+        "status": "pending-first-liquidity",
+        "command": "bun run uniswap:hedge:liquidity",
+        "currentResult": "PASS=1 WARN=13 FAIL=0",
+        "currentInRangeLiquidity": "0 for all six live FxHedgeHook pools",
+        "firstLiquidityTx": null,
+        "operatorPlanCommand": "bun run uniswap:hedge:liquidity:plan",
+        "operatorPlanScript": "scripts/plan-fx-hedge-liquidity-seeding.ts",
+        "currentOperatorPlanResult": "PASS=32 WARN=1 FAIL=0",
+        "operatorCommand": "bun run hedge:arc:seed-liquidity",
+        "operatorScript": "contracts/script/SeedFxHedgeHookLiquidity.s.sol",
+        "routerActiveClaim": "Do not claim router-active/liquid hedge markets until first liquidity txs are published and current in-range liquidity is nonzero."
+      },
+      "routerQuoterStatus": {
+        "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+        "hookData": "0x",
+        "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+        "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+        "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+      }
+    },
+    {
+      "family": "FxHedgeHook",
+      "symbol": "MXNB/USDC",
+      "status": "live",
+      "poolManager": "0x403Aa1347a77195FB4dEddc362758AA9e0a48D2E",
+      "poolId": "0x5bd11000bfaa4f274a1cbc0b7d5c20f92ffc047738ac04963fcaac3221466946",
+      "poolKey": {
+        "currency0": "0x3600000000000000000000000000000000000000",
+        "currency1": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
+        "fee": 100,
+        "tickSpacing": 1,
+        "hooks": "0x466e2BBFbF3D2Ca1a90eCf25fFF1e275b548C540"
+      },
+      "initializeTx": "0x40589ff7072d44afaeb90bacfb3fa65d58a77eba255c2443db9e2e4b5fe2c554",
+      "initializeBlock": 45516495,
+      "configureTx": "0xee1492481b70db7850abaa6202b05b77c8db8ee160cda7d78378699a46628303",
+      "configureBlock": 45516499,
+      "bindGatewayRouteTx": null,
+      "sqrtPriceX96": "329342239632990077748091445442",
+      "hookPermissions": {
+        "low14Bits": 1344,
+        "flags": [
+          "afterAddLiquidity",
+          "afterRemoveLiquidity",
+          "afterSwap"
+        ],
+        "customDeltas": false
+      },
+      "liquidityReadiness": {
+        "status": "pending-first-liquidity",
+        "command": "bun run uniswap:hedge:liquidity",
+        "currentResult": "PASS=1 WARN=13 FAIL=0",
+        "currentInRangeLiquidity": "0 for all six live FxHedgeHook pools",
+        "firstLiquidityTx": null,
+        "operatorPlanCommand": "bun run uniswap:hedge:liquidity:plan",
+        "operatorPlanScript": "scripts/plan-fx-hedge-liquidity-seeding.ts",
+        "currentOperatorPlanResult": "PASS=32 WARN=1 FAIL=0",
+        "operatorCommand": "bun run hedge:arc:seed-liquidity",
+        "operatorScript": "contracts/script/SeedFxHedgeHookLiquidity.s.sol",
+        "routerActiveClaim": "Do not claim router-active/liquid hedge markets until first liquidity txs are published and current in-range liquidity is nonzero."
+      },
+      "routerQuoterStatus": {
+        "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+        "hookData": "0x",
+        "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+        "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+        "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+      }
+    },
+    {
+      "family": "FxHedgeHook",
+      "symbol": "QCAD/USDC",
+      "status": "live",
+      "poolManager": "0x403Aa1347a77195FB4dEddc362758AA9e0a48D2E",
+      "poolId": "0x1ad04bd3b9be342b2c720b5bbde60569cea51b9c343cfb4848f342a45e061fd7",
+      "poolKey": {
+        "currency0": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+        "currency1": "0x3600000000000000000000000000000000000000",
+        "fee": 100,
+        "tickSpacing": 1,
+        "hooks": "0x466e2BBFbF3D2Ca1a90eCf25fFF1e275b548C540"
+      },
+      "initializeTx": "0xd0594a7fa15d4eaa6e471a2b308739a2bf428650d70ce64d629e9e03cb82dc34",
+      "initializeBlock": 45516510,
+      "configureTx": "0xca2a4dbb6e75446fc4dfc79396662115ad8ab4aeb8abe2e914789799bc8f81f8",
+      "configureBlock": 45516521,
+      "bindGatewayRouteTx": null,
+      "sqrtPriceX96": "67215703676826037714411714718",
+      "hookPermissions": {
+        "low14Bits": 1344,
+        "flags": [
+          "afterAddLiquidity",
+          "afterRemoveLiquidity",
+          "afterSwap"
+        ],
+        "customDeltas": false
+      },
+      "liquidityReadiness": {
+        "status": "pending-first-liquidity",
+        "command": "bun run uniswap:hedge:liquidity",
+        "currentResult": "PASS=1 WARN=13 FAIL=0",
+        "currentInRangeLiquidity": "0 for all six live FxHedgeHook pools",
+        "firstLiquidityTx": null,
+        "operatorPlanCommand": "bun run uniswap:hedge:liquidity:plan",
+        "operatorPlanScript": "scripts/plan-fx-hedge-liquidity-seeding.ts",
+        "currentOperatorPlanResult": "PASS=32 WARN=1 FAIL=0",
+        "operatorCommand": "bun run hedge:arc:seed-liquidity",
+        "operatorScript": "contracts/script/SeedFxHedgeHookLiquidity.s.sol",
+        "routerActiveClaim": "Do not claim router-active/liquid hedge markets until first liquidity txs are published and current in-range liquidity is nonzero."
+      },
+      "routerQuoterStatus": {
+        "genericV4Quoter": "locally-proven-with-official-v4quoter-diagnostic",
+        "hookData": "0x",
+        "exactInput": "supported-in-local-official-v4quoter-diagnostic",
+        "exactOutput": "supported-in-local-official-v4quoter-diagnostic",
+        "officialArcMainnet": "rerun against official Arc PoolManager and Quoter once Uniswap publishes them"
+      }
+    },
+    {
+      "family": "FxSwapHook",
+      "symbol": "USDC/EURC",
+      "poolManager": "0x3FA22b7Aeda9ebBe34732ea394f1711887363B34",
+      "poolId": "0x4d268583c6cefb4fb959761f3f733c22b6a0bd622a2e7fa04dd30fe6e35e2d9c",
+      "poolKey": {
+        "currency0": "0x3600000000000000000000000000000000000000",
+        "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+        "fee": 100,
+        "tickSpacing": 1,
+        "hooks": "0x5bA91EB2f67302C947dFD35cC75D1dBcDb2CcAc8"
+      },
+      "initializeTx": "0xba9982b907ade0bcb67acabeac7b8bd36628b4e321f8ab8110f9384ce38da72e",
+      "initializeBlock": 44517407,
+      "configureTx": null,
+      "configureBlock": null,
+      "bindGatewayRouteTx": null,
+      "sqrtPriceX96": null,
+      "hookPermissions": {
+        "low14Bits": 2760,
+        "flags": [
+          "beforeAddLiquidity",
+          "beforeRemoveLiquidity",
+          "beforeSwap",
+          "afterSwap",
+          "beforeSwapReturnDelta"
+        ],
+        "customDeltas": true
+      },
+      "liquidityReadiness": null,
+      "routerQuoterStatus": {
+        "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+        "supportedInternalQuote": "direct quote/exact-input protocol router",
+        "exactInput": "supported-via-direct-quote-and-protocol-router",
+        "exactOutput": "unsupported",
+        "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+      }
+    },
+    {
+      "family": "FxSwapHook",
+      "symbol": "USDC/AUDF",
+      "poolManager": "0x3FA22b7Aeda9ebBe34732ea394f1711887363B34",
+      "poolId": "0x7b1fbffcc973902a9cb09cb66f7322f7e750d0f54f953abdea910b2e21267de6",
+      "poolKey": {
+        "currency0": "0x3600000000000000000000000000000000000000",
+        "currency1": "0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b",
+        "fee": 100,
+        "tickSpacing": 1,
+        "hooks": "0x7Af1ed939C2d4965490f1546b08b07e0BFdA0ac8"
+      },
+      "initializeTx": "0xc3c5c4379bf5a4eca36abb822f08af18dca121b4d4de9756f117a9e17984615f",
+      "initializeBlock": 44517559,
+      "configureTx": null,
+      "configureBlock": null,
+      "bindGatewayRouteTx": null,
+      "sqrtPriceX96": null,
+      "hookPermissions": {
+        "low14Bits": 2760,
+        "flags": [
+          "beforeAddLiquidity",
+          "beforeRemoveLiquidity",
+          "beforeSwap",
+          "afterSwap",
+          "beforeSwapReturnDelta"
+        ],
+        "customDeltas": true
+      },
+      "liquidityReadiness": null,
+      "routerQuoterStatus": {
+        "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+        "supportedInternalQuote": "direct quote/exact-input protocol router",
+        "exactInput": "supported-via-direct-quote-and-protocol-router",
+        "exactOutput": "unsupported",
+        "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+      }
+    },
+    {
+      "family": "FxSwapHook",
+      "symbol": "USDC/MXNB",
+      "poolManager": "0x3FA22b7Aeda9ebBe34732ea394f1711887363B34",
+      "poolId": "0x964b698844ab4699762ec07031a2dc953d7cfc17f567dc43faccf6dac23c1c39",
+      "poolKey": {
+        "currency0": "0x3600000000000000000000000000000000000000",
+        "currency1": "0x836F73Fbc370A9329Ba4957E47912DfDBA6BA461",
+        "fee": 100,
+        "tickSpacing": 1,
+        "hooks": "0xe9B0cD01eD5F83EEAe98522052Ae3a798dfb8aC8"
+      },
+      "initializeTx": "0x289fe08e3bb5f0d571b41a2699959cde5adeff3e318a34c0659ee34f0b7af55c",
+      "initializeBlock": 44517669,
+      "configureTx": null,
+      "configureBlock": null,
+      "bindGatewayRouteTx": null,
+      "sqrtPriceX96": null,
+      "hookPermissions": {
+        "low14Bits": 2760,
+        "flags": [
+          "beforeAddLiquidity",
+          "beforeRemoveLiquidity",
+          "beforeSwap",
+          "afterSwap",
+          "beforeSwapReturnDelta"
+        ],
+        "customDeltas": true
+      },
+      "liquidityReadiness": null,
+      "routerQuoterStatus": {
+        "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+        "supportedInternalQuote": "direct quote/exact-input protocol router",
+        "exactInput": "supported-via-direct-quote-and-protocol-router",
+        "exactOutput": "unsupported",
+        "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+      }
+    },
+    {
+      "family": "FxSwapHook",
+      "symbol": "QCAD/USDC",
+      "poolManager": "0x3FA22b7Aeda9ebBe34732ea394f1711887363B34",
+      "poolId": "0x5303c347ab8aa48a98f6738d4598bd3d8db7a9924143a990ad883cd54a7adb41",
+      "poolKey": {
+        "currency0": "0x23d7CFFd0876f3ABb6B074287ba2aeefBc83825d",
+        "currency1": "0x3600000000000000000000000000000000000000",
+        "fee": 100,
+        "tickSpacing": 1,
+        "hooks": "0x6f80Ab06A4e359e9E6D025105945f02CcC98CAc8"
+      },
+      "initializeTx": "0xb2d63cb96b38d981b9605013f88837b5ae614ae2088463a2beeeea15c63eaaf5",
+      "initializeBlock": 44517765,
+      "configureTx": null,
+      "configureBlock": null,
+      "bindGatewayRouteTx": null,
+      "sqrtPriceX96": null,
+      "hookPermissions": {
+        "low14Bits": 2760,
+        "flags": [
+          "beforeAddLiquidity",
+          "beforeRemoveLiquidity",
+          "beforeSwap",
+          "afterSwap",
+          "beforeSwapReturnDelta"
+        ],
+        "customDeltas": true
+      },
+      "liquidityReadiness": null,
+      "routerQuoterStatus": {
+        "genericV4Quoter": "diagnostic-proven-not-generic-empty-hookdata",
+        "supportedInternalQuote": "direct quote/exact-input protocol router",
+        "exactInput": "supported-via-direct-quote-and-protocol-router",
+        "exactOutput": "unsupported",
+        "settlementCaveat": "Requires PMM-aware exact-input settlement; canonical PoolSwapTest and generic empty-hookData V4Quoter do not pre-settle input into PoolManager before FxSwapHook.beforeSwap pulls input into SharedFxVault."
+      }
+    },
+    {
+      "family": "TelaranaGatewayHubHook",
+      "symbol": "USDC/EURC",
+      "status": "live-gateway-demo",
+      "poolManager": "0x3FA22b7Aeda9ebBe34732ea394f1711887363B34",
+      "poolId": "0xf6b13fe5ae3115d159b3a844a56588d1549293fb6725040f01c54ba31827f711",
+      "poolKey": {
+        "currency0": "0x3600000000000000000000000000000000000000",
+        "currency1": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+        "fee": 100,
+        "tickSpacing": 1,
+        "hooks": "0xe895CB461AFF6E98167a7FA0Db252ba906714088"
+      },
+      "initializeTx": "0x91f605e7556c5aec98fd2a93ea00777321b55cdaf501a371404b708d01ce2921",
+      "initializeBlock": null,
+      "configureTx": null,
+      "configureBlock": null,
+      "bindGatewayRouteTx": "0x1b885470b6a0c862fd31d06ace2a433c5c6912154bf96f38e076383bcb9533a5",
+      "sqrtPriceX96": "0xf52559aa0006380000000000",
+      "hookPermissions": {
+        "low14Bits": 136,
+        "flags": [
+          "beforeSwap",
+          "beforeSwapReturnDelta"
+        ],
+        "customDeltas": true
+      },
+      "liquidityReadiness": null,
+      "routerQuoterStatus": {
+        "genericV4Quoter": "not-generic-hookdata-required",
+        "hookData": "Gateway route and attestation context required",
+        "exactOutput": "unsupported"
+      }
+    }
+  ],
+  "evidenceCommands": {
+    "offlineReadiness": "bun run uniswap:indexing:check",
+    "officialArcReadiness": "bun run uniswap:official-arc:check",
+    "officialArcMigrationPlan": "bun run uniswap:official-arc:plan",
+    "officialArcHookRedeployPlan": "bun run uniswap:official-arc:hooks:plan",
+    "officialArcDeploymentInputCheck": "bun run uniswap:official-arc:input:check",
+    "officialArcDeploymentInputSelfTest": "bun run uniswap:official-arc:input:self-test",
+    "officialArcPoolPublicationCheck": "bun run uniswap:official-arc:pools:check",
+    "officialArcPoolPublicationSelfTest": "bun run uniswap:official-arc:pools:self-test",
+    "officialMultichainReadiness": "bun run uniswap:official-multichain:check",
+    "officialArcStateViewReadiness": "bun run uniswap:stateview:check",
+    "subgraphReadiness": "bun run uniswap:subgraph:check",
+    "submissionEvidenceExport": "bun run uniswap:evidence:export",
+    "submissionEvidenceSnapshot": "bun run uniswap:evidence:write",
+    "submissionEvidenceFreshness": "bun run uniswap:evidence:check",
+    "onchainReceiptVerifier": "bun run uniswap:indexing:onchain",
+    "hedgeHookLiquidityVerifier": "bun run uniswap:hedge:liquidity",
+    "hedgeHookLiquiditySeedPlan": "bun run uniswap:hedge:liquidity:plan",
+    "hedgeHookLiquidityOperatorScript": "bun run hedge:arc:seed-liquidity",
+    "hedgeHookV4QuoterDiagnostic": "bun run uniswap:hedge:v4quoter",
+    "fxSwapHookV4QuoterDiagnostic": "bun run uniswap:fxswap:v4quoter",
+    "pendingHedgePoolsPlan": "bun run hedge:arc:plan-stables",
+    "pendingHedgePoolsOperatorScript": "bun run hedge:arc:configure-stables"
+  },
+  "submissionPackage": {
+    "indexingEvidenceCommand": "bun run uniswap:evidence:export",
+    "indexingEvidenceSnapshotCommand": "bun run uniswap:evidence:write",
+    "indexingEvidenceCheckCommand": "bun run uniswap:evidence:check",
+    "indexingEvidenceSnapshot": "deployments/uniswap-v4-indexing-evidence-5042002.json",
+    "demoableToday": [
+      "All six FxHedgeHook poolIds initialized and configured on the self-deployed Arc testnet PoolManager",
+      "Vault-backed FxSwapHook direct quote/exact-input routes on the self-deployed Arc testnet PoolManager",
+      "Gateway-backed TelaranaGatewayHubHook demo route requiring Gateway hookData"
+    ],
+    "doNotClaimYet": [
+      "Official Uniswap Arc mainnet indexing, because official Arc v4 addresses are not published in the Uniswap deployments table as of 2026-06-08.",
+      "Official Uniswap Avalanche Fuji indexing, because official Fuji v4 addresses are not published in the Uniswap deployments table as of 2026-06-08 and the recorded Fuji PoolManager is rehearsal-only.",
+      "fx-Telarana hook indexing on Avalanche or Arbitrum, because official v4 contracts are known but protocol hooks still need chain-specific remine/redeploy, PoolManager Initialize txs, first liquidity, StateView verification, subgraph verification, and official Quoter diagnostics.",
+      "Router-active/liquid FxHedgeHook hedge markets, because first liquidity txs are not published yet and current in-range liquidity is zero.",
+      "Generic empty-hookData V4Quoter compatibility for FxSwapHook, because the local diagnostic proves this custom-accounting PMM requires the direct quote/protocol router path instead."
+    ]
+  }
+}

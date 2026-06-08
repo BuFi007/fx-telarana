@@ -76,6 +76,7 @@ contract MineHookSalt is Script {
     ///   FX_ORACLE          — already-deployed FxOracle
     ///   FX_MARKET_REGISTRY — already-deployed FxMarketRegistry
     ///   MORPHO_BLUE        — Morpho Blue
+    ///   FX_VAULT           — SharedFxVault address for hook-owned liquidity
     ///   HOOK_OWNER         — initial owner
     ///   POOL_TOKEN0        — sorted-lower token
     ///   POOL_TOKEN1        — sorted-higher token
@@ -87,6 +88,7 @@ contract MineHookSalt is Script {
         address oracle      = vm.envAddress("FX_ORACLE");
         address registry    = vm.envAddress("FX_MARKET_REGISTRY");
         address morpho      = vm.envAddress("MORPHO_BLUE");
+        address vault       = vm.envAddress("FX_VAULT");
         address hookOwner   = vm.envAddress("HOOK_OWNER");
         address token0      = vm.envAddress("POOL_TOKEN0");
         address token1      = vm.envAddress("POOL_TOKEN1");
@@ -102,7 +104,7 @@ contract MineHookSalt is Script {
         );
 
         bytes memory creationCode = type(FxSwapHook).creationCode;
-        bytes memory ctorArgs = abi.encode(poolManager, oracle, registry, hookOwner, token0, token1, morpho);
+        bytes memory ctorArgs = abi.encode(poolManager, oracle, registry, hookOwner, token0, token1, morpho, vault);
 
         (address hookAddress, bytes32 salt) = HookMiner.find(deployer, flags, creationCode, ctorArgs);
 
@@ -114,6 +116,7 @@ contract MineHookSalt is Script {
         console2.log("oracle      ", oracle);
         console2.log("registry    ", registry);
         console2.log("morpho      ", morpho);
+        console2.log("vault       ", vault);
         console2.log("hookOwner   ", hookOwner);
         console2.log("token0      ", token0);
         console2.log("token1      ", token1);
