@@ -43,7 +43,7 @@ Readiness check:
 bun run uniswap:indexing:check
 ```
 
-Current expected result: `PASS=386 WARN=1 FAIL=0`. The remaining warning is
+Current expected result: `PASS=393 WARN=1 FAIL=0`. The remaining warning is
 `FxHedgeHook` first liquidity, which is required before claiming router-active
 or liquid hedge markets.
 
@@ -163,6 +163,21 @@ evidence, and live receipt checks proving that `initializeTx` emits the official
 `PoolManager.ModifyLiquidity` event. Use the same populated file for the
 StateView and subgraph checks below so official pool records are not duplicated
 across manifests.
+
+Official Arc pool publication fill plan:
+
+```bash
+bun run uniswap:official-arc:pools:plan
+```
+
+Current expected result: `PASS=58 WARN=1 FAIL=0`. The warning is expected
+while the official Arc `PoolManager` is still pending. This read-only planner
+derives all 11 official pool records from the Arc testnet evidence manifest and
+prints the exact fields operators must populate after official hook redeploys:
+official hook address, official `PoolKey`, derived `poolId`, initialize tx,
+first-liquidity tx, route/quoter status, StateView evidence, subgraph evidence,
+and receipt verification flags. It is not a readiness claim; the populated file
+must still pass `bun run uniswap:official-arc:pools:check`.
 
 Official Arc pool publication checker self-test:
 
@@ -359,14 +374,14 @@ Submission audit:
 bun run uniswap:submission:audit
 ```
 
-Current expected result: `CHECKS=26 PASS=26 WARN=36 FAIL=0`. This is the
+Current expected result: `CHECKS=27 PASS=27 WARN=37 FAIL=0`. This is the
 single reviewer-facing no-broadcast command for the indexing package. It
 re-runs official Uniswap deployment freshness, official Arc and multichain
-readiness gates, deployment-input generation/checks, pool-publication self-tests,
-StateView/subgraph preflights, live `FxHedgeHook.poolConfigs` storage checks,
-`FxHedgeHook` liquidity checks, live Arc PoolManager receipt verification, both
-local official `V4Quoter` diagnostics, and evidence snapshot freshness. The
-warnings are the documented pending
+readiness gates, deployment-input generation/checks, the Arc pool-publication
+fill plan, pool-publication self-tests, StateView/subgraph preflights, live
+`FxHedgeHook.poolConfigs` storage checks, `FxHedgeHook` liquidity checks, live
+Arc PoolManager receipt verification, both local official `V4Quoter`
+diagnostics, and evidence snapshot freshness. The warnings are the documented pending
 conditions: Arc/Fuji official addresses, official-chain pool publication,
 subgraph/StateView readiness before official pool records, and hedge first
 liquidity.
@@ -611,7 +626,7 @@ Ask Claude to verify these points:
 
 1. Run `bun run uniswap:indexing:check` from the `fx-telarana` repo.
 2. Confirm the check exits with `FAIL=0`; the current expected summary is
-   `PASS=386 WARN=1 FAIL=0`.
+   `PASS=393 WARN=1 FAIL=0`.
 3. Run `bun run uniswap:official-arc:check` and confirm official Arc is either
    fully populated from Uniswap docs or still pending with the expected warning;
    current expected summary is `PASS=9 WARN=1 FAIL=0`.
@@ -686,7 +701,7 @@ Ask Claude to verify these points:
 24. Run `bun run uniswap:evidence:check` and confirm the snapshot is fresh.
 25. Run `bun run uniswap:submission:audit` and confirm the executable
    submission audit exits with `FAIL=0`; the current expected summary is
-   `CHECKS=26 PASS=26 WARN=36 FAIL=0`.
+   `CHECKS=27 PASS=27 WARN=37 FAIL=0`.
 26. Run `bun run hedge:arc:plan-stables` and confirm all six hedge pools are
    live/configured; the current expected summary is `PASS=46 WARN=0 FAIL=0`.
 27. Run `bun run uniswap:hedge:liquidity` and confirm it reports zero liquidity

@@ -36,6 +36,7 @@ const CHECKS: AuditCheck[] = [
   { key: "officialArcDeploymentInputSelfTest", label: "official Arc deployment input self-test" },
   { key: "officialArcDeploymentInputGenerateSelfTest", label: "official Arc deployment input generator self-test" },
   { key: "officialArcPoolPublicationCheck", label: "official Arc pool publication" },
+  { key: "officialArcPoolPublicationPlan", label: "official Arc pool-publication fill plan" },
   { key: "officialArcPoolPublicationSelfTest", label: "official Arc pool publication self-test" },
   { key: "officialArcStateViewReadiness", label: "official StateView readiness" },
   { key: "subgraphReadiness", label: "official subgraph readiness" },

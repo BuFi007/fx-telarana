@@ -343,6 +343,25 @@ function checkOfficialMainnetBlock(manifest: AnyRecord): void {
   }
 
   if (
+    typeof poolPublication.planCommand === "string"
+    && poolPublication.planCommand.includes("uniswap:official-arc:pools:plan")
+  ) {
+    pass("official Arc pool publication fill-plan command is recorded");
+  } else {
+    fail("official Arc pool publication fill-plan command is missing");
+  }
+
+  if (
+    typeof poolPublication.currentPlanResult === "string"
+    && poolPublication.currentPlanResult.includes("WARN=1")
+    && poolPublication.currentPlanResult.includes("FAIL=0")
+  ) {
+    pass("official Arc pool publication fill-plan result is recorded");
+  } else {
+    fail("official Arc pool publication fill-plan result is missing");
+  }
+
+  if (
     typeof poolPublication.selfTestCommand === "string"
     && poolPublication.selfTestCommand.includes("uniswap:official-arc:pools:self-test")
   ) {
@@ -387,6 +406,7 @@ function checkOfficialMainnetBlock(manifest: AnyRecord): void {
     "self-deployed Arc testnet PoolManager",
     "low-14 permission bits",
     "poolId is unique",
+    "fill plan",
     "firstLiquidityTx",
     "draft files",
     "ready files require OFFICIAL_ARC_RPC_URL",
@@ -579,6 +599,13 @@ function checkOfficialMainnetBlock(manifest: AnyRecord): void {
     fail(`official Arc pool publication verifier is missing at ${officialArcPoolPublicationScript}`);
   }
 
+  const officialArcPoolPublicationPlan = "scripts/plan-official-arc-pool-publication.ts";
+  if (existsSync(join(ROOT, officialArcPoolPublicationPlan))) {
+    pass(`official Arc pool publication fill planner exists at ${officialArcPoolPublicationPlan}`);
+  } else {
+    fail(`official Arc pool publication fill planner is missing at ${officialArcPoolPublicationPlan}`);
+  }
+
   const officialArcPoolPublicationSelfTest = "scripts/self-test-official-arc-pool-publication.ts";
   if (existsSync(join(ROOT, officialArcPoolPublicationSelfTest))) {
     pass(`official Arc pool publication self-test exists at ${officialArcPoolPublicationSelfTest}`);
@@ -627,6 +654,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialArcDeploymentInputCheck", "uniswap:official-arc:input:check"],
     ["officialArcDeploymentInputSelfTest", "uniswap:official-arc:input:self-test"],
     ["officialArcPoolPublicationCheck", "uniswap:official-arc:pools:check"],
+    ["officialArcPoolPublicationPlan", "uniswap:official-arc:pools:plan"],
     ["officialArcPoolPublicationSelfTest", "uniswap:official-arc:pools:self-test"],
     ["officialMultichainReadiness", "uniswap:official-multichain:check"],
     ["officialMultichainDeploymentInputCheck", "uniswap:official-multichain:input:check"],
@@ -1266,6 +1294,24 @@ function checkSubmissionEvidenceSnapshot(manifest: AnyRecord, snapshot: AnyRecor
     pass("indexing evidence snapshot official Arc pool publication result matches manifest");
   } else {
     fail("indexing evidence snapshot official Arc pool publication result does not match manifest");
+  }
+
+  if (
+    snapshot.officialArcMainnet?.poolPublication?.planCommand
+    === manifest.officialArcMainnet?.poolPublication?.planCommand
+  ) {
+    pass("indexing evidence snapshot official Arc pool publication fill-plan command matches manifest");
+  } else {
+    fail("indexing evidence snapshot official Arc pool publication fill-plan command does not match manifest");
+  }
+
+  if (
+    snapshot.officialArcMainnet?.poolPublication?.currentPlanResult
+    === manifest.officialArcMainnet?.poolPublication?.currentPlanResult
+  ) {
+    pass("indexing evidence snapshot official Arc pool publication fill-plan result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official Arc pool publication fill-plan result does not match manifest");
   }
 
   if (
