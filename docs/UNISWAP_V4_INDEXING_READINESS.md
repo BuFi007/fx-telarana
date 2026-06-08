@@ -43,7 +43,7 @@ Readiness check:
 bun run uniswap:indexing:check
 ```
 
-Current expected result: `PASS=605 WARN=1 FAIL=0`. The remaining warning is
+Current expected result: `PASS=609 WARN=1 FAIL=0`. The remaining warning is
 `FxHedgeHook` first liquidity, which is required before claiming router-active
 or liquid hedge markets.
 
@@ -333,7 +333,10 @@ Arbitrum PoolManager targets, self-deployed PoolManager rejection, and prints
 no-broadcast command templates for FxHedgeHook, FxSwapHook, and
 TelaranaGatewayHubHook on the published official target chains. The four
 warnings are expected: Arc/Fuji official addresses are pending, while Avalanche
-and Arbitrum hook redeploys still need operator broadcast evidence.
+and Arbitrum hook redeploys still need operator broadcast evidence. The
+generated snapshot also requires post-redeploy Universal Router execution
+evidence or an explicit custom-route caveat before official router/indexing
+claims.
 
 Checked multichain hook remine/redeploy plan snapshot:
 
@@ -954,7 +957,7 @@ Ask Claude to verify these points:
 
 1. Run `bun run uniswap:indexing:check` from the `fx-telarana` repo.
 2. Confirm the check exits with `FAIL=0`; the current expected summary is
-   `PASS=605 WARN=1 FAIL=0`.
+   `PASS=609 WARN=1 FAIL=0`.
 3. Run `bun run uniswap:official-arc:check` and confirm official Arc is either
    fully populated from Uniswap docs or still pending with the expected warning;
    current expected summary is `PASS=9 WARN=1 FAIL=0`.

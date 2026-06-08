@@ -1090,6 +1090,13 @@ function checkOfficialMultichainBlock(
         fail(`official multichain hook redeploy snapshot must include three ${network} command templates`);
       }
     }
+
+    const postRedeployEvidence = new Set<string>(target.requiredPostRedeployEvidence ?? []);
+    if (postRedeployEvidence.has("universalRouterExecutionEvidenceOrCustomRouteCaveat")) {
+      pass(`official multichain hook redeploy snapshot requires ${network} Universal Router execution evidence`);
+    } else {
+      fail(`official multichain hook redeploy snapshot must require ${network} Universal Router execution evidence`);
+    }
   }
 
   const hookRedeployChecks = Array.isArray(hookRedeployPlan.requiredChecks) ? hookRedeployPlan.requiredChecks.join("\n") : "";

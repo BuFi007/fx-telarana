@@ -31,7 +31,8 @@
         "firstLiquidityTx",
         "stateViewSlot0AndLiquidity",
         "subgraphPoolEntity",
-        "v4QuoterExactInputDiagnosticOrCustomRouteCaveat"
+        "v4QuoterExactInputDiagnosticOrCustomRouteCaveat",
+        "universalRouterExecutionEvidenceOrCustomRouteCaveat"
       ]
     },
     {
@@ -51,7 +52,8 @@
         "firstLiquidityTx",
         "stateViewSlot0AndLiquidity",
         "subgraphPoolEntity",
-        "v4QuoterExactInputDiagnosticOrCustomRouteCaveat"
+        "v4QuoterExactInputDiagnosticOrCustomRouteCaveat",
+        "universalRouterExecutionEvidenceOrCustomRouteCaveat"
       ]
     },
     {
@@ -88,7 +90,8 @@
         "firstLiquidityTx",
         "stateViewSlot0AndLiquidity",
         "subgraphPoolEntity",
-        "v4QuoterExactInputDiagnosticOrCustomRouteCaveat"
+        "v4QuoterExactInputDiagnosticOrCustomRouteCaveat",
+        "universalRouterExecutionEvidenceOrCustomRouteCaveat"
       ]
     },
     {
@@ -125,7 +128,8 @@
         "firstLiquidityTx",
         "stateViewSlot0AndLiquidity",
         "subgraphPoolEntity",
-        "v4QuoterExactInputDiagnosticOrCustomRouteCaveat"
+        "v4QuoterExactInputDiagnosticOrCustomRouteCaveat",
+        "universalRouterExecutionEvidenceOrCustomRouteCaveat"
       ]
     }
   ]

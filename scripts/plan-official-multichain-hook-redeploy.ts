@@ -332,6 +332,7 @@ function buildRedeployPacket(targets: AnyRecord[]): AnyRecord {
         "stateViewSlot0AndLiquidity",
         "subgraphPoolEntity",
         "v4QuoterExactInputDiagnosticOrCustomRouteCaveat",
+        "universalRouterExecutionEvidenceOrCustomRouteCaveat",
       ],
     })),
   };
