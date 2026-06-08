@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-08",
+  "sourceManifest": "deployments/uniswap-v4-indexing-readiness-5042002.json",
+  "sourceMultichainManifest": "deployments/uniswap-v4-official-multichain-readiness.json",
+  "status": "pending-pool-publication-evidence",
+  "expectedPoolTemplateCount": 11,
+  "poolTemplatesFromManifest": true,
+  "requiredTargetNetworks": [
+    "arc-mainnet",
+    "avalanche-fuji",
+    "avalanche",
+    "arbitrum-one"
+  ],
+  "requiredPoolFields": [
+    "family",
+    "symbol",
+    "poolManager",
+    "hookAddress",
+    "poolId",
+    "poolKey",
+    "initializeTx",
+    "firstLiquidityTx",
+    "routerActiveClaim",
+    "routerQuoterStatus",
+    "stateViewVerification",
+    "subgraphVerification",
+    "receiptVerification"
+  ],
+  "requiredReadyEvidence": [
+    "PoolManager Initialize receipt emitted by the official target-chain PoolManager",
+    "positive PoolManager ModifyLiquidity receipt emitted by the official target-chain PoolManager",
+    "StateView slot0 sqrtPriceX96 and nonzero liquidity",
+    "Uniswap v4 subgraph pool entity with matching hooks, tokens, fee, tickSpacing, price state, and nonzero liquidity",
+    "official Quoter exact-input diagnostic or explicitly documented custom-route caveat"
+  ],
+  "targets": [
+    {
+      "network": "arc-mainnet",
+      "chainId": null,
+      "status": "pending-official-uniswap-v4-addresses",
+      "officialPoolManager": null,
+      "rpcEnv": "OFFICIAL_ARC_RPC_URL",
+      "officialPools": []
+    },
+    {
+      "network": "avalanche-fuji",
+      "chainId": 43113,
+      "status": "pending-official-uniswap-v4-addresses",
+      "officialPoolManager": null,
+      "rpcEnv": "AVALANCHE_FUJI_RPC_URL",
+      "rehearsalPoolManager": "0x5A517f51edca02880542effb8b6a3bdFaAcaD8B2",
+      "officialPools": []
+    },
+    {
+      "network": "avalanche",
+      "chainId": 43114,
+      "status": "pending-official-hook-pool-publication",
+      "officialPoolManager": "0x06380c0e0912312b5150364b9dc4542ba0dbbc85",
+      "rpcEnv": "AVALANCHE_RPC_URL",
+      "officialPools": []
+    },
+    {
+      "network": "arbitrum-one",
+      "chainId": 42161,
+      "status": "pending-official-hook-pool-publication",
+      "officialPoolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+      "rpcEnv": "ARBITRUM_RPC_URL",
+      "officialPools": []
+    }
+  ],
+  "notes": [
+    "Keep this template pending until target-chain hook redeploys, PoolManager initialize txs, first-liquidity txs, StateView evidence, subgraph evidence, and Quoter diagnostics exist.",
+    "Avalanche and Arbitrum have official Uniswap v4 contract addresses, but their official fx-Telarana hook pool records intentionally remain empty until chain-specific deployment evidence is populated.",
+    "Avalanche Fuji is rehearsal-only until Uniswap publishes official Fuji v4 addresses.",
+    "Use OFFICIAL_MULTICHAIN_POOL_PUBLICATION_INPUT=<populated-file> bun run uniswap:official-multichain:pools:check before claiming any target-chain hook pool is officially indexed.",
+    "Use target status=draft for populated offline preflight; use status=ready only when the target RPC env can verify official PoolManager Initialize and positive ModifyLiquidity receipts."
+  ],
+  "command": "bun run uniswap:official-multichain:pools:check",
+  "currentResult": "PASS=67 WARN=4 FAIL=0"
+}

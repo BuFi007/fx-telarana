@@ -15,6 +15,7 @@ const ROOT = resolve(import.meta.dir, "..");
 const MANIFEST = "deployments/uniswap-v4-indexing-readiness-5042002.json";
 const EVIDENCE_SNAPSHOT = "deployments/uniswap-v4-indexing-evidence-5042002.json";
 const MULTICHAIN_MANIFEST = "deployments/uniswap-v4-official-multichain-readiness.json";
+const MULTICHAIN_POOL_PUBLICATION = "deployments/uniswap-v4-official-multichain-pools.template.json";
 const OFFICIAL_ARC_INPUT_TEMPLATE = "deployments/uniswap-v4-official-arc-input.template.json";
 const HEDGE_DEPLOYMENT = "deployments/fx-hedge-hook-5042002.json";
 const HEDGE_STABLE_DEPLOYMENT = "deployments/fx-hedge-stable-pools-5042002.json";
@@ -565,6 +566,7 @@ function checkEvidenceCommands(manifest: AnyRecord): void {
     ["officialArcPoolPublicationCheck", "uniswap:official-arc:pools:check"],
     ["officialArcPoolPublicationSelfTest", "uniswap:official-arc:pools:self-test"],
     ["officialMultichainReadiness", "uniswap:official-multichain:check"],
+    ["officialMultichainPoolPublication", "uniswap:official-multichain:pools:check"],
     ["officialArcStateViewReadiness", "uniswap:stateview:check"],
     ["subgraphReadiness", "uniswap:subgraph:check"],
     ["submissionEvidenceExport", "uniswap:evidence:export"],
@@ -628,6 +630,58 @@ function checkOfficialMultichainBlock(
     pass("official multichain readiness result is recorded");
   } else {
     fail("official multichain readiness result is missing");
+  }
+
+  const publication = block.poolPublication ?? {};
+  if (publication.manifest === MULTICHAIN_POOL_PUBLICATION) {
+    pass("official multichain pool publication manifest path is recorded");
+  } else {
+    fail("official multichain pool publication manifest path is missing");
+  }
+
+  if (existsSync(join(ROOT, MULTICHAIN_POOL_PUBLICATION))) {
+    pass(`official multichain pool publication template exists at ${MULTICHAIN_POOL_PUBLICATION}`);
+  } else {
+    fail(`official multichain pool publication template is missing at ${MULTICHAIN_POOL_PUBLICATION}`);
+  }
+
+  const publicationScript = "scripts/check-official-multichain-pool-publication.ts";
+  if (existsSync(join(ROOT, publicationScript))) {
+    pass(`official multichain pool publication verifier exists at ${publicationScript}`);
+  } else {
+    fail(`official multichain pool publication verifier is missing at ${publicationScript}`);
+  }
+
+  if (
+    typeof publication.command === "string"
+    && publication.command.includes("uniswap:official-multichain:pools:check")
+  ) {
+    pass("official multichain pool publication command is recorded");
+  } else {
+    fail("official multichain pool publication command is missing");
+  }
+
+  if (
+    typeof publication.currentResult === "string"
+    && publication.currentResult.includes("WARN=4")
+    && publication.currentResult.includes("FAIL=0")
+  ) {
+    pass("official multichain pool publication result is recorded");
+  } else {
+    fail("official multichain pool publication result is missing");
+  }
+
+  const publicationChecks = Array.isArray(publication.requiredChecks) ? publication.requiredChecks.join("\n") : "";
+  for (const snippet of [
+    "target chain status",
+    "official PoolManager",
+    "Self-deployed Arc testnet",
+    "low-14 permission bits",
+    "poolIds must derive",
+    "live target-chain PoolManager receipt verification",
+  ]) {
+    if (publicationChecks.includes(snippet)) pass(`official multichain pool publication checks cover ${snippet}`);
+    else fail(`official multichain pool publication checks must cover ${snippet}`);
   }
 
   if (multichain.schemaVersion === 1) {
@@ -711,6 +765,15 @@ function checkOfficialMultichainBlock(
     pass("indexing evidence snapshot official multichain result matches manifest");
   } else {
     fail("indexing evidence snapshot official multichain result does not match manifest");
+  }
+
+  if (
+    snapshot.officialMultichain?.poolPublication?.currentResult
+    === block.poolPublication?.currentResult
+  ) {
+    pass("indexing evidence snapshot official multichain pool publication result matches manifest");
+  } else {
+    fail("indexing evidence snapshot official multichain pool publication result does not match manifest");
   }
 }
 

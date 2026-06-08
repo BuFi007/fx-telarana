@@ -13,6 +13,7 @@ type Severity = "PASS" | "WARN" | "FAIL";
 
 const ROOT = resolve(import.meta.dir, "..");
 const MULTICHAIN_MANIFEST = "deployments/uniswap-v4-official-multichain-readiness.json";
+const MULTICHAIN_POOL_PUBLICATION = "deployments/uniswap-v4-official-multichain-pools.template.json";
 const ARC_READINESS_MANIFEST = "deployments/uniswap-v4-indexing-readiness-5042002.json";
 const DEPLOYMENTS_URL = "https://developers.uniswap.org/docs/protocols/v4/deployments";
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
@@ -167,6 +168,60 @@ function checkRequiredEvidence(manifest: AnyRecord, target: AnyRecord): void {
   for (const snippet of ["PoolManager", "liquidity", "StateView", "subgraph"]) {
     if (actions.includes(snippet)) pass(`${target.network} next actions cover ${snippet}`);
     else fail(`${target.network} next actions must cover ${snippet}`);
+  }
+}
+
+function checkPoolPublicationBlock(manifest: AnyRecord): void {
+  const publication = manifest.poolPublication ?? {};
+  if (publication.manifest === MULTICHAIN_POOL_PUBLICATION) {
+    pass("multichain pool publication manifest path is recorded");
+  } else {
+    fail("multichain pool publication manifest path is missing");
+  }
+
+  if (existsSync(join(ROOT, MULTICHAIN_POOL_PUBLICATION))) {
+    pass(`multichain pool publication template exists at ${MULTICHAIN_POOL_PUBLICATION}`);
+  } else {
+    fail(`multichain pool publication template is missing at ${MULTICHAIN_POOL_PUBLICATION}`);
+  }
+
+  const script = "scripts/check-official-multichain-pool-publication.ts";
+  if (existsSync(join(ROOT, script))) {
+    pass(`multichain pool publication verifier exists at ${script}`);
+  } else {
+    fail(`multichain pool publication verifier is missing at ${script}`);
+  }
+
+  if (
+    typeof publication.command === "string"
+    && publication.command.includes("uniswap:official-multichain:pools:check")
+  ) {
+    pass("multichain pool publication command is recorded");
+  } else {
+    fail("multichain pool publication command is missing");
+  }
+
+  if (
+    typeof publication.currentResult === "string"
+    && publication.currentResult.includes("WARN=4")
+    && publication.currentResult.includes("FAIL=0")
+  ) {
+    pass("multichain pool publication result is recorded");
+  } else {
+    fail("multichain pool publication result is missing");
+  }
+
+  const checks = Array.isArray(publication.requiredChecks) ? publication.requiredChecks.join("\n") : "";
+  for (const snippet of [
+    "target chain status",
+    "official PoolManager",
+    "Self-deployed Arc testnet",
+    "low-14 permission bits",
+    "poolIds must derive",
+    "live target-chain PoolManager receipt verification",
+  ]) {
+    if (checks.includes(snippet)) pass(`multichain pool publication checks cover ${snippet}`);
+    else fail(`multichain pool publication checks must cover ${snippet}`);
   }
 }
 
@@ -325,6 +380,8 @@ async function main(): Promise<void> {
     if (claimPolicy.includes(snippet)) pass(`claim policy covers ${snippet}`);
     else fail(`claim policy must cover ${snippet}`);
   }
+
+  checkPoolPublicationBlock(manifest);
 
   for (const target of targets) {
     await checkTarget(manifest, target, selfPoolManagers);
