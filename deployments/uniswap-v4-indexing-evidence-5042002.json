@@ -241,7 +241,7 @@
         "For Avalanche and Arbitrum One, use only the official Uniswap PoolManager from the manifest.",
         "Reject self-deployed Arc testnet and Fuji rehearsal PoolManager reuse.",
         "Print no-broadcast target-chain command templates for the hook redeploy operator.",
-        "Keep target-chain hook pool indexing pending until broadcast, initialize, first-liquidity, StateView, subgraph, and Quoter evidence exists."
+        "Keep target-chain hook pool indexing pending until broadcast, initialize, first-liquidity, StateView, subgraph, Quoter, and Universal Router execution evidence exists."
       ]
     },
     "sourceFreshness": {
