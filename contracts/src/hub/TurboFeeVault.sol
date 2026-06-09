@@ -32,15 +32,30 @@ contract TurboFeeVault is ITurboFeeVault, AccessControl, ReentrancyGuard {
     // --- Destinations ---
     address public protocolTreasury;
     uint256 public insuranceBalance;
+    /// @notice F-10: insurance payouts go HERE (governance-set), never to the
+    ///         caller. Separates "who may trigger a payout" (INSURANCE_ADMIN)
+    ///         from "who receives it", so a compromised insurance admin cannot
+    ///         self-drain the fund.
+    address public insuranceBeneficiary;
 
     // --- LP staking (Synthetix rewards pattern) ---
     uint256 public totalShares;
     uint256 public totalStaked;
     uint256 public rewardPerShareStored; // scaled by 1e18
+    /// @notice F-23: LP fee share accrued while there were no stakers. Folded
+    ///         into `rewardPerShareStored` on the first stake instead of being
+    ///         silently captured by the (admin-drainable) insurance fund.
+    uint256 public pendingLpRewards;
+
+    /// @notice F-24: optional minimum hold time between staking and withdrawing
+    ///         / claiming, to defeat just-in-time fee-distribution sandwiches.
+    ///         0 == disabled. Governance-set.
+    uint256 public withdrawCooldown;
 
     mapping(address => uint256) public shares;
     mapping(address => uint256) public userRewardPerSharePaid;
     mapping(address => uint256) public rewards;
+    mapping(address => uint256) public lastStakeTime;
 
     // --- Stats ---
     uint256 public totalFeesCollected;
@@ -51,11 +66,16 @@ contract TurboFeeVault is ITurboFeeVault, AccessControl, ReentrancyGuard {
     error InsufficientShares(uint256 requested, uint256 available);
     error InsufficientInsurance(uint256 requested, uint256 available);
     error UnsupportedFeeToken(address token);
+    error WithdrawLocked(uint256 unlockAt);
+
+    event InsuranceBeneficiarySet(address indexed beneficiary);
+    event WithdrawCooldownSet(uint256 cooldown);
 
     constructor(IERC20 _usdc, address _treasury) {
         if (address(_usdc) == address(0) || _treasury == address(0)) revert ZeroAddress();
         USDC = _usdc;
         protocolTreasury = _treasury;
+        insuranceBeneficiary = _treasury; // F-10: default payee; rotate via setter
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -68,11 +88,17 @@ contract TurboFeeVault is ITurboFeeVault, AccessControl, ReentrancyGuard {
     {
         if (amount == 0) revert ZeroAmount();
         if (token != address(USDC)) revert UnsupportedFeeToken(token);
-        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
-        uint256 protocolShare = (amount * PROTOCOL_BPS) / BPS;
-        uint256 lpShare = (amount * LP_BPS) / BPS;
-        uint256 insuranceShare = amount - protocolShare - lpShare;
+        // F-41: split the MEASURED received amount, not the requested amount, so
+        // a non-standard / fee-on-transfer token can never over-distribute.
+        uint256 beforeBal = IERC20(token).balanceOf(address(this));
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+        uint256 received = IERC20(token).balanceOf(address(this)) - beforeBal;
+        if (received == 0) revert ZeroAmount();
+
+        uint256 protocolShare = (received * PROTOCOL_BPS) / BPS;
+        uint256 lpShare = (received * LP_BPS) / BPS;
+        uint256 insuranceShare = received - protocolShare - lpShare;
 
         IERC20(token).safeTransfer(protocolTreasury, protocolShare);
         insuranceBalance += insuranceShare;
@@ -80,11 +106,13 @@ contract TurboFeeVault is ITurboFeeVault, AccessControl, ReentrancyGuard {
         if (totalShares > 0) {
             rewardPerShareStored += (lpShare * 1e18) / totalShares;
         } else {
-            insuranceBalance += lpShare;
+            // F-23: hold the LP share for future stakers instead of handing it
+            // to the (admin-drainable) insurance fund.
+            pendingLpRewards += lpShare;
         }
 
-        totalFeesCollected += amount;
-        emit FeeDeposited(marketId, token, amount, protocolShare, lpShare, insuranceShare);
+        totalFeesCollected += received;
+        emit FeeDeposited(marketId, token, received, protocolShare, lpShare, insuranceShare);
     }
 
     // ─── LP Staking ──────────────────────────────────────────────
@@ -99,6 +127,14 @@ contract TurboFeeVault is ITurboFeeVault, AccessControl, ReentrancyGuard {
         shares[msg.sender] += newShares;
         totalShares += newShares;
         totalStaked += assets;
+        lastStakeTime[msg.sender] = block.timestamp; // F-24
+
+        // F-23: once there is stake to attribute to, fold any LP rewards that
+        // accrued while the pool was empty into the per-share index.
+        if (pendingLpRewards > 0 && totalShares > 0) {
+            rewardPerShareStored += (pendingLpRewards * 1e18) / totalShares;
+            pendingLpRewards = 0;
+        }
 
         emit Deposited(msg.sender, assets, newShares);
     }
@@ -108,6 +144,9 @@ contract TurboFeeVault is ITurboFeeVault, AccessControl, ReentrancyGuard {
         if (sharesToBurn > shares[msg.sender]) {
             revert InsufficientShares(sharesToBurn, shares[msg.sender]);
         }
+        // F-24: enforce the optional stake cooldown.
+        uint256 unlockAt = lastStakeTime[msg.sender] + withdrawCooldown;
+        if (withdrawCooldown != 0 && block.timestamp < unlockAt) revert WithdrawLocked(unlockAt);
         _updateReward(msg.sender);
 
         assets = (sharesToBurn * totalStaked) / totalShares;
@@ -139,7 +178,8 @@ contract TurboFeeVault is ITurboFeeVault, AccessControl, ReentrancyGuard {
     {
         if (amount > insuranceBalance) revert InsufficientInsurance(amount, insuranceBalance);
         insuranceBalance -= amount;
-        USDC.safeTransfer(msg.sender, amount);
+        // F-10: pay the governance-set beneficiary, NOT msg.sender.
+        USDC.safeTransfer(insuranceBeneficiary, amount);
         emit InsurancePayout(marketId, amount, reason);
     }
 
@@ -167,6 +207,19 @@ contract TurboFeeVault is ITurboFeeVault, AccessControl, ReentrancyGuard {
     function setTreasury(address newTreasury) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (newTreasury == address(0)) revert ZeroAddress();
         protocolTreasury = newTreasury;
+    }
+
+    /// @notice F-10: rotate the insurance payout beneficiary (governance only).
+    function setInsuranceBeneficiary(address beneficiary) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (beneficiary == address(0)) revert ZeroAddress();
+        insuranceBeneficiary = beneficiary;
+        emit InsuranceBeneficiarySet(beneficiary);
+    }
+
+    /// @notice F-24: set the stake→withdraw/claim cooldown (0 disables it).
+    function setWithdrawCooldown(uint256 cooldown) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        withdrawCooldown = cooldown;
+        emit WithdrawCooldownSet(cooldown);
     }
 
     // ─── Internal ────────────────────────────────────────────────

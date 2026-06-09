@@ -42,7 +42,7 @@ Branch: `fix/audit-remediation`.
 | F-7 | `totalAssets()` counts unreachable USYC/in-transit → redeem DoS | ⬜ pending | **Cap `maxWithdraw`/`maxRedeem` at reachable liquidity ONLY** (no `totalAssets` USYC change — that's the excluded F-5). |
 | F-8 | `relayMintFromRemote` bearer front-run | ⬜ pending | Bind mint to originating relayer / parse recipient; else enforce single-relayer on-chain. |
 | F-9 | `KawaiiRebateVault` 4-roles-one-EOA | 🔧 code affordance + ops | Add per-epoch allocation cap (code); split roles (ops). |
-| F-10 | `TurboFeeVault.insurancePayout` pays `msg.sender` | ⬜ pending | Add explicit `to` payee; route role to multisig (ops). |
+| F-10 | `TurboFeeVault.insurancePayout` pays `msg.sender` | ✅ fixed (code) | Pays governance-set `insuranceBeneficiary` (default treasury, `setInsuranceBeneficiary`), not the caller. PoC: `test_insurancePayout_goesToBeneficiaryNotCaller`. |
 | F-11 | `KawaiiRebateVault` pauser can freeze vested claims | ⬜ pending | Exempt vested `claim()` from pause or bound pause duration. |
 | F-12 | Partial-liquidation flag reset re-arms `flagDelay` | ⬜ pending | Don't delete flag unless post-close position is healthy. |
 | F-13 | Keeper-settled fills have no oracle band | ⬜ pending | Bound `fillPriceE18` to `getMidVerified` ± `maxFillDeviationBps`. |
@@ -61,8 +61,8 @@ Branch: `fix/audit-remediation`.
 | F-20 | Zero-target swap takes input for zero out; `_invertE18(0)` | ⬜ pending | Revert before taking input when targets/amountOut == 0. |
 | F-21 | `executeDeposit` accepts any source domain/sender | ⬜ pending | `(sourceDomain, senderSpoke)` allowlist + lib readers. |
 | F-22 | `FxYieldRelay` yield not bound to `(homeChain, lp)` | ⬜ pending | Bind mint recipient to LP or pull pattern. |
-| F-23 | `TurboFeeVault` routes LP share to insurance when no stakers | ⬜ pending | Pending bucket folded on first stake. |
-| F-24 | `TurboFeeVault` no stake cooldown → JIT sandwich | ⬜ pending | Stream distributions / min-stake duration. |
+| F-23 | `TurboFeeVault` routes LP share to insurance when no stakers | ✅ fixed (code) | No-staker LP share accrues to `pendingLpRewards`, folded into `rewardPerShareStored` on first stake. PoC: `test_lpShareHeldForFutureStakers_whenNoStakers`. |
+| F-24 | `TurboFeeVault` no stake cooldown → JIT sandwich | ✅ fixed (code) | Optional `withdrawCooldown` (`setWithdrawCooldown`, 0=off) locks staked principal. PoC: `test_withdrawCooldown_enforced`. |
 | F-26 | `executeRoutedIntent` funds not bound to intent | ⬜ pending | Per-intent balance-delta / `creditedForIntent` ledger. |
 | F-27 | `KawaiiRebateVault` allocate to non-claiming addr strands funds | ⬜ pending | Time-gated admin clawback. |
 | F-28 | `getMid` silently single-sources on Pyth low-confidence | ⬜ pending | Catch only `OracleFeedUnknown`; rethrow confidence/staleness; fix docstring. |
@@ -81,7 +81,7 @@ Branch: `fix/audit-remediation`.
 |----|-------|-------------|-------|
 | F-39 | First-depositor share inflation (offset 0) | ⬜ pending | Seed dead-share / `_decimalsOffset` before public deposits. |
 | F-40 | Multi-hook `recordInflow` donation grief | ⬜ pending | Authenticate caller's configured legs. |
-| F-41 | `TurboFeeVault.depositFee` not fee-on-transfer safe | ⬜ pending | Credit measured balance delta. |
+| F-41 | `TurboFeeVault.depositFee` not fee-on-transfer safe | ✅ fixed (code) | Splits the measured balance delta, not the requested amount. |
 | F-42 | `FxRouter.setPairAllowed` allows self-pair | ⬜ pending | `require(sellToken != buyToken)`. |
 | F-43 | `FxMarketRegistry` unbounded Morpho approval | ⬜ pending | Optionally scope to `needed`. |
 | F-44 | Oracle decimals > 18 underflow; `ManualPriceFeed` unchecked dec | ⬜ pending | Bound decimals ≤ 18; signed-exponent scaler. |
