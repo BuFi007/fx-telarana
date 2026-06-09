@@ -135,6 +135,7 @@ contract FxRouter is IFxRouter, EIP712, Ownable, ReentrancyGuardTransient {
 
     error ZeroAddress();
     error AdapterReturnedZero();
+    error SellEqualsBuy();
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS (impl-specific)
@@ -223,13 +224,20 @@ contract FxRouter is IFxRouter, EIP712, Ownable, ReentrancyGuardTransient {
         uint256 sellAmountNet = intent.sellAmount - protocolFee;
 
         IERC20(intent.sellToken).safeTransfer(address(swapAdapter), sellAmountNet);
-        buyAmount = swapAdapter.swapExactInput(
+
+        // F-32: trust the MEASURED delivery to the recipient, not the adapter's
+        // self-reported return. A malicious/compromised adapter could return
+        // `minBuyAmount` while transferring less; measuring the recipient's
+        // buyToken balance delta closes that under-delivery gap.
+        uint256 recipientBefore = IERC20(intent.buyToken).balanceOf(intent.recipient);
+        swapAdapter.swapExactInput(
             intent.sellToken,
             intent.buyToken,
             sellAmountNet,
             intent.minBuyAmount,
             intent.recipient
         );
+        buyAmount = IERC20(intent.buyToken).balanceOf(intent.recipient) - recipientBefore;
 
         if (buyAmount == 0) revert AdapterReturnedZero();
         if (buyAmount < intent.minBuyAmount) {
@@ -315,6 +323,7 @@ contract FxRouter is IFxRouter, EIP712, Ownable, ReentrancyGuardTransient {
     /// @inheritdoc IFxRouter
     function setPairAllowed(address sellToken, address buyToken, bool allowed) external onlyOwner {
         if (sellToken == address(0) || buyToken == address(0)) revert ZeroAddress();
+        if (sellToken == buyToken) revert SellEqualsBuy(); // F-42
         _pairAllowed[sellToken][buyToken] = allowed;
         emit PairAllowedSet(sellToken, buyToken, allowed);
     }

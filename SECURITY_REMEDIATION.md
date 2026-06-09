@@ -68,8 +68,8 @@ Branch: `fix/audit-remediation`.
 | F-28 | `getMid` silently single-sources on Pyth low-confidence | ⬜ pending | Catch only `OracleFeedUnknown`; rethrow confidence/staleness; fix docstring. |
 | F-29 | `FxSpoke` local `messageNonce` collision | ⬜ pending | Per-spoke counter / document as non-canonical. |
 | F-30 | `FxGhostKycHook` pass not bound to swapper | ⬜ pending | Bind pass to beneficiary; gate `trustedRouter` behind timelock. |
-| F-31 | `FxLiquidator` sweeps full balance to caller | ⬜ pending | Bound payout to per-call deltas. |
-| F-32 | `FxRouter` trusts adapter `buyAmount` vs measured delta | ⬜ pending | Measure recipient balance delta. |
+| F-31 | `FxLiquidator` sweeps full balance to caller | ✅ fixed (code) | Forwards only per-call deltas (`seized`, refund) over snapshotted balances; stranded/donated tokens no longer sweepable. |
+| F-32 | `FxRouter` trusts adapter `buyAmount` vs measured delta | ✅ fixed (code) | `executeIntent` measures the recipient's buyToken balance delta and enforces `minBuyAmount` against it, treating the adapter return as advisory. |
 | F-33 | Funding scales by raw size, not notional | ⬜ pending | Multiply by notional / fold price into index. |
 | F-34 | Maintenance margin uses entry-price notional | ⬜ pending | Use current verified mark price. |
 | F-35 | `relayExecute` over-forwards result-token balance | ⬜ pending | `resultToken != asset` guard + measured delta. |
@@ -82,7 +82,7 @@ Branch: `fix/audit-remediation`.
 | F-39 | First-depositor share inflation (offset 0) | ⬜ pending | Seed dead-share / `_decimalsOffset` before public deposits. |
 | F-40 | Multi-hook `recordInflow` donation grief | ⬜ pending | Authenticate caller's configured legs. |
 | F-41 | `TurboFeeVault.depositFee` not fee-on-transfer safe | ✅ fixed (code) | Splits the measured balance delta, not the requested amount. |
-| F-42 | `FxRouter.setPairAllowed` allows self-pair | ⬜ pending | `require(sellToken != buyToken)`. |
+| F-42 | `FxRouter.setPairAllowed` allows self-pair | ✅ fixed (code) | `setPairAllowed` reverts `SellEqualsBuy` when `sellToken == buyToken`. |
 | F-43 | `FxMarketRegistry` unbounded Morpho approval | ⬜ pending | Optionally scope to `needed`. |
 | F-44 | Oracle decimals > 18 underflow; `ManualPriceFeed` unchecked dec | ⬜ pending | Bound decimals ≤ 18; signed-exponent scaler. |
 | F-45 | `FxHedgeHook` TWAP gate bypassable on first obs | ⬜ pending | Seed TWAP from oracle; gate add/remove. |

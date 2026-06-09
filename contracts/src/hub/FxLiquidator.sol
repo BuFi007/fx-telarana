@@ -115,6 +115,12 @@ contract FxLiquidator is AccessControl, Pausable {
         MorphoMarketParams memory mp = _morphoParams(loanToken, collateralToken);
 
         IERC20 debtToken = IERC20(loanToken);
+        IERC20 collat = IERC20(collateralToken);
+        // F-31: snapshot balances so we forward only THIS call's deltas, never
+        // any pre-existing / donated / stranded balance held by the conduit.
+        uint256 debtBefore = debtToken.balanceOf(address(this));
+        uint256 collatBefore = collat.balanceOf(address(this));
+
         if (maxRepayAssets > 0) {
             uint256 allowance = debtToken.allowance(msg.sender, address(this));
             if (allowance < maxRepayAssets) revert InsufficientApproval(maxRepayAssets, allowance);
@@ -127,12 +133,13 @@ contract FxLiquidator is AccessControl, Pausable {
 
         (seized, repaid) = MORPHO.liquidate(mp, borrower, seizedAssets, repaidShares, "");
 
-        // Send seized collateral to the caller; refund any unused debt-side balance.
-        IERC20 collat = IERC20(collateralToken);
-        uint256 collatBal = collat.balanceOf(address(this));
-        if (collatBal > 0) collat.safeTransfer(msg.sender, collatBal);
+        // Send the collateral seized by THIS call to the caller; refund only the
+        // unused portion of what THIS call pulled in (both measured as deltas
+        // over the pre-call balances, so stranded tokens are never swept).
+        uint256 seizedDelta = collat.balanceOf(address(this)) - collatBefore;
+        if (seizedDelta > 0) collat.safeTransfer(msg.sender, seizedDelta);
 
-        uint256 debtRefund = debtToken.balanceOf(address(this));
+        uint256 debtRefund = debtToken.balanceOf(address(this)) - debtBefore;
         if (debtRefund > 0) debtToken.safeTransfer(msg.sender, debtRefund);
     }
 
