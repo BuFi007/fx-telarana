@@ -134,4 +134,70 @@ contract FxSpokeTest is Test {
         vm.prank(alice);
         spoke.enterHubWithFee(address(usdc), 1, beneficiary, "", 0, 500);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                        F-25 — EXIT BEARER REDIRECT
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Build a CCTP V2 outer message whose inner burn body mints
+    ///         `amount` to `mintRecipient` (the spoke). Mirrors the byte layout
+    ///         documented in CctpMessageLib.
+    function _burnMessage(bytes32 nonce, address mintRecipient, uint256 amount) internal pure returns (bytes memory) {
+        return abi.encodePacked(
+            uint32(0), // outer version          @0
+            uint32(0), // sourceDomain           @4
+            uint32(0), // destinationDomain      @8
+            nonce, //     nonce (bytes32)         @12
+            bytes32(0), // sender                 @44
+            bytes32(0), // recipient              @76
+            bytes32(0), // destinationCaller      @108
+            uint32(0), // minFinalityThreshold    @140
+            uint32(0), // finalityThresholdExec   @144
+            // ---- burn message body @148 ----
+            uint32(0), // body version            @148
+            bytes32(0), // burnToken              @152
+            bytes32(uint256(uint160(mintRecipient))), // mintRecipient @184
+            uint256(amount), // amount            @216
+            bytes32(0), // messageSender          @248
+            uint256(0), // maxFee                 @280
+            uint256(0), // feeExecuted            @312
+            uint256(0) //  expirationBlock        @344  (ends @376)
+        );
+    }
+
+    /// @notice F-25 — pre-fix, `exitHub` was permissionless and forwarded the
+    ///         minted USDC (sent to the spoke) to a caller-supplied recipient.
+    ///         An attacker could front-run the legit relayer and redirect the
+    ///         entire exit amount. The fix gates the call to owner/allowlisted
+    ///         relayers, so an untrusted caller reverts before any mint.
+    function test_exitHub_revertsForUntrustedCaller() public {
+        bytes memory message = _burnMessage(bytes32(uint256(1)), address(spoke), 1_000_000);
+        address attacker = address(0xBAD);
+
+        vm.prank(attacker);
+        vm.expectRevert(FxSpoke.NotExitRelayer.selector);
+        spoke.exitHub(message, hex"", attacker);
+
+        // No USDC reached the attacker.
+        assertEq(usdc.balanceOf(attacker), 0, "attacker got nothing");
+    }
+
+    /// @notice The allowlisted relayer (and owner) can still settle exits.
+    function test_exitHub_relayerCanSettle() public {
+        address relayer = address(0x4E1A1);
+        spoke.setExitRelayer(relayer, true);
+
+        bytes memory message = _burnMessage(bytes32(uint256(2)), address(spoke), 750_000);
+
+        vm.prank(relayer);
+        spoke.exitHub(message, hex"", beneficiary);
+
+        assertEq(usdc.balanceOf(beneficiary), 750_000, "beneficiary received exit");
+    }
+
+    function test_setExitRelayer_onlyOwner() public {
+        vm.prank(alice);
+        vm.expectRevert(FxSpoke.NotOwner.selector);
+        spoke.setExitRelayer(address(0x4E1A1), true);
+    }
 }

@@ -38,6 +38,17 @@ contract FxSpoke is IFxSpoke {
     ///         USDC and EURC where the route is supported by Circle.
     mapping(address token => bool allowed) public circleTokenAllowed;
 
+    /// @notice Trusted relayers permitted to settle hub→spoke CCTP exits (F-25).
+    ///         `exitHub` is otherwise a bearer claim: the hub burns with
+    ///         `mintRecipient = FxSpoke`, so without this gate ANY caller could
+    ///         front-run a public Circle attestation and redirect the freshly
+    ///         minted USDC to an arbitrary recipient. The exit flow is an
+    ///         operational (protocol-run) redistribution, not a user action, so
+    ///         it is gated to the owner + an allowlisted relayer set.
+    mapping(address relayer => bool allowed) public exitRelayer;
+
+    event ExitRelayerSet(address indexed relayer, bool allowed);
+
     /// @notice Default max-fee in USDC (6 decimals) the user is willing to pay
     ///         CCTP V2 for fast transport. Configurable per call via `enterHubWithFee`.
     uint256 public constant DEFAULT_MAX_FEE = 1_000; // 0.001 USDC
@@ -48,6 +59,7 @@ contract FxSpoke is IFxSpoke {
 
     error UnsupportedFinality(uint32 threshold);
     error NotOwner();
+    error NotExitRelayer();
 
     /*//////////////////////////////////////////////////////////////
                                 CTOR
@@ -71,6 +83,13 @@ contract FxSpoke is IFxSpoke {
         if (token == address(0)) revert UnsupportedToken(address(0));
         circleTokenAllowed[token] = allowed;
         emit CircleTokenAllowedSet(token, allowed);
+    }
+
+    function setExitRelayer(address relayer, bool allowed) external {
+        if (msg.sender != owner) revert NotOwner();
+        if (relayer == address(0)) revert InvalidBeneficiary();
+        exitRelayer[relayer] = allowed;
+        emit ExitRelayerSet(relayer, allowed);
     }
 
     function transferOwner(address newOwner) external {
@@ -148,6 +167,11 @@ contract FxSpoke is IFxSpoke {
     function _exitHubForToken(bytes calldata cctpMessage, bytes calldata attestation, address recipient, address token)
         internal
     {
+        // F-25: only the owner or an allowlisted relayer may settle an exit.
+        // Without this, `exitHub` is a permissionless bearer claim — anyone could
+        // front-run the legitimate relayer with a public Circle attestation and
+        // redirect the minted USDC (which is sent to this spoke) to themselves.
+        if (msg.sender != owner && !exitRelayer[msg.sender]) revert NotExitRelayer();
         if (recipient == address(0)) revert InvalidBeneficiary();
         if (!circleTokenAllowed[token]) revert UnsupportedToken(token);
 
