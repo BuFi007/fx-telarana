@@ -107,11 +107,21 @@ contract FxOracleV2 is FxOracle {
         (uint256 basePrice, uint8 baseDec, uint256 baseUpdated) = _chainlinkPrice(base);
         (uint256 quotePrice, uint8 quoteDec, uint256 quoteUpdated) = _chainlinkPrice(quote);
 
-        uint256 baseE18 = basePrice * (10 ** (18 - baseDec));
-        uint256 quoteE18 = quotePrice * (10 ** (18 - quoteDec));
+        // F-44: scale to 1e18 with a signed exponent so a feed reporting MORE
+        // than 18 decimals scales DOWN instead of underflowing `10 ** (18 - dec)`
+        // and bricking the Chainlink fallback for that token.
+        uint256 baseE18 = _toE18(basePrice, baseDec);
+        uint256 quoteE18 = _toE18(quotePrice, quoteDec);
 
         midE18 = (baseE18 * 1e18) / quoteE18;
         publishedAt = baseUpdated < quoteUpdated ? baseUpdated : quoteUpdated;
+    }
+
+    /// @dev Scale a `dec`-decimal price to 1e18 with a signed exponent, so
+    ///      decimals > 18 scale down rather than reverting (F-44).
+    function _toE18(uint256 price, uint8 dec) internal pure returns (uint256) {
+        if (dec == 18) return price;
+        return dec < 18 ? price * (10 ** (18 - dec)) : price / (10 ** (dec - 18));
     }
 
     function _chainlinkPrice(address token)

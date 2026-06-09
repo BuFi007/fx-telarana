@@ -273,7 +273,10 @@ contract FxSpotExecutorTest is Test {
         assertEq(vault.totalFeesCollected(), 500, "vault fee total");
         assertEq(usdc.balanceOf(address(executor)), 999_500, "USDC net retained");
         assertEq(usdc.balanceOf(ADMIN), 250, "protocol split");
-        assertEq(vault.insuranceBalance(), 250, "insurance plus no-LP yield");
+        // F-23: with no LP stakers, insurance holds only the 10% share; the 40%
+        // LP share is held in pendingLpRewards for future stakers.
+        assertEq(vault.insuranceBalance(), 50, "insurance share only");
+        assertEq(vault.pendingLpRewards(), 200, "LP share held for future stakers");
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -20,6 +20,7 @@ contract ManualPriceFeed {
     error NotOwner();
     error ZeroAddress();
     error NonPositivePrice();
+    error DecimalsTooHigh(uint8 dec);
 
     event PriceSet(int256 answer, uint256 updatedAt, uint80 roundId);
     event OwnerTransferred(address indexed from, address indexed to);
@@ -32,6 +33,7 @@ contract ManualPriceFeed {
     constructor(uint8 dec, string memory desc, int256 initialAnswer, address owner_) {
         if (owner_ == address(0)) revert ZeroAddress();
         if (initialAnswer <= 0) revert NonPositivePrice();
+        if (dec > 18) revert DecimalsTooHigh(dec); // F-44: downstream 1e18 scaling assumes ≤18
         decimals = dec;
         description = desc;
         owner = owner_;

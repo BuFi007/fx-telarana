@@ -47,6 +47,10 @@ contract FxSpoke is IFxSpoke {
     ///         it is gated to the owner + an allowlisted relayer set.
     mapping(address relayer => bool allowed) public exitRelayer;
 
+    /// @notice Strictly-increasing local sequence to disambiguate the emitted
+    ///         `messageNonce` for identical same-block deposits (F-29).
+    uint256 private _localNonceSeq;
+
     event ExitRelayerSet(address indexed relayer, bool allowed);
 
     /// @notice Default max-fee in USDC (6 decimals) the user is willing to pay
@@ -144,8 +148,12 @@ contract FxSpoke is IFxSpoke {
         );
 
         // CCTP V2 generates the message nonce internally and we cannot read it back
-        // synchronously; we use keccak(spoke, sender, hookData) as a local-tracking key.
-        messageNonce = keccak256(abi.encode(address(this), msg.sender, hookData, block.number));
+        // synchronously; we use keccak(spoke, sender, hookData, block, seq) as a
+        // local-tracking key. F-29: a strictly-increasing per-spoke counter makes
+        // the key unique even for two identical deposits in the same block (the
+        // canonical key remains the CCTP message nonce surfaced on the hub).
+        messageNonce =
+            keccak256(abi.encode(address(this), msg.sender, hookData, block.number, _localNonceSeq++));
 
         emit Entered(messageNonce, beneficiary, token, amount, hubCalldata);
     }
