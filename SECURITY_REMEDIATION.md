@@ -40,7 +40,7 @@ Branch: `fix/audit-remediation`.
 | ID | Title | Disposition | Notes |
 |----|-------|-------------|-------|
 | F-7 | `totalAssets()` counts unreachable USYC/in-transit → redeem DoS | ✅ fixed (code) | `maxWithdraw`/`maxRedeem` capped at `_reachableLiquidity()` (hot + Morpho), so an over-withdraw fails early with the standard ERC4626 cap error. `totalAssets()` (incl. USYC term) **unchanged** — no overlap with excluded F-5. PoC: `test_maxWithdrawReflectsReachableLiquidityDuringTransit`. |
-| F-8 | `relayMintFromRemote` bearer front-run | ⬜ pending | Bind mint to originating relayer / parse recipient; else enforce single-relayer on-chain. |
+| F-8 | `relayMintFromRemote` bearer front-run | ✅ fixed (code) | `setRelayCaller` hard-caps `activeRelayerCount` at 1, so no co-tenant relayer can front-run another's in-flight attestation (rotate by disabling first). PoC: `test_setRelayCaller_rejectsSecondActiveRelayer`. Full cryptographic recipient-binding (TransferSpec parser) remains the next-iteration fix. |
 | F-9 | `KawaiiRebateVault` 4-roles-one-EOA | ✅ fixed (code) + ops | `setAllocationCapPerEpoch` + rolling-window cap in `_allocate` bounds a compromised allocator; role-split is ops. PoC: `test_allocationCap_enforcedPerEpoch`. |
 | F-10 | `TurboFeeVault.insurancePayout` pays `msg.sender` | ✅ fixed (code) | Pays governance-set `insuranceBeneficiary` (default treasury, `setInsuranceBeneficiary`), not the caller. PoC: `test_insurancePayout_goesToBeneficiaryNotCaller`. |
 | F-11 | `KawaiiRebateVault` pauser can freeze vested claims | ✅ fixed (code) | `claim()` no longer `whenNotPaused`; pause blocks only new allocations. PoC: `test_pause_blocksAllocate_butNotVestedClaim`. |

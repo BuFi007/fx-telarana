@@ -117,6 +117,27 @@ contract FxHubMessageReceiverRelayTest is Test {
         hub.setRelayCaller(BUFX, true);
     }
 
+    /// @dev F-8: at most one relayer may be active at a time, so no co-tenant
+    ///      relayer can front-run another's in-flight Gateway attestation
+    ///      (bearer claim). Rotation requires disabling the current relayer first.
+    function test_setRelayCaller_rejectsSecondActiveRelayer() public {
+        vm.prank(OWNER);
+        hub.setRelayCaller(BUFX, true);
+        assertEq(hub.activeRelayerCount(), 1, "one active");
+
+        vm.prank(OWNER);
+        vm.expectRevert(FxHubMessageReceiver.MultipleRelayersNotAllowed.selector);
+        hub.setRelayCaller(OUTSIDER, true);
+
+        // Rotation works: disable the first, then enable the new one.
+        vm.prank(OWNER);
+        hub.setRelayCaller(BUFX, false);
+        assertEq(hub.activeRelayerCount(), 0, "rotated out");
+        vm.prank(OWNER);
+        hub.setRelayCaller(OUTSIDER, true);
+        assertTrue(hub.relayCallers(OUTSIDER), "new relayer active");
+    }
+
     // ── relayToRemoteHub ─────────────────────────────────────────────────
 
     function test_relayToRemoteHub_happyPath_fromOwner() public {

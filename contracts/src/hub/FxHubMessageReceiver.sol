@@ -68,12 +68,19 @@ contract FxHubMessageReceiver is IFxHubMessageReceiver, ReentrancyGuard {
     address public gatewayHook;
     mapping(address relayer => bool allowed) public relayCallers;
 
+    /// @notice F-8: number of currently-whitelisted relayers. Hard-capped at 1
+    ///         so no co-tenant relayer can front-run another's in-flight Gateway
+    ///         attestation (attestations are bearer claims). Rotate by disabling
+    ///         the current relayer before enabling a new one.
+    uint256 public activeRelayerCount;
+
     error NotOwner(address caller);
     error NotAuthorizedRelayer(address caller);
     error ZeroAmount();
     error GatewayHookNotSet();
     error MintShortfall(uint256 expected, uint256 received);
     error SweepExceedsAvailable(uint256 requested, uint256 available);
+    error MultipleRelayersNotAllowed();
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event GatewayHookChanged(address indexed previousHook, address indexed newHook);
@@ -159,6 +166,15 @@ contract FxHubMessageReceiver is IFxHubMessageReceiver, ReentrancyGuard {
     /// the rest of the hub surface.
     function setRelayCaller(address relayer, bool allowed) external onlyOwner {
         if (relayer == address(0)) revert ZeroAddress();
+        bool current = relayCallers[relayer];
+        if (allowed && !current) {
+            // F-8: enforce at most one active relayer on-chain. Rotate by first
+            // disabling the existing relayer.
+            if (activeRelayerCount != 0) revert MultipleRelayersNotAllowed();
+            activeRelayerCount = 1;
+        } else if (!allowed && current) {
+            activeRelayerCount = 0;
+        }
         relayCallers[relayer] = allowed;
         emit RelayCallerSet(relayer, allowed);
     }
