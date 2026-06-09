@@ -268,6 +268,30 @@ contract SharedFxVault is
         super._withdraw(caller, receiver, owner, assets, shares); // burns shares, sends USDC
     }
 
+    /// @dev F-7: liquidity `_withdraw` can actually source on demand — hot senior
+    ///      USDC plus the vault's Morpho supply. EXCLUDES `gatewayInTransitUsdc`
+    ///      and `_yieldAdapterAssets` (USYC), which sit behind keeper-only
+    ///      recovery (`redeemSeniorFromYield` / `clearGatewayMint`). Used to cap
+    ///      `maxWithdraw`/`maxRedeem` so ERC4626 never advertises more than it can
+    ///      honor. NOTE: `totalAssets()` is deliberately NOT changed here.
+    function _reachableLiquidity() internal view returns (uint256) {
+        return _s().seniorUsdcHot + _morphoSupplyAssets();
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    function maxWithdraw(address owner) public view override returns (uint256) {
+        uint256 ownerAssets = super.maxWithdraw(owner);
+        uint256 reachable = _reachableLiquidity();
+        return ownerAssets < reachable ? ownerAssets : reachable;
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    function maxRedeem(address owner) public view override returns (uint256) {
+        uint256 ownerShares = super.maxRedeem(owner);
+        uint256 reachableShares = convertToShares(_reachableLiquidity());
+        return ownerShares < reachableShares ? ownerShares : reachableShares;
+    }
+
     /*//////////////////////////////////////////////////////////////
                        HOOK FILL SURFACE (JUNIOR ONLY)
     //////////////////////////////////////////////////////////////*/

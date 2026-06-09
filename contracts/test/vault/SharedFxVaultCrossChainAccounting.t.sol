@@ -100,6 +100,28 @@ contract SharedFxVaultCrossChainAccountingTest is StdInvariant, Test {
         assertEq(vault.convertToAssets(aliceShares), shareValueBefore, "share price still unchanged");
     }
 
+    /// @dev F-7: while USDC is in the cross-hub Gateway transit bucket, NAV is
+    ///      unchanged but that USDC is unreachable by `_withdraw`. `maxWithdraw`
+    ///      must reflect only reachable liquidity, and an over-withdraw must fail
+    ///      with the standard ERC4626 cap error (not a deep `InsufficientSeniorLiquidity`).
+    function test_maxWithdrawReflectsReachableLiquidityDuringTransit() public {
+        vault.grantRole(vault.GATEWAY_ACCOUNTANT_ROLE(), admin);
+        vault.recordGatewayBurn(400e6); // hot 600, inTransit 400, NAV still 1000
+
+        assertEq(vault.totalAssets(), 1_000e6, "NAV unchanged");
+        // Pre-fix: maxWithdraw advertised ~1000 (alice's full claim); now capped at 600.
+        assertEq(vault.maxWithdraw(alice), 600e6, "maxWithdraw capped at reachable liquidity");
+
+        vm.prank(alice);
+        vm.expectRevert(); // ERC4626ExceededMaxWithdraw — fails early, cleanly
+        vault.withdraw(700e6, alice, alice);
+
+        // A withdrawal within reachable liquidity still works.
+        vm.prank(alice);
+        vault.withdraw(600e6, alice, alice);
+        assertEq(vault.seniorUsdcHot(), 0, "hot drained to reachable cap");
+    }
+
     function test_usycAdapterMarksNavWithTellerPreviewRedeem() public {
         FxUsycAdapter adapter = new FxUsycAdapter(
             IERC20(address(usdc)), IERC20(address(usyc)), IUsycTeller(address(teller)), admin, address(vault)
