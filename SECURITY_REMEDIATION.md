@@ -45,7 +45,7 @@ Branch: `fix/audit-remediation`.
 | F-10 | `TurboFeeVault.insurancePayout` pays `msg.sender` | ✅ fixed (code) | Pays governance-set `insuranceBeneficiary` (default treasury, `setInsuranceBeneficiary`), not the caller. PoC: `test_insurancePayout_goesToBeneficiaryNotCaller`. |
 | F-11 | `KawaiiRebateVault` pauser can freeze vested claims | ✅ fixed (code) | `claim()` no longer `whenNotPaused`; pause blocks only new allocations. PoC: `test_pause_blocksAllocate_butNotVestedClaim`. |
 | F-12 | Partial-liquidation flag reset re-arms `flagDelay` | ✅ fixed (code) | `liquidate()` clears `flaggedAt` only when the post-close position is healthy (`_healthIsLiquidatableVerified`). PoC: `test_partialLiquidation_keepsFlagWhenStillUnhealthy`. |
-| F-13 | Keeper-settled fills have no oracle band | ⬜ pending | Bound `fillPriceE18` to `getMidVerified` ± `maxFillDeviationBps`. |
+| F-13 | Keeper-settled fills have no oracle band | ⏸ deferred (design) | Needs the verified (deviation-gated) oracle plumbed into `FxOrderSettlement` (RedStone-payload forwarding) + a `maxFillDeviationBps` param. Same plumbing class as F-33/F-34. |
 | F-14 | Router/adapters owner = keeper EOA, no timelock | 🔧 code affordance + ops | `Ownable2Step` on `FxRouter`; ownership → timelock (ops). |
 | F-15 | Permissionless `executeHedge` drains protocol margin | ⬜ pending | Gate caller + per-pool cooldown/cap; source exposure from `afterSwap`. |
 | F-16 | Hedge open/close uses lenient `getMid` | ⬜ pending | Force verified price path for hedge. |
@@ -59,7 +59,7 @@ Branch: `fix/audit-remediation`.
 | F-18 | Untimelocked `setYieldAdapter`/`setOracle`/`setPoolManager` | 🔧 code affordance + ops | Behind timelock; bound `_yieldAdapterAssets`. |
 | F-19 | Dead protocol-fee sleeve in vault-backed hook | ⬜ pending | Wire fee accumulator or remove dead surface + document. |
 | F-20 | Zero-target swap takes input for zero out; `_invertE18(0)` | ⬜ pending | Revert before taking input when targets/amountOut == 0. |
-| F-21 | `executeDeposit` accepts any source domain/sender | ⬜ pending | `(sourceDomain, senderSpoke)` allowlist + lib readers. |
+| F-21 | `executeDeposit` accepts any source domain/sender | ⏸ deferred (ops/design) | Mandatory enforcement changes the live deposit flow (needs a deploy-time `(sourceDomain, senderSpoke)` allowlist) and churns ~15 tests, for a Low defense-in-depth gain where `FxMarketRegistry` is the hardened gate. Add the `CctpMessageLib.sourceDomain()/sender()` readers + allowlist when the spoke set is finalized at deploy. |
 | F-22 | `FxYieldRelay` yield not bound to `(homeChain, lp)` | ⬜ pending | Bind mint recipient to LP or pull pattern. |
 | F-23 | `TurboFeeVault` routes LP share to insurance when no stakers | ✅ fixed (code) | No-staker LP share accrues to `pendingLpRewards`, folded into `rewardPerShareStored` on first stake. PoC: `test_lpShareHeldForFutureStakers_whenNoStakers`. |
 | F-24 | `TurboFeeVault` no stake cooldown → JIT sandwich | ✅ fixed (code) | Optional `withdrawCooldown` (`setWithdrawCooldown`, 0=off) locks staked principal. PoC: `test_withdrawCooldown_enforced`. |
