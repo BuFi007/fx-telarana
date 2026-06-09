@@ -41,10 +41,10 @@ Branch: `fix/audit-remediation`.
 |----|-------|-------------|-------|
 | F-7 | `totalAssets()` counts unreachable USYC/in-transit → redeem DoS | ⬜ pending | **Cap `maxWithdraw`/`maxRedeem` at reachable liquidity ONLY** (no `totalAssets` USYC change — that's the excluded F-5). |
 | F-8 | `relayMintFromRemote` bearer front-run | ⬜ pending | Bind mint to originating relayer / parse recipient; else enforce single-relayer on-chain. |
-| F-9 | `KawaiiRebateVault` 4-roles-one-EOA | 🔧 code affordance + ops | Add per-epoch allocation cap (code); split roles (ops). |
+| F-9 | `KawaiiRebateVault` 4-roles-one-EOA | ✅ fixed (code) + ops | `setAllocationCapPerEpoch` + rolling-window cap in `_allocate` bounds a compromised allocator; role-split is ops. PoC: `test_allocationCap_enforcedPerEpoch`. |
 | F-10 | `TurboFeeVault.insurancePayout` pays `msg.sender` | ✅ fixed (code) | Pays governance-set `insuranceBeneficiary` (default treasury, `setInsuranceBeneficiary`), not the caller. PoC: `test_insurancePayout_goesToBeneficiaryNotCaller`. |
-| F-11 | `KawaiiRebateVault` pauser can freeze vested claims | ⬜ pending | Exempt vested `claim()` from pause or bound pause duration. |
-| F-12 | Partial-liquidation flag reset re-arms `flagDelay` | ⬜ pending | Don't delete flag unless post-close position is healthy. |
+| F-11 | `KawaiiRebateVault` pauser can freeze vested claims | ✅ fixed (code) | `claim()` no longer `whenNotPaused`; pause blocks only new allocations. PoC: `test_pause_blocksAllocate_butNotVestedClaim`. |
+| F-12 | Partial-liquidation flag reset re-arms `flagDelay` | ✅ fixed (code) | `liquidate()` clears `flaggedAt` only when the post-close position is healthy (`_healthIsLiquidatableVerified`). PoC: `test_partialLiquidation_keepsFlagWhenStillUnhealthy`. |
 | F-13 | Keeper-settled fills have no oracle band | ⬜ pending | Bound `fillPriceE18` to `getMidVerified` ± `maxFillDeviationBps`. |
 | F-14 | Router/adapters owner = keeper EOA, no timelock | 🔧 code affordance + ops | `Ownable2Step` on `FxRouter`; ownership → timelock (ops). |
 | F-15 | Permissionless `executeHedge` drains protocol margin | ⬜ pending | Gate caller + per-pool cooldown/cap; source exposure from `afterSwap`. |
@@ -64,7 +64,7 @@ Branch: `fix/audit-remediation`.
 | F-23 | `TurboFeeVault` routes LP share to insurance when no stakers | ✅ fixed (code) | No-staker LP share accrues to `pendingLpRewards`, folded into `rewardPerShareStored` on first stake. PoC: `test_lpShareHeldForFutureStakers_whenNoStakers`. |
 | F-24 | `TurboFeeVault` no stake cooldown → JIT sandwich | ✅ fixed (code) | Optional `withdrawCooldown` (`setWithdrawCooldown`, 0=off) locks staked principal. PoC: `test_withdrawCooldown_enforced`. |
 | F-26 | `executeRoutedIntent` funds not bound to intent | ⬜ pending | Per-intent balance-delta / `creditedForIntent` ledger. |
-| F-27 | `KawaiiRebateVault` allocate to non-claiming addr strands funds | ⬜ pending | Time-gated admin clawback. |
+| F-27 | `KawaiiRebateVault` allocate to non-claiming addr strands funds | ✅ fixed (code) | `clawbackStale(holder)` returns never-claimed allocations to `unallocated` after `STALE_CLAWBACK_EPOCHS` vest windows; solvency-preserving. PoC: `test_clawbackStale_returnsToPool`. |
 | F-28 | `getMid` silently single-sources on Pyth low-confidence | ⬜ pending | Catch only `OracleFeedUnknown`; rethrow confidence/staleness; fix docstring. |
 | F-29 | `FxSpoke` local `messageNonce` collision | ⬜ pending | Per-spoke counter / document as non-canonical. |
 | F-30 | `FxGhostKycHook` pass not bound to swapper | ⬜ pending | Bind pass to beneficiary; gate `trustedRouter` behind timelock. |

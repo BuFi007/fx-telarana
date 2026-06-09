@@ -173,7 +173,11 @@ contract FxPerpStackTest is Test {
         assertEq(margin.protocolLiquidity(), 1_000e6, "fee bypasses protocol bucket");
         assertEq(vault.totalFeesCollected(), 5_500, "vault fee total");
         assertEq(usdc.balanceOf(ADMIN), 2_750, "protocol split");
-        assertEq(vault.insuranceBalance(), 2_750, "insurance plus no-LP yield");
+        // F-23: with no LP stakers, the 10% insurance share is retained as
+        // insurance and the 40% LP share is held in pendingLpRewards (NOT
+        // captured by the admin-drainable insurance fund). Both stay in the vault.
+        assertEq(vault.insuranceBalance(), 550, "insurance share only");
+        assertEq(vault.pendingLpRewards(), 2_200, "LP share held for future stakers");
         assertEq(usdc.balanceOf(address(vault)), 2_750, "vault retained balance");
     }
 

@@ -161,7 +161,16 @@ contract FxLiquidationEngine is IFxLiquidationEngine, AccessControl, Pausable, R
         if (block.timestamp < readyAt) revert FlagDelayPending(readyAt, block.timestamp);
 
         (,, uint256 badDebt) = _clearinghouseLiquidatePosition(marketId, trader, maxSizeToCloseAbsE18);
-        delete flaggedAt[marketId][trader];
+
+        // F-12: only clear the flag if the position is now healthy. A partial
+        // close that leaves the account still liquidatable must NOT reset the
+        // flag — doing so would re-arm `flagDelay` and let a griefer close a
+        // dust slice each round to indefinitely block real liquidation while bad
+        // debt grows. Keeping the flag lets the keeper continue closing in the
+        // same flag window with no fresh flag + delay.
+        if (!_healthIsLiquidatableVerified(marketId, trader)) {
+            delete flaggedAt[marketId][trader];
+        }
 
         uint256 remainingMargin = MARGIN.marginOf(trader);
         liquidatorReward = remainingMargin.mulDiv(liquidationConfig.bountyBps, 10_000);
