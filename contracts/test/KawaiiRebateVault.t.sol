@@ -131,7 +131,9 @@ contract KawaiiRebateVaultTest is Test {
         _solvent();
     }
 
-    function test_pause_blocksClaimAndAllocate_butNotFund() public {
+    /// @dev F-11: pause blocks NEW allocations + funding-side risk, but must NOT
+    ///      censor already-vested claims (fully-backed, owed funds).
+    function test_pause_blocksAllocate_butNotVestedClaim() public {
         _fund(1_000e6);
         vm.prank(KEEPER);
         vault.allocate(ALICE, 100e6);
@@ -141,12 +143,12 @@ contract KawaiiRebateVaultTest is Test {
         vault.pause();
 
         vm.prank(KEEPER);
-        vm.expectRevert(); // Pausable: paused
+        vm.expectRevert(); // Pausable: paused — new vesting blocked
         vault.allocate(BOB, 10e6);
 
+        // F-11: vested claim still works while paused — owed funds are never frozen.
         vm.prank(ALICE);
-        vm.expectRevert(); // claim frozen by the circuit breaker
-        vault.claim();
+        assertEq(vault.claim(), 100e6, "vested claim works while paused");
 
         // funding still works while paused (adding backing is safe)
         usdc.mint(FUNDER, 5e6);
@@ -154,11 +156,54 @@ contract KawaiiRebateVaultTest is Test {
         usdc.approve(address(vault), 5e6);
         vault.fund(5e6);
         vm.stopPrank();
+        _solvent();
+    }
 
-        vm.prank(GUARDIAN);
-        vault.unpause();
-        vm.prank(ALICE);
-        assertEq(vault.claim(), 100e6, "claim works after unpause");
+    /// @dev F-9: rolling per-epoch allocation cap bounds a single allocator key.
+    function test_allocationCap_enforcedPerEpoch() public {
+        _fund(1_000e6);
+        vm.prank(ADMIN);
+        vault.setAllocationCapPerEpoch(100e6);
+
+        vm.prank(KEEPER);
+        vault.allocate(ALICE, 60e6); // ok, 60 <= 100
+
+        vm.prank(KEEPER);
+        vm.expectRevert(abi.encodeWithSelector(KawaiiRebateVault.AllocationCapExceeded.selector, 50e6, 40e6));
+        vault.allocate(BOB, 50e6); // 60 + 50 = 110 > 100 → revert
+
+        vm.warp(block.timestamp + vault.ALLOCATION_EPOCH());
+        vm.prank(KEEPER);
+        vault.allocate(BOB, 90e6); // new epoch resets the running total
+        assertApproxEqAbs(vault.totalAllocatedTo(BOB), 90e6, 1);
+        _solvent();
+    }
+
+    /// @dev F-27: a never-claimed allocation can be clawed back to the pool only
+    ///      after a long grace, and is solvency-preserving.
+    function test_clawbackStale_returnsToPool() public {
+        address dead = address(0xdead);
+        _fund(1_000e6);
+        vm.prank(KEEPER);
+        vault.allocate(dead, 400e6);
+
+        // before grace: not eligible. Precompute eligibleAt BEFORE pranking so
+        // the view call does not consume the prank.
+        uint256 graceWindow = VEST * vault.STALE_CLAWBACK_EPOCHS();
+        uint256 eligibleAt = block.timestamp + graceWindow;
+        vm.expectRevert(abi.encodeWithSelector(KawaiiRebateVault.NotStale.selector, dead, eligibleAt));
+        vm.prank(ADMIN);
+        vault.clawbackStale(dead);
+
+        vm.warp(block.timestamp + graceWindow);
+
+        uint256 unallocBefore = vault.unallocated();
+        vm.prank(ADMIN);
+        uint256 reclaimed = vault.clawbackStale(dead);
+
+        assertEq(reclaimed, 400e6, "full stale allocation reclaimed");
+        assertEq(vault.unallocated(), unallocBefore + 400e6, "returned to backing pool");
+        assertEq(vault.totalOutstanding(), 0, "no longer owed");
         _solvent();
     }
 

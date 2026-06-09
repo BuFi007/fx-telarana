@@ -62,16 +62,32 @@ contract KawaiiRebateVault is AccessControl, ReentrancyGuard, Pausable {
     uint256 public totalAllocated;
     uint256 public totalClaimed;
 
+    // --- F-9: per-epoch allocation cap (defense-in-depth vs a compromised
+    //     allocator key; complements role-splitting at deploy). 0 == unlimited.
+    uint256 public constant ALLOCATION_EPOCH = 1 days;
+    uint256 public allocationCapPerEpoch;
+    uint256 public epochAllocated;
+    uint64 public epochStart;
+
+    // --- F-27: grace before stale (never-claimed) allocations can be clawed
+    //     back to the backing pool. Measured in whole vest windows so it is
+    //     always far longer than the vesting period itself.
+    uint256 public constant STALE_CLAWBACK_EPOCHS = 12;
+
     event Funded(address indexed funder, uint256 amount, uint256 unallocated);
     event Allocated(address indexed holder, uint256 amount, uint64 vestStart);
     event Claimed(address indexed holder, uint256 amount);
     event SurplusRecovered(address indexed to, uint256 amount);
+    event AllocationCapSet(uint256 capPerEpoch);
+    event AllocationClawedBack(address indexed holder, uint256 amount);
 
     error ZeroAmount();
     error ZeroAddress();
     error LengthMismatch();
     error InsufficientUnallocated(uint256 requested, uint256 available);
     error NothingToClaim();
+    error AllocationCapExceeded(uint256 requested, uint256 remainingThisEpoch);
+    error NotStale(address holder, uint256 eligibleAt);
 
     /// @param _usdc          settlement token (USDC, 6dp).
     /// @param _vestDuration  linear vest window in seconds (>0).
@@ -138,6 +154,16 @@ contract KawaiiRebateVault is AccessControl, ReentrancyGuard, Pausable {
         if (amount == 0) revert ZeroAmount();
         if (amount > unallocated) revert InsufficientUnallocated(amount, unallocated);
 
+        // F-9: rolling per-epoch allocation cap. Bounds how much a single
+        // (compromised) allocator key can move out in any window. 0 == unlimited.
+        uint256 cap = allocationCapPerEpoch;
+        if (cap != 0) {
+            uint256 spent = block.timestamp >= uint256(epochStart) + ALLOCATION_EPOCH ? 0 : epochAllocated;
+            if (spent + amount > cap) revert AllocationCapExceeded(amount, cap > spent ? cap - spent : 0);
+            if (spent == 0) epochStart = uint64(block.timestamp);
+            epochAllocated = spent + amount;
+        }
+
         _accrue(holder); // bank everything vested under the OLD schedule first
 
         Schedule storage s = schedules[holder];
@@ -155,7 +181,11 @@ contract KawaiiRebateVault is AccessControl, ReentrancyGuard, Pausable {
     // ─── Claim (pull payment) ────────────────────────────────────────
 
     /// @notice Claim all vested-but-unclaimed rebate. Pull-only; CEI + guard.
-    function claim() external whenNotPaused nonReentrant returns (uint256 amount) {
+    /// @dev F-11: `claim()` is intentionally NOT `whenNotPaused`. Already-vested
+    ///      rebates are fully backed (the solvency invariant holds), so the pause
+    ///      circuit breaker must not censor funds already owed to holders — pause
+    ///      only blocks NEW allocations/vesting (`allocate`/`allocateBatch`).
+    function claim() external nonReentrant returns (uint256 amount) {
         _accrue(msg.sender);
         amount = vested[msg.sender] - claimed[msg.sender];
         if (amount == 0) revert NothingToClaim();
@@ -208,6 +238,44 @@ contract KawaiiRebateVault is AccessControl, ReentrancyGuard, Pausable {
         if (surplus == 0) revert ZeroAmount();
         USDC.safeTransfer(to, surplus);
         emit SurplusRecovered(to, surplus);
+    }
+
+    /// @notice F-9: set the rolling per-epoch allocation cap (0 = unlimited).
+    ///         Deployments should set a sane cap so one compromised allocator
+    ///         key cannot move the entire unallocated pool in a single window.
+    function setAllocationCapPerEpoch(uint256 capPerEpoch) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        allocationCapPerEpoch = capPerEpoch;
+        emit AllocationCapSet(capPerEpoch);
+    }
+
+    /// @notice F-27: claw a holder's never-claimed allocation back into the
+    ///         backing pool once it is far past full vesting (a misallocation to
+    ///         a non-claiming/typo'd/lost-key address would otherwise be stranded
+    ///         in `totalOutstanding` forever, outside `recoverSurplus` reach).
+    /// @dev    Solvency-preserving: moves `owed` from `totalOutstanding` to
+    ///         `unallocated`; the token balance is unchanged. Only callable once
+    ///         the holder's live schedule started ≥ `STALE_CLAWBACK_EPOCHS` vest
+    ///         windows ago, so it can never touch funds a holder could still be
+    ///         reasonably expected to claim.
+    function clawbackStale(address holder)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        nonReentrant
+        returns (uint256 amount)
+    {
+        uint256 eligibleAt = uint256(schedules[holder].start) + VEST_DURATION * STALE_CLAWBACK_EPOCHS;
+        if (block.timestamp < eligibleAt) revert NotStale(holder, eligibleAt);
+
+        amount = totalAllocatedTo(holder) - claimed[holder];
+        if (amount == 0) revert NothingToClaim();
+
+        delete schedules[holder];
+        vested[holder] = 0;
+        claimed[holder] = 0;
+
+        totalOutstanding -= amount;
+        unallocated += amount;
+        emit AllocationClawedBack(holder, amount);
     }
 
     // ─── Internal ────────────────────────────────────────────────────
