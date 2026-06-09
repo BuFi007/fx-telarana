@@ -33,9 +33,13 @@ contract MockPoolManager {
     uint256 public lastSettledAmount;
     uint256 public settleCount;
     uint256 public syncCount;
+    uint256 public takeCount;
+    uint256 public lastTakenAmount;
+    address public lastTakenCurrency;
 
     event MockSync(address currency);
     event MockSettle(uint256 amount);
+    event MockTake(address currency, address to, uint256 amount);
 
     function sync(Currency currency) external {
         lastSyncedCurrency = Currency.unwrap(currency);
@@ -47,6 +51,19 @@ contract MockPoolManager {
         paid = 0;
         settleCount += 1;
         emit MockSettle(paid);
+    }
+
+    /// @notice Mirror IPoolManager.take — the hook now collects the caller's
+    ///         input on the specified side (F-1). Transfers the input currency
+    ///         the mock custodies to the hook so the balance accounting matches.
+    function take(Currency currency, address to, uint256 amount) external {
+        takeCount += 1;
+        lastTakenAmount = amount;
+        lastTakenCurrency = Currency.unwrap(currency);
+        if (amount > 0) {
+            require(IERC20(Currency.unwrap(currency)).transfer(to, amount), "PM take transfer failed");
+        }
+        emit MockTake(Currency.unwrap(currency), to, amount);
     }
 }
 
@@ -132,6 +149,9 @@ contract TelaranaGatewayHubHookBeforeSwapTest is Test {
 
         // Fund the minter so it can "mint" USDC by transferring from its reserve.
         usdc.mint(address(minter), 10_000_000); // 10 USDC
+        // Fund the PoolManager with the input currency (EURC) so the hook can
+        // `take()` the caller's input on the specified side (F-1).
+        eurc.mint(address(poolManager), 10_000_000); // 10 EURC
 
         // Set up the PoolKey: currency0 = EURC, currency1 = USDC (currency0 < currency1).
         // Make sure EURC address < USDC address; if not, swap.
@@ -156,7 +176,9 @@ contract TelaranaGatewayHubHookBeforeSwapTest is Test {
             sourceGatewayWallet: address(0xBBBB),
             destinationGatewayMinter: address(minter),
             destinationHub: address(hook),
-            whitelistedCaller: address(0),
+            // F-38/F-1: the v4 mint path requires a non-zero whitelisted caller;
+            // the swap initiator (`taker`) must match it.
+            whitelistedCaller: taker,
             signerMode: ITelaranaGatewayHubHook.GatewaySignerMode.EOA,
             enabled: true,
             metadataRef: METADATA_REF
@@ -204,8 +226,13 @@ contract TelaranaGatewayHubHookBeforeSwapTest is Test {
         // unspecifiedDelta = -MINT_AMOUNT (hook contributed USDC into pool accounting)
         int128 specified = BeforeSwapDeltaLibrary.getSpecifiedDelta(delta);
         int128 unspecified = BeforeSwapDeltaLibrary.getUnspecifiedDelta(delta);
-        assertEq(specified, int128(0), "specified delta == 0");
+        // F-1: the hook now COLLECTS the caller's input (specified == +amountIn);
+        // pre-fix this was 0, which handed the minted USDC out for free.
+        assertEq(int256(specified), int256(MINT_AMOUNT), "specified delta == +amountIn");
         assertEq(int256(unspecified), -int256(MINT_AMOUNT), "unspecified delta == -MINT_AMOUNT");
+        // The input currency (EURC) was physically taken from the PoolManager.
+        assertEq(poolManager.takeCount(), 1, "take called");
+        assertEq(poolManager.lastTakenAmount(), MINT_AMOUNT, "took amountIn");
 
         // USDC physically moved from minter to PoolManager via the hook.
         assertEq(usdc.balanceOf(address(minter)), minterUsdcBefore - MINT_AMOUNT, "minter -= amount");
@@ -252,6 +279,35 @@ contract TelaranaGatewayHubHookBeforeSwapTest is Test {
         vm.prank(address(0x1337));
         vm.expectRevert(abi.encodeWithSelector(TelaranaGatewayHubHook.NotPoolManager.selector, address(0x1337)));
         hook.beforeSwap(taker, key, params, hookData);
+    }
+
+    /// @notice F-1/F-38 (audit) — the critical free-drain vector. Pre-fix, ANY
+    ///         observer with a valid Circle attestation could call swap on a
+    ///         bound pool and receive the Gateway-minted (protocol-locked) USDC
+    ///         for ~0 input, because `beforeSwap` skipped the route's
+    ///         whitelisted-caller gate and returned specifiedDelta == 0. The fix
+    ///         requires `sender == route.whitelistedCaller`, so a non-whitelisted
+    ///         caller reverts before any mint.
+    function test_beforeSwap_revertsWhen_callerNotWhitelisted() public {
+        minter.setNextMint(false, MINT_AMOUNT);
+        ITelaranaGatewayHubHook.GatewayMintContext memory ctx = _ctx(REQUEST_ID, MINT_AMOUNT);
+        bytes memory hookData = abi.encode(bytes("attestation"), bytes("signature"), ctx);
+        IPoolManager.SwapParams memory params = _swapParamsBuyingUsdc();
+
+        address attacker = address(0xBAD);
+        uint256 minterUsdcBefore = usdc.balanceOf(address(minter));
+
+        // PoolManager forwards the swap, but the initiator is the attacker, not
+        // the route's whitelisted caller (`taker`).
+        vm.prank(address(poolManager));
+        vm.expectRevert(
+            abi.encodeWithSelector(TelaranaGatewayHubHook.UnauthorizedRouteCaller.selector, ROUTE_ID, attacker)
+        );
+        hook.beforeSwap(attacker, key, params, hookData);
+
+        // No mint happened — protocol USDC untouched, no settle.
+        assertEq(usdc.balanceOf(address(minter)), minterUsdcBefore, "no mint drained");
+        assertEq(poolManager.settleCount(), 0, "no settle");
     }
 
     /// @notice Section A — no route bound for this PoolId.
