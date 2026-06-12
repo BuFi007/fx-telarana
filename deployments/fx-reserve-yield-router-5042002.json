@@ -1,0 +1,21 @@
+{
+  "FxReserveYieldRouter": "0x623d0DAfA24B59809a9fBfa3a60148F69aaB8b06",
+  "chainId": 5042002,
+  "network": "arc-testnet",
+  "deployer": "0x0646FFe11b9aBcE0054Ce6F73025F06F3E91eC69",
+  "proxyType": "UUPS",
+  "usyc": "0xe9185F0c5F296Ed1797AaE4238D26CCaBEadb86C",
+  "usycTeller": "0x9fdF14c5B14173D74C08Af27AebFf39240dC105A",
+  "hashnoteRolesAuthority": "0xCC205224862C7641930c87679E98999d23C26113",
+  "keeper": "0xcA02Be6cDBb806d4a327FC92E094D1A44EC37445",
+  "usdc": "0x3600000000000000000000000000000000000000",
+  "waterMarksUsdc": { "low": "5000000000", "high": "20000000000" },
+  "usycEntitlement": {
+    "status": "granted",
+    "grantedAt": "2026-06-12",
+    "rolesBitmap": "0x1",
+    "canCall": { "usycTransfer": true, "tellerDeposit": true, "tellerRedeem": true },
+    "note": "Hashnote-granted via Circle 2026-06-12 (bit-0 role, same as keeper). The router can now subscribe/redeem USYC and hold the position. Verify live: fx-pasillo/scripts/bufx-verify-productive.sh."
+  },
+  "note": "Tier-gated reserve yield engine (USYC + Morpho sinks) backing the BUFX USYC-backed ramp float. Consumed by fx-pasillo (BUFX_RAMP_RESERVE_ROUTER) and surfaced in defi-web-app protocol dashboard. This is THE registered/entitled router — keep all three repos pointed here."
+}
